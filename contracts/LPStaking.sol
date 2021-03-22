@@ -622,7 +622,7 @@ contract LPStaking {
         accOHMPerShare = 0;
     }
 
-    function transferOwnership(address payable _owner) public onlyOwner() {
+    function transferOwnership(address _owner) public onlyOwner() {
         address previousOwner = owner;
         owner = _owner;
         emit TransferredOwnership(previousOwner, owner, block.timestamp);
