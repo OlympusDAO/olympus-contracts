@@ -619,27 +619,31 @@ contract LPStaking {
         rewardPool = _rewardPool;
         lastRewardBlock = block.number;
         rewardPerBlock = _rewardPerBlock;
-        accOHMPerShare = 0;
+        accOHMPerShare;
     }
 
-    function transferOwnership(address _owner) public onlyOwner() {
+    function transferOwnership(address _owner) external onlyOwner() returns ( bool ) {
         address previousOwner = owner;
         owner = _owner;
         emit TransferredOwnership(previousOwner, owner, block.timestamp);
+
+        return true;
     }
 
     // Sets OHM reward for each block
-    function setRewardPerBlock(uint256 _rewardPerBlock) public onlyOwner() {
+    function setRewardPerBlock(uint256 _rewardPerBlock) external onlyOwner() returns ( bool ) {
         rewardPerBlock = _rewardPerBlock;
+
+        return true;
     }
 
     // Function that will get balance of a certain stake
-    function getUserBalance(address _staker) public view returns(uint256 _amountStaked) {
+    function getUserBalance(address _staker) external view returns(uint256 _amountStaked) {
         return userDetails[_staker]._LPDeposited;
     }
 
     // Function that returns User's pending rewards
-    function pendingRewards(address _staker) public view returns(uint256) {
+    function pendingRewards(address _staker) external view returns(uint256) {
         User storage user = userDetails[_staker];
 
         uint256 _accOHMPerShare = accOHMPerShare;
@@ -654,14 +658,14 @@ contract LPStaking {
     }
 
     // Function that updates OHM/DAI LP pool
-    function updatePool() public {
+    function updatePool() public returns ( bool ) {
         if (block.number <= lastRewardBlock) {
-            return;
+            return true;
         }
 
         if (totalStaked == 0) {
             lastRewardBlock = block.number;
-            return;
+            return true;
         }
 
         uint256 blocksToReward = block.number.sub(lastRewardBlock);
@@ -674,12 +678,13 @@ contract LPStaking {
         lastRewardBlock = block.number;
 
         emit PoolUpdated(blocksToReward, ohmReward, block.timestamp);
+
+        return true;
     }
 
     // Function that lets user stake OHM/DAI LP
-    function stakeLP(uint256 _amount) public {
+    function stakeLP(uint256 _amount) external returns ( bool ) {
         require(_amount > 0, "Can not stake 0 LP tokens");
-        require(LPToken.balanceOf(msg.sender) >= _amount, "Do not have enough LP tokens to stake");
 
         updatePool();
 
@@ -701,10 +706,13 @@ contract LPStaking {
         user._rewardDebt = user._LPDeposited.mul(accOHMPerShare).div(1e18);
 
         emit StakeCompleted(msg.sender, _amount, user._LPDeposited, block.timestamp);
+
+        return true;
+
     }
 
     // Function that will allow user to claim rewards
-    function claimRewards() public {
+    function claimRewards() external returns ( bool ) {
         updatePool();
 
         User storage user = userDetails[msg.sender];
@@ -717,10 +725,12 @@ contract LPStaking {
         user._rewardDebt = user._LPDeposited.mul(accOHMPerShare).div(1e18);
 
         emit RewardsClaimed(msg.sender, _pendingRewards, block.timestamp);
+
+        return true;
     }
 
     // Function that lets user unstake OHM/DAI LP in system
-    function unstakeLP() public {        
+    function unstakeLP() external returns ( bool ) {        
 
         updatePool();
 
@@ -741,6 +751,8 @@ contract LPStaking {
 
         emit WithdrawCompleted(msg.sender, beingWithdrawn, block.timestamp);
         emit RewardsClaimed(msg.sender, _pendingRewards, block.timestamp);
+
+        return true;
     }
 
 }
