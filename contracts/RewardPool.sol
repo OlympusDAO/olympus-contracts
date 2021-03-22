@@ -78,7 +78,7 @@ interface IERC20 {
 contract RewardPool {
 
     event TransferredOwnership(address _previous, address _next, uint256 _time);
-    
+
     modifier onlyOwner() {
         require(msg.sender == owner, "Owner only");
         _;
@@ -88,18 +88,22 @@ contract RewardPool {
 
     address public owner;
 
-    constructor( IERC20 _OHMToken ) {
-        OHMToken = _OHMToken;
+    constructor( address _OHMToken ) {
+        OHMToken = IERC20( _OHMToken );
     }
 
-    function transferOwnership(address _owner) public onlyOwner() {
+    function transferOwnership(address _owner) external onlyOwner() returns ( bool ) {
         address previousOwner = owner;
         owner = _owner;
         emit TransferredOwnership(previousOwner, owner, block.timestamp);
+
+        return true;
     }
 
-    function allowTransferToStaking(address _stakingAddress, uint256 _amount) public onlyOwner() {
+    function allowTransferToStaking(address _stakingAddress, uint256 _amount) external onlyOwner() returns ( bool ) {
         OHMToken.approve(_stakingAddress, _amount);
+
+        return true;
     }
 
 }
