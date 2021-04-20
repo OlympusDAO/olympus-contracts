@@ -1,6 +1,78 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.7.5;
+// SPDX-License-Identifier: AGPL-3.0-or-later
+pragma solidity 0.7.4;
 
+library SafeERC20 {
+    using SafeMath for uint256;
+    using Address for address;
+
+    function safeTransfer(IERC20 token, address to, uint256 value) internal {
+        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
+    }
+
+    function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
+        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
+    }
+
+    /**
+     * @dev Deprecated. This function has issues similar to the ones found in
+     * {IERC20-approve}, and its usage is discouraged.
+     *
+     * Whenever possible, use {safeIncreaseAllowance} and
+     * {safeDecreaseAllowance} instead.
+     */
+    function safeApprove(IERC20 token, address spender, uint256 value) internal {
+        // safeApprove should only be called when setting an initial allowance,
+        // or when resetting it to zero. To increase and decrease it, use
+        // 'safeIncreaseAllowance' and 'safeDecreaseAllowance'
+        // solhint-disable-next-line max-line-length
+        require((value == 0) || (token.allowance(address(this), spender) == 0),
+            "SafeERC20: approve from non-zero to non-zero allowance"
+        );
+        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));
+    }
+
+    function safeIncreaseAllowance(IERC20 token, address spender, uint256 value) internal {
+        uint256 newAllowance = token.allowance(address(this), spender).add(value);
+        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
+    }
+
+    function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {
+        uint256 newAllowance = token.allowance(address(this), spender).sub(value, "SafeERC20: decreased allowance below zero");
+        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
+    }
+
+    /**
+     * @dev Imitates a Solidity high-level call (i.e. a regular function call to a contract), relaxing the requirement
+     * on the return value: the return value is optional (but if data is returned, it must not be false).
+     * @param token The token targeted by the call.
+     * @param data The call data (encoded using abi.encode or one of its variants).
+     */
+    function _callOptionalReturn(IERC20 token, bytes memory data) private {
+        // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
+        // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
+        // the target address contains contract code and also asserts for success in the low-level call.
+
+        bytes memory returndata = address(token).functionCall(data, "SafeERC20: low-level call failed");
+        if (returndata.length > 0) { // Return data is optional
+            // solhint-disable-next-line max-line-length
+            require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
+        }
+    }
+}
+
+/**
+ * @dev Wrappers over Solidity's arithmetic operations with added overflow
+ * checks.
+ *
+ * Arithmetic operations in Solidity wrap on overflow. This can easily result
+ * in bugs, because programmers usually assume that an overflow raises an
+ * error, which is the standard behavior in high level programming languages.
+ * `SafeMath` restores this intuition by reverting the transaction when an
+ * operation overflows.
+ *
+ * Using this library instead of the unchecked operations eliminates an entire
+ * class of bugs, so it's recommended to use it always.
+ */
 library SafeMath {
     /**
      * @dev Returns the addition of two unsigned integers, reverting on
@@ -194,171 +266,83 @@ library SafeMath {
   }
 }
 
-interface IOwnable {
-
-  function owner() external view returns (address);
-
-  function renounceOwnership() external;
-  
-  function transferOwnership( address newOwner_ ) external;
-}
-
-contract Ownable is IOwnable {
-    
-  address internal _owner;
-
-  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-  /**
-   * @dev Initializes the contract setting the deployer as the initial owner.
-   */
-  constructor () {
-    _owner = msg.sender;
-    emit OwnershipTransferred( address(0), _owner );
-  }
-
-  /**
-   * @dev Returns the address of the current owner.
-   */
-  function owner() public view override returns (address) {
-    return _owner;
-  }
-
-  /**
-   * @dev Throws if called by any account other than the owner.
-   */
-  modifier onlyOwner() {
-    require( _owner == msg.sender, "Ownable: caller is not the owner" );
-    _;
-  }
-
-  /**
-   * @dev Leaves the contract without owner. It will not be possible to call
-   * `onlyOwner` functions anymore. Can only be called by the current owner.
-   *
-   * NOTE: Renouncing ownership will leave the contract without an owner,
-   * thereby removing any functionality that is only available to the owner.
-   */
-  function renounceOwnership() public virtual override onlyOwner() {
-    emit OwnershipTransferred( _owner, address(0) );
-    _owner = address(0);
-  }
-
-  /**
-   * @dev Transfers ownership of the contract to a new account (`newOwner`).
-   * Can only be called by the current owner.
-   */
-  function transferOwnership( address newOwner_ ) public virtual override onlyOwner() {
-    require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-    emit OwnershipTransferred( _owner, newOwner_ );
-    _owner = newOwner_;
-  }
-}
-
-interface IStaking {
-
-    function initialize(
-        address olyTokenAddress_,
-        address sOLY_,
-        address dai_
-    ) external;
-
-    //function stakeOLY(uint amountToStake_) external {
-    function stakeOLYWithPermit (
-        uint256 amountToStake_,
-        uint256 deadline_,
-        uint8 v_,
-        bytes32 r_,
-        bytes32 s_
-    ) external;
-
-    //function unstakeOLY( uint amountToWithdraw_) external {
-    function unstakeOLYWithPermit (
-        uint256 amountToWithdraw_,
-        uint256 deadline_,
-        uint8 v_,
-        bytes32 r_,
-        bytes32 s_
-    ) external;
-
-    function stakeOLY( uint amountToStake_ ) external returns ( bool );
-
-    function unstakeOLY( uint amountToWithdraw_ ) external returns ( bool );
-
-    function distributeOLYProfits() external;
-}
-
+/**
+ * @dev Interface of the ERC20 standard as defined in the EIP.
+ */
 interface IERC20 {
-  /**
-   * @dev Returns the amount of tokens in existence.
-   */
-  function totalSupply() external view returns (uint256);
+    /**
+     * @dev Returns the amount of tokens in existence.
+     */
+    function totalSupply() external view returns (uint256);
 
-  /**
-   * @dev Returns the amount of tokens owned by `account`.
-   */
-  function balanceOf(address account) external view returns (uint256);
+    /**
+     * @dev Returns the amount of tokens owned by `account`.
+     */
+    function balanceOf(address account) external view returns (uint256);
 
-  /**
-   * @dev Moves `amount` tokens from the caller's account to `recipient`.
-   *
-   * Returns a boolean value indicating whether the operation succeeded.
-   *
-   * Emits a {Transfer} event.
-   */
-  function transfer(address recipient, uint256 amount) external returns (bool);
+    /**
+     * @dev Moves `amount` tokens from the caller's account to `recipient`.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
+    function transfer(address recipient, uint256 amount) external returns (bool);
 
-  /**
-   * @dev Returns the remaining number of tokens that `spender` will be
-   * allowed to spend on behalf of `owner` through {transferFrom}. This is
-   * zero by default.
-   *
-   * This value changes when {approve} or {transferFrom} are called.
-   */
-  function allowance(address owner, address spender) external view returns (uint256);
+    /**
+     * @dev Returns the remaining number of tokens that `spender` will be
+     * allowed to spend on behalf of `owner` through {transferFrom}. This is
+     * zero by default.
+     *
+     * This value changes when {approve} or {transferFrom} are called.
+     */
+    function allowance(address owner, address spender) external view returns (uint256);
 
-  /**
-   * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
-   *
-   * Returns a boolean value indicating whether the operation succeeded.
-   *
-   * IMPORTANT: Beware that changing an allowance with this method brings the risk
-   * that someone may use both the old and the new allowance by unfortunate
-   * transaction ordering. One possible solution to mitigate this race
-   * condition is to first reduce the spender's allowance to 0 and set the
-   * desired value afterwards:
-   * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-   *
-   * Emits an {Approval} event.
-   */
-  function approve(address spender, uint256 amount) external returns (bool);
+    /**
+     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * IMPORTANT: Beware that changing an allowance with this method brings the risk
+     * that someone may use both the old and the new allowance by unfortunate
+     * transaction ordering. One possible solution to mitigate this race
+     * condition is to first reduce the spender's allowance to 0 and set the
+     * desired value afterwards:
+     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+     *
+     * Emits an {Approval} event.
+     */
+    function approve(address spender, uint256 amount) external returns (bool);
 
-  /**
-   * @dev Moves `amount` tokens from `sender` to `recipient` using the
-   * allowance mechanism. `amount` is then deducted from the caller's
-   * allowance.
-   *
-   * Returns a boolean value indicating whether the operation succeeded.
-   *
-   * Emits a {Transfer} event.
-   */
-  function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    /**
+     * @dev Moves `amount` tokens from `sender` to `recipient` using the
+     * allowance mechanism. `amount` is then deducted from the caller's
+     * allowance.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 
-  /**
-   * @dev Emitted when `value` tokens are moved from one account (`from`) to
-   * another (`to`).
-   *
-   * Note that `value` may be zero.
-   */
-  event Transfer(address indexed from, address indexed to, uint256 value);
+    /**
+     * @dev Emitted when `value` tokens are moved from one account (`from`) to
+     * another (`to`).
+     *
+     * Note that `value` may be zero.
+     */
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
-  /**
-   * @dev Emitted when the allowance of a `spender` for an `owner` is set by
-   * a call to {approve}. `value` is the new allowance.
-   */
-  event Approval(address indexed owner, address indexed spender, uint256 value);
+    /**
+     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
+     * a call to {approve}. `value` is the new allowance.
+     */
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
+/**
+ * @dev Collection of functions related to the address type
+ */
 library Address {
     /**
      * @dev Returns true if `account` is a contract.
@@ -586,219 +570,122 @@ library Address {
     }
 }
 
-library SafeERC20 {
-    using SafeMath for uint256;
-    using Address for address;
-
-    function safeTransfer(IERC20 token, address to, uint256 value) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
-    }
-
-    function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
-    }
-
-    /**
-     * @dev Deprecated. This function has issues similar to the ones found in
-     * {IERC20-approve}, and its usage is discouraged.
-     *
-     * Whenever possible, use {safeIncreaseAllowance} and
-     * {safeDecreaseAllowance} instead.
-     */
-    function safeApprove(IERC20 token, address spender, uint256 value) internal {
-        // safeApprove should only be called when setting an initial allowance,
-        // or when resetting it to zero. To increase and decrease it, use
-        // 'safeIncreaseAllowance' and 'safeDecreaseAllowance'
-        // solhint-disable-next-line max-line-length
-        require((value == 0) || (token.allowance(address(this), spender) == 0),
-            "SafeERC20: approve from non-zero to non-zero allowance"
-        );
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));
-    }
-
-    function safeIncreaseAllowance(IERC20 token, address spender, uint256 value) internal {
-        uint256 newAllowance = token.allowance(address(this), spender).add(value);
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
-    }
-
-    function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {
-        uint256 newAllowance = token.allowance(address(this), spender).sub(value, "SafeERC20: decreased allowance below zero");
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
-    }
-
-    /**
-     * @dev Imitates a Solidity high-level call (i.e. a regular function call to a contract), relaxing the requirement
-     * on the return value: the return value is optional (but if data is returned, it must not be false).
-     * @param token The token targeted by the call.
-     * @param data The call data (encoded using abi.encode or one of its variants).
-     */
-    function _callOptionalReturn(IERC20 token, bytes memory data) private {
-        // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
-        // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
-        // the target address contains contract code and also asserts for success in the low-level call.
-
-        bytes memory returndata = address(token).functionCall(data, "SafeERC20: low-level call failed");
-        if (returndata.length > 0) { // Return data is optional
-            // solhint-disable-next-line max-line-length
-            require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
-        }
-    }
-}
-interface ITreasury {
-
-  function getBondingCalculator() external returns ( address );
-  function payDebt( address depositor_ ) external returns ( bool );
-  function getTimelockEndBlock() external returns ( uint );
-  function getManagedToken() external returns ( address );
-  function getDebtAmountDue() external returns ( uint );
-  function incurDebt( address principleToken_, uint principieTokenAmountDeposited_ ) external returns ( bool );
+interface IVault {
+    function depositReserves( uint amount_ ) external returns ( bool );
 }
 
-interface IOHMandsOHM {
-    function rebase(uint256 ohmProfit)
-        external
-        returns (uint256);
-
-    function circulatingSupply() external view returns (uint256);
-
-    function balanceOf(address who) external view returns (uint256);
-
-    function permit(
-        address owner,
-        address spender,
-        uint256 amount,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
+interface IStaking {
+    function stakeOHM( uint amountToStake_ ) external returns ( bool );
 }
 
-contract OlympusStaking is Ownable {
+contract OlympusStakingDistributor {
+    using SafeMath for uint;
+    using SafeERC20 for IERC20;
+    
+    address public owner;
+    address public vault;
+    address public OHM;
+    address public DAI;
+    address public DAO;
+    address public stakingContract;
+    
+    uint public nextEpochBlock;
+    uint public blocksInEpoch;
+    
+    // reward rate is in hundreths i.e. 50 = 0.5%
+    uint public rewardRate;
+    
+    bool public isInitialized;
 
-  using SafeMath for uint256;
-  using SafeERC20 for IERC20;
-
-  uint256 public epochLengthInBlocks;
-
-  address public ohm;
-  address public sOHM;
-  uint256 public ohmToDistributeNextEpoch;
-
-  uint256 nextEpochBlock;
-
-  bool isInitialized;
-
-  modifier notInitialized() {
-    require( !isInitialized );
-    _;
-  }
-
-  function initialize(
-        address ohmTokenAddress_,
-        address sOHM_,
-        uint8 epochLengthInBlocks_
-    ) external onlyOwner() notInitialized() {
-        ohm = ohmTokenAddress_;
-        sOHM = sOHM_;
-        epochLengthInBlocks = epochLengthInBlocks_;
+    constructor() {
+        owner = msg.sender;
+    }
+    
+    function initialize( uint _nextEpochBlock, uint _blocksInEpoch, uint _rewardRate, address _vault, address _stakingContract, address _OHM, address _DAI, address _DAO ) external returns ( bool ) {
+        require( msg.sender == owner );
+        require( isInitialized == false );
+        
+        nextEpochBlock = _nextEpochBlock;
+        blocksInEpoch = _blocksInEpoch;
+        rewardRate = _rewardRate;
+        vault = _vault;
+        stakingContract = _stakingContract;
+        OHM = _OHM; 
+        DAI = _DAI;
+        DAO = _DAO;
+        
         isInitialized = true;
-    }
-
-  function setEpochLengthintBlock( uint256 newEpochLengthInBlocks_ ) external onlyOwner() {
-    epochLengthInBlocks = newEpochLengthInBlocks_;
-  }
-
-  function _distributeOHMProfits() internal {
-    if( nextEpochBlock <= block.number ) {
-      IOHMandsOHM(sOHM).rebase(ohmToDistributeNextEpoch);
-      uint256 _ohmBalance = IOHMandsOHM(ohm).balanceOf(address(this));
-      uint256 _sohmSupply = IOHMandsOHM(sOHM).circulatingSupply();
-      ohmToDistributeNextEpoch = _ohmBalance.sub(_sohmSupply);
-      nextEpochBlock = nextEpochBlock.add( epochLengthInBlocks );
-    }
-  }
-
-  function _stakeOHM( uint256 amountToStake_ ) internal {
-    _distributeOHMProfits();
         
-    IERC20(ohm).safeTransferFrom(
-        msg.sender,
-        address(this),
-        amountToStake_
-      );
+        return true;
+    }
+    
+    function distribute() external returns ( bool ) {
+        if ( block.number >= nextEpochBlock ) {
+            nextEpochBlock = nextEpochBlock.add( blocksInEpoch );
+            
+            uint _ohmToDistribute = IERC20( OHM ).totalSupply().mul( rewardRate ).div( 10000 );
 
-    IERC20(sOHM).safeTransfer(msg.sender, amountToStake_);
-  }
-
-  function stakeOHMWithPermit (
-        uint256 amountToStake_,
-        uint256 deadline_,
-        uint8 v_,
-        bytes32 r_,
-        bytes32 s_
-    ) external {
-
-        IOHMandsOHM(ohm).permit(
-            msg.sender,
-            address(this),
-            amountToStake_,
-            deadline_,
-            v_,
-            r_,
-            s_
-        );
-
-        _stakeOHM( amountToStake_ );
+            IERC20( OHM ).safeTransfer( stakingContract, _ohmToDistribute );
+            IStaking( stakingContract ).stakeOHM( 0 );
+        }
+        return true;
     }
 
-    function stakeOHM( uint amountToStake_ ) external returns ( bool ) {
+    function convertDAIToOHM( uint _amountToConvert ) external returns ( bool ) {
+        require( msg.sender == owner );
 
-      _stakeOHM( amountToStake_ );
-
-      return true;
-
-    }
-
-    function _unstakeOHM( uint256 amountToUnstake_ ) internal {
-
-      _distributeOHMProfits();
-
-      IERC20(sOHM).safeTransferFrom(
-            msg.sender,
-            address(this),
-            amountToUnstake_
-        );
-
-      IERC20(ohm).safeTransfer(msg.sender, amountToUnstake_);
-    }
-
-    function unstakeOHMWithPermit (
-        uint256 amountToWithdraw_,
-        uint256 deadline_,
-        uint8 v_,
-        bytes32 r_,
-        bytes32 s_
-    ) external {
-        
-        IOHMandsOHM(sOHM).permit(
-            msg.sender,
-            address(this),
-            amountToWithdraw_,
-            deadline_,
-            v_,
-            r_,
-            s_
-        );
-
-        _unstakeOHM( amountToWithdraw_ );
-
-    }
-
-    function unstakeOHM( uint amountToWithdraw_ ) external returns ( bool ) {
-
-        _unstakeOHM( amountToWithdraw_ );
+        IERC20( DAI ).approve( vault, _amountToConvert );
+        IVault( vault ).depositReserves( _amountToConvert );
 
         return true;
+    }
+    
+    function setBlocksInEpoch( uint _blocksInEpoch ) external returns ( bool ) {
+        require( msg.sender == owner);
+        blocksInEpoch = _blocksInEpoch;
+        return true;
+    }
+    
+    // reward rate is in hundreths i.e. 50 = 0.5%
+    function setRewardRate( uint _rewardRate ) external returns ( bool ) {
+        require( msg.sender == owner );
+        rewardRate = _rewardRate;
+        return true;
+    }
+
+    function setVault( address _vault ) external returns ( bool ) {
+        require( msg.sender == owner );
+        vault = _vault;
+        return true;
+    }
+
+    function setStaking( address _staking ) external returns ( bool ) {
+        require( msg.sender == owner );
+        stakingContract = _staking;
+        return true;
+
+    }
+
+    function transferOwnership( address _owner ) external returns ( bool ) {
+        require( msg.sender == owner );
+        owner = _owner;
+        
+        return true;
+    }
+
+    function transferDAIToDAO() external returns ( bool ) {
+        require( msg.sender == owner );
+        IERC20( DAI ).safeTransfer( DAO, IERC20( DAI ).balanceOf( address( this ) ) );
+        return true;
+    }
+
+    function transferOHMToDAO() external returns ( bool ) {
+        require( msg.sender == owner );
+        IERC20( OHM ).safeTransfer( DAO, IERC20( OHM ).balanceOf( address( this ) ) );
+        return true;
+    }
+
+    function getCurrentRewardForNextEpoch() external view returns ( uint ) {
+        return IERC20( OHM ).totalSupply().mul( rewardRate ).div( 10000 );
     }
 }
