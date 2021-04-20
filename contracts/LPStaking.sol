@@ -579,7 +579,7 @@ interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
-contract LPStaking {
+contract OlympusLPStaking {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -613,13 +613,14 @@ contract LPStaking {
     mapping(address => User) public userDetails;
 
     // Constructor will set the address of OHM/ETH LP token
-    constructor(address _LPToken, address _OHMToken, address _rewardPool, uint256 _rewardPerBlock) {
+    constructor(address _LPToken, address _OHMToken, address _rewardPool, uint256 _rewardPerBlock, uint _blocksToWait) {
         LPToken = IERC20(_LPToken);
         OHMToken = IERC20(_OHMToken);
         rewardPool = _rewardPool;
-        lastRewardBlock = block.number;
+        lastRewardBlock = block.number.add( _blocksToWait );
         rewardPerBlock = _rewardPerBlock;
         accOHMPerShare;
+        owner = msg.sender;
     }
 
     function transferOwnership(address _owner) external onlyOwner() returns ( bool ) {
@@ -669,13 +670,12 @@ contract LPStaking {
         }
 
         uint256 blocksToReward = block.number.sub(lastRewardBlock);
+        lastRewardBlock = block.number;
 
         uint256 ohmReward = blocksToReward.mul(rewardPerBlock);
+        accOHMPerShare = accOHMPerShare.add(ohmReward.mul(1e18).div(totalStaked));
 
         OHMToken.safeTransferFrom(rewardPool, address(this), ohmReward);
-
-        accOHMPerShare = accOHMPerShare.add(ohmReward.mul(1e18).div(totalStaked));
-        lastRewardBlock = block.number;
 
         emit PoolUpdated(blocksToReward, ohmReward, block.timestamp);
 
@@ -718,11 +718,11 @@ contract LPStaking {
         User storage user = userDetails[msg.sender];
 
         uint256 _pendingRewards = user._LPDeposited.mul(accOHMPerShare).div(1e18).sub(user._rewardDebt);
+        user._rewardDebt = user._LPDeposited.mul(accOHMPerShare).div(1e18);
+        
         require(_pendingRewards > 0, "No rewards to claim!");
 
         OHMToken.safeTransfer(msg.sender, _pendingRewards);
-
-        user._rewardDebt = user._LPDeposited.mul(accOHMPerShare).div(1e18);
 
         emit RewardsClaimed(msg.sender, _pendingRewards, block.timestamp);
 
