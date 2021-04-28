@@ -24,8 +24,7 @@ interface IERC20 {
 contract DaiPool {
     
     using SafeMath for uint;
-    
-    uint public interestGained;
+   
     uint public lastRewardBlock;
     uint public DAI_DEPOSITED;
     uint public accDAIPerShare;
@@ -87,11 +86,9 @@ contract DaiPool {
     
     // Function that returns User's pending rewards
     function pendingRewards() public view returns(uint256) {
-
         return userDepositInfo[msg.sender].amountDeposited.mul(accDAIPerShare).div(1e18).sub(userDepositInfo[msg.sender].rewardDebt);
     }
-    
-    // Function that updates DAI RariFund pool
+
     function updatePool() public returns ( bool ) {
         if (block.number <= lastRewardBlock) {
             return true;
