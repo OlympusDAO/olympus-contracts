@@ -1,5 +1,9 @@
+/**
+ *Submitted for verification at Etherscan.io on 2021-04-21
+*/
+
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.4;
+pragma solidity 0.7.5;
 
 interface IOwnable {
 
@@ -134,9 +138,6 @@ library SafeMath {
 library Address {
 
     function isContract(address account) internal view returns (bool) {
-        // This method relies in extcodesize, which returns 0 for contracts in
-        // construction, since the code is only stored at the end of the
-        // constructor execution.
 
         uint256 size;
         // solhint-disable-next-line no-inline-assembly
@@ -224,11 +225,8 @@ library Address {
         if (success) {
             return returndata;
         } else {
-            // Look for revert reason and bubble it up if present
             if (returndata.length > 0) {
-                // The easiest way to bubble the revert reason is using memory via assembly
 
-                // solhint-disable-next-line no-inline-assembly
                 assembly {
                     let returndata_size := mload(returndata)
                     revert(add(32, returndata), returndata_size)
@@ -352,16 +350,16 @@ abstract contract ERC20 is IERC20 {
         return true;
     }
 
-  function _transfer(address sender, address recipient, uint256 amount) internal virtual {
-    require(sender != address(0), "ERC20: transfer from the zero address");
-    require(recipient != address(0), "ERC20: transfer to the zero address");
+    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");
 
-    _beforeTokenTransfer(sender, recipient, amount);
+        _beforeTokenTransfer(sender, recipient, amount);
 
-    _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
-    _balances[recipient] = _balances[recipient].add(amount);
-    emit Transfer(sender, recipient, amount);
-  }
+        _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
+        _balances[recipient] = _balances[recipient].add(amount);
+        emit Transfer(sender, recipient, amount);
+    }
 
     function _mint(address account_, uint256 ammount_) internal virtual {
         require(account_ != address(0), "ERC20: mint to the zero address");
@@ -411,9 +409,7 @@ library Counters {
     using SafeMath for uint256;
 
     struct Counter {
-        // This variable should never be directly accessed by users of the library: interactions must be restricted to
-        // the library's function. As of Solidity v0.5.2, this cannot be enforced, though there is a proposal to add
-        // this feature: see https://github.com/ethereum/solidity/issues/4637
+
         uint256 _value; // default: 0
     }
 
@@ -422,7 +418,6 @@ library Counters {
     }
 
     function increment(Counter storage counter) internal {
-        // The {SafeMath} overflow check can be skipped here, see the comment at the top
         counter._value += 1;
     }
 
@@ -526,159 +521,6 @@ library SafeERC20 {
     }
 }
 
-interface IUniswapV2ERC20 {
-    event Approval(address indexed owner, address indexed spender, uint value);
-    event Transfer(address indexed from, address indexed to, uint value);
-
-    function name() external pure returns (string memory);
-    function symbol() external pure returns (string memory);
-    function decimals() external pure returns (uint8);
-    function totalSupply() external view returns (uint);
-    function balanceOf(address owner) external view returns (uint);
-    function allowance(address owner, address spender) external view returns (uint);
-
-    function approve(address spender, uint value) external returns (bool);
-    function transfer(address to, uint value) external returns (bool);
-    function transferFrom(address from, address to, uint value) external returns (bool);
-
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
-    function PERMIT_TYPEHASH() external pure returns (bytes32);
-    function nonces(address owner) external view returns (uint);
-
-    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external;
-}
-
-library Babylonian {
-    // credit for this implementation goes to
-    // https://github.com/abdk-consulting/abdk-libraries-solidity/blob/master/ABDKMath64x64.sol#L687
-    function sqrt(uint256 x) internal pure returns (uint256) {
-        if (x == 0) return 0;
-        // this block is equivalent to r = uint256(1) << (BitMath.mostSignificantBit(x) / 2);
-        // however that code costs significantly more gas
-        uint256 xx = x;
-        uint256 r = 1;
-        if (xx >= 0x100000000000000000000000000000000) {
-            xx >>= 128;
-            r <<= 64;
-        }
-        if (xx >= 0x10000000000000000) {
-            xx >>= 64;
-            r <<= 32;
-        }
-        if (xx >= 0x100000000) {
-            xx >>= 32;
-            r <<= 16;
-        }
-        if (xx >= 0x10000) {
-            xx >>= 16;
-            r <<= 8;
-        }
-        if (xx >= 0x100) {
-            xx >>= 8;
-            r <<= 4;
-        }
-        if (xx >= 0x10) {
-            xx >>= 4;
-            r <<= 2;
-        }
-        if (xx >= 0x8) {
-            r <<= 1;
-        }
-        r = (r + x / r) >> 1;
-        r = (r + x / r) >> 1;
-        r = (r + x / r) >> 1;
-        r = (r + x / r) >> 1;
-        r = (r + x / r) >> 1;
-        r = (r + x / r) >> 1;
-        r = (r + x / r) >> 1; // Seven iterations should be enough
-        uint256 r1 = x / r;
-        return (r < r1 ? r : r1);
-    }
-}
-
-library BitMath {
-    // returns the 0 indexed position of the most significant bit of the input x
-    // s.t. x >= 2**msb and x < 2**(msb+1)
-    function mostSignificantBit(uint256 x) internal pure returns (uint8 r) {
-        require(x > 0, 'BitMath::mostSignificantBit: zero');
-
-        if (x >= 0x100000000000000000000000000000000) {
-            x >>= 128;
-            r += 128;
-        }
-        if (x >= 0x10000000000000000) {
-            x >>= 64;
-            r += 64;
-        }
-        if (x >= 0x100000000) {
-            x >>= 32;
-            r += 32;
-        }
-        if (x >= 0x10000) {
-            x >>= 16;
-            r += 16;
-        }
-        if (x >= 0x100) {
-            x >>= 8;
-            r += 8;
-        }
-        if (x >= 0x10) {
-            x >>= 4;
-            r += 4;
-        }
-        if (x >= 0x4) {
-            x >>= 2;
-            r += 2;
-        }
-        if (x >= 0x2) r += 1;
-    }
-
-    // returns the 0 indexed position of the least significant bit of the input x
-    // s.t. (x & 2**lsb) != 0 and (x & (2**(lsb) - 1)) == 0)
-    // i.e. the bit at the index is set and the mask of all lower bits is 0
-    function leastSignificantBit(uint256 x) internal pure returns (uint8 r) {
-        require(x > 0, 'BitMath::leastSignificantBit: zero');
-
-        r = 255;
-        if (x & uint128(-1) > 0) {
-            r -= 128;
-        } else {
-            x >>= 128;
-        }
-        if (x & uint64(-1) > 0) {
-            r -= 64;
-        } else {
-            x >>= 64;
-        }
-        if (x & uint32(-1) > 0) {
-            r -= 32;
-        } else {
-            x >>= 32;
-        }
-        if (x & uint16(-1) > 0) {
-            r -= 16;
-        } else {
-            x >>= 16;
-        }
-        if (x & uint8(-1) > 0) {
-            r -= 8;
-        } else {
-            x >>= 8;
-        }
-        if (x & 0xf > 0) {
-            r -= 4;
-        } else {
-            x >>= 4;
-        }
-        if (x & 0x3 > 0) {
-            r -= 2;
-        } else {
-            x >>= 2;
-        }
-        if (x & 0x1 > 0) r -= 1;
-    }
-}
-
 library FullMath {
     function fullMul(uint256 x, uint256 y) private pure returns (uint256 l, uint256 h) {
         uint256 mm = mulmod(x, y, uint256(-1));
@@ -723,14 +565,11 @@ library FullMath {
 }
 
 library FixedPoint {
-    // range: [0, 2**112 - 1]
-    // resolution: 1 / 2**112
+
     struct uq112x112 {
         uint224 _x;
     }
 
-    // range: [0, 2**144 - 1]
-    // resolution: 1 / 2**112
     struct uq144x112 {
         uint256 _x;
     }
@@ -740,107 +579,15 @@ library FixedPoint {
     uint256 private constant Q224 = 0x100000000000000000000000000000000000000000000000000000000;
     uint256 private constant LOWER_MASK = 0xffffffffffffffffffffffffffff; // decimal of UQ*x112 (lower 112 bits)
 
-    // encode a uint112 as a UQ112x112
-    function encode(uint112 x) internal pure returns (uq112x112 memory) {
-        return uq112x112(uint224(x) << RESOLUTION);
-    }
-
-    // encodes a uint144 as a UQ144x112
-    function encode144(uint144 x) internal pure returns (uq144x112 memory) {
-        return uq144x112(uint256(x) << RESOLUTION);
-    }
-
-    // decode a UQ112x112 into a uint112 by truncating after the radix point
     function decode(uq112x112 memory self) internal pure returns (uint112) {
         return uint112(self._x >> RESOLUTION);
     }
 
-    // decode a UQ144x112 into a uint144 by truncating after the radix point
-    function decode144(uq144x112 memory self) internal pure returns (uint144) {
-        return uint144(self._x >> RESOLUTION);
+    function decode112with18(uq112x112 memory self) internal pure returns (uint) {
+
+        return uint(self._x) / 5192296858534827;
     }
 
-    // decode a uq112x112 into a uint with 18 decimals of precision
-  function decode112with18(uq112x112 memory self) internal pure returns (uint) {
-    // we only have 256 - 224 = 32 bits to spare, so scaling up by ~60 bits is dangerous
-    // instead, get close to:
-    //  (x * 1e18) >> 112
-    // without risk of overflowing, e.g.:
-    //  (x) / 2 ** (112 - lg(1e18))
-    return uint(self._x) / 5192296858534827;
-  }
-
-    // multiply a UQ112x112 by a uint, returning a UQ144x112
-    // reverts on overflow
-    function mul(uq112x112 memory self, uint256 y) internal pure returns (uq144x112 memory) {
-        uint256 z = 0;
-        require(y == 0 || (z = self._x * y) / y == self._x, 'FixedPoint::mul: overflow');
-        return uq144x112(z);
-    }
-
-    // multiply a UQ112x112 by an int and decode, returning an int
-    // reverts on overflow
-    function muli(uq112x112 memory self, int256 y) internal pure returns (int256) {
-        uint256 z = FullMath.mulDiv(self._x, uint256(y < 0 ? -y : y), Q112);
-        require(z < 2**255, 'FixedPoint::muli: overflow');
-        return y < 0 ? -int256(z) : int256(z);
-    }
-
-    // multiply a UQ112x112 by a UQ112x112, returning a UQ112x112
-    // lossy
-    function muluq(uq112x112 memory self, uq112x112 memory other) internal pure returns (uq112x112 memory) {
-        if (self._x == 0 || other._x == 0) {
-            return uq112x112(0);
-        }
-        uint112 upper_self = uint112(self._x >> RESOLUTION); // * 2^0
-        uint112 lower_self = uint112(self._x & LOWER_MASK); // * 2^-112
-        uint112 upper_other = uint112(other._x >> RESOLUTION); // * 2^0
-        uint112 lower_other = uint112(other._x & LOWER_MASK); // * 2^-112
-
-        // partial products
-        uint224 upper = uint224(upper_self) * upper_other; // * 2^0
-        uint224 lower = uint224(lower_self) * lower_other; // * 2^-224
-        uint224 uppers_lowero = uint224(upper_self) * lower_other; // * 2^-112
-        uint224 uppero_lowers = uint224(upper_other) * lower_self; // * 2^-112
-
-        // so the bit shift does not overflow
-        require(upper <= uint112(-1), 'FixedPoint::muluq: upper overflow');
-
-        // this cannot exceed 256 bits, all values are 224 bits
-        uint256 sum = uint256(upper << RESOLUTION) + uppers_lowero + uppero_lowers + (lower >> RESOLUTION);
-
-        // so the cast does not overflow
-        require(sum <= uint224(-1), 'FixedPoint::muluq: sum overflow');
-
-        return uq112x112(uint224(sum));
-    }
-
-    // divide a UQ112x112 by a UQ112x112, returning a UQ112x112
-    function divuq(uq112x112 memory self, uq112x112 memory other) internal pure returns (uq112x112 memory) {
-        require(other._x > 0, 'FixedPoint::divuq: division by zero');
-        if (self._x == other._x) {
-            return uq112x112(uint224(Q112));
-        }
-        if (self._x <= uint144(-1)) {
-            uint256 value = (uint256(self._x) << RESOLUTION) / other._x;
-            require(value <= uint224(-1), 'FixedPoint::divuq: overflow');
-            return uq112x112(uint224(value));
-        }
-
-        uint256 result = FullMath.mulDiv(Q112, self._x, other._x);
-        require(result <= uint224(-1), 'FixedPoint::divuq: overflow');
-        return uq112x112(uint224(result));
-    }
-
-  // returns a uq112x112 which represents the ratio of the numerator to the denominator
-  // equivalent to encode(numerator).div(denominator)
-  // function fraction(uint112 numerator, uint112 denominator) internal pure returns (uq112x112 memory) {
-  //   require(denominator > 0, "DIV_BY_ZERO");
-  //   return uq112x112((uint224(numerator) << 112) / denominator);
-  // }
-
-    // returns a UQ112x112 which represents the ratio of the numerator to the denominator
-    // lossy if either numerator or denominator is greater than 112 bits
     function fraction(uint256 numerator, uint256 denominator) internal pure returns (uq112x112 memory) {
         require(denominator > 0, 'FixedPoint::fraction: division by zero');
         if (numerator == 0) return FixedPoint.uq112x112(0);
@@ -855,66 +602,45 @@ library FixedPoint {
             return uq112x112(uint224(result));
         }
     }
-
-    // take the reciprocal of a UQ112x112
-    // reverts on overflow
-    // lossy
-    function reciprocal(uq112x112 memory self) internal pure returns (uq112x112 memory) {
-        require(self._x != 0, 'FixedPoint::reciprocal: reciprocal of zero');
-        require(self._x != 1, 'FixedPoint::reciprocal: overflow');
-        return uq112x112(uint224(Q224 / self._x));
-    }
-
-    // square root of a UQ112x112
-    // lossy between 0/1 and 40 bits
-    function sqrt(uq112x112 memory self) internal pure returns (uq112x112 memory) {
-        if (self._x <= uint144(-1)) {
-            return uq112x112(uint224(Babylonian.sqrt(uint256(self._x) << 112)));
-        }
-
-        uint8 safeShiftBits = 255 - BitMath.mostSignificantBit(self._x);
-        safeShiftBits -= safeShiftBits % 2;
-        return uq112x112(uint224(Babylonian.sqrt(uint256(self._x) << safeShiftBits) << ((112 - safeShiftBits) / 2)));
-    }
 }
 
+interface ITreasury {
+    function depositReserves( uint depositAmount_ ) external returns ( bool );
+}
 
-interface IPrincipleDepository {
+interface ICirculatingOHM {
+    function OHMCirculatingSupply() external view returns ( uint );
+}
 
-    function getDepositorInfo( address _depositorAddress_ ) external view returns 
-        ( uint principleValue_, uint paidOut_, uint maxPayout, uint vestingPeriod_ );
+interface IBondDepo {
+
+    function getDepositorInfo( address _depositorAddress_ ) external view returns ( uint principleValue_, uint paidOut_, uint maxPayout, uint vestingPeriod_ );
     
-    function depositBondPrinciple( uint256 amountToDeposit_ ) external returns ( bool );
+    function deposit( uint256 amount_, uint maxPremium_, address depositor_ ) external returns ( bool );
 
-    function depositBondPrincipleWithPermit( uint256 amountToDeposit_, uint256 deadline, uint8 v, bytes32 r, bytes32 s ) external returns ( bool );
+    function depositWithPermit( uint256 amount_, uint maxPremium_, address depositor_, uint256 deadline, uint8 v, bytes32 r, bytes32 s ) external returns ( bool );
 
-    function redeemBond() external returns ( bool );
+    function redeem() external returns ( bool );
 
     function calculatePercentVested( address depositor_ ) external view returns ( uint _percentVested );
     
     function calculatePendingPayout( address depositor_ ) external view returns ( uint _pendingPayout );
       
-    function calculateBondInterest( uint principleValue_ ) external view returns ( uint maxPayout );
+    function calculateBondInterest( uint value_ ) external view returns ( uint _interestDue );
         
     function calculatePremium() external view returns ( uint _premium );
 }
 
-interface IBondingCalculator {
-    function principleValuation( address principleTokenAddress_, uint amountDeposited_ ) external view returns ( uint principleValuation_ );
-}
 
-interface ITreasury {
-    function depositPrinciple( uint depositAmount_ ) external returns ( bool );
-}
 
-contract OHMPrincipleDepository is IPrincipleDepository, Ownable {
+contract OlympusDAIDepository is IBondDepo, Ownable {
 
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
 
     struct DepositInfo {
-        uint principleValue; // Risk-Free Value of LP
+        uint value; // Value
         uint payoutRemaining; // OHM remaining to be paid
         uint lastBlock; // Last interaction
         uint vestingPeriod; // Blocks left to vest
@@ -922,133 +648,184 @@ contract OHMPrincipleDepository is IPrincipleDepository, Ownable {
 
     mapping( address => DepositInfo ) public depositorInfo; 
 
+    uint public DAOShare; // % = 1 / DAOShare
     uint public bondControlVariable; // Premium scaling variable
     uint public vestingPeriodInBlocks; 
     uint public minPremium; // Floor for the premium
 
+    //  Max a payout can be compared to the circulating supply, in hundreths. i.e. 50 = 0.5%
+    uint public maxPayoutPercent;
+
     address public treasury;
-    address public bondCalculator;
-    address public principleToken; // OHM-DAI LP
+    address public DAI;
     address public OHM;
 
-    uint256 public totalDebt; // Total principle value of outstanding bonds
+    uint256 public totalDebt; // Total value of outstanding bonds
 
     address public stakingContract;
     address public DAOWallet;
-    uint public DAOShare; // % = 1 / DAOShare
+    address public circulatingOHMContract; // calculates circulating supply
 
-    bool public isInitialized;
+    bool public useCircForDebtRatio; // Use circulating or total supply to calc total debt
 
-    function initialize ( address principleToken_, address OHM_ ) external onlyOwner() returns ( bool ) {
-        require( isInitialized == false );
-        principleToken = principleToken_;
+    constructor ( 
+        address DAI_, 
+        address OHM_,
+        address treasury_, 
+        address stakingContract_, 
+        address DAOWallet_, 
+        address circulatingOHMContract_
+    ) {
+        DAI = DAI_;
         OHM = OHM_;
-
-        isInitialized = true;
-
-        return true;
-    }
-
-    function setAddresses( address bondCalculator_, address treasury_, address stakingContract_, 
-    address DAOWallet_, uint DAOShare_ ) external onlyOwner() returns ( bool ) {
-        bondCalculator = bondCalculator_;
         treasury = treasury_;
         stakingContract = stakingContract_;
         DAOWallet = DAOWallet_;
-        DAOShare = DAOShare_;
-        return true;
+        circulatingOHMContract = circulatingOHMContract_;
     }
 
-    function setBondTerms( uint bondControlVariable_, uint vestingPeriodInBlocks_, uint minPremium_ ) 
+    /**
+        @notice set parameters of new bonds
+        @param bondControlVariable_ uint
+        @param vestingPeriodInBlocks_ uint
+        @param minPremium_ uint
+        @param maxPayout_ uint
+        @param DAOShare_ uint
+        @return bool
+     */
+    function setBondTerms( 
+        uint bondControlVariable_, 
+        uint vestingPeriodInBlocks_, 
+        uint minPremium_, 
+        uint maxPayout_,
+        uint DAOShare_ ) 
     external onlyOwner() returns ( bool ) {
         bondControlVariable = bondControlVariable_;
         vestingPeriodInBlocks = vestingPeriodInBlocks_;
         minPremium = minPremium_;
+        maxPayoutPercent = maxPayout_;
+        DAOShare = DAOShare_;
         return true;
     }
 
-    function getDepositorInfo( address depositorAddress_ ) external view override returns 
-    ( uint _principleValue, uint _payoutRemaining, uint _lastBlock, uint _vestingPeriod ) {
-        DepositInfo memory depositorInfo_ = depositorInfo[ depositorAddress_ ];
-        _principleValue = depositorInfo_.principleValue;
-        _payoutRemaining = depositorInfo_.payoutRemaining;
-        _lastBlock = depositorInfo_.lastBlock;
-        _vestingPeriod = depositorInfo_.vestingPeriod;
-    }
-
-    function depositBondPrinciple( uint amountToDeposit_ ) external override returns ( bool ) {
-        _depositBondPrinciple( amountToDeposit_ ) ;
-        return true;
-    }
-
-    function depositBondPrincipleWithPermit( uint amountToDeposit_, uint deadline, uint8 v, bytes32 r, bytes32 s ) 
+    /**
+        @notice deposit bond
+        @param amount_ uint
+        @param maxPremium_ uint
+        @param depositor_ address
+        @return bool
+     */
+    function deposit( 
+        uint amount_, 
+        uint maxPremium_,
+        address depositor_ ) 
     external override returns ( bool ) {
-        ERC20Permit( principleToken ).permit( msg.sender, address(this), amountToDeposit_, deadline, v, r, s );
-        _depositBondPrinciple( amountToDeposit_ ) ;
+        _deposit( amount_, maxPremium_, depositor_ ) ;
         return true;
     }
 
-    function _depositBondPrinciple( uint amountToDeposit_ ) internal returns ( bool ){
-        IERC20( principleToken ).safeTransferFrom( msg.sender, address(this), amountToDeposit_ );
+    /**
+        @notice deposit bond with permit
+        @param amount_ uint
+        @param maxPremium_ uint
+        @param depositor_ address
+        @param v uint8
+        @param r bytes32
+        @param s bytes32
+        @return bool
+     */
+    function depositWithPermit( 
+        uint amount_, 
+        uint maxPremium_,
+        address depositor_, 
+        uint deadline, 
+        uint8 v, 
+        bytes32 r, 
+        bytes32 s ) 
+    external override returns ( bool ) {
+        ERC20Permit( DAI ).permit( msg.sender, address(this), amount_, deadline, v, r, s );
+        _deposit( amount_, maxPremium_, depositor_ ) ;
+        return true;
+    }
 
-        uint principleValue_ = IBondingCalculator( bondCalculator )
-            .principleValuation( principleToken, amountToDeposit_ ).div( 1e9 );
+    /**
+        @notice deposit function like mint
+        @param amount_ uint
+        @param maxPremium_ uint
+        @param depositor_ address
+        @return bool
+     */
+    function _deposit( 
+        uint amount_, 
+        uint maxPremium_, 
+        address depositor_ ) 
+    internal returns ( bool ) {
+        // slippage protection
+        require( maxPremium_ >= _calcPremium(), "Slippage protection: more than max premium" );
 
-        uint payout_ = _calculateBondInterest( principleValue_ );
+        IERC20( DAI ).safeTransferFrom( msg.sender, address(this), amount_ );
 
-        require( payout_ >= 10000000, "Bond too small" );
+        uint value_ = amount_.div( 1e9 );
+        uint payout_ = calculateBondInterest( value_ );
 
-        totalDebt = totalDebt.add( principleValue_ );
+        require( payout_ >= 10000000, "Bond too small" ); // must be > 0.01 OHM
+        require( payout_ <= getMaxPayoutAmount(), "Bond too large");
 
-        uint profit_ = principleValue_.sub( payout_ );
+        totalDebt = totalDebt.add( value_ );
+
+        // Deposit token to mint OHM
+        IERC20( DAI ).approve( address( treasury ), amount_ );
+        ITreasury( treasury ).depositReserves( amount_ ); // Returns OHM
+
+        uint profit_ = value_.sub( payout_ );
         uint DAOProfit_ = FixedPoint.fraction( profit_, DAOShare ).decode();
-
-        IUniswapV2ERC20( principleToken ).approve( address( treasury ), amountToDeposit_ );
-
-        ITreasury( treasury ).depositPrinciple( amountToDeposit_ ); // Returns OHM
-
+        // Transfer profits to staking distributor and dao
         IERC20( OHM ).safeTransfer( stakingContract, profit_.sub( DAOProfit_ ) );
         IERC20( OHM ).safeTransfer( DAOWallet, DAOProfit_ );
 
-        depositorInfo[msg.sender] = DepositInfo({
-            principleValue: depositorInfo[msg.sender].principleValue.add( principleValue_ ),
-            payoutRemaining: depositorInfo[msg.sender].payoutRemaining.add( payout_ ),
+        // Store depositor info
+        depositorInfo[ depositor_ ] = DepositInfo({
+            value: depositorInfo[ depositor_ ].value.add( value_ ),
+            payoutRemaining: depositorInfo[ depositor_ ].payoutRemaining.add( payout_ ),
             lastBlock: block.number,
             vestingPeriod: vestingPeriodInBlocks
         });
         return true;
     }
 
-    function redeemBond() external override returns ( bool ) {
-        uint payoutRemaining_ = depositorInfo[msg.sender].payoutRemaining;
+    /** 
+        @notice redeem bond
+        @return bool
+     */ 
+    function redeem() external override returns ( bool ) {
+        uint payoutRemaining_ = depositorInfo[ msg.sender ].payoutRemaining;
 
         require( payoutRemaining_ > 0, "Sender is not due any interest." );
 
-        uint principleValue_ = depositorInfo[msg.sender].principleValue;
-
-        uint blocksSinceLast_ = block.number.sub( depositorInfo[msg.sender].lastBlock );
-
-        uint vestingPeriod_ = depositorInfo[msg.sender].vestingPeriod;
-
+        uint value_ = depositorInfo[ msg.sender ].value;
         uint percentVested_ = _calculatePercentVested( msg.sender );
 
-        if ( percentVested_ >= 10000 ) {
+        if ( percentVested_ >= 10000 ) { // if fully vested
             delete depositorInfo[msg.sender];
-
             IERC20( OHM ).safeTransfer( msg.sender, payoutRemaining_ );
-            totalDebt = totalDebt.sub( principleValue_ );
-
+            totalDebt = totalDebt.sub( value_ );
             return true;
         }
 
+        // calculate and send vested OHM
         uint payout_ = payoutRemaining_.mul( percentVested_ ).div( 10000 );
         IERC20( OHM ).safeTransfer( msg.sender, payout_ );
 
-        uint principleUsed_ = principleValue_.mul( percentVested_ ).div( 10000 );
-        totalDebt = totalDebt.sub( principleUsed_ );
+        // reduce total debt by vested amount
+        uint valueUsed_ = value_.mul( percentVested_ ).div( 10000 );
+        totalDebt = totalDebt.sub( valueUsed_ );
 
+        uint vestingPeriod_ = depositorInfo[msg.sender].vestingPeriod;
+        uint blocksSinceLast_ = block.number.sub( depositorInfo[ msg.sender ].lastBlock );
+
+        // store updated deposit info
         depositorInfo[msg.sender] = DepositInfo({
-            principleValue: principleValue_.sub( principleUsed_ ),
+            value: value_.sub( valueUsed_ ),
             payoutRemaining: payoutRemaining_.sub( payout_ ),
             lastBlock: block.number,
             vestingPeriod: vestingPeriod_.sub( blocksSinceLast_ )
@@ -1056,47 +833,105 @@ contract OHMPrincipleDepository is IPrincipleDepository, Ownable {
         return true;
     }
 
+    /**
+        @notice get info of depositor
+        @param address_ info
+     */
+    function getDepositorInfo( address address_ ) external view override returns ( 
+        uint _value, 
+        uint _payoutRemaining, 
+        uint _lastBlock, 
+        uint _vestingPeriod ) 
+    {
+        DepositInfo memory info = depositorInfo[ address_ ];
+        _value = info.value;
+        _payoutRemaining = info.payoutRemaining;
+        _lastBlock = info.lastBlock;
+        _vestingPeriod = info.vestingPeriod;
+    }
+
+    /**
+        @notice set contract to use circulating or total supply to calc debt
+     */
+    function toggleUseCircForDebtRatio() external onlyOwner() returns ( bool ) {
+        useCircForDebtRatio = !useCircForDebtRatio;
+        return true;
+    }
+
+    /**
+        @notice use maxPayoutPercent to determine maximum bond available
+        @return uint
+     */
+    function getMaxPayoutAmount() public view returns ( uint ) {
+        uint circulatingOHM = ICirculatingOHM( circulatingOHMContract ).OHMCirculatingSupply();
+
+        uint maxPayout = circulatingOHM.mul( maxPayoutPercent ).div( 10000 );
+
+        return maxPayout;
+    }
+
+    /**
+        @notice view function for _calculatePercentVested
+        @param depositor_ address
+        @return _percentVested uint
+     */
     function calculatePercentVested( address depositor_ ) external view override returns ( uint _percentVested ) {
         _percentVested = _calculatePercentVested( depositor_ );
     }
 
-    // In thousandths ( 1 = 0.01% )
+    /**
+        @notice calculate how far into vesting period depositor is
+        @param depositor_ address
+        @return _percentVested uint ( in hundreths - i.e. 10 = 0.1% )
+     */
     function _calculatePercentVested( address depositor_ ) internal view returns ( uint _percentVested ) {
-        uint blocksSinceLast_ = block.number.sub( depositorInfo[ depositor_ ].lastBlock );
-
         uint vestingPeriod_ = depositorInfo[ depositor_ ].vestingPeriod;
-
         if ( vestingPeriod_ > 0 ) {
+            uint blocksSinceLast_ = block.number.sub( depositorInfo[ depositor_ ].lastBlock );
             _percentVested = blocksSinceLast_.mul( 10000 ).div( vestingPeriod_ );
         } else {
             _percentVested = 0;
         }
     }
 
-    function calculatePendingPayout( address depositor_ ) external view override returns ( uint _pendingPayout ) {
+    /**
+        @notice calculate amount of OHM available for claim by depositor
+        @param depositor_ address
+        @return uint
+     */
+    function calculatePendingPayout( address depositor_ ) external view override returns ( uint ) {
         uint percentVested_ = _calculatePercentVested( depositor_ );
         uint payoutRemaining_ = depositorInfo[ depositor_ ].payoutRemaining;
         
-        _pendingPayout = payoutRemaining_.mul( percentVested_ ).div( 10000 );
+        uint pendingPayout = payoutRemaining_.mul( percentVested_ ).div( 10000 );
 
         if ( percentVested_ >= 10000 ) {
-            _pendingPayout = payoutRemaining_;
+            pendingPayout = payoutRemaining_;
         } 
+        return pendingPayout;
     }
 
-    function calculateBondInterest( uint amountToDeposit_ ) external view override returns ( uint _interestDue ) {
-        uint principleValue_ = IBondingCalculator( bondCalculator ).principleValuation( principleToken, amountToDeposit_ ).div( 1e9 );
-        _interestDue = _calculateBondInterest( principleValue_ );
+    /**
+        @notice calculate interest due to new bonder
+        @param value_ uint
+        @return _interestDue uint
+     */
+    function calculateBondInterest( uint value_ ) public view override returns ( uint _interestDue ) {
+        _interestDue = FixedPoint.fraction( value_, _calcPremium() ).decode112with18().div( 1e16 );
     }
 
-    function _calculateBondInterest( uint principleValue_ ) internal view returns ( uint _interestDue ) {
-        _interestDue = FixedPoint.fraction( principleValue_, _calcPremium() ).decode112with18().div( 1e16 );
-    }
-
+    /**
+        @notice view function for _calcPremium()
+        @return _premium uint
+     */
     function calculatePremium() external view override returns ( uint _premium ) {
         _premium = _calcPremium();
     }
 
+    /**
+        @notice calculate current bond premium
+        @return _premium uint
+     */
     function _calcPremium() internal view returns ( uint _premium ) {
         _premium = bondControlVariable.mul( _calcDebtRatio() ).add( uint(1000000000) ).div( 1e7 );
         if ( _premium < minPremium ) {
@@ -1104,12 +939,24 @@ contract OHMPrincipleDepository is IPrincipleDepository, Ownable {
         }
     }
 
-    function _calcDebtRatio() internal view returns ( uint _debtRatio ) {    
+    /**
+        @notice calculate current debt ratio
+        @return _debtRatio uint
+     */
+    function _calcDebtRatio() internal view returns ( uint _debtRatio ) {   
+        uint supply;
+
+        if( useCircForDebtRatio ) {
+            supply = ICirculatingOHM( circulatingOHMContract ).OHMCirculatingSupply();
+        } else {
+            supply = IERC20( OHM ).totalSupply();
+        }
+
         _debtRatio = FixedPoint.fraction( 
             // Must move the decimal to the right by 9 places to avoid math underflow error
             totalDebt.mul( 1e9 ), 
-            IERC20( OHM ).totalSupply()
+            supply
         ).decode112with18().div( 1e18 );
-        // Must move the decimal tot he left 18 places to account for the 9 places added above and the 19 signnificant digits added by FixedPoint.
+        // Must move the decimal to the left 18 places to account for the 9 places added above and the 19 signnificant digits added by FixedPoint.
     }
 }
