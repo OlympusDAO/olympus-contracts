@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
 library SafeMath {
@@ -105,190 +105,14 @@ library SafeMath {
     function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
         require(b > 0, errorMessage);
         uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+        assert(a == b * c + a % b); // There is no case in which this doesn't hold
 
         return c;
     }
-
-    /**
-     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
-     * Reverts when dividing by zero.
-     *
-     * Counterpart to Solidity's `%` operator. This function uses a `revert`
-     * opcode (which leaves remaining gas untouched) while Solidity uses an
-     * invalid opcode to revert (consuming all remaining gas).
-     *
-     * Requirements:
-     *
-     * - The divisor cannot be zero.
-     */
-    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
-        return mod(a, b, "SafeMath: modulo by zero");
-    }
-
-    /**
-     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
-     * Reverts with custom message when dividing by zero.
-     *
-     * Counterpart to Solidity's `%` operator. This function uses a `revert`
-     * opcode (which leaves remaining gas untouched) while Solidity uses an
-     * invalid opcode to revert (consuming all remaining gas).
-     *
-     * Requirements:
-     *
-     * - The divisor cannot be zero.
-     */
-    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b != 0, errorMessage);
-        return a % b;
-    }
-
-    // babylonian method (https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method)
-    function sqrrt(uint256 a) internal pure returns (uint c) {
-        if (a > 3) {
-            c = a;
-            uint b = add( div( a, 2), 1 );
-            while (b < c) {
-                c = b;
-                b = div( add( div( a, b ), b), 2 );
-            }
-        } else if (a != 0) {
-            c = 1;
-        }
-    }
-
-    /*
-     * Expects percentage to be trailed by 00,
-    */
-    function percentageAmount( uint256 total_, uint8 percentage_ ) internal pure returns ( uint256 percentAmount_ ) {
-        return div( mul( total_, percentage_ ), 1000 );
-    }
-
-    /*
-     * Expects percentage to be trailed by 00,
-    */
-    function substractPercentage( uint256 total_, uint8 percentageToSub_ ) internal pure returns ( uint256 result_ ) {
-        return sub( total_, div( mul( total_, percentageToSub_ ), 1000 ) );
-    }
-
-    function percentageOfTotal( uint256 part_, uint256 total_ ) internal pure returns ( uint256 percent_ ) {
-        return div( mul(part_, 100) , total_ );
-    }
-
-    /**
-     * Taken from Hypersonic https://github.com/M2629/HyperSonic/blob/main/Math.sol
-     * @dev Returns the average of two numbers. The result is rounded towards
-     * zero.
-     */
-    function average(uint256 a, uint256 b) internal pure returns (uint256) {
-        // (a + b) / 2 can overflow, so we distribute
-        return (a / 2) + (b / 2) + ((a % 2 + b % 2) / 2);
-    }
-
-    function quadraticPricing( uint256 payment_, uint256 multiplier_ ) internal pure returns (uint256) {
-        return sqrrt( mul( multiplier_, payment_ ) );
-    }
-
-  function bondingCurve( uint256 supply_, uint256 multiplier_ ) internal pure returns (uint256) {
-      return mul( multiplier_, supply_ );
-  }
-}
-
-interface IOwnable {
-
-  function owner() external view returns (address);
-
-  function renounceOwnership() external;
-  
-  function transferOwnership( address newOwner_ ) external;
-}
-
-contract Ownable is IOwnable {
-    
-  address internal _owner;
-
-  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-  /**
-   * @dev Initializes the contract setting the deployer as the initial owner.
-   */
-  constructor () {
-    _owner = msg.sender;
-    emit OwnershipTransferred( address(0), _owner );
-  }
-
-  /**
-   * @dev Returns the address of the current owner.
-   */
-  function owner() public view override returns (address) {
-    return _owner;
-  }
-
-  /**
-   * @dev Throws if called by any account other than the owner.
-   */
-  modifier onlyOwner() {
-    require( _owner == msg.sender, "Ownable: caller is not the owner" );
-    _;
-  }
-
-  /**
-   * @dev Leaves the contract without owner. It will not be possible to call
-   * `onlyOwner` functions anymore. Can only be called by the current owner.
-   *
-   * NOTE: Renouncing ownership will leave the contract without an owner,
-   * thereby removing any functionality that is only available to the owner.
-   */
-  function renounceOwnership() public virtual override onlyOwner() {
-    emit OwnershipTransferred( _owner, address(0) );
-    _owner = address(0);
-  }
-
-  /**
-   * @dev Transfers ownership of the contract to a new account (`newOwner`).
-   * Can only be called by the current owner.
-   */
-  function transferOwnership( address newOwner_ ) public virtual override onlyOwner() {
-    require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-    emit OwnershipTransferred( _owner, newOwner_ );
-    _owner = newOwner_;
-  }
-}
-
-interface IStaking {
-
-    function initialize(
-        address olyTokenAddress_,
-        address sOLY_,
-        address dai_
-    ) external;
-
-    //function stakeOLY(uint amountToStake_) external {
-    function stakeOLYWithPermit (
-        uint256 amountToStake_,
-        uint256 deadline_,
-        uint8 v_,
-        bytes32 r_,
-        bytes32 s_
-    ) external;
-
-    //function unstakeOLY( uint amountToWithdraw_) external {
-    function unstakeOLYWithPermit (
-        uint256 amountToWithdraw_,
-        uint256 deadline_,
-        uint8 v_,
-        bytes32 r_,
-        bytes32 s_
-    ) external;
-
-    function stakeOLY( uint amountToStake_ ) external returns ( bool );
-
-    function unstakeOLY( uint amountToWithdraw_ ) external returns ( bool );
-
-    function distributeOLYProfits() external;
 }
 
 interface IERC20 {
+    function decimals() external view returns (uint8);
   /**
    * @dev Returns the amount of tokens in existence.
    */
@@ -465,10 +289,6 @@ library Address {
      *
      * _Available since v3.1._
      */
-    // function functionCallWithValue(address target, bytes memory data, uint256 value, string memory errorMessage) internal returns (bytes memory) {
-    //     require(address(this).balance >= value, "Address: insufficient balance for call");
-    //     return _functionCallWithValue(target, data, value, errorMessage);
-    // }
     function functionCallWithValue(address target, bytes memory data, uint256 value, string memory errorMessage) internal returns (bytes memory) {
         require(address(this).balance >= value, "Address: insufficient balance for call");
         require(isContract(target), "Address: call to non-contract");
@@ -644,161 +464,249 @@ library SafeERC20 {
         }
     }
 }
-interface ITreasury {
 
-  function getBondingCalculator() external returns ( address );
-  function payDebt( address depositor_ ) external returns ( bool );
-  function getTimelockEndBlock() external returns ( uint );
-  function getManagedToken() external returns ( address );
-  function getDebtAmountDue() external returns ( uint );
-  function incurDebt( address principleToken_, uint principieTokenAmountDeposited_ ) external returns ( bool );
+interface IOwnable {
+  function manager() external view returns (address);
+
+  function renounceManagement() external;
+  
+  function pushManagement( address newOwner_ ) external;
+  
+  function pullManagement() external;
 }
 
-interface IOHMandsOHM {
-    function rebase(uint256 ohmProfit)
-        external
-        returns (uint256);
+contract Ownable is IOwnable {
+
+    address internal _owner;
+    address internal _newOwner;
+
+    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
+    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+
+    constructor () {
+        _owner = msg.sender;
+        emit OwnershipPushed( address(0), _owner );
+    }
+
+    function manager() public view override returns (address) {
+        return _owner;
+    }
+
+    modifier onlyManager() {
+        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+        _;
+    }
+
+    function renounceManagement() public virtual override onlyManager() {
+        emit OwnershipPushed( _owner, address(0) );
+        _owner = address(0);
+    }
+
+    function pushManagement( address newOwner_ ) public virtual override onlyManager() {
+        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipPushed( _owner, newOwner_ );
+        _newOwner = newOwner_;
+    }
+    
+    function pullManagement() public virtual override {
+        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
+        emit OwnershipPulled( _owner, _newOwner );
+        _owner = _newOwner;
+    }
+}
+
+interface IsOHM {
+    function rebase( uint256 ohmProfit_, uint epoch_) external returns (uint256);
 
     function circulatingSupply() external view returns (uint256);
 
     function balanceOf(address who) external view returns (uint256);
 
-    function permit(
-        address owner,
-        address spender,
-        uint256 amount,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
+    function gonsForBalance( uint amount ) external view returns ( uint );
+
+    function balanceForGons( uint gons ) external view returns ( uint );
+}
+
+interface IveOHM {
+    function mint( address to, uint amount ) external returns ( bool );
+    function burn( address from, uint amount ) external returns ( bool );
+}
+
+interface ILockedStaking {
+    function unlock( uint amount_, uint bonus_, address staker_ ) external returns ( bool );
+}
+
+interface ILPRewards {
+    function enter() external returns ( bool );
+    function exit() external returns ( bool );
+}
+
+interface IDistributor {
+    function distribute() external returns ( bool );
 }
 
 contract OlympusStaking is Ownable {
 
-  using SafeMath for uint256;
-  using SafeERC20 for IERC20;
+    using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
-  uint256 public epochLengthInBlocks;
+    address public immutable OHM;
+    address public immutable sOHM;
 
-  address public ohm;
-  address public sOHM;
-  uint256 public ohmToDistributeNextEpoch;
-
-  uint256 nextEpochBlock;
-
-  bool isInitialized;
-
-  modifier notInitialized() {
-    require( !isInitialized );
-    _;
-  }
-
-  function initialize(
-        address ohmTokenAddress_,
-        address sOHM_,
-        uint8 epochLengthInBlocks_
-    ) external onlyOwner() notInitialized() {
-        ohm = ohmTokenAddress_;
-        sOHM = sOHM_;
-        epochLengthInBlocks = epochLengthInBlocks_;
-        isInitialized = true;
+    uint public INDEX_GONS;
+    
+    struct Epoch {
+        uint length;
+        uint number;
+        uint endBlock;
+        uint distribute;
     }
+    Epoch public epoch;
 
-  function setEpochLengthintBlock( uint256 newEpochLengthInBlocks_ ) external onlyOwner() {
-    epochLengthInBlocks = newEpochLengthInBlocks_;
-  }
+    enum CONTRACTS { DISTRIBUTOR, LPREWARDS, LOCKER }
 
-  function _distributeOHMProfits() internal {
-    if( nextEpochBlock <= block.number ) {
-      IOHMandsOHM(sOHM).rebase(ohmToDistributeNextEpoch);
-      uint256 _ohmBalance = IOHMandsOHM(ohm).balanceOf(address(this));
-      uint256 _sohmSupply = IOHMandsOHM(sOHM).circulatingSupply();
-      ohmToDistributeNextEpoch = _ohmBalance.sub(_sohmSupply);
-      nextEpochBlock = nextEpochBlock.add( epochLengthInBlocks );
-    }
-  }
-
-  function _stakeOHM( uint256 amountToStake_ ) internal {
-    _distributeOHMProfits();
+    address public distributor;
+    address public LPRewards;
+    address public locker;
+    uint public totalBonus;
+    
+    constructor ( 
+        address _OHM, 
+        address _sOHM, 
+        uint _epochLength,
+        uint _firstEpochNumber,
+        uint _firstEpochBlock,
+        uint _indexBalance
+    ) {
+        require( _OHM != address(0) );
+        OHM = _OHM;
+        require( _sOHM != address(0) );
+        sOHM = _sOHM;
         
-    IERC20(ohm).safeTransferFrom(
-        msg.sender,
-        address(this),
-        amountToStake_
-      );
+        epoch = Epoch({
+            length: _epochLength,
+            number: _firstEpochNumber,
+            endBlock: _firstEpochBlock,
+            distribute: 0
+        });
 
-    IERC20(sOHM).safeTransfer(msg.sender, amountToStake_);
-  }
-
-  function stakeOHMWithPermit (
-        uint256 amountToStake_,
-        uint256 deadline_,
-        uint8 v_,
-        bytes32 r_,
-        bytes32 s_
-    ) external {
-
-        IOHMandsOHM(ohm).permit(
-            msg.sender,
-            address(this),
-            amountToStake_,
-            deadline_,
-            v_,
-            r_,
-            s_
-        );
-
-        _stakeOHM( amountToStake_ );
+        INDEX_GONS = IsOHM( sOHM ).gonsForBalance( _indexBalance );
     }
 
-    function stakeOHM( uint amountToStake_ ) external returns ( bool ) {
-
-      _stakeOHM( amountToStake_ );
-
-      return true;
-
-    }
-
-    function _unstakeOHM( uint256 amountToUnstake_ ) internal {
-
-      _distributeOHMProfits();
-
-      IERC20(sOHM).safeTransferFrom(
-            msg.sender,
-            address(this),
-            amountToUnstake_
-        );
-
-      IERC20(ohm).safeTransfer(msg.sender, amountToUnstake_);
-    }
-
-    function unstakeOHMWithPermit (
-        uint256 amountToWithdraw_,
-        uint256 deadline_,
-        uint8 v_,
-        bytes32 r_,
-        bytes32 s_
-    ) external {
+    /**
+        @notice get sOHM for OHM
+        @param _amount uint
+        @return bool
+     */
+    function stake( uint _amount, address _recipient ) external returns ( bool ) {
+        rebase();
         
-        IOHMandsOHM(sOHM).permit(
-            msg.sender,
-            address(this),
-            amountToWithdraw_,
-            deadline_,
-            v_,
-            r_,
-            s_
-        );
+        IERC20( OHM ).safeTransferFrom( msg.sender, address(this), _amount );
+        IERC20( sOHM ).safeTransfer( _recipient, _amount );
 
-        _unstakeOHM( amountToWithdraw_ );
-
+        return true;
     }
 
-    function unstakeOHM( uint amountToWithdraw_ ) external returns ( bool ) {
+    /**
+        @notice redeem sOHM for OHM
+        @param _amount uint
+        @return bool
+     */
+    function unstake( uint _amount, address _recipient ) external returns ( bool ) {
+        rebase();
 
-        _unstakeOHM( amountToWithdraw_ );
+        IERC20( sOHM ).safeTransferFrom( msg.sender, address(this), _amount );
+        IERC20( OHM ).safeTransfer( _recipient, _amount );
 
+        return true;
+    }
+
+    /**
+        @notice returns the sOHM index, which tracks rebase growth
+        @return uint
+     */
+    function index() public view returns ( uint ) {
+        return IsOHM( sOHM ).balanceForGons( INDEX_GONS );
+    }
+
+    /**
+        @notice trigger rebase if epoch over
+        @return bool
+     */
+    function rebase() public returns ( bool ) {
+        if( epoch.endBlock <= block.number ) {
+
+            if( LPRewards != address(0) ) {
+                ILPRewards( LPRewards ).enter();
+                IsOHM( sOHM ).rebase( epoch.distribute, epoch.number );
+                ILPRewards( LPRewards ).exit();
+            } else {
+                IsOHM( sOHM ).rebase( epoch.distribute, epoch.number );
+            }
+            
+            if ( distributor != address(0) ) {
+                IDistributor( distributor ).distribute();
+            }
+
+            uint balance = contractBalance();
+            uint staked = IsOHM( sOHM ).circulatingSupply();
+
+            if( balance <= staked ) {
+                epoch.distribute = 0;
+            } else {
+                epoch.distribute = balance.sub( staked );
+            }
+            epoch.endBlock = epoch.endBlock.add( epoch.length );
+            epoch.number++;
+        }
+        return true;
+    }
+
+    /**
+        @notice returns contract OHM holdings, including bonuses provided
+        @return uint
+     */
+    function contractBalance() public view returns ( uint ) {
+        return IERC20( OHM ).balanceOf( address(this) ).add( totalBonus );
+    }
+
+    /**
+        @notice provide bonus to locked staking contract
+        @param _amount uint
+        @return bool
+     */
+    function giveBonusToLocker( uint _amount ) external returns ( bool ) {
+        require( msg.sender == locker );
+        totalBonus = totalBonus.add( _amount );
+        IERC20( sOHM ).safeTransfer( locker, _amount );
+        return true;
+    }
+
+    /**
+        @notice reclaim bonus from locked staking contract
+        @param _amount uint
+        @return bool
+     */
+    function reclaimBonusFromLocker( uint _amount ) external returns ( bool ) {
+        require( msg.sender == locker );
+        totalBonus = totalBonus.sub( _amount );
+        IERC20( sOHM ).safeTransferFrom( locker, address(this), _amount );
+        return true;
+    }
+
+    /**
+        @notice sets the contract address for LP staking
+        @param _contract address
+        @return bool
+     */
+    function setContract( CONTRACTS _contract, address _address ) external onlyManager() returns ( bool ) {
+        if( _contract == CONTRACTS.DISTRIBUTOR ) { // 0
+            distributor = _address;
+        } else if ( _contract == CONTRACTS.LPREWARDS ) {
+            LPRewards = _address;
+        } else if ( _contract == CONTRACTS.LOCKER ) {
+            locker = _address;
+        }
         return true;
     }
 }

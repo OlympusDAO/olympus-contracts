@@ -1,48 +1,53 @@
-/**
- *Submitted for verification at Etherscan.io on 2021-04-21
-*/
-
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
 interface IOwnable {
+  function manager() external view returns (address);
 
-    function owner() external view returns (address);
-
-    function renounceOwnership() external;
+  function renounceManagement() external;
   
-    function transferOwnership( address newOwner_ ) external;
+  function pushManagement( address newOwner_ ) external;
+  
+  function pullManagement() external;
 }
 
 contract Ownable is IOwnable {
-    
-    address internal _owner;
 
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    address internal _owner;
+    address internal _newOwner;
+
+    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
+    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
 
     constructor () {
         _owner = msg.sender;
-        emit OwnershipTransferred( address(0), _owner );
+        emit OwnershipPushed( address(0), _owner );
     }
 
-    function owner() public view override returns (address) {
+    function manager() public view override returns (address) {
         return _owner;
     }
 
-    modifier onlyOwner() {
+    modifier onlyManager() {
         require( _owner == msg.sender, "Ownable: caller is not the owner" );
         _;
     }
 
-    function renounceOwnership() public virtual override onlyOwner() {
-        emit OwnershipTransferred( _owner, address(0) );
+    function renounceManagement() public virtual override onlyManager() {
+        emit OwnershipPushed( _owner, address(0) );
         _owner = address(0);
     }
 
-    function transferOwnership( address newOwner_ ) public virtual override onlyOwner() {
+    function pushManagement( address newOwner_ ) public virtual override onlyManager() {
         require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferred( _owner, newOwner_ );
-        _owner = newOwner_;
+        emit OwnershipPushed( _owner, newOwner_ );
+        _newOwner = newOwner_;
+    }
+    
+    function pullManagement() public virtual override {
+        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
+        emit OwnershipPulled( _owner, _newOwner );
+        _owner = _newOwner;
     }
 }
 
@@ -108,31 +113,6 @@ library SafeMath {
             c = 1;
         }
     }
-
-    function percentageAmount( uint256 total_, uint8 percentage_ ) internal pure returns ( uint256 percentAmount_ ) {
-        return div( mul( total_, percentage_ ), 1000 );
-    }
-
-    function substractPercentage( uint256 total_, uint8 percentageToSub_ ) internal pure returns ( uint256 result_ ) {
-        return sub( total_, div( mul( total_, percentageToSub_ ), 1000 ) );
-    }
-
-    function percentageOfTotal( uint256 part_, uint256 total_ ) internal pure returns ( uint256 percent_ ) {
-        return div( mul(part_, 100) , total_ );
-    }
-
-    function average(uint256 a, uint256 b) internal pure returns (uint256) {
-        // (a + b) / 2 can overflow, so we distribute
-        return (a / 2) + (b / 2) + ((a % 2 + b % 2) / 2);
-    }
-
-    function quadraticPricing( uint256 payment_, uint256 multiplier_ ) internal pure returns (uint256) {
-        return sqrrt( mul( multiplier_, payment_ ) );
-    }
-
-  function bondingCurve( uint256 supply_, uint256 multiplier_ ) internal pure returns (uint256) {
-      return mul( multiplier_, supply_ );
-  }
 }
 
 library Address {
@@ -605,358 +585,407 @@ library FixedPoint {
 }
 
 interface ITreasury {
-    function depositReserves( uint depositAmount_ ) external returns ( bool );
+    function deposit( uint _amount, address _token, uint _profit ) external returns ( bool );
 }
 
-interface ICirculatingOHM {
-    function OHMCirculatingSupply() external view returns ( uint );
+interface IBondCalculator {
+    function valuation( address _LP, uint _amount ) external view returns ( uint );
+    function markdown( address _LP ) external view returns ( uint );
 }
 
-interface IBondDepo {
-
-    function getDepositorInfo( address _depositorAddress_ ) external view returns ( uint principleValue_, uint paidOut_, uint maxPayout, uint vestingPeriod_ );
-    
-    function deposit( uint256 amount_, uint maxPremium_, address depositor_ ) external returns ( bool );
-
-    function depositWithPermit( uint256 amount_, uint maxPremium_, address depositor_, uint256 deadline, uint8 v, bytes32 r, bytes32 s ) external returns ( bool );
-
-    function redeem() external returns ( bool );
-
-    function calculatePercentVested( address depositor_ ) external view returns ( uint _percentVested );
-    
-    function calculatePendingPayout( address depositor_ ) external view returns ( uint _pendingPayout );
-      
-    function calculateBondInterest( uint value_ ) external view returns ( uint _interestDue );
-        
-    function calculatePremium() external view returns ( uint _premium );
+interface IStaking {
+    function stake( uint _amount, address _recipient ) external returns ( bool );
 }
 
-
-
-contract OlympusDAIDepository is IBondDepo, Ownable {
+contract OlympusBondDepository is Ownable {
 
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
 
-    struct DepositInfo {
-        uint value; // Value
-        uint payoutRemaining; // OHM remaining to be paid
-        uint lastBlock; // Last interaction
-        uint vestingPeriod; // Blocks left to vest
-    }
+    event BondCreated( uint deposit, uint indexed payout, uint indexed expires, uint indexed priceInUSD );
+    event BondRedeemed( uint indexed payout, uint indexed remaining );
+    event BondPriceChanged( uint indexed priceInUSD, uint indexed internalPrice, uint indexed debtRatio );
 
-    mapping( address => DepositInfo ) public depositorInfo; 
+    address public immutable OHM; // Token given as payment for bond
+    address public immutable principle; // Token used to create bond
+    address public immutable treasury; // Mints OHM when receives principle
+    address public immutable DAO; // Receives profit share from bond
 
-    uint public DAOShare; // % = 1 / DAOShare
-    uint public bondControlVariable; // Premium scaling variable
-    uint public vestingPeriodInBlocks; 
-    uint public minPremium; // Floor for the premium
-
-    //  Max a payout can be compared to the circulating supply, in hundreths. i.e. 50 = 0.5%
-    uint public maxPayoutPercent;
-
-    address public treasury;
-    address public DAI;
-    address public OHM;
-
-    uint256 public totalDebt; // Total value of outstanding bonds
-
-    address public stakingContract;
-    address public DAOWallet;
-    address public circulatingOHMContract; // calculates circulating supply
-
-    bool public useCircForDebtRatio; // Use circulating or total supply to calc total debt
+    bool public immutable isLiquidityBond; // LP and Reserve bonds are treated slightly different
+    address public immutable bondCalculator; // Calculates value of LP tokens
+    address public staking;
 
     constructor ( 
-        address DAI_, 
-        address OHM_,
-        address treasury_, 
-        address stakingContract_, 
-        address DAOWallet_, 
-        address circulatingOHMContract_
+        address _OHM,
+        address _principle,
+        address _treasury, 
+        address _DAO, 
+        address _bondCalculator,
+        uint _controlVariable,
+        uint _minimumPrice
     ) {
-        DAI = DAI_;
-        OHM = OHM_;
-        treasury = treasury_;
-        stakingContract = stakingContract_;
-        DAOWallet = DAOWallet_;
-        circulatingOHMContract = circulatingOHMContract_;
+        require( _OHM != address(0) );
+        OHM = _OHM;
+        require( _principle != address(0) );
+        principle = _principle;
+        require( _treasury != address(0) );
+        treasury = _treasury;
+        require( _DAO != address(0) );
+        DAO = _DAO;
+        // bondCalculator should be address(0) if not LP bond
+        bondCalculator = _bondCalculator;
+        isLiquidityBond = ( _bondCalculator != address(0) );
+        terms.controlVariable = _controlVariable;
+        terms.minimumPrice = _minimumPrice;
     }
+
+    /*
+        Bond holder information
+     */
+
+    struct Bond {
+        uint valueRemaining; // value of principle given
+        uint payoutRemaining; // OHM remaining to be paid
+        uint vestingPeriod; // Blocks left to vest
+        uint lastBlock; // Last interaction
+        uint pricePaid; // In DAI, for front end viewing
+    }
+    mapping( address => Bond ) public bondInfo; // Stores bond information for depositor
+
+    /*
+        New bond terms
+     */
+
+    struct Terms {
+        uint controlVariable; // scaling variable for price
+        uint vestingTerm; // in blocks
+        uint minimumPrice; // vs principle value
+        uint maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
+        uint fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
+    }
+    Terms public terms; // Stores terms for new bonds
+    
+    // Total value of outstanding bonds
+    uint public totalDebt; // Used for pricing
 
     /**
         @notice set parameters of new bonds
-        @param bondControlVariable_ uint
-        @param vestingPeriodInBlocks_ uint
-        @param minPremium_ uint
-        @param maxPayout_ uint
-        @param DAOShare_ uint
+        @param _vestingTerm uint
+        @param _maxPayout uint
+        @param _fee uint
         @return bool
      */
-    function setBondTerms( 
-        uint bondControlVariable_, 
-        uint vestingPeriodInBlocks_, 
-        uint minPremium_, 
-        uint maxPayout_,
-        uint DAOShare_ ) 
-    external onlyOwner() returns ( bool ) {
-        bondControlVariable = bondControlVariable_;
-        vestingPeriodInBlocks = vestingPeriodInBlocks_;
-        minPremium = minPremium_;
-        maxPayoutPercent = maxPayout_;
-        DAOShare = DAOShare_;
+    function setBondTerms ( 
+        uint _vestingTerm, // Length in blocks for bond to vest
+        uint _maxPayout, // Maximum amount (as % of circ supply) a bond can pay out
+        uint _fee // Amount of profits DAO takes
+    ) external onlyManager() returns ( bool ) {
+        require( _vestingTerm >= 10000, "Vesting must be longer than 36 hours" );
+        require( _maxPayout <= 1000, "Payout cannot be above 1 percent" );
+        require( _fee <= 10000, "DAO fee cannot exceed payout" );
+
+        terms.vestingTerm = _vestingTerm;
+        terms.maxPayout = _maxPayout;
+        terms.fee = _fee;
+
         return true;
     }
+
+    /**
+        Info for incremental adjustments to control variable 
+     */
+
+    struct Adjust {
+        bool add;
+        uint rate;
+        uint target;
+    }
+    Adjust public adjustment;
+
+    /**
+        @notice set control variable adjustment
+        @param _addition bool
+        @param _increment uint
+        @param _target uint
+     */
+    function setAdjustment ( 
+        bool _addition,
+        uint _increment, 
+        uint _target 
+    ) external onlyManager() {
+        require( _increment <= terms.controlVariable.mul( 25 ).div( 1000 ), "Increment too large" );
+
+        adjustment = Adjust({
+            add: _addition,
+            rate: _increment,
+            target: _target
+        });
+    }
+
 
     /**
         @notice deposit bond
-        @param amount_ uint
-        @param maxPremium_ uint
-        @param depositor_ address
-        @return bool
+        @param _amount uint
+        @param _maxPrice uint
+        @param _depositor address
+        @return uint
      */
     function deposit( 
-        uint amount_, 
-        uint maxPremium_,
-        address depositor_ ) 
-    external override returns ( bool ) {
-        _deposit( amount_, maxPremium_, depositor_ ) ;
-        return true;
-    }
+        uint _amount, 
+        uint _maxPrice,
+        address _depositor
+    ) external returns ( uint ) {
+        require( _depositor != address(0), "Invalid address" );
+        
+        uint priceInUSD = bondPriceInUSD(); // Stored in bond info
+        uint nativePrice = _bondPrice();
 
-    /**
-        @notice deposit bond with permit
-        @param amount_ uint
-        @param maxPremium_ uint
-        @param depositor_ address
-        @param v uint8
-        @param r bytes32
-        @param s bytes32
-        @return bool
-     */
-    function depositWithPermit( 
-        uint amount_, 
-        uint maxPremium_,
-        address depositor_, 
-        uint deadline, 
-        uint8 v, 
-        bytes32 r, 
-        bytes32 s ) 
-    external override returns ( bool ) {
-        ERC20Permit( DAI ).permit( msg.sender, address(this), amount_, deadline, v, r, s );
-        _deposit( amount_, maxPremium_, depositor_ ) ;
-        return true;
-    }
+        require( _maxPrice >= nativePrice, "Slippage limit: more than max price" ); // slippage protection
 
-    /**
-        @notice deposit function like mint
-        @param amount_ uint
-        @param maxPremium_ uint
-        @param depositor_ address
-        @return bool
-     */
-    function _deposit( 
-        uint amount_, 
-        uint maxPremium_, 
-        address depositor_ ) 
-    internal returns ( bool ) {
-        // slippage protection
-        require( maxPremium_ >= _calcPremium(), "Slippage protection: more than max premium" );
+        uint value;
+        if( isLiquidityBond ) { // LP is calculated at risk-free value
+            value = IBondCalculator( bondCalculator ).valuation( principle, _amount ); 
+        } else { // reserve is converted to OHM decimals
+            value = _amount.mul( 10 ** IERC20( OHM ).decimals() ).div( 10 ** IERC20( principle ).decimals() ); 
+        }
+        uint payout = payoutFor( value ); // payout to bonder is computed
 
-        IERC20( DAI ).safeTransferFrom( msg.sender, address(this), amount_ );
+        require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
+        require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
 
-        uint value_ = amount_.div( 1e9 );
-        uint payout_ = calculateBondInterest( value_ );
+        // calculate profits
+        uint fee = payout.mul( terms.fee ).div( 10000 );
+        uint profit = value.sub( payout ).sub( fee );
 
-        require( payout_ >= 10000000, "Bond too small" ); // must be > 0.01 OHM
-        require( payout_ <= getMaxPayoutAmount(), "Bond too large");
-
-        totalDebt = totalDebt.add( value_ );
-
-        // Deposit token to mint OHM
-        IERC20( DAI ).approve( address( treasury ), amount_ );
-        ITreasury( treasury ).depositReserves( amount_ ); // Returns OHM
-
-        uint profit_ = value_.sub( payout_ );
-        uint DAOProfit_ = FixedPoint.fraction( profit_, DAOShare ).decode();
-        // Transfer profits to staking distributor and dao
-        IERC20( OHM ).safeTransfer( stakingContract, profit_.sub( DAOProfit_ ) );
-        IERC20( OHM ).safeTransfer( DAOWallet, DAOProfit_ );
-
-        // Store depositor info
-        depositorInfo[ depositor_ ] = DepositInfo({
-            value: depositorInfo[ depositor_ ].value.add( value_ ),
-            payoutRemaining: depositorInfo[ depositor_ ].payoutRemaining.add( payout_ ),
+        /**
+            principle is transferred in
+            approved and
+            deposited into the treasury
+            returning (_amount - profit) OHM
+         */
+        IERC20( principle ).safeTransferFrom( msg.sender, address(this), _amount );
+        IERC20( principle ).approve( address( treasury ), _amount );
+        ITreasury( treasury ).deposit( _amount, principle, profit );
+        
+        // fee is transferred to dao 
+        IERC20( OHM ).safeTransfer( DAO, fee ); 
+        
+        // total debt is increased
+        totalDebt = totalDebt.add( value ); 
+                
+        // depositor info is stored
+        Bond memory info = bondInfo[ _depositor ];
+        bondInfo[ _depositor ] = Bond({ 
+            valueRemaining: info.valueRemaining.add( value ), // add on to previous 
+            payoutRemaining: info.payoutRemaining.add( payout ), // amounts if they exist
+            vestingPeriod: terms.vestingTerm,
             lastBlock: block.number,
-            vestingPeriod: vestingPeriodInBlocks
+            pricePaid: priceInUSD
         });
-        return true;
+
+        // emit indexed events 
+        emit BondCreated( _amount, payout, block.number.add( terms.vestingTerm ), priceInUSD );
+        emit BondPriceChanged( bondPriceInUSD(), _bondPrice(), debtRatio() );
+
+        adjust(); // adjustment control variable
+        return payout; 
     }
 
     /** 
-        @notice redeem bond
-        @return bool
+        @notice redeem all unvested bonds
+        @param _stake bool
+        @return payout_ uint
      */ 
-    function redeem() external override returns ( bool ) {
-        uint payoutRemaining_ = depositorInfo[ msg.sender ].payoutRemaining;
+    function redeem( bool _stake ) external returns ( uint ) {        
+        Bond memory info = bondInfo[ msg.sender ];
+        uint percentVested = percentVestedFor( msg.sender ); // (blocks since last interaction / vesting term remaining)
 
-        require( payoutRemaining_ > 0, "Sender is not due any interest." );
+        if ( percentVested >= 10000 ) { // if fully vested
+            delete bondInfo[msg.sender]; // delete user info
+            totalDebt = totalDebt.sub( info.valueRemaining ); // reduce debt
+            emit BondRedeemed( info.payoutRemaining, 0 ); // emit bond data
+            return stakeOrSend( _stake, info.payoutRemaining ); // pay user everything due
 
-        uint value_ = depositorInfo[ msg.sender ].value;
-        uint percentVested_ = _calculatePercentVested( msg.sender );
+        } else { // if unfinished
+            // calculate payout vested
+            uint value = info.valueRemaining.mul( percentVested ).div( 10000 );
+            uint payout = info.payoutRemaining.mul( percentVested ).div( 10000 );
+            uint blocksSinceLast = block.number.sub( info.lastBlock );
 
-        if ( percentVested_ >= 10000 ) { // if fully vested
-            delete depositorInfo[msg.sender];
-            IERC20( OHM ).safeTransfer( msg.sender, payoutRemaining_ );
-            totalDebt = totalDebt.sub( value_ );
-            return true;
+            // store updated deposit info
+            bondInfo[ msg.sender ] = Bond({
+                valueRemaining: info.valueRemaining.sub( value ),
+                payoutRemaining: info.payoutRemaining.sub( payout ),
+                vestingPeriod: info.vestingPeriod.sub( blocksSinceLast ),
+                lastBlock: block.number,
+                pricePaid: info.pricePaid
+            });
+
+            // reduce total debt by vested amount
+            totalDebt = totalDebt.sub( value );
+
+            emit BondRedeemed( payout, bondInfo[ msg.sender ].payoutRemaining );
+            return stakeOrSend( _stake, payout );
         }
-
-        // calculate and send vested OHM
-        uint payout_ = payoutRemaining_.mul( percentVested_ ).div( 10000 );
-        IERC20( OHM ).safeTransfer( msg.sender, payout_ );
-
-        // reduce total debt by vested amount
-        uint valueUsed_ = value_.mul( percentVested_ ).div( 10000 );
-        totalDebt = totalDebt.sub( valueUsed_ );
-
-        uint vestingPeriod_ = depositorInfo[msg.sender].vestingPeriod;
-        uint blocksSinceLast_ = block.number.sub( depositorInfo[ msg.sender ].lastBlock );
-
-        // store updated deposit info
-        depositorInfo[msg.sender] = DepositInfo({
-            value: value_.sub( valueUsed_ ),
-            payoutRemaining: payoutRemaining_.sub( payout_ ),
-            lastBlock: block.number,
-            vestingPeriod: vestingPeriod_.sub( blocksSinceLast_ )
-        });
-        return true;
     }
 
     /**
-        @notice get info of depositor
-        @param address_ info
-     */
-    function getDepositorInfo( address address_ ) external view override returns ( 
-        uint _value, 
-        uint _payoutRemaining, 
-        uint _lastBlock, 
-        uint _vestingPeriod ) 
-    {
-        DepositInfo memory info = depositorInfo[ address_ ];
-        _value = info.value;
-        _payoutRemaining = info.payoutRemaining;
-        _lastBlock = info.lastBlock;
-        _vestingPeriod = info.vestingPeriod;
-    }
-
-    /**
-        @notice set contract to use circulating or total supply to calc debt
-     */
-    function toggleUseCircForDebtRatio() external onlyOwner() returns ( bool ) {
-        useCircForDebtRatio = !useCircForDebtRatio;
-        return true;
-    }
-
-    /**
-        @notice use maxPayoutPercent to determine maximum bond available
+        @notice allow user to stake payout automatically
+        @param _stake bool
+        @param _amount uint
         @return uint
      */
-    function getMaxPayoutAmount() public view returns ( uint ) {
-        uint circulatingOHM = ICirculatingOHM( circulatingOHMContract ).OHMCirculatingSupply();
+    function stakeOrSend( bool _stake, uint _amount ) internal returns ( uint ) {
+        emit BondPriceChanged( bondPriceInUSD(), _bondPrice(), debtRatio() );
 
-        uint maxPayout = circulatingOHM.mul( maxPayoutPercent ).div( 10000 );
-
-        return maxPayout;
+        if ( !_stake ) { // if user does not want to stake
+            IERC20( OHM ).transfer( msg.sender, _amount ); // send payout
+        } else { // if user wants to stake
+            IERC20( OHM ).approve( staking, _amount );
+            IStaking( staking ).stake( _amount, msg.sender ); // stake payout
+        }
+        return _amount;
     }
 
     /**
-        @notice view function for _calculatePercentVested
-        @param depositor_ address
-        @return _percentVested uint
+        @notice makes incremental adjustment to control variable
      */
-    function calculatePercentVested( address depositor_ ) external view override returns ( uint _percentVested ) {
-        _percentVested = _calculatePercentVested( depositor_ );
+    function adjust() internal {
+        if( adjustment.rate != 0 ) {
+            if ( adjustment.add ) {
+                terms.controlVariable = terms.controlVariable.add( adjustment.rate );
+                if ( terms.controlVariable >= adjustment.target ) {
+                    adjustment.rate = 0;
+                }
+            } else {
+                terms.controlVariable = terms.controlVariable.sub( adjustment.rate );
+                if ( terms.controlVariable <= adjustment.target ) {
+                    adjustment.rate = 0;
+                }
+            }
+        }
     }
 
     /**
-        @notice calculate how far into vesting period depositor is
-        @param depositor_ address
-        @return _percentVested uint ( in hundreths - i.e. 10 = 0.1% )
+        @notice determine maximum bond size
+        @return uint
      */
-    function _calculatePercentVested( address depositor_ ) internal view returns ( uint _percentVested ) {
-        uint vestingPeriod_ = depositorInfo[ depositor_ ].vestingPeriod;
-        if ( vestingPeriod_ > 0 ) {
-            uint blocksSinceLast_ = block.number.sub( depositorInfo[ depositor_ ].lastBlock );
-            _percentVested = blocksSinceLast_.mul( 10000 ).div( vestingPeriod_ );
+    function maxPayout() public view returns ( uint ) {
+        return IERC20( OHM ).totalSupply().mul( terms.maxPayout ).div( 100000 );
+    }
+
+    /**
+        @notice calculate current bond premium
+        @return price_ uint
+     */
+    function bondPrice() public view returns ( uint price_ ) {        
+        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e7 );
+        if ( price_ < terms.minimumPrice ) {
+            price_ = terms.minimumPrice;
+        }
+    }
+
+    /**
+        @notice calculate current bond price and remove floor if above
+        @return price_ uint
+     */
+    function _bondPrice() internal returns ( uint price_ ) {
+        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e7 );
+        if ( price_ < terms.minimumPrice ) {
+            price_ = terms.minimumPrice;        
+        } else if ( terms.minimumPrice != 0 ) {
+            terms.minimumPrice = 0;
+        }
+    }
+
+    /**
+        @notice converts bond price to DAI value
+        @return price_ uint
+     */
+    function bondPriceInUSD() public view returns ( uint price_ ) {
+        if( isLiquidityBond ) {
+            price_ = bondPrice().mul( IBondCalculator( bondCalculator ).markdown( principle ) ).div( 100 );
         } else {
-            _percentVested = 0;
+            price_ = bondPrice().mul( 10 ** IERC20( principle ).decimals() ).div( 100 );
+        }
+    }
+
+    /**
+        @notice calculate current ratio of payouts to OHM supply
+        @return debtRatio_ uint
+     */
+
+    function debtRatio() public view returns ( uint debtRatio_ ) {   
+        uint supply = IERC20( OHM ).totalSupply();
+        debtRatio_ = FixedPoint.fraction( 
+            totalDebt.mul( 1e9 ), 
+            supply
+        ).decode112with18().div( 1e18 );
+    }
+
+    /**
+        @notice calculate interest due for new bond
+        @param _value uint
+        @return uint
+     */
+    function payoutFor( uint _value ) public view returns ( uint ) {
+        return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e16 );
+    }
+
+    /**
+        @notice calculate how far into vesting a depositor is
+        @param _depositor address
+        @return percentVested_ uint
+     */
+    function percentVestedFor( address _depositor ) public view returns ( uint percentVested_ ) {
+        Bond memory bond = bondInfo[ _depositor ];
+        uint blocksSinceLast = block.number.sub( bond.lastBlock );
+        uint vestingPeriod = bond.vestingPeriod;
+
+        if ( vestingPeriod > 0 ) {
+            percentVested_ = blocksSinceLast.mul( 10000 ).div( vestingPeriod );
+        } else {
+            percentVested_ = 0;
         }
     }
 
     /**
         @notice calculate amount of OHM available for claim by depositor
-        @param depositor_ address
-        @return uint
+        @param _depositor address
+        @return pendingPayout_ uint
      */
-    function calculatePendingPayout( address depositor_ ) external view override returns ( uint ) {
-        uint percentVested_ = _calculatePercentVested( depositor_ );
-        uint payoutRemaining_ = depositorInfo[ depositor_ ].payoutRemaining;
-        
-        uint pendingPayout = payoutRemaining_.mul( percentVested_ ).div( 10000 );
+    function pendingPayoutFor( address _depositor ) external view returns ( uint pendingPayout_ ) {
+        uint percentVested = percentVestedFor( _depositor );
+        uint payoutRemaining = bondInfo[ _depositor ].payoutRemaining;
 
-        if ( percentVested_ >= 10000 ) {
-            pendingPayout = payoutRemaining_;
-        } 
-        return pendingPayout;
-    }
-
-    /**
-        @notice calculate interest due to new bonder
-        @param value_ uint
-        @return _interestDue uint
-     */
-    function calculateBondInterest( uint value_ ) public view override returns ( uint _interestDue ) {
-        _interestDue = FixedPoint.fraction( value_, _calcPremium() ).decode112with18().div( 1e16 );
-    }
-
-    /**
-        @notice view function for _calcPremium()
-        @return _premium uint
-     */
-    function calculatePremium() external view override returns ( uint _premium ) {
-        _premium = _calcPremium();
-    }
-
-    /**
-        @notice calculate current bond premium
-        @return _premium uint
-     */
-    function _calcPremium() internal view returns ( uint _premium ) {
-        _premium = bondControlVariable.mul( _calcDebtRatio() ).add( uint(1000000000) ).div( 1e7 );
-        if ( _premium < minPremium ) {
-            _premium = minPremium;
-        }
-    }
-
-    /**
-        @notice calculate current debt ratio
-        @return _debtRatio uint
-     */
-    function _calcDebtRatio() internal view returns ( uint _debtRatio ) {   
-        uint supply;
-
-        if( useCircForDebtRatio ) {
-            supply = ICirculatingOHM( circulatingOHMContract ).OHMCirculatingSupply();
+        if ( percentVested >= 10000 ) {
+            pendingPayout_ = payoutRemaining;
         } else {
-            supply = IERC20( OHM ).totalSupply();
+            pendingPayout_ = payoutRemaining.mul( percentVested ).div( 10000 );
         }
+    }
 
-        _debtRatio = FixedPoint.fraction( 
-            // Must move the decimal to the right by 9 places to avoid math underflow error
-            totalDebt.mul( 1e9 ), 
-            supply
-        ).decode112with18().div( 1e18 );
-        // Must move the decimal to the left 18 places to account for the 9 places added above and the 19 signnificant digits added by FixedPoint.
+    /**
+        @notice initializes auto-stake redemptions
+        @param _staking address
+        @return bool
+     */
+    function setStaking( address _staking ) external onlyManager() returns ( bool ) {
+        require( _staking != address(0) );
+        require( staking == address(0) );
+        staking = _staking;
+        return true;
+    }
+
+    /**
+        @notice allow anyone to send lost tokens (excluding principle or OHM) to the DAO
+        @return bool
+     */
+    function recoverLostToken( address _token ) external returns ( bool ) {
+        require( _token != OHM );
+        require( _token != principle );
+        IERC20( _token ).safeTransfer( DAO, IERC20( _token ).balanceOf( address(this) ) );
+        return true;
     }
 }
