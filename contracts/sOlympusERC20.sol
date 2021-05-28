@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
 
@@ -433,67 +433,6 @@ library Address {
         return string(_addr);
 
     }
-}
-
-interface IOwnable {
-
-  function owner() external view returns (address);
-
-  function renounceOwnership() external;
-  
-  function transferOwnership( address newOwner_ ) external;
-}
-
-contract Ownable is IOwnable {
-    
-  address internal _owner;
-
-  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-  /**
-   * @dev Initializes the contract setting the deployer as the initial owner.
-   */
-  constructor () {
-    _owner = msg.sender;
-    emit OwnershipTransferred( address(0), _owner );
-  }
-
-  /**
-   * @dev Returns the address of the current owner.
-   */
-  function owner() public view override returns (address) {
-    return _owner;
-  }
-
-  /**
-   * @dev Throws if called by any account other than the owner.
-   */
-  modifier onlyOwner() {
-    require( _owner == msg.sender, "Ownable: caller is not the owner" );
-    _;
-  }
-
-  /**
-   * @dev Leaves the contract without owner. It will not be possible to call
-   * `onlyOwner` functions anymore. Can only be called by the current owner.
-   *
-   * NOTE: Renouncing ownership will leave the contract without an owner,
-   * thereby removing any functionality that is only available to the owner.
-   */
-  function renounceOwnership() public virtual override onlyOwner() {
-    emit OwnershipTransferred( _owner, address(0) );
-    _owner = address(0);
-  }
-
-  /**
-   * @dev Transfers ownership of the contract to a new account (`newOwner`).
-   * Can only be called by the current owner.
-   */
-  function transferOwnership( address newOwner_ ) public virtual override onlyOwner() {
-    require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-    emit OwnershipTransferred( _owner, newOwner_ );
-    _owner = newOwner_;
-  }
 }
 
 interface IERC20 {
@@ -948,20 +887,19 @@ abstract contract ERC20Permit is ERC20, IERC2612Permit {
     bytes32 public DOMAIN_SEPARATOR;
 
     constructor() {
+
         uint256 chainID;
         assembly {
             chainID := chainid()
         }
 
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes(name())),
-                keccak256(bytes("1")), // Version
-                chainID,
-                address(this)
-            )
-        );
+        DOMAIN_SEPARATOR = keccak256(abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256(bytes(name())),
+            keccak256(bytes("1")), // Version
+            chainID,
+            address(this)
+        ));
     }
 
     /**
@@ -999,28 +937,85 @@ abstract contract ERC20Permit is ERC20, IERC2612Permit {
     }
 }
 
+interface IOwnable {
+  function manager() external view returns (address);
+
+  function renounceManagement() external;
+  
+  function pushManagement( address newOwner_ ) external;
+  
+  function pullManagement() external;
+}
+
+contract Ownable is IOwnable {
+
+    address internal _owner;
+    address internal _newOwner;
+
+    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
+    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+
+    constructor () {
+        _owner = msg.sender;
+        emit OwnershipPushed( address(0), _owner );
+    }
+
+    function manager() public view override returns (address) {
+        return _owner;
+    }
+
+    modifier onlyManager() {
+        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+        _;
+    }
+
+    function renounceManagement() public virtual override onlyManager() {
+        emit OwnershipPushed( _owner, address(0) );
+        _owner = address(0);
+    }
+
+    function pushManagement( address newOwner_ ) public virtual override onlyManager() {
+        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipPushed( _owner, newOwner_ );
+        _newOwner = newOwner_;
+    }
+    
+    function pullManagement() public virtual override {
+        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
+        emit OwnershipPulled( _owner, _newOwner );
+        _owner = _newOwner;
+    }
+}
+
 contract sOlympus is ERC20Permit, Ownable {
 
     using SafeMath for uint256;
 
-    event LogRebase(uint256 indexed epoch, uint256 totalSupply);
-    event LogMonetaryPolicyUpdated(address monetaryPolicy);
-
-    // Used for authentication
-    address public monetaryPolicy;
+    modifier onlyStakingContract() {
+        require( msg.sender == stakingContract );
+        _;
+    }
 
     address public stakingContract;
+    address public initializer;
 
-    modifier onlyMonetaryPolicy() {
-        require(msg.sender == monetaryPolicy);
-        _;
-    }
+    event LogRebase( uint256 indexed epoch, uint256 totalSupply );
+    event LogStakingContractUpdated( address stakingContract );
 
-    modifier validRecipient(address to) {
-        require(to != address(0x0));
-        require(to != address(this));
-        _;
+    struct Rebase {
+        uint epoch;
+        uint rebase; // 18 decimals
+        uint totalStakedBefore;
+        uint totalStakedAfter;
+        uint amountRebased;
+        uint index;
+        uint blockNumberOccured;
     }
+    Rebase[] public rebases;
+
+    uint public INDEX;
+
+    mapping( address => bool ) public cannotReceive;
 
     uint256 private constant MAX_UINT256 = ~uint256(0);
     uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 500000 * 10**9;
@@ -1035,118 +1030,173 @@ contract sOlympus is ERC20Permit, Ownable {
     uint256 private _gonsPerFragment;
     mapping(address => uint256) private _gonBalances;
 
-    // This is denominated in Fragments, because the gons-fragments conversion might change before
-    // it's fully paid.
-    mapping (address => mapping (address => uint256)) private _allowedFragments;
+    mapping ( address => mapping ( address => uint256 ) ) private _allowedValue;
 
-    constructor() ERC20("Staked Olympus", "sOHM", 9) {
-       _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
-       _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
+    constructor() ERC20("Staked Olympus", "sOHM", 9) ERC20Permit() {
+        initializer = msg.sender;
+        _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
+        _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
 
-        emit Transfer(address(0x0), msg.sender, _totalSupply);
+        emit Transfer( address(0x0), msg.sender, _totalSupply );
     }
 
-    function setStakingContract( address newStakingContract_ ) external onlyOwner() {
-      stakingContract = newStakingContract_;
-      _gonBalances[stakingContract] = TOTAL_GONS;
+    function initialize( address stakingContract_ ) external returns ( bool ) {
+        require( msg.sender == initializer );
+        require( stakingContract_ != address(0) );
+        stakingContract = stakingContract_;
+        _gonBalances[ stakingContract ] = TOTAL_GONS;
+
+        emit LogStakingContractUpdated( stakingContract_ );
+        
+        initializer = address(0);
+        return true;
     }
 
-    function setMonetaryPolicy(address monetaryPolicy_) external onlyOwner() {
-        monetaryPolicy = monetaryPolicy_;
-        emit LogMonetaryPolicyUpdated(monetaryPolicy_);
+    function setIndex( uint _INDEX ) external onlyManager() returns ( bool ) {
+        require( INDEX == 0 );
+        INDEX = _INDEX;
+        return true;
     }
 
-    function rebase(uint256 olyProfit) public onlyMonetaryPolicy() returns (uint256) {
-        uint256 _rebase;
+    /**
+        @notice allows pools to be blocked from receiving, but not sending, sOHM
+        @param address_ address
+        @return bool
+     */
+    function toggleReceiver( address address_ ) external onlyManager() returns ( bool ) {
+        cannotReceive[ address_ ] = !cannotReceive[ address_ ];
+        return true;
+    }
 
-        if (olyProfit == 0) {
-            emit LogRebase(block.timestamp, _totalSupply);
+    /**
+        @notice increases sOHM supply to increase staking balances relative to profit_
+        @param profit_ uint256
+        @return uint256
+     */
+    function rebase( uint256 profit_, uint epoch_ ) public onlyStakingContract() returns ( uint256 ) {
+        uint256 rebaseAmount;
+        uint256 circulatingSupply_ = circulatingSupply();
+
+        if ( profit_ == 0 ) {
+            emit LogRebase( block.timestamp, _totalSupply );
             return _totalSupply;
+        } else if ( circulatingSupply_ > 0 ){
+            rebaseAmount = profit_.mul( _totalSupply ).div( circulatingSupply_ );
+        } else {
+            rebaseAmount = profit_;
         }
 
-        if(circulatingSupply() > 0 ){
-            _rebase = olyProfit.mul(_totalSupply).div(circulatingSupply());
-        }
+        _totalSupply = _totalSupply.add( rebaseAmount );
 
-        else {
-            _rebase = olyProfit;
-        }
-
-        _totalSupply = _totalSupply.add(_rebase);
-
-
-        if (_totalSupply > MAX_SUPPLY) {
+        if ( _totalSupply > MAX_SUPPLY ) {
             _totalSupply = MAX_SUPPLY;
         }
 
-        _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
+        _gonsPerFragment = TOTAL_GONS.div( _totalSupply );
 
-        emit LogRebase(block.timestamp, _totalSupply);
+        _storeRebase( circulatingSupply_, profit_, epoch_ );
+
         return _totalSupply;
     }
 
-    function balanceOf(address who) public view override returns (uint256) {
-        return _gonBalances[who].div(_gonsPerFragment);
-    }
+    /**
+        @notice emits event with data about rebase
+        @param previousCirculating_ uint
+        @param profit_ uint
+        @param epoch_ uint
+        @return bool
+     */
+    function _storeRebase( uint previousCirculating_, uint profit_, uint epoch_ ) internal returns ( bool ) {
+        uint rebasePercent = profit_.mul( 1e18 ).div( previousCirculating_ );
 
-    function circulatingSupply() public view returns (uint) {
-       return _totalSupply.sub(balanceOf(stakingContract));
-    }
-
-    function transfer(address to, uint256 value) public override validRecipient(to) returns (bool) {
-        require(msg.sender == stakingContract, 'transfer not from staking contract');
-
-        uint256 gonValue = value.mul(_gonsPerFragment);
-        _gonBalances[msg.sender] = _gonBalances[msg.sender].sub(gonValue);
-        _gonBalances[to] = _gonBalances[to].add(gonValue);
-        emit Transfer(msg.sender, to, value);
-        return true;
-    }
-
-    function allowance(address owner_, address spender) public view override returns (uint256) {
-        return _allowedFragments[owner_][spender];
-    }
-
-    function transferFrom(address from, address to, uint256 value) public override validRecipient(to) returns (bool) {
-        require(stakingContract == to, 'transfer from not to staking contract');
-
-       _allowedFragments[from][msg.sender] = _allowedFragments[from][msg.sender].sub(value);
-
-        uint256 gonValue = value.mul(_gonsPerFragment);
-        _gonBalances[from] = _gonBalances[from].sub(gonValue);
-        _gonBalances[to] = _gonBalances[to].add(gonValue);
-        emit Transfer(from, to, value);
+        rebases.push( Rebase ( {
+            epoch: epoch_,
+            rebase: rebasePercent, // 18 decimals
+            totalStakedBefore: previousCirculating_,
+            totalStakedAfter: circulatingSupply(),
+            amountRebased: profit_,
+            index: index(),
+            blockNumberOccured: block.number
+        }));
+        
+        emit LogRebase( block.timestamp, _totalSupply );
 
         return true;
     }
 
-    function approve(address spender, uint256 value) public override returns (bool) {
-         _allowedFragments[msg.sender][spender] = value;
-         emit Approval(msg.sender, spender, value);
+    function balanceOf( address who ) public view override returns ( uint256 ) {
+        return _gonBalances[ who ].div( _gonsPerFragment );
+    }
+
+    function gonsForBalance( uint amount ) public view returns ( uint ) {
+        return amount.mul( _gonsPerFragment );
+    }
+
+    function balanceForGons( uint gons ) public view returns ( uint ) {
+        return gons.div( _gonsPerFragment );
+    }
+
+    // Staking contract holds excess sOHM
+    function circulatingSupply() public view returns ( uint ) {
+        return _totalSupply.sub( balanceOf( stakingContract ) );
+    }
+
+    function index() public view returns ( uint ) {
+        return balanceForGons( INDEX );
+    }
+
+    function transfer( address to, uint256 value ) public override returns (bool) {
+        require( !cannotReceive[ to ], "Cannot send to this address" );
+        uint256 gonValue = value.mul( _gonsPerFragment );
+        _gonBalances[ msg.sender ] = _gonBalances[ msg.sender ].sub( gonValue );
+        _gonBalances[ to ] = _gonBalances[ to ].add( gonValue );
+        emit Transfer( msg.sender, to, value );
+        return true;
+    }
+
+    function allowance( address owner_, address spender ) public view override returns ( uint256 ) {
+        return _allowedValue[ owner_ ][ spender ];
+    }
+
+    function transferFrom( address from, address to, uint256 value ) public override returns ( bool ) {
+        require( !cannotReceive[ to ], "Cannot send to this address" );
+       _allowedValue[ from ][ msg.sender ] = _allowedValue[ from ][ msg.sender ].sub( value );
+       emit Approval( from, msg.sender,  _allowedValue[ from ][ msg.sender ] );
+
+        uint256 gonValue = gonsForBalance( value );
+        _gonBalances[ from ] = _gonBalances[from].sub( gonValue );
+        _gonBalances[ to ] = _gonBalances[to].add( gonValue );
+        emit Transfer( from, to, value );
+
+        return true;
+    }
+
+    function approve( address spender, uint256 value ) public override returns (bool) {
+         _allowedValue[ msg.sender ][ spender ] = value;
+         emit Approval( msg.sender, spender, value );
          return true;
     }
 
     // What gets called in a permit
-    function _approve(address owner, address spender, uint256 value) internal override virtual {
-        _allowedFragments[owner][spender] = value;
-        emit Approval(owner, spender, value);
+    function _approve( address owner, address spender, uint256 value ) internal override virtual {
+        _allowedValue[owner][spender] = value;
+        emit Approval( owner, spender, value );
     }
 
-    function increaseAllowance(address spender, uint256 addedValue) public override returns (bool) {
-        _allowedFragments[msg.sender][spender] =
-            _allowedFragments[msg.sender][spender].add(addedValue);
-        emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
+    function increaseAllowance( address spender, uint256 addedValue ) public override returns (bool) {
+        _allowedValue[ msg.sender ][ spender ] = _allowedValue[ msg.sender ][ spender ].add( addedValue );
+        emit Approval( msg.sender, spender, _allowedValue[ msg.sender ][ spender ] );
         return true;
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) public override returns (bool) {
-        uint256 oldValue = _allowedFragments[msg.sender][spender];
+    function decreaseAllowance( address spender, uint256 subtractedValue ) public override returns (bool) {
+        uint256 oldValue = _allowedValue[ msg.sender ][ spender ];
         if (subtractedValue >= oldValue) {
-            _allowedFragments[msg.sender][spender] = 0;
+            _allowedValue[ msg.sender ][ spender ] = 0;
         } else {
-            _allowedFragments[msg.sender][spender] = oldValue.sub(subtractedValue);
+            _allowedValue[ msg.sender ][ spender ] = oldValue.sub( subtractedValue );
         }
-        emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
+        emit Approval( msg.sender, spender, _allowedValue[ msg.sender ][ spender ] );
         return true;
     }
 }
