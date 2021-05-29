@@ -1036,8 +1036,6 @@ contract sOlympus is ERC20Permit, Ownable {
         initializer = msg.sender;
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
-
-        emit Transfer( address(0x0), msg.sender, _totalSupply );
     }
 
     function initialize( address stakingContract_ ) external returns ( bool ) {
@@ -1046,6 +1044,7 @@ contract sOlympus is ERC20Permit, Ownable {
         stakingContract = stakingContract_;
         _gonBalances[ stakingContract ] = TOTAL_GONS;
 
+        emit Transfer( address(0x0), stakingContract, _totalSupply );
         emit LogStakingContractUpdated( stakingContract_ );
         
         initializer = address(0);
