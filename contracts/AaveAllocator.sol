@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
+
 /**
  * @dev Collection of functions related to the address type
  */
@@ -557,16 +558,14 @@ contract Ownable is IOwnable {
     }
 }
 
-interface IMasterChef {
-    function pendingSushi(uint256 _pid, address _user) external view returns (uint256);
-    function deposit(uint256 _pid, uint256 _amount) external;
-    function withdraw(uint256 _pid, uint256 _amount) external;
-    function emergencyWithdraw(uint256 _pid) external;
+interface ILendingPool {
+    function deposit( address asset, uint256 amount, address onBehalfOf, uint16 referralCode ) external;
+    function withdraw( address asset, uint256 amount, address to ) external;
 }
 
-interface ISushiBar {
-    function enter(uint256 _amount) external;
-    function leave(uint256 _share) external;
+interface IStakedAave {
+    function claimRewards(address to, uint256 amount) external;
+    function getTotalRewardsBalance(address staker) external view returns (uint256);
 }
 
 interface ITreasury {
@@ -576,223 +575,169 @@ interface ITreasury {
 }
 
 /**
- *  Contract deploys liquidity from treasury into the Onsen program,
- *  earning $SUSHI that can be staked and/or deposited into the treasury.
+ *  Contract deploys reserves from treasury into the Aave lending pool,
+ *  earning interest and $stkAAVE for the treasury.
  */
 
-contract SushiAllocator is Ownable {
-    
-    /* ========== DEPENDENCIES ========== */
-    
+contract AaveAllocator is Ownable {
+
+    /* ======== DEPENDENCIES ======== */
+
     using SafeERC20 for IERC20;
     using SafeMath for uint;
 
 
 
-    /* ========== STATE VARIABLES ========== */
-
-    uint[] public pids; // Pool IDs
-    mapping( uint => address ) public pools; // Pool Addresses index by PID
-
-    address immutable sushi; // $SUSHI token
-    address immutable xSushi; // $xSUSHI token
-    
-    address immutable masterChef; // Onsen contract
+    /* ======== STATE VARIABLES ======== */
 
     address immutable treasury; // Olympus Treasury
+    address immutable lendingPool; // Aave Lending Pool
+    address immutable stkAave; // staked Aave ( rewards token )
 
-    uint public totalValueDeployed; // Total RFV deployed
+    mapping( address => address ) public aTokens; // Corresponding aTokens for tokens
+
+    uint public totalAllocated;
+    mapping( address => uint ) public allocated; // amount allocated into pool for token
+    mapping( address => uint ) public maxAllocation; // max allocated into pool for token
+
+    uint public immutable changeMaxAllocationTimelock; // timelock in blocks to change max allocation
+    mapping( address => uint ) public changeMaxAllocationBlock; // block when new max can be set
+    mapping( address => uint ) public newMaxAllocation; // pending new max allocations for tokens
 
 
+    /* ======== CONSTRUCTOR ======== */
 
-    /* ========== CONSTRUCTOR ========== */
-
-    constructor( 
-        address _chef, 
+    constructor ( 
         address _treasury, 
-        address _sushi, 
-        address _xSushi 
+        address _lendingPool, 
+        address _stkAave,
+        uint _changeMaxAllocationTimelock 
     ) {
-        require( _chef != address(0) );
-        masterChef = _chef;
         require( _treasury != address(0) );
         treasury = _treasury;
-        require( _sushi != address(0) );
-        sushi = _sushi;
-        require( _xSushi != address(0) );
-        xSushi = _xSushi;
+        require( _lendingPool != address(0) );
+        lendingPool = _lendingPool;
+        require( _stkAave != address(0) );
+        stkAave = _stkAave;
+        changeMaxAllocationTimelock = _changeMaxAllocationTimelock;
     }
 
 
 
-    /* ========== OPEN FUNCTIONS ========== */
+    /* ======== OPEN FUNCTIONS ======== */
 
     /**
-     * @notice harvest Onsen rewards from all pools
-     * @param _stake bool
+     *  @notice claims accrued stkAave rewards
      */
-    function harvest( bool _stake ) external {
-        for( uint i = 0; i < pids.length; i++ ) {
-            uint pid = pids[i];
-            if ( pid != 0 ) { // pid of 0 is invalid
-                IMasterChef( masterChef ).withdraw( pid, 0 ); // withdrawing 0 harvests rewards
-            }
-        }
-        enterSushiBar( _stake );
+    function harvest() external {
+        IStakedAave( stkAave ).claimRewards( treasury, rewardsPending() );
     }
 
 
 
-    /* ========== INTERNAL FUNCTIONS ========== */
+
+    /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     * @notice stake sushi rewards if enter is true. return funds to treasury.
-     * @param _stake bool
+     *  @notice deposits asset from treasury into lending pool and returns aToken
+     *  @param asset address
+     *  @param amount uint
      */
-    function enterSushiBar( bool _stake ) internal {
-        uint balance = IERC20( sushi ).balanceOf( address(this) );
-        if ( balance > 0 ) {
-            if ( !_stake ) {
-                IERC20( sushi ).safeTransfer( treasury, balance ); // transfer sushi to treasury
-            } else {
-                IERC20( sushi ).approve( xSushi, balance );
-                ISushiBar( xSushi ).enter( balance ); // stake sushi
+    function deposit( address asset, uint amount ) external onlyPolicy() {
+        require( !exceedsMaxAllocation( asset, amount ) );
 
-                uint xBalance = IERC20( xSushi ).balanceOf( address(this) );
-                IERC20( xSushi ).safeTransfer( treasury, xBalance ); // transfer xSushi to treasury
-            }
-        }
-    }
+        ITreasury( treasury ).manage( asset, amount ); // retrieve amount of asset from treasury
 
+        IERC20( asset ).approve( lendingPool, amount ); // deposit into lending pool
+        ILendingPool( lendingPool ).deposit( asset, amount, address(this), 0 ); // returns aToken
 
-
-    /* ========== VIEW FUNCTIONS ========== */
-
-    /**
-     *  @notice pending $SUSHI rewards
-     *  @return uint
-     */
-    function pendingSushi() external view returns ( uint ) {
-        uint pending;
-        for ( uint i = 0; i < pids.length; i++ ) {
-            uint pid = pids[i];
-            if ( pid != 0 ) {
-                pending = pending.add( IMasterChef( masterChef ).pendingSushi( pid, address(this) ) );
-            }
-        }
-        return pending;
-    }
-
-
-
-    /* ========== POLICY FUNCTIONS ========== */
-
-    /**
-     * @notice deposit LP from treasury to Onsen and collect rewards
-     * @param _amount uint
-     * @param _stake bool
-     */
-    function deposit( uint _pid, uint _amount, bool _stake ) external onlyPolicy() {
-        address LP = pools[ _pid ];
-        require( LP != address(0) );
-
-        ITreasury( treasury ).manage( LP, _amount ); // retrieve LP from treasury
+        allocated[ asset ] = allocated[ asset ].add( amount ); // track amount allocated into pool
+        totalAllocated = totalAllocated.add( amount );
         
-        IERC20( LP ).approve( masterChef, _amount );
-        IMasterChef( masterChef ).deposit( _pid, _amount ); // deposit into Onsen
+        address aToken = aTokens[ asset ];
+        uint aBalance = IERC20( aToken ).balanceOf( address(this) );
+        uint value = ITreasury( treasury ).valueOf( aToken, aBalance );
 
-        uint value = ITreasury( treasury ).valueOf( LP, _amount );
-        totalValueDeployed = totalValueDeployed.add( value ); // add to deployed value tracker
-        
-        enterSushiBar( _stake ); // manage rewards 
+        // approve and deposit asset into treasury
+        IERC20( aToken ).approve( aToken, aBalance );
+        // use value as profit so no new OHM is minted
+        ITreasury( treasury ).deposit( aBalance, aToken, value ); 
     }
 
     /**
-     * @notice collect rewards and withdraw LP from Onsen and return to treasury.
-     * @param _amount uint
-     * @param _stake bool
+     *  @notice withdraws aToken from lending pool and asset to treasury
+     *  @param asset address
+     *  @param amount uint
      */
-    function withdraw( uint _pid, uint _amount, bool _stake ) external onlyPolicy() {
-        address LP = pools[ _pid ];
-        require( LP != address(0) );
+    function withdraw( address asset, uint amount ) external onlyPolicy() {
+        address aToken = aTokens[ asset ];
+        ITreasury( treasury ).manage( aToken, amount ); // retrieve amount of aToken from treasury
 
-        IMasterChef( masterChef ).withdraw( _pid, _amount ); // withdraw from Onsen
+        IERC20( aToken ).approve( lendingPool, amount ); // withdraw from lending pool
+        ILendingPool( lendingPool ).withdraw( aToken, amount, address(this) ); // returns asset
 
-        uint value = ITreasury( treasury ).valueOf( LP, _amount );
-        // remove from deployed value tracker
-        totalValueDeployed = totalValueDeployed.sub( value ); 
-        
-        // approve and deposit LP into treasury
-        IERC20( LP ).approve( treasury, _amount );
-        // use value for profit so that no OHM is minted
-        ITreasury( treasury ).deposit( _amount, LP, value );
-        
-        enterSushiBar( _stake ); // manage rewards
+        allocated[ asset ] = allocated[ asset ].sub( amount ); // track amount allocated into pool
+        totalAllocated = totalAllocated.sub( amount );
+
+        uint balance = IERC20( asset ).balanceOf( address(this) );
+        uint value = ITreasury( treasury ).valueOf( asset, balance );
+
+        // approve and deposit asset into treasury
+        IERC20( asset ).approve( treasury, balance );
+        // use value as profit so no new OHM is minted
+        ITreasury( treasury ).deposit( balance, asset, value ); 
     }
 
     /**
-     * @notice withdraw Sushi from treasury and stake to xSushi
-     * @param _amount uint
+     *  @notice adds asset and corresponding aToken to mapping
+     *  @param token address
+     *  @param aToken address
      */
-    function enterSushiBarFromTreasury( uint _amount ) external onlyPolicy() {
-        ITreasury( treasury ).manage( sushi, _amount ); // retrieve $SUSHI from treasury
-        
-        enterSushiBar( true ); // stake $SUSHI
-    }
-    
-    /**
-     * @notice withdraw xSushi from treasury and unstake to sushi
-     * @param _amount uint
-     */
-    function exitSushiBar( uint _amount ) external onlyPolicy() {
-        ITreasury( treasury ).manage( xSushi, _amount ); // retrieve $xSUSHI from treasury
-        
-        ISushiBar( xSushi ).leave( _amount ); // unstake $xSUSHI
-        
-        IERC20( sushi ).safeTransfer( treasury, IERC20( sushi ).balanceOf( address(this) ) ); // return $SUSHI to treasury
+    function addToken( address token, address aToken, uint max ) external onlyPolicy() {
+        require( token != address(0) );
+        require( aToken != address(0) );
+        require( maxAllocation[ token ] == 0 || max <= maxAllocation[ token ] );
+        aTokens[ token ] = aToken;
+        maxAllocation[ token ] = max;
     }
 
     /**
-     *  @notice add new PID and corresponding liquidity pool
-     *  @param _pool address
-     *  @param _pid uint
+     *  @notice starts timelock to change max allocation for asset
+     *  @param asset address
+     *  @param newMax uint
      */
-    function addPool( address _pool, uint _pid ) external onlyPolicy() {
-        require( _pool != address(0) );
-        require( pools[ _pid ] == address(0) );
-        pids.push( _pid );
-        pools[ _pid ] = _pool;
+    function queueNewMaxAllocation( address asset, uint newMax ) external onlyPolicy() {
+        changeMaxAllocationBlock[ asset ] = block.number.add( changeMaxAllocationTimelock );
+        newMaxAllocation[ asset ] = newMax;
     }
 
     /**
-     *  @notice remove liquidity pool and corresponding PID
-     *  @param _pool address
-     *  @param _index uint
+     *  @notice changes max allocation for asset when timelock elapsed
+     *  @param asset address
      */
-    function removePool( address _pool, uint _index ) external onlyPolicy() {
-        uint pid = pids[_index];
-        require( pools[ pid ] == _pool );
+    function setNewMaxAllocation( address asset ) external onlyPolicy() {
+        require( block.number >= changeMaxAllocationBlock[ asset ], "Timelock not expired" );
+        maxAllocation[ asset ] = newMaxAllocation[ asset ];
+        newMaxAllocation[ asset ] = 0;
+    }
 
-        pids[ _index ] = 0;
-        pools[ pid ] = address(0);
+
+
+    /* ======== VIEW FUNCTIONS ======== */
+
+    function rewardsPending() public view returns ( uint ) {
+        return IStakedAave( stkAave ).getTotalRewardsBalance( address(this) );
     }
 
     /**
-     *  @notice withdraw liquidity without regard for rewards
-     *  @param _pid uint
+     *  @notice checks to ensure deposit does not exceed max allocation for asset
+     *  @param asset address
+     *  @param amount uint
      */
-    function emergencyWithdraw( uint _pid ) external onlyPolicy() {
-        address LP = pools[ _pid ];
+    function exceedsMaxAllocation( address asset, uint amount ) public view returns ( bool ) {
+        uint alreadyAllocated = allocated[ asset ];
+        uint willBeAllocated = alreadyAllocated.add( amount );
 
-        IMasterChef( masterChef ).emergencyWithdraw( _pid ); // withdraws LP without returning rewards
-
-        uint balance = IERC20( LP ).balanceOf( address(this) );
-        uint value = ITreasury( treasury ).valueOf( LP, balance );
-        totalValueDeployed = totalValueDeployed.sub( value ); // remove from value deployed tracker
-
-        // approve and deposit LP into treasury
-        IERC20( LP ).approve( treasury, balance );
-        // use value for profit so that no OHM is minted
-        ITreasury( treasury ).deposit( balance, LP, value ); 
+        return ( willBeAllocated > maxAllocation[ asset ] );
     }
 }
