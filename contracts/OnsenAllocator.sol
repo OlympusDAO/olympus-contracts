@@ -720,7 +720,11 @@ contract SushiAllocator is Ownable {
 
         uint value = ITreasury( treasury ).valueOf( LP, _amount );
         // remove from deployed value tracker
-        totalValueDeployed = totalValueDeployed.sub( value ); 
+        if ( value < totalValueDeployed ) {
+            totalValueDeployed = totalValueDeployed.sub( value ); 
+        } else { // LP value grows from fees and may exceed total deployed
+            totalValueDeployed = 0;
+        }
         
         // approve and deposit LP into treasury
         IERC20( LP ).approve( treasury, _amount );
@@ -760,6 +764,7 @@ contract SushiAllocator is Ownable {
     function addPool( address _pool, uint _pid ) external onlyPolicy() {
         require( _pool != address(0) );
         require( pools[ _pid ] == address(0) );
+
         pids.push( _pid );
         pools[ _pid ] = _pool;
     }
@@ -788,7 +793,11 @@ contract SushiAllocator is Ownable {
 
         uint balance = IERC20( LP ).balanceOf( address(this) );
         uint value = ITreasury( treasury ).valueOf( LP, balance );
-        totalValueDeployed = totalValueDeployed.sub( value ); // remove from value deployed tracker
+        if ( value < totalValueDeployed ) {
+            totalValueDeployed = totalValueDeployed.sub( value ); // remove from value deployed tracker
+        } else { // value increases with fees and would otherwise cause underflow
+            totalValueDeployed = 0;
+        }
 
         // approve and deposit LP into treasury
         IERC20( LP ).approve( treasury, balance );
