@@ -580,7 +580,7 @@ interface ITreasury {
  *  earning $SUSHI that can be staked and/or deposited into the treasury.
  */
 
-contract SushiAllocator is Ownable {
+contract OnsenAllocator is Ownable {
     
     /* ========== DEPENDENCIES ========== */
     
