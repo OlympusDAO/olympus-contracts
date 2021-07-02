@@ -302,17 +302,17 @@ contract Policy is IPolicy {
         return _policy;
     }
 
-    modifier onlyManager() {
+    modifier onlyPolicy() {
         require( _policy == msg.sender, "Ownable: caller is not the owner" );
         _;
     }
 
-    function renouncePolicy() public virtual override onlyManager() {
+    function renouncePolicy() public virtual override onlyPolicy() {
         emit OwnershipTransferred( _policy, address(0) );
         _policy = address(0);
     }
 
-    function pushPolicy( address newPolicy_ ) public virtual override onlyManager() {
+    function pushPolicy( address newPolicy_ ) public virtual override onlyPolicy() {
         require( newPolicy_ != address(0), "Ownable: new owner is the zero address");
         _newPolicy = newPolicy_;
     }
@@ -325,103 +325,158 @@ contract Policy is IPolicy {
 }
 
 interface ITreasury {
-    function mintRewards( address recipient_, uint amount_ ) external returns ( bool );
+    function mintRewards( address _recipient, uint _amount ) external;
 }
 
-interface IStaking {
-    function rebase() external returns ( bool );
-}
-
-contract OlympusDistributorContract is Policy {
+contract Distributor is Policy {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
+    
+    
+    
+    /* ====== VARIABLES ====== */
 
-    address public immutable treasury;
     address public immutable OHM;
+    address public immutable treasury;
+    
+    uint public immutable epochLength;
+    uint public nextEpochBlock;
+    
+    mapping( uint => Adjust ) public adjustments;
+    
+    
+    /* ====== STRUCTS ====== */
         
-    // reward rate is in ten-thousandths ( 5000 = 0.5% )
-    mapping( address => uint ) rewardRates;
+    struct Info {
+        uint rate; // in ten-thousandths ( 5000 = 0.5% )
+        address recipient;
+    }
+    Info[] public info;
     
     struct Adjust {
         bool add;
         uint rate;
         uint target;
     }
-    mapping( address => Adjust ) public adjustments;
+    
+    
+    
+    /* ====== CONSTRUCTOR ====== */
 
-    constructor( address _treasury, address _ohm ) {        
+    constructor( address _treasury, address _ohm, uint _epochLength, uint _nextEpochBlock ) {        
         require( _treasury != address(0) );
         treasury = _treasury;
         require( _ohm != address(0) );
         OHM = _ohm;
+        epochLength = _epochLength;
+        nextEpochBlock = _nextEpochBlock;
     }
+    
+    
+    
+    /* ====== PUBLIC FUNCTIONS ====== */
     
     /**
         @notice send epoch reward to staking contract
-        @return bool
      */
     function distribute() external returns ( bool ) {
-        uint rate = rewardRates[ msg.sender ];
-        require( rate != 0, "Only approved recipients" );
-        
-        ITreasury( treasury ).mintRewards( msg.sender, rewardAt( rate ) );
-
-        return adjust();
+        if ( nextEpochBlock <= block.number ) {
+            nextEpochBlock = nextEpochBlock.add( epochLength ); // set next epoch block
+            
+            // distribute rewards to each recipient
+            for ( uint i = 0; i < info.length; i++ ) {
+                if ( info[ i ].rate > 0 ) {
+                    ITreasury( treasury ).mintRewards( // mint and send from treasury
+                        info[ i ].recipient, 
+                        nextRewardAt( info[ i ].rate ) 
+                    );
+                    adjust( i ); // check for adjustment
+                }
+            }
+            return true;
+        } else { 
+            return false; 
+        }
     }
+    
+    
+    
+    /* ====== INTERNAL FUNCTIONS ====== */
 
     /**
         @notice increment reward rate for collector
      */
-    function adjust( uint _rewardRate ) internal returns ( bool ) {
-        Adjust memory adjustment = adjustments[ msg.sender ];
+    function adjust( uint _index ) internal {
+        Adjust memory adjustment = adjustments[ _index ];
         if ( adjustment.rate != 0 ) {
-            if( adjustment.add ) {
-                _rewardRate = _rewardRate.add( adjustment.rate );
-                rewardRates[ msg.sender ] = _rewardRate;
-
-                if ( _rewardRate >= adjustment.target ) {
-                    adjustments[ msg.sender ].rate = 0;
+            if ( adjustment.add ) { // if rate should increase
+                info[ _index ].rate = info[ _index ].rate.add( adjustment.rate ); // raise rate
+                if ( info[ _index ].rate >= adjustment.target ) { // if target met
+                    adjustments[ _index ].rate = 0; // turn off adjustment
                 }
-            } else {
-                _rewardRate = _rewardRate.add( adjustment.rate );
-                rewardRates[ msg.sender ] = _rewardRate;
-
-                if ( _rewardRate <= adjustment.target ) {
-                    adjustments[ msg.sender ].rate = 0;
+            } else { // if rate should decrease
+                info[ _index ].rate = info[ _index ].rate.sub( adjustment.rate ); // lower rate
+                if ( info[ _index ].rate <= adjustment.target ) { // if target met
+                    adjustments[ _index ].rate = 0; // turn off adjustment
                 }
             }
         }
-        return true;
     }
+    
+    
+    
+    /* ====== VIEW FUNCTIONS ====== */
 
     /**
         @notice view function for next reward at given rate
         @param _rate uint
         @return uint
      */
-    function rewardAt( uint _rate ) public view returns ( uint ) {
+    function nextRewardAt( uint _rate ) public view returns ( uint ) {
         return IERC20( OHM ).totalSupply().mul( _rate ).div( 1000000 );
     }
 
     /**
-        @notice view function for next reward for recipient
+        @notice view function for next reward for specified address
         @param _recipient address
         @return uint
      */
     function nextRewardFor( address _recipient ) public view returns ( uint ) {
-        return rewardAt( rewardRates[ _recipient ] );
+        uint reward;
+        for ( uint i = 0; i < info.length; i++ ) {
+            if ( info[ i ].recipient == _recipient ) {
+                reward = nextRewardAt( info[ i ].rate );
+            }
+        }
+        return reward;
+    }
+    
+    
+    
+    /* ====== POLICY FUNCTIONS ====== */
+
+    /**
+        @notice adds recipient for distributions
+        @param _recipient address
+        @param _rewardRate uint
+     */
+    function addRecipient( address _recipient, uint _rewardRate ) external onlyPolicy() {
+        require( _recipient != address(0) );
+        info.push( Info({
+            recipient: _recipient,
+            rate: _rewardRate
+        }));
     }
 
     /**
-        @notice adds new recipient for distributions
+        @notice removes recipient for distributions
+        @param _index uint
         @param _recipient address
-        @param _rewardRate uint
-        @return bool
      */
-    function setNewRecipient( address _recipient, uint _rewardRate ) external onlyManager() returns ( bool ) {
-        require( _recipient != address(0) );
-        rewardRates[ _recipient ] = _rewardRate;
-        return true;
+    function removeRecipient( uint _index, address _recipient ) external onlyPolicy() {
+        require( _recipient == info[ _index ].recipient );
+        info[ _index ].recipient = address(0);
+        info[ _index ].rate = 0;
     }
 
     /**
@@ -430,14 +485,12 @@ contract OlympusDistributorContract is Policy {
         @param _add bool
         @param _rate uint
         @param _target uint
-        @return bool
      */
-    function setAdjustment( uint _index, bool _add, uint _rate, uint _target ) external onlyManager() returns ( bool ) {
-        adjustments[ collectors[ _index ].recipient ] = Adjust({
+    function setAdjustment( uint _index, bool _add, uint _rate, uint _target ) external onlyPolicy() {
+        adjustments[ _index ] = Adjust({
             add: _add,
             rate: _rate,
             target: _target
         });
-        return true;
     }
 }
