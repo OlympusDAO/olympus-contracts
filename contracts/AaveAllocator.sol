@@ -644,7 +644,7 @@ contract AaveAllocator is Ownable {
      *  @param amount uint
      */
     function deposit( address asset, uint amount ) external onlyPolicy() {
-        require( !exceedsMaxAllocation( asset, amount ) );
+        require( !exceedsMaxAllocation( asset, amount ) ); // ensure deposit is within bounds
 
         ITreasury( treasury ).manage( asset, amount ); // retrieve amount of asset from treasury
 
@@ -656,12 +656,12 @@ contract AaveAllocator is Ownable {
         
         address aToken = aTokens[ asset ];
         uint aBalance = IERC20( aToken ).balanceOf( address(this) );
-        uint value = ITreasury( treasury ).valueOf( aToken, aBalance );
+        uint aValue = ITreasury( treasury ).valueOf( aToken, aBalance );
 
         // approve and deposit asset into treasury
-        IERC20( aToken ).approve( aToken, aBalance );
+        IERC20( aToken ).approve( treasury, aBalance );
         // use value as profit so no new OHM is minted
-        ITreasury( treasury ).deposit( aBalance, aToken, value ); 
+        ITreasury( treasury ).deposit( aBalance, aToken, aValue ); 
     }
 
     /**
