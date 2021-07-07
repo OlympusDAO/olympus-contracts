@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-
 /**
  * @dev Collection of functions related to the address type
  */
@@ -590,19 +589,21 @@ contract AaveAllocator is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    address immutable treasury; // Olympus Treasury
     address immutable lendingPool; // Aave Lending Pool
     address immutable stkAave; // staked Aave ( rewards token )
+    address treasury; // Olympus Treasury
 
     mapping( address => address ) public aTokens; // Corresponding aTokens for tokens
 
-    uint public totalAllocated;
-    mapping( address => uint ) public allocated; // amount allocated into pool for token
+    uint public totalValueAllocated;
+    mapping( address => uint ) public deployed; // amount allocated into pool for token
     mapping( address => uint ) public maxAllocation; // max allocated into pool for token
 
-    uint public immutable changeMaxAllocationTimelock; // timelock in blocks to change max allocation
+    uint public changeMaxAllocationTimelock; // timelock in blocks to change max allocation
     mapping( address => uint ) public changeMaxAllocationBlock; // block when new max can be set
     mapping( address => uint ) public newMaxAllocation; // pending new max allocations for tokens
+    
+    uint16 public referralCode; // Rebates portion of lending pool fees
 
 
     /* ======== CONSTRUCTOR ======== */
@@ -620,6 +621,7 @@ contract AaveAllocator is Ownable {
         require( _stkAave != address(0) );
         stkAave = _stkAave;
         changeMaxAllocationTimelock = _changeMaxAllocationTimelock;
+        referralCode = 0;
     }
 
 
@@ -649,19 +651,19 @@ contract AaveAllocator is Ownable {
         ITreasury( treasury ).manage( asset, amount ); // retrieve amount of asset from treasury
 
         IERC20( asset ).approve( lendingPool, amount ); // deposit into lending pool
-        ILendingPool( lendingPool ).deposit( asset, amount, address(this), 0 ); // returns aToken
+        ILendingPool( lendingPool ).deposit( asset, amount, address(this), referralCode ); // returns aToken
 
-        allocated[ asset ] = allocated[ asset ].add( amount ); // track amount allocated into pool
-        totalAllocated = totalAllocated.add( amount );
+        uint value = ITreasury( treasury ).valueOf( asset, amount );
+        
+        trackAllocations( asset, amount, value, true );
         
         address aToken = aTokens[ asset ];
         uint aBalance = IERC20( aToken ).balanceOf( address(this) );
-        uint aValue = ITreasury( treasury ).valueOf( aToken, aBalance );
 
         // approve and deposit asset into treasury
         IERC20( aToken ).approve( treasury, aBalance );
         // use value as profit so no new OHM is minted
-        ITreasury( treasury ).deposit( aBalance, aToken, aValue ); 
+        ITreasury( treasury ).deposit( aBalance, aToken, value ); 
     }
 
     /**
@@ -675,12 +677,11 @@ contract AaveAllocator is Ownable {
 
         IERC20( aToken ).approve( lendingPool, amount ); // withdraw from lending pool
         ILendingPool( lendingPool ).withdraw( aToken, amount, address(this) ); // returns asset
-
-        allocated[ asset ] = allocated[ asset ].sub( amount ); // track amount allocated into pool
-        totalAllocated = totalAllocated.sub( amount );
-
+        
         uint balance = IERC20( asset ).balanceOf( address(this) );
         uint value = ITreasury( treasury ).valueOf( asset, balance );
+        
+        trackAllocations( asset, balance, value, false );
 
         // approve and deposit asset into treasury
         IERC20( asset ).approve( treasury, balance );
@@ -720,7 +721,62 @@ contract AaveAllocator is Ownable {
         maxAllocation[ asset ] = newMaxAllocation[ asset ];
         newMaxAllocation[ asset ] = 0;
     }
+    
+    /**
+     *  @notice initialize for production
+     *  @param _treasury address
+     *  @param _timelock uint
+     */
+    function setForProduction( address _treasury, uint _timelock, uint16 _ref ) external onlyPolicy() {
+        require( changeMaxAllocationTimelock == 1 );
+        require( _timelock != 1, "Function only callable once" );
+        treasury = _treasury;
+        changeMaxAllocationTimelock = _timelock;
+        referralCode = _ref;
+    }
+    
+    /**
+     *  @notice set referral code to earn rebate on fees
+     *  @param _ref uint16
+     */
+    function setReferralCode( uint16 _ref ) external onlyPolicy() {
+        referralCode = _ref;
+    }
 
+
+
+    /* ======== INTERNAL FUNCTIONS ======== */
+
+    /**
+     *  @notice accounting of deposits/withdrawals of assets and in total
+     *  @param asset address
+     *  @param amount uint
+     *  @param value uint
+     *  @param add bool
+     */
+    function trackAllocations( address asset, uint amount, uint value, bool add ) internal {
+        if( add ) {
+            // track amount allocated into pool
+            deployed[ asset ] = deployed[ asset ].add( amount ); 
+        
+            // track total value allocated into pools
+            totalValueAllocated = totalValueAllocated.add( value );
+        } else {
+            // track amount allocated into pool
+            if ( amount < deployed[ asset ] ) {
+                deployed[ asset ] = deployed[ asset ].sub( amount ); 
+            } else {
+                deployed[ asset ] = 0;
+            }
+            
+            // track total value allocated into pools
+            if ( value < totalValueAllocated ) {
+                totalValueAllocated = totalValueAllocated.sub( value );
+            } else {
+                totalValueAllocated = 0;
+            }
+        }
+    }
 
 
     /* ======== VIEW FUNCTIONS ======== */
@@ -735,9 +791,9 @@ contract AaveAllocator is Ownable {
      *  @param amount uint
      */
     function exceedsMaxAllocation( address asset, uint amount ) public view returns ( bool ) {
-        uint alreadyAllocated = allocated[ asset ];
-        uint willBeAllocated = alreadyAllocated.add( amount );
+        uint alreadyDeployed = deployed[ asset ];
+        uint willBeDeployed = alreadyDeployed.add( amount );
 
-        return ( willBeAllocated > maxAllocation[ asset ] );
+        return ( willBeDeployed > maxAllocation[ asset ] );
     }
 }
