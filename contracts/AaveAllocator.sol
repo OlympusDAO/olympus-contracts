@@ -632,7 +632,7 @@ contract AaveAllocator is Ownable {
      *  @notice claims accrued stkAave rewards
      */
     function harvest() external {
-        IStakedAave( stkAave ).claimRewards( treasury, rewardsPending() );
+        IStakedAave( stkAave ).claimRewards( address(this), rewardsPending() );
     }
 
 
