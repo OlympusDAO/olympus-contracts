@@ -577,7 +577,7 @@ interface ITreasury {
 
 /**
  *  Contract deploys reserves from treasury into the Aave lending pool,
- *  earning interest and $stkAAVE for the treasury.
+ *  earning interest and $stkAAVE.
  */
 
 contract AaveAllocator is Ownable {
@@ -727,9 +727,6 @@ contract AaveAllocator is Ownable {
         require( aToken != address(0) );
         require( aTokenRegistry[ token ] == address(0) ); // cannot add token twice
 
-        // use queueRaiseMaxAllocation to raise the max allocation for token
-        require( deployLimitFor[ token ] == 0 || max <= deployLimitFor[ token ] );
-
         aTokenRegistry[ token ] = aToken;
         aTokens.push( aToken );
         deployLimitFor[ token ] = max;
@@ -795,6 +792,13 @@ contract AaveAllocator is Ownable {
             }
         }
         depositToTreasury = true;
+    }
+
+    /**
+     *  @notice revert enabling aToken treasury deposits
+     */
+    function revertDepositToTreasury() external onlyPolicy() {
+        depositToTreasury = false;
     }
 
 
