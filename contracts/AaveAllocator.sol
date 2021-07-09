@@ -559,7 +559,7 @@ contract Ownable is IOwnable {
 
 interface ILendingPool {
     function deposit( address asset, uint256 amount, address onBehalfOf, uint16 referralCode ) external;
-    function withdraw( address asset, uint256 amount, address to ) external;
+    function withdraw( address asset, uint256 amount, address to ) external returns (uint256);
 }
 
 interface IStakedTokenIncentivesController {
@@ -654,7 +654,7 @@ contract AaveAllocator is Ownable {
      *  @notice claims accrued stkAave rewards for given aTokens in treasury
      *  @param tokens address[] memory
      */
-    function harvestFor( address[] memory tokens ) external {
+    function harvestFor( address[] calldata tokens ) external {
         address _treasury = address( treasury );
         if( depositToTreasury ) {
             incentives.claimRewardsOnBehalf( tokens, rewardsPending( _treasury ), _treasury, _treasury );
@@ -851,7 +851,7 @@ contract AaveAllocator is Ownable {
      *  @param tokens address[]
      *  @return uint
      */
-    function rewardsPendingFor( address[] memory tokens, address user ) public view returns ( uint ) {
+    function rewardsPendingFor( address[] calldata tokens, address user ) public view returns ( uint ) {
         return incentives.getRewardsBalance( tokens, user );
     }
 
