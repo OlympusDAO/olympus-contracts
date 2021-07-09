@@ -97,53 +97,53 @@ library Address {
     }
 }
 
-interface IOwnable {
-  function manager() external view returns (address);
+interface IGuardable {
+  function guardian() external view returns (address);
 
-  function renounceManagement() external;
+  function renounceGuardian() external;
   
-  function pushManagement( address newOwner_ ) external;
+  function pushGuardian( address newGuardian_ ) external;
   
-  function pullManagement() external;
+  function pullGuardian() external;
 }
 
-contract Ownable is IOwnable {
+contract Guardable is IGuardable {
 
-    address internal _owner;
-    address internal _newOwner;
+    address internal _guardian;
+    address internal _newGuardian;
 
-    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
-    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+    event GuardianPushed(address indexed previousOwner, address indexed newOwner);
+    event GuardianPulled(address indexed previousOwner, address indexed newOwner);
 
     constructor () {
-        _owner = msg.sender;
-        emit OwnershipPushed( address(0), _owner );
+        _guardian = msg.sender;
+        emit GuardianPulled( address(0), _guardian );
     }
 
-    function manager() public view override returns (address) {
-        return _owner;
+    function guardian() public view override returns (address) {
+        return _guardian;
     }
 
-    modifier onlyManager() {
-        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+    modifier onlyGuardian() {
+        require( _guardian == msg.sender, "Guardable: caller is not the owner" );
         _;
     }
 
-    function renounceManagement() public virtual override onlyManager() {
-        emit OwnershipPushed( _owner, address(0) );
-        _owner = address(0);
+    function renounceGuardian() public virtual override onlyGuardian() {
+        emit GuardianPushed( _guardian, address(0) );
+        _guardian = address(0);
     }
 
-    function pushManagement( address newOwner_ ) public virtual override onlyManager() {
-        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipPushed( _owner, newOwner_ );
-        _newOwner = newOwner_;
+    function pushGuardian( address newGuardian_ ) public virtual override onlyGuardian() {
+        require( newGuardian_ != address(0), "Guardable: new guardian is the zero address");
+        emit GuardianPushed( _guardian, newGuardian_ );
+        _newGuardian = newGuardian_;
     }
     
-    function pullManagement() public virtual override {
-        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
-        emit OwnershipPulled( _owner, _newOwner );
-        _owner = _newOwner;
+    function pullGuardian() public virtual override {
+        require( msg.sender == _newGuardian, "Guardable: must be new guardian to pull");
+        emit GuardianPulled( _guardian, _newGuardian );
+        _guardian = _newGuardian;
     }
 }
 
@@ -196,7 +196,7 @@ interface IBondCalculator {
   function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
 }
 
-contract OlympusTreasury is Ownable {
+contract OlympusTreasury is Guardable {
 
     /* ========== DEPENDENCIES ========== */
 
@@ -240,6 +240,7 @@ contract OlympusTreasury is Ownable {
         address toPermit;
         address calculator;
         uint timelockEnd;
+        bool nullify;
     }
 
 
@@ -251,15 +252,16 @@ contract OlympusTreasury is Ownable {
 
     mapping( STATUS => address[] ) public registry;
     mapping( STATUS => mapping( address => bool ) ) public permissions;
+    
+    Queue[] public permissionQueue;
+    uint public immutable blocksNeededForQueue;
+    
     mapping( address => address ) public bondCalculator;
 
     mapping( address => uint ) public debtorBalance;
     
     uint public totalReserves;
     uint public totalDebt;
-
-    Queue[] public permissionQueue;
-    uint public immutable blocksNeededForQueue;
 
 
 
@@ -434,15 +436,66 @@ contract OlympusTreasury is Ownable {
         emit RewardsMinted( msg.sender, _recipient, _amount );
     } 
 
+    /**
+     *  @notice enable permission from queue
+     *  @param _index uint
+     */
+    function enable( uint _index ) external {
+        Queue memory info = permissionQueue[ _index ];
+        require( !info.nullify, "Action has been nullified" );
+        require( block.number >= info.timelockEnd, "Timelock not complete" );
+
+        if ( info.managing == STATUS.SOHM ) { // 9
+            sOHM = info.toPermit;
+        } else {
+            registry[ info.managing ].push( info.toPermit );
+            permissions[ info.managing ][ info.toPermit ] = true;
+            
+            if ( info.managing == STATUS.LIQUIDITYTOKEN ) { // 5
+                bondCalculator[ info.toPermit ] = info.calculator;
+            }
+        }
+    }
 
 
-    /* ========== MANAGERIAL FUNCTIONS ========== */
+
+    /* ========== GOVERNANCE FUNCTIONS ========== */
+
+    /**
+        @notice queue address to receive permission
+        @param _status STATUS
+        @param _address address
+        @return bool
+     */
+    function queue( STATUS _status, address _address, address _calculator ) external returns ( bool ) {
+        require( _address != address(0) );
+
+        uint timelock = block.number.add( blocksNeededForQueue );
+        if ( _status == STATUS.RESERVEMANAGER || _status == STATUS.LIQUIDITYMANAGER ) {
+            timelock = block.number.add( blocksNeededForQueue.mul( 2 ) );
+        }
+
+        permissionQueue.push( Queue({
+            managing: _status,
+            toPermit: _address,
+            calculator: _calculator,
+            timelockEnd: timelock,
+            nullify: false
+        } ) );
+
+        emit ChangeQueued( _status, _address );
+        return true;
+    }
+
+
+
+    /* ========== GUARDIAN FUNCTIONS ========== */
 
     /**
         @notice takes inventory of all tracked assets
         @notice always consolidate to recognized reserves before audit
      */
-    function auditReserves() external onlyManager() {
+    function auditReserves() external onlyGuardian() {
         uint reserves;
         address[] memory reserveToken = registry[ STATUS.RESERVETOKEN ];
         for( uint i = 0; i < reserveToken.length; i++ ) {
@@ -462,48 +515,11 @@ contract OlympusTreasury is Ownable {
     }
 
     /**
-        @notice queue address to receive permission
-        @param _status STATUS
-        @param _address address
-        @return bool
-     */
-    function queue( STATUS _status, address _address, address _calculator ) external onlyManager() returns ( bool ) {
-        require( _address != address(0) );
-
-        uint timelock = block.number.add( blocksNeededForQueue );
-        if ( _status == STATUS.RESERVEMANAGER || _status == STATUS.LIQUIDITYMANAGER ) {
-            timelock = block.number.add( blocksNeededForQueue.mul( 2 ) );
-        }
-
-        permissionQueue.push( Queue({
-            managing: _status,
-            toPermit: _address,
-            calculator: _calculator,
-            timelockEnd: timelock
-        } ) );
-
-        emit ChangeQueued( _status, _address );
-        return true;
-    }
-
-    /**
-     *  @notice enable permission from queue
+     *  @notice prevents queued action from taking place
      *  @param _index uint
      */
-    function enable( uint _index ) external onlyManager() {
-        Queue memory info = permissionQueue[ _index ];
-        require( block.number >= info.timelockEnd, "Timelock not complete" );
-
-        if ( info.managing == STATUS.SOHM ) { // 9
-            sOHM = info.toPermit;
-        } else {
-            registry[ info.managing ].push( info.toPermit );
-            permissions[ info.managing ][ info.toPermit ] = true;
-            
-            if ( info.managing == STATUS.LIQUIDITYTOKEN ) { // 5
-                bondCalculator[ info.toPermit ] = info.calculator;
-            }
-        }
+    function nullify( uint _index ) external onlyGuardian() {
+        permissionQueue[ _index ].nullify = true;
     }
 
     /**
@@ -511,7 +527,7 @@ contract OlympusTreasury is Ownable {
      *  @param _status STATUS
      *  @param _toDisable address
      */
-    function disable( STATUS _status, address _toDisable ) external onlyManager() {
+    function disable( STATUS _status, address _toDisable ) external onlyGuardian() {
         permissions[ _status ][ _toDisable ] = false;
     }
 
