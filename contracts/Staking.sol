@@ -469,53 +469,53 @@ library SafeERC20 {
     }
 }
 
-interface IOwnable {
-  function manager() external view returns (address);
+interface IGovernable {
+  function governor() external view returns (address);
 
-  function renounceManagement() external;
+  function renounceGovernor() external;
   
-  function pushManagement( address newOwner_ ) external;
+  function pushGovernor( address newGovernor_ ) external;
   
-  function pullManagement() external;
+  function pullGovernor() external;
 }
 
-contract Ownable is IOwnable {
+contract Governable is IGovernable {
 
-    address internal _owner;
-    address internal _newOwner;
+    address internal _governor;
+    address internal _newGovernor;
 
-    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
-    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+    event GovernorPushed(address indexed previousGovernor, address indexed newGovernor);
+    event GovernorPulled(address indexed previousGovernor, address indexed newGovernor);
 
     constructor () {
-        _owner = msg.sender;
-        emit OwnershipPushed( address(0), _owner );
+        _governor = msg.sender;
+        emit GovernorPulled( address(0), _governor );
     }
 
-    function manager() public view override returns (address) {
-        return _owner;
+    function governor() public view override returns (address) {
+        return _governor;
     }
 
-    modifier onlyManager() {
-        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+    modifier onlyGovernor() {
+        require( _governor == msg.sender, "Governable: caller is not the governor" );
         _;
     }
 
-    function renounceManagement() public virtual override onlyManager() {
-        emit OwnershipPushed( _owner, address(0) );
-        _owner = address(0);
+    function renounceGovernor() public virtual override onlyGovernor() {
+        emit GovernorPushed( _governor, address(0) );
+        _governor = address(0);
     }
 
-    function pushManagement( address newOwner_ ) public virtual override onlyManager() {
-        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipPushed( _owner, newOwner_ );
-        _newOwner = newOwner_;
+    function pushGovernor( address newGovernor_ ) public virtual override onlyGovernor() {
+        require( newGovernor_ != address(0), "Governable: new governor is the zero address");
+        emit GovernorPushed( _governor, newGovernor_ );
+        _newGovernor = newGovernor_;
     }
     
-    function pullManagement() public virtual override {
-        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
-        emit OwnershipPulled( _owner, _newOwner );
-        _owner = _newOwner;
+    function pullGovernor() public virtual override {
+        require( msg.sender == _newGovernor, "Governable: must be new governor to pull");
+        emit GovernorPulled( _governor, _newGovernor );
+        _governor = _newGovernor;
     }
 }
 
@@ -541,7 +541,7 @@ interface IDistributor {
     function distribute() external returns ( bool );
 }
 
-contract OlympusStaking is Ownable {
+contract OlympusStaking is Governable {
 
     /* ========== DEPENDENCIES ========== */
 
@@ -586,6 +586,8 @@ contract OlympusStaking is Ownable {
     uint public warmupPeriod;
 
     mapping( address => Claim ) public warmupInfo;
+
+    uint public rebate;
 
 
 
@@ -690,6 +692,7 @@ contract OlympusStaking is Ownable {
      */
     function rebase() public {
         if( epoch.endBlock <= block.number ) {
+            sOHM.safeTransfer( msg.sender, rebate );
 
             sOHM.rebase( epoch.distribute, epoch.number );
 
@@ -763,7 +766,7 @@ contract OlympusStaking is Ownable {
         @notice sets the contract address for LP staking
         @param _contract address
      */
-    function setContract( CONTRACTS _contract, address _address ) external onlyManager() {
+    function setContract( CONTRACTS _contract, address _address ) external onlyGovernor() {
         if( _contract == CONTRACTS.DISTRIBUTOR ) { // 0
             distributor = _address;
         } else if ( _contract == CONTRACTS.WARMUP ) { // 1
@@ -779,7 +782,15 @@ contract OlympusStaking is Ownable {
      * @notice set warmup period for new stakers
      * @param _warmupPeriod uint
      */
-    function setWarmup( uint _warmupPeriod ) external onlyManager() {
+    function setWarmup( uint _warmupPeriod ) external onlyGovernor() {
         warmupPeriod = _warmupPeriod;
+    }
+
+    /**
+     *  @notice set rebate to send to address that triggers rebase. compensation for gas.
+     *  @param _amount uint
+     */
+    function setRebate( uint _amount ) external onlyGovernor() {
+        rebate = _amount;
     }
 }

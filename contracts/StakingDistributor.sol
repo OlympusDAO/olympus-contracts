@@ -274,53 +274,103 @@ library Address {
     }
 }
 
+interface IGuardable {
+  function guardian() external view returns (address);
 
-interface IPolicy {
-
-    function policy() external view returns (address);
-
-    function renouncePolicy() external;
+  function renounceGuardian() external;
   
-    function pushPolicy( address newPolicy_ ) external;
-
-    function pullPolicy() external;
+  function pushGuardian( address newGuardian_ ) external;
+  
+  function pullGuardian() external;
 }
 
-contract Policy is IPolicy {
-    
-    address internal _policy;
-    address internal _newPolicy;
+contract Guardable is IGuardable {
 
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    address internal _guardian;
+    address internal _newGuardian;
+
+    event GuardianPushed(address indexed previousGuardian, address indexed newGuardian);
+    event GuardianPulled(address indexed previousGuardian, address indexed newGuardian);
 
     constructor () {
-        _policy = msg.sender;
-        emit OwnershipTransferred( address(0), _policy );
+        _guardian = msg.sender;
+        emit GuardianPulled( address(0), _guardian );
     }
 
-    function policy() public view override returns (address) {
-        return _policy;
+    function guardian() public view override returns (address) {
+        return _guardian;
     }
 
-    modifier onlyPolicy() {
-        require( _policy == msg.sender, "Ownable: caller is not the owner" );
+    modifier onlyGuardian() {
+        require( _guardian == msg.sender, "Guardable: caller is not the guardian" );
         _;
     }
 
-    function renouncePolicy() public virtual override onlyPolicy() {
-        emit OwnershipTransferred( _policy, address(0) );
-        _policy = address(0);
+    function renounceGuardian() public virtual override onlyGuardian() {
+        emit GuardianPushed( _guardian, address(0) );
+        _guardian = address(0);
     }
 
-    function pushPolicy( address newPolicy_ ) public virtual override onlyPolicy() {
-        require( newPolicy_ != address(0), "Ownable: new owner is the zero address");
-        _newPolicy = newPolicy_;
+    function pushGuardian( address newGuardian_ ) public virtual override onlyGuardian() {
+        require( newGuardian_ != address(0), "Guardable: new guardian is the zero address");
+        emit GuardianPushed( _guardian, newGuardian_ );
+        _newGuardian = newGuardian_;
+    }
+    
+    function pullGuardian() public virtual override {
+        require( msg.sender == _newGuardian, "Guardable: must be new guardian to pull");
+        emit GuardianPulled( _guardian, _newGuardian );
+        _guardian = _newGuardian;
+    }
+}
+
+interface IGovernable {
+  function governor() external view returns (address);
+
+  function renounceGovernor() external;
+  
+  function pushGovernor( address newGovernor_ ) external;
+  
+  function pullGovernor() external;
+}
+
+contract Governable is IGovernable {
+
+    address internal _governor;
+    address internal _newGovernor;
+
+    event GovernorPushed(address indexed previousGovernor, address indexed newGovernor);
+    event GovernorPulled(address indexed previousGovernor, address indexed newGovernor);
+
+    constructor () {
+        _governor = msg.sender;
+        emit GovernorPulled( address(0), _governor );
     }
 
-    function pullPolicy() public virtual override {
-        require( msg.sender == _newPolicy );
-        emit OwnershipTransferred( _policy, _newPolicy );
-        _policy = _newPolicy;
+    function governor() public view override returns (address) {
+        return _governor;
+    }
+
+    modifier onlyGovernor() {
+        require( _governor == msg.sender, "Governable: caller is not the governor" );
+        _;
+    }
+
+    function renounceGovernor() public virtual override onlyGovernor() {
+        emit GovernorPushed( _governor, address(0) );
+        _governor = address(0);
+    }
+
+    function pushGovernor( address newGovernor_ ) public virtual override onlyGovernor() {
+        require( newGovernor_ != address(0), "Governable: new governor is the zero address");
+        emit GovernorPushed( _governor, newGovernor_ );
+        _newGovernor = newGovernor_;
+    }
+    
+    function pullGovernor() public virtual override {
+        require( msg.sender == _newGovernor, "Governable: must be new governor to pull");
+        emit GovernorPulled( _governor, _newGovernor );
+        _governor = _newGovernor;
     }
 }
 
@@ -328,7 +378,10 @@ interface ITreasury {
     function mintRewards( address _recipient, uint _amount ) external;
 }
 
-contract Distributor is Policy {
+contract Distributor is Governable, Guardable {
+
+    /* ========== DEPENDENCIES ========== */
+
     using SafeMath for uint;
     using SafeERC20 for IERC20;
     
@@ -343,6 +396,7 @@ contract Distributor is Policy {
     uint public nextEpochBlock;
     
     mapping( uint => Adjust ) public adjustments;
+    
     
     
     /* ====== STRUCTS ====== */
@@ -457,7 +511,7 @@ contract Distributor is Policy {
         @param _recipient address
         @param _rewardRate uint
      */
-    function addRecipient( address _recipient, uint _rewardRate ) external onlyPolicy() {
+    function addRecipient( address _recipient, uint _rewardRate ) external onlyGovernor() {
         require( _recipient != address(0) );
         info.push( Info({
             recipient: _recipient,
@@ -470,7 +524,8 @@ contract Distributor is Policy {
         @param _index uint
         @param _recipient address
      */
-    function removeRecipient( uint _index, address _recipient ) external onlyPolicy() {
+    function removeRecipient( uint _index, address _recipient ) external {
+        require( msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian" );
         require( _recipient == info[ _index ].recipient );
         info[ _index ].recipient = address(0);
         info[ _index ].rate = 0;
@@ -483,7 +538,13 @@ contract Distributor is Policy {
         @param _rate uint
         @param _target uint
      */
-    function setAdjustment( uint _index, bool _add, uint _rate, uint _target ) external onlyPolicy() {
+    function setAdjustment( uint _index, bool _add, uint _rate, uint _target ) external {
+        require( msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian" );
+
+        if ( msg.sender == guardian() ) {
+            require( _rate <= info[ _index ].rate.mul( 25 ).div( 1000 ), "Limiter: cannot adjust by >2.5%" );
+        }
+        
         adjustments[ _index ] = Adjust({
             add: _add,
             rate: _rate,
