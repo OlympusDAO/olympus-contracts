@@ -112,8 +112,8 @@ contract Guardable is IGuardable {
     address internal _guardian;
     address internal _newGuardian;
 
-    event GuardianPushed(address indexed previousOwner, address indexed newOwner);
-    event GuardianPulled(address indexed previousOwner, address indexed newOwner);
+    event GuardianPushed(address indexed previousGuardian, address indexed newGuardian);
+    event GuardianPulled(address indexed previousGuardian, address indexed newGuardian);
 
     constructor () {
         _guardian = msg.sender;
@@ -125,7 +125,7 @@ contract Guardable is IGuardable {
     }
 
     modifier onlyGuardian() {
-        require( _guardian == msg.sender, "Guardable: caller is not the owner" );
+        require( _guardian == msg.sender, "Guardable: caller is not the guardian" );
         _;
     }
 
@@ -144,6 +144,56 @@ contract Guardable is IGuardable {
         require( msg.sender == _newGuardian, "Guardable: must be new guardian to pull");
         emit GuardianPulled( _guardian, _newGuardian );
         _guardian = _newGuardian;
+    }
+}
+
+interface IGovernable {
+  function governor() external view returns (address);
+
+  function renounceGovernor() external;
+  
+  function pushGovernor( address newGovernor_ ) external;
+  
+  function pullGovernor() external;
+}
+
+contract Governable is IGovernable {
+
+    address internal _governor;
+    address internal _newGovernor;
+
+    event GovernorPushed(address indexed previousGovernor, address indexed newGovernor);
+    event GovernorPulled(address indexed previousGovernor, address indexed newGovernor);
+
+    constructor () {
+        _governor = msg.sender;
+        emit GovernorPulled( address(0), _governor );
+    }
+
+    function governor() public view override returns (address) {
+        return _governor;
+    }
+
+    modifier onlyGovernor() {
+        require( _governor == msg.sender, "Governable: caller is not the governor" );
+        _;
+    }
+
+    function renounceGovernor() public virtual override onlyGovernor() {
+        emit GovernorPushed( _governor, address(0) );
+        _governor = address(0);
+    }
+
+    function pushGovernor( address newGovernor_ ) public virtual override onlyGovernor() {
+        require( newGovernor_ != address(0), "Governable: new governor is the zero address");
+        emit GovernorPushed( _governor, newGovernor_ );
+        _newGovernor = newGovernor_;
+    }
+    
+    function pullGovernor() public virtual override {
+        require( msg.sender == _newGovernor, "Governable: must be new governor to pull");
+        emit GovernorPulled( _governor, _newGovernor );
+        _governor = _newGovernor;
     }
 }
 
@@ -196,7 +246,7 @@ interface IBondCalculator {
   function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
 }
 
-contract OlympusTreasury is Guardable {
+contract OlympusTreasury is Guardable, Governable {
 
     /* ========== DEPENDENCIES ========== */
 
@@ -437,10 +487,10 @@ contract OlympusTreasury is Guardable {
     } 
 
     /**
-     *  @notice enable permission from queue
+     *  @notice enable queued permission
      *  @param _index uint
      */
-    function enable( uint _index ) external {
+    function execute( uint _index ) external {
         Queue memory info = permissionQueue[ _index ];
         require( !info.nullify, "Action has been nullified" );
         require( block.number >= info.timelockEnd, "Timelock not complete" );
@@ -459,15 +509,14 @@ contract OlympusTreasury is Guardable {
 
 
 
-    /* ========== GOVERNANCE FUNCTIONS ========== */
+    /* ========== GOVERNOR FUNCTIONS ========== */
 
     /**
         @notice queue address to receive permission
         @param _status STATUS
         @param _address address
-        @return bool
      */
-    function queue( STATUS _status, address _address, address _calculator ) external returns ( bool ) {
+    function queue( STATUS _status, address _address, address _calculator ) external onlyGovernor() {
         require( _address != address(0) );
 
         uint timelock = block.number.add( blocksNeededForQueue );
@@ -484,10 +533,21 @@ contract OlympusTreasury is Guardable {
         } ) );
 
         emit ChangeQueued( _status, _address );
-        return true;
     }
 
 
+
+    /* ========== GOVERNOR or GUARDIAN FUNCTIONS ========== */
+
+    /**
+     *  @notice disable permission from address
+     *  @param _status STATUS
+     *  @param _toDisable address
+     */
+    function disable( STATUS _status, address _toDisable ) external {
+        require( msg.sender == governor() || msg.sender == guardian(), "Not governor or guardian" );
+        permissions[ _status ][ _toDisable ] = false;
+    }
 
     /* ========== GUARDIAN FUNCTIONS ========== */
 
@@ -520,15 +580,6 @@ contract OlympusTreasury is Guardable {
      */
     function nullify( uint _index ) external onlyGuardian() {
         permissionQueue[ _index ].nullify = true;
-    }
-
-    /**
-     *  @notice disable permission from address
-     *  @param _status STATUS
-     *  @param _toDisable address
-     */
-    function disable( STATUS _status, address _toDisable ) external onlyGuardian() {
-        permissions[ _status ][ _toDisable ] = false;
     }
 
 

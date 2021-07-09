@@ -1,53 +1,103 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-interface IOwnable {
-  function policy() external view returns (address);
+interface IGuardable {
+  function guardian() external view returns (address);
 
-  function renounceManagement() external;
+  function renounceGuardian() external;
   
-  function pushManagement( address newOwner_ ) external;
+  function pushGuardian( address newGuardian_ ) external;
   
-  function pullManagement() external;
+  function pullGuardian() external;
 }
 
-contract Ownable is IOwnable {
+contract Guardable is IGuardable {
 
-    address internal _owner;
-    address internal _newOwner;
+    address internal _guardian;
+    address internal _newGuardian;
 
-    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
-    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+    event GuardianPushed(address indexed previousGuardian, address indexed newGuardian);
+    event GuardianPulled(address indexed previousGuardian, address indexed newGuardian);
 
     constructor () {
-        _owner = msg.sender;
-        emit OwnershipPushed( address(0), _owner );
+        _guardian = msg.sender;
+        emit GuardianPulled( address(0), _guardian );
     }
 
-    function policy() public view override returns (address) {
-        return _owner;
+    function guardian() public view override returns (address) {
+        return _guardian;
     }
 
-    modifier onlyPolicy() {
-        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+    modifier onlyGuardian() {
+        require( _guardian == msg.sender, "Guardable: caller is not the guardian" );
         _;
     }
 
-    function renounceManagement() public virtual override onlyPolicy() {
-        emit OwnershipPushed( _owner, address(0) );
-        _owner = address(0);
+    function renounceGuardian() public virtual override onlyGuardian() {
+        emit GuardianPushed( _guardian, address(0) );
+        _guardian = address(0);
     }
 
-    function pushManagement( address newOwner_ ) public virtual override onlyPolicy() {
-        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipPushed( _owner, newOwner_ );
-        _newOwner = newOwner_;
+    function pushGuardian( address newGuardian_ ) public virtual override onlyGuardian() {
+        require( newGuardian_ != address(0), "Guardable: new guardian is the zero address");
+        emit GuardianPushed( _guardian, newGuardian_ );
+        _newGuardian = newGuardian_;
     }
     
-    function pullManagement() public virtual override {
-        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
-        emit OwnershipPulled( _owner, _newOwner );
-        _owner = _newOwner;
+    function pullGuardian() public virtual override {
+        require( msg.sender == _newGuardian, "Guardable: must be new guardian to pull");
+        emit GuardianPulled( _guardian, _newGuardian );
+        _guardian = _newGuardian;
+    }
+}
+
+interface IGovernable {
+  function governor() external view returns (address);
+
+  function renounceGovernor() external;
+  
+  function pushGovernor( address newGovernor_ ) external;
+  
+  function pullGovernor() external;
+}
+
+contract Governable is IGovernable {
+
+    address internal _governor;
+    address internal _newGovernor;
+
+    event GovernorPushed(address indexed previousGovernor, address indexed newGovernor);
+    event GovernorPulled(address indexed previousGovernor, address indexed newGovernor);
+
+    constructor () {
+        _governor = msg.sender;
+        emit GovernorPulled( address(0), _governor );
+    }
+
+    function governor() public view override returns (address) {
+        return _governor;
+    }
+
+    modifier onlyGovernor() {
+        require( _governor == msg.sender, "Governable: caller is not the governor" );
+        _;
+    }
+
+    function renounceGovernor() public virtual override onlyGovernor() {
+        emit GovernorPushed( _governor, address(0) );
+        _governor = address(0);
+    }
+
+    function pushGovernor( address newGovernor_ ) public virtual override onlyGovernor() {
+        require( newGovernor_ != address(0), "Governable: new governor is the zero address");
+        emit GovernorPushed( _governor, newGovernor_ );
+        _newGovernor = newGovernor_;
+    }
+    
+    function pullGovernor() public virtual override {
+        require( msg.sender == _newGovernor, "Governable: must be new governor to pull");
+        emit GovernorPulled( _governor, _newGovernor );
+        _governor = _newGovernor;
     }
 }
 
@@ -602,7 +652,7 @@ interface IStakingHelper {
     function stake( uint _amount, address _recipient ) external;
 }
 
-contract OlympusBondDepository is Ownable {
+contract OlympusBondDepository is Governable, Guardable {
 
     using FixedPoint for *;
     using SafeERC20 for IERC20;
@@ -716,7 +766,7 @@ contract OlympusBondDepository is Ownable {
         uint _fee,
         uint _maxDebt,
         uint _initialDebt
-    ) external onlyPolicy() {
+    ) external onlyGuardian() {
         require( terms.controlVariable == 0, "Bonds must be initialized from 0" );
         terms = Terms ({
             controlVariable: _controlVariable,
@@ -741,15 +791,12 @@ contract OlympusBondDepository is Ownable {
      *  @param _parameter PARAMETER
      *  @param _input uint
      */
-    function setBondTerms ( PARAMETER _parameter, uint _input ) external onlyPolicy() {
+    function setBondTerms ( PARAMETER _parameter, uint _input ) external onlyGovernor() {
         if ( _parameter == PARAMETER.VESTING ) { // 0
-            require( _input >= 10000, "Vesting must be longer than 36 hours" );
             terms.vestingTerm = _input;
         } else if ( _parameter == PARAMETER.PAYOUT ) { // 1
-            require( _input <= 1000, "Payout cannot be above 1 percent" );
             terms.maxPayout = _input;
         } else if ( _parameter == PARAMETER.FEE ) { // 2
-            require( _input <= 10000, "DAO fee cannot exceed payout" );
             terms.fee = _input;
         } else if ( _parameter == PARAMETER.DEBT ) { // 3
             terms.maxDebt = _input;
@@ -768,7 +815,9 @@ contract OlympusBondDepository is Ownable {
         uint _increment, 
         uint _target,
         uint _buffer 
-    ) external onlyPolicy() {
+    ) external {
+        require( msg.sender == governor() || msg.sender == guardian(), "Not governor or guardian" );
+        
         require( _increment <= terms.controlVariable.mul( 25 ).div( 1000 ), "Increment too large" );
 
         adjustment = Adjust({
@@ -1059,17 +1108,14 @@ contract OlympusBondDepository is Ownable {
 
 
 
-
     /* ======= AUXILLIARY ======= */
 
     /**
      *  @notice allow anyone to send lost tokens (excluding principle or OHM) to the DAO
-     *  @return bool
      */
-    function recoverLostToken( address _token ) external returns ( bool ) {
+    function recoverLostToken( address _token ) external {
         require( _token != address( OHM ) );
         require( _token != address( principle ) );
         IERC20( _token ).safeTransfer( DAO, IERC20( _token ).balanceOf( address(this) ) );
-        return true;
     }
 }
