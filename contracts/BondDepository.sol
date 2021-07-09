@@ -585,7 +585,7 @@ library FixedPoint {
 }
 
 interface ITreasury {
-    function deposit( uint _amount, address _token, uint _profit ) external returns ( bool );
+    function deposit( address _from, uint _amount, address _token, uint _profit ) external returns ( uint );
     function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
 }
 
@@ -623,17 +623,15 @@ contract OlympusBondDepository is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    address public immutable OHM; // token given as payment for bond
-    address public immutable principle; // token used to create bond
-    address public immutable treasury; // mints OHM when receives principle
+    IERC20 immutable OHM; // token given as payment for bond
+    IERC20 immutable principle; // token used to create bond
+    ITreasury immutable treasury; // mints OHM when receives principle
     address public immutable DAO; // receives profit share from bond
 
     bool public immutable isLiquidityBond; // LP and Reserve bonds are treated slightly different
-    address public immutable bondCalculator; // calculates value of LP tokens
+    IBondCalculator immutable bondCalculator; // calculates value of LP tokens
 
     address public staking; // to auto-stake payout
-    address public stakingHelper; // to stake and claim if no staking warmup
-    bool public useHelper;
 
     Terms public terms; // stores terms for new bonds
     Adjust public adjustment; // stores adjustment to BCV data
@@ -688,15 +686,15 @@ contract OlympusBondDepository is Ownable {
         address _bondCalculator
     ) {
         require( _OHM != address(0) );
-        OHM = _OHM;
+        OHM = IERC20( _OHM );
         require( _principle != address(0) );
-        principle = _principle;
+        principle = IERC20( _principle );
         require( _treasury != address(0) );
-        treasury = _treasury;
+        treasury = ITreasury( _treasury );
         require( _DAO != address(0) );
         DAO = _DAO;
         // bondCalculator should be address(0) if not LP bond
-        bondCalculator = _bondCalculator;
+        bondCalculator = IBondCalculator( _bondCalculator );
         isLiquidityBond = ( _bondCalculator != address(0) );
     }
 
@@ -782,22 +780,6 @@ contract OlympusBondDepository is Ownable {
         });
     }
 
-    /**
-     *  @notice set contract for auto stake
-     *  @param _staking address
-     *  @param _helper bool
-     */
-    function setStaking( address _staking, bool _helper ) external onlyPolicy() {
-        require( _staking != address(0) );
-        if ( _helper ) {
-            useHelper = true;
-            stakingHelper = _staking;
-        } else {
-            useHelper = false;
-            staking = _staking;
-        }
-    }
-
 
     
 
@@ -821,32 +803,19 @@ contract OlympusBondDepository is Ownable {
         require( totalDebt <= terms.maxDebt, "Max capacity reached" );
         
         uint priceInUSD = bondPriceInUSD(); // Stored in bond info
-        uint nativePrice = _bondPrice();
 
-        require( _maxPrice >= nativePrice, "Slippage limit: more than max price" ); // slippage protection
+        require( _maxPrice >= _bondPrice(), "Slippage limit: more than max price" ); // slippage protection
 
-        uint value = ITreasury( treasury ).valueOf( principle, _amount );
+        uint value = treasury.valueOf( address( principle ), _amount );
         uint payout = payoutFor( value ); // payout to bonder is computed
 
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
 
-        // profits are calculated
-        uint fee = payout.mul( terms.fee ).div( 10000 );
-        uint profit = value.sub( payout ).sub( fee );
+        uint profit = value.sub( payout );
 
-        /**
-            principle is transferred in
-            approved and
-            deposited into the treasury, returning (_amount - profit) OHM
-         */
-        IERC20( principle ).safeTransferFrom( msg.sender, address(this), _amount );
-        IERC20( principle ).approve( address( treasury ), _amount );
-        ITreasury( treasury ).deposit( _amount, principle, profit );
-        
-        if ( fee != 0 ) { // fee is transferred to dao 
-            IERC20( OHM ).safeTransfer( DAO, fee ); 
-        }
+        // deposit principle from sender address to treasury
+        treasury.deposit( msg.sender, _amount, address( principle ), profit );
         
         // total debt is increased
         totalDebt = totalDebt.add( value ); 
@@ -912,15 +881,10 @@ contract OlympusBondDepository is Ownable {
      */
     function stakeOrSend( address _recipient, bool _stake, uint _amount ) internal returns ( uint ) {
         if ( !_stake ) { // if user does not want to stake
-            IERC20( OHM ).transfer( _recipient, _amount ); // send payout
+            OHM.transfer( _recipient, _amount ); // send payout
         } else { // if user wants to stake
-            if ( useHelper ) { // use if staking warmup is 0
-                IERC20( OHM ).approve( stakingHelper, _amount );
-                IStakingHelper( stakingHelper ).stake( _amount, _recipient );
-            } else {
-                IERC20( OHM ).approve( staking, _amount );
-                IStaking( staking ).stake( _amount, _recipient );
-            }
+            IERC20( OHM ).approve( staking, _amount );
+            IStaking( staking ).stake( _amount, _recipient );
         }
         return _amount;
     }
@@ -966,7 +930,7 @@ contract OlympusBondDepository is Ownable {
      *  @return uint
      */
     function maxPayout() public view returns ( uint ) {
-        return IERC20( OHM ).totalSupply().mul( terms.maxPayout ).div( 100000 );
+        return OHM.totalSupply().mul( terms.maxPayout ).div( 100000 );
     }
 
     /**
@@ -1009,9 +973,9 @@ contract OlympusBondDepository is Ownable {
      */
     function bondPriceInUSD() public view returns ( uint price_ ) {
         if( isLiquidityBond ) {
-            price_ = bondPrice().mul( IBondCalculator( bondCalculator ).markdown( principle ) ).div( 100 );
+            price_ = bondPrice().mul( bondCalculator.markdown( address( principle ) ) ).div( 100 );
         } else {
-            price_ = bondPrice().mul( 10 ** IERC20( principle ).decimals() ).div( 100 );
+            price_ = bondPrice().mul( 10 ** principle.decimals() ).div( 100 );
         }
     }
 
@@ -1021,10 +985,9 @@ contract OlympusBondDepository is Ownable {
      *  @return debtRatio_ uint
      */
     function debtRatio() public view returns ( uint debtRatio_ ) {   
-        uint supply = IERC20( OHM ).totalSupply();
         debtRatio_ = FixedPoint.fraction( 
             currentDebt().mul( 1e9 ), 
-            supply
+            OHM.totalSupply()
         ).decode112with18().div( 1e18 );
     }
 
@@ -1034,7 +997,7 @@ contract OlympusBondDepository is Ownable {
      */
     function standardizedDebtRatio() external view returns ( uint ) {
         if ( isLiquidityBond ) {
-            return debtRatio().mul( IBondCalculator( bondCalculator ).markdown( principle ) ).div( 1e9 );
+            return debtRatio().mul( bondCalculator.markdown( address( principle ) ) ).div( 1e9 );
         } else {
             return debtRatio();
         }
@@ -1104,8 +1067,8 @@ contract OlympusBondDepository is Ownable {
      *  @return bool
      */
     function recoverLostToken( address _token ) external returns ( bool ) {
-        require( _token != OHM );
-        require( _token != principle );
+        require( _token != address( OHM ) );
+        require( _token != address( principle ) );
         IERC20( _token ).safeTransfer( DAO, IERC20( _token ).balanceOf( address(this) ) );
         return true;
     }

@@ -987,6 +987,10 @@ contract Ownable is IOwnable {
     }
 }
 
+interface IOracle {
+    function getPrice( address _pair ) external returns ( uint );
+}
+
 contract sOlympus is ERC20Permit, Ownable {
 
     using SafeMath for uint256;
@@ -999,6 +1003,9 @@ contract sOlympus is ERC20Permit, Ownable {
     address public stakingContract;
     address public initializer;
 
+    IOracle oracle;
+    address pair;
+
     event LogRebase( uint256 indexed epoch, uint256 totalSupply );
     event LogStakingContractUpdated( address stakingContract );
 
@@ -1009,6 +1016,7 @@ contract sOlympus is ERC20Permit, Ownable {
         uint totalStakedAfter;
         uint amountRebased;
         uint index;
+        uint indexAdjustedPrice;
         uint blockNumberOccured;
     }
     Rebase[] public rebases;
@@ -1043,7 +1051,7 @@ contract sOlympus is ERC20Permit, Ownable {
         require( stakingContract_ != address(0) );
         stakingContract = stakingContract_;
         _gonBalances[ stakingContract ] = TOTAL_GONS;
-
+        
         emit Transfer( address(0x0), stakingContract, _totalSupply );
         emit LogStakingContractUpdated( stakingContract_ );
         
@@ -1055,6 +1063,13 @@ contract sOlympus is ERC20Permit, Ownable {
         require( INDEX == 0 );
         INDEX = _INDEX;
         return true;
+    }
+
+    function setOracle( address _oracle, address _pair ) external onlyManager() {
+        require( _oracle != address(0) );
+        oracle = IOracle( _oracle );
+        require( _pair != address(0) );
+        pair = _pair;
     }
 
     /**
@@ -1115,6 +1130,7 @@ contract sOlympus is ERC20Permit, Ownable {
             totalStakedAfter: circulatingSupply(),
             amountRebased: profit_,
             index: index(),
+            indexAdjustedPrice: index().mul( oracle.getPrice( pair ) ).div( 1e9 ),
             blockNumberOccured: block.number
         }));
         
