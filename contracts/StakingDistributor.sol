@@ -336,8 +336,8 @@ contract Distributor is Policy {
     
     /* ====== VARIABLES ====== */
 
-    address public immutable OHM;
-    address public immutable treasury;
+    IERC20 immutable OHM;
+    ITreasury immutable treasury;
     
     uint public immutable epochLength;
     uint public nextEpochBlock;
@@ -365,9 +365,9 @@ contract Distributor is Policy {
 
     constructor( address _treasury, address _ohm, uint _epochLength, uint _nextEpochBlock ) {        
         require( _treasury != address(0) );
-        treasury = _treasury;
+        treasury = ITreasury( _treasury );
         require( _ohm != address(0) );
-        OHM = _ohm;
+        OHM = IERC20( _ohm );
         epochLength = _epochLength;
         nextEpochBlock = _nextEpochBlock;
     }
@@ -379,23 +379,20 @@ contract Distributor is Policy {
     /**
         @notice send epoch reward to staking contract
      */
-    function distribute() external returns ( bool ) {
+    function distribute() external {
         if ( nextEpochBlock <= block.number ) {
             nextEpochBlock = nextEpochBlock.add( epochLength ); // set next epoch block
             
             // distribute rewards to each recipient
             for ( uint i = 0; i < info.length; i++ ) {
                 if ( info[ i ].rate > 0 ) {
-                    ITreasury( treasury ).mintRewards( // mint and send from treasury
+                    treasury.mintRewards( // mint and send from treasury
                         info[ i ].recipient, 
                         nextRewardAt( info[ i ].rate ) 
                     );
                     adjust( i ); // check for adjustment
                 }
             }
-            return true;
-        } else { 
-            return false; 
         }
     }
     
@@ -433,7 +430,7 @@ contract Distributor is Policy {
         @return uint
      */
     function nextRewardAt( uint _rate ) public view returns ( uint ) {
-        return IERC20( OHM ).totalSupply().mul( _rate ).div( 1000000 );
+        return OHM.totalSupply().mul( _rate ).div( 1000000 );
     }
 
     /**
