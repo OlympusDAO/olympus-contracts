@@ -593,18 +593,18 @@ contract AaveAllocator is Ownable {
     ILendingPool immutable lendingPool; // Aave Lending Pool
     ITreasury immutable treasury; // Olympus Treasury
 
-    address[] public aTokens; // All relevant aTokens
-    mapping( address => address ) public aTokenRegistry; // Corresponding aTokens for tokens
+    address[] public aTokens; // all relevant aTokens
+    mapping( address => address ) public aTokenRegistry; // corresponding aTokens for tokens
 
     uint public totalValueDeployed; // total RFV deployed into lending pool
-    mapping( address => uint ) public deployedFor; // amount allocated into pool for token
-    mapping( address => uint ) public deployLimitFor; // max allocated into pool for token
+    mapping( address => uint ) public deployedFor; // amount of token deployed into pool
+    mapping( address => uint ) public deployLimitFor; // max token can be deployed into pool
 
-    uint public immutable timelockInBlocks; // timelock to raise max allocation
+    uint public immutable timelockInBlocks; // timelock to raise deployment limit
     mapping( address => uint ) public raiseLimitTimelockEnd; // block when new max can be set
     mapping( address => uint ) public newLimit; // pending new deployment limits for tokens
     
-    uint16 public referralCode; // Rebates portion of lending pool fees
+    uint16 public referralCode; // rebates portion of lending pool fees
 
 
     /* ======== CONSTRUCTOR ======== */
@@ -659,7 +659,7 @@ contract AaveAllocator is Ownable {
      *  @param amount uint
      */
     function deposit( address token, uint amount ) external onlyPolicy() {
-        require( !exceedsDeployLimit( token, amount ) ); // ensure deposit is within bounds
+        require( !exceedsLimit( token, amount ) ); // ensure deposit is within bounds
 
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
@@ -716,11 +716,11 @@ contract AaveAllocator is Ownable {
     }
 
     /**
-     *  @notice lowers max allocation for asset without timelock
+     *  @notice lowers max can be deployed for asset (no timelock)
      *  @param token address
      *  @param newMax uint
      */
-    function lowerMaxDeployed( address token, uint newMax ) external onlyPolicy() {
+    function lowerLimit( address token, uint newMax ) external onlyPolicy() {
         require( newMax < deployLimitFor[ token ] );
         require( newMax > deployedFor[ token ] );
         deployLimitFor[ token ] = newMax;
@@ -730,7 +730,7 @@ contract AaveAllocator is Ownable {
      *  @param token address
      *  @param newMax uint
      */
-    function queueRaiseMaxDeployed( address token, uint newMax ) external onlyPolicy() {
+    function queueRaiseLimit( address token, uint newMax ) external onlyPolicy() {
         raiseLimitTimelockEnd[ token ] = block.number.add( timelockInBlocks );
         newLimit[ token ] = newMax;
     }
@@ -739,7 +739,7 @@ contract AaveAllocator is Ownable {
      *  @notice changes max allocation for asset when timelock elapsed
      *  @param token address
      */
-    function raiseMaxDeployed( address token ) external onlyPolicy() {
+    function raiseLimit( address token ) external onlyPolicy() {
         require( block.number >= raiseLimitTimelockEnd[ token ], "Timelock not expired" );
 
         deployLimitFor[ token ] = newLimit[ token ];
@@ -814,7 +814,7 @@ contract AaveAllocator is Ownable {
      *  @param token address
      *  @param amount uint
      */
-    function exceedsDeployLimit( address token, uint amount ) public view returns ( bool ) {
+    function exceedsLimit( address token, uint amount ) public view returns ( bool ) {
         uint alreadyDeployed = deployedFor[ token ];
         uint willBeDeployed = alreadyDeployed.add( amount );
 
