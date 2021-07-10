@@ -608,8 +608,13 @@ contract AaveAllocator is Ownable {
     
     uint16 public referralCode; // rebates portion of lending pool fees
 
-    // deposit aDAI into treasury or hold in allocator.
-    bool public depositToTreasury; // contigent on claimOnBehalfOf permission
+    /** Two modes on this contract. Default mode (depositToTreasury = false)
+     *  holds aDAI in this contract. The alternate mode (depositToTreasury = true)
+     *  deposits aDAI into the treasury and retrieves it to withdraw. Switching 
+     *  to true is contigent on claimOnBehalfOf permission (which must be given
+     *  by Aave governance) so that this contract can claim stkAAVE rewards.
+     */ 
+    bool public depositToTreasury;
 
 
     /* ======== CONSTRUCTOR ======== */
@@ -639,27 +644,27 @@ contract AaveAllocator is Ownable {
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
-     *  @notice claims accrued stkAave rewards for all added aTokens in treasury
+     *  @notice claims accrued stkAave rewards for all tracked aTokens
      */
     function harvest() public {
         address _treasury = address( treasury );
-        if( depositToTreasury ) {
+        if( depositToTreasury ) { // claims rewards accrued to treasury
             incentives.claimRewardsOnBehalf( aTokens, rewardsPending( _treasury ), _treasury, _treasury );
-        } else {
+        } else { // claims rewards accrued to this contract
             incentives.claimRewards( aTokens, rewardsPending( address( this ) ), _treasury );
         }
     }
 
     /**
-     *  @notice claims accrued stkAave rewards for given aTokens in treasury
-     *  @param tokens address[] memory
+     *  @notice claims accrued stkAave rewards for given aTokens
+     *  @param _aTokens address[] memory
      */
-    function harvestFor( address[] calldata tokens ) external {
+    function harvestFor( address[] calldata _aTokens ) external {
         address _treasury = address( treasury );
-        if( depositToTreasury ) {
-            incentives.claimRewardsOnBehalf( tokens, rewardsPending( _treasury ), _treasury, _treasury );
-        } else {
-            incentives.claimRewards( tokens, rewardsPending( address( this ) ), _treasury );
+        if( depositToTreasury ) { // claims rewards accrued to treasury
+            incentives.claimRewardsOnBehalf( _aTokens, rewardsPending( _treasury ), _treasury, _treasury );
+        } else { // claims rewards accrued to this contract
+            incentives.claimRewards( _aTokens, rewardsPending( address( this ) ), _treasury );
         }
     }
 
@@ -727,9 +732,9 @@ contract AaveAllocator is Ownable {
         require( aToken != address(0) );
         require( aTokenRegistry[ token ] == address(0) ); // cannot add token twice
 
-        aTokenRegistry[ token ] = aToken;
-        aTokens.push( aToken );
-        deployLimitFor[ token ] = max;
+        aTokenRegistry[ token ] = aToken; // maps token to aToken
+        aTokens.push( aToken ); // tracks aToken in array
+        deployLimitFor[ token ] = max; // sets max token can be deployed
     }
 
     /**
@@ -739,7 +744,7 @@ contract AaveAllocator is Ownable {
      */
     function lowerLimit( address token, uint newMax ) external onlyPolicy() {
         require( newMax < deployLimitFor[ token ] );
-        require( newMax > deployedFor[ token ] );
+        require( newMax > deployedFor[ token ] ); // cannot set limit below what has been deployed already
         deployLimitFor[ token ] = newMax;
     }
     
@@ -780,8 +785,9 @@ contract AaveAllocator is Ownable {
         require( incentives.getClaimer( address( treasury ) ) == address(this), "Contract not approved to claim rewards" );
         require( !depositToTreasury, "Already enabled" );
 
-        harvest();
-
+        harvest(); // claim accrued rewards to this address first
+        
+        // deposit all held aTokens into treasury
         for ( uint i = 0; i < aTokens.length; i++ ) {
             address aToken = aTokens[i];
             uint balance = IERC20( aToken ).balanceOf( address(this) );
@@ -791,14 +797,14 @@ contract AaveAllocator is Ownable {
                 treasury.deposit( balance, aToken, value ); // deposit using value as profit so no OHM is minted
             }
         }
-        depositToTreasury = true;
+        depositToTreasury = true; // enable last
     }
 
     /**
      *  @notice revert enabling aToken treasury deposits
      */
     function revertDepositToTreasury() external onlyPolicy() {
-        depositToTreasury = false;
+        depositToTreasury = false; // future aToken deposits will be held in this contract
     }
 
 
@@ -840,6 +846,7 @@ contract AaveAllocator is Ownable {
 
     /**
      *  @notice query all pending rewards
+     *  @param user address
      *  @return uint
      */
     function rewardsPending( address user ) public view returns ( uint ) {
@@ -849,6 +856,7 @@ contract AaveAllocator is Ownable {
     /**
      *  @notice query pending rewards for provided aTokens
      *  @param tokens address[]
+     *  @param user address
      *  @return uint
      */
     function rewardsPendingFor( address[] calldata tokens, address user ) public view returns ( uint ) {
