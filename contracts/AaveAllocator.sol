@@ -709,7 +709,7 @@ contract AaveAllocator is Ownable {
         lendingPool.withdraw( aToken, amount, address(this) ); // withdraw from lending pool, returning asset
         
         uint balance = IERC20( token ).balanceOf( address(this) ); // balance of asset received from lending pool
-        uint value = ITreasury( treasury ).valueOf( token, balance ); // treasury RFV calculator
+        uint value = treasury.valueOf( token, balance ); // treasury RFV calculator
         
         accountingFor( token, balance, value, false ); // account for withdrawal
 
