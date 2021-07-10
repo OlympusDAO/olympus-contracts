@@ -706,7 +706,7 @@ contract AaveAllocator is Ownable {
         }
 
         IERC20( aToken ).approve( address( lendingPool ), amount ); // approve to withdraw from lending pool
-        lendingPool.withdraw( aToken, amount, address(this) ); // withdraw from lending pool, returning asset
+        lendingPool.withdraw( token, amount, address(this) ); // withdraw from lending pool, returning asset
         
         uint balance = IERC20( token ).balanceOf( address(this) ); // balance of asset received from lending pool
         uint value = treasury.valueOf( token, balance ); // treasury RFV calculator
