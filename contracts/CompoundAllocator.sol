@@ -557,16 +557,15 @@ contract Ownable is IOwnable {
     }
 }
 
-interface ILendingPool {
-    function deposit( address asset, uint256 amount, address onBehalfOf, uint16 referralCode ) external;
-    function withdraw( address asset, uint256 amount, address to ) external returns (uint256);
+interface CERC20 {
+    function mint( uint mintAmount ) external returns ( uint );
+    function redeem( uint redeemTokens ) external returns ( uint );
 }
 
-interface IStakedTokenIncentivesController {
-    function claimRewards( address[] memory assets, uint256 amount, address to ) external;
-    function claimRewardsOnBehalf(address[] memory assets, uint256 amount, address user, address to) external;
-    function getRewardsBalance(address[] memory assets, address user) external view returns (uint256);
-    function getClaimer(address user) external view returns (address);
+interface IComptroller {
+    function compAccrued( address holder ) external;
+    function claimComp( address holder ) external;
+    function claimComp( address holder, CToken[] memory cTokens ) external view returns (uint256);
 }
 
 interface ITreasury {
@@ -587,9 +586,13 @@ contract AaveAllocator is Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint;
 
-    struct aTokenData {
+
+
+    /* ======== STRUCTS ======== */
+
+    struct cTokenData {
         address underlying;
-        address aToken;
+        address cToken;
         uint deployed;
         uint limit;
         uint newLimit;
@@ -600,48 +603,32 @@ contract AaveAllocator is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    IStakedTokenIncentivesController immutable incentives; // stkAave incentive controller
-    ILendingPool immutable lendingPool; // Aave Lending Pool
+    IComptroller immutable troll; // stkAave incentive controller
     ITreasury immutable treasury; // Olympus Treasury
 
-    address[] public aTokens; // all relevant aTokens
-    mapping( address => aTokenData ) public aTokenInfo;
+    address[] public cTokens; // all relevant cTokens
+    mapping( address => cTokenData ) public cTokenInfo; // corresponding cTokens for tokens
 
     uint public totalValueDeployed; // total RFV deployed into lending pool
-
+        
     uint public immutable timelockInBlocks; // timelock to raise deployment limit
-    
-    uint16 public referralCode; // rebates portion of lending pool fees
 
-    /** Two modes on this contract. Default mode (depositToTreasury = false)
-     *  holds aDAI in this contract. The alternate mode (depositToTreasury = true)
-     *  deposits aDAI into the treasury and retrieves it to withdraw. Switching 
-     *  to true is contigent on claimOnBehalfOf permission (which must be given
-     *  by Aave governance) so that this contract can claim stkAAVE rewards.
-     */ 
-    bool public depositToTreasury;
 
 
     /* ======== CONSTRUCTOR ======== */
 
     constructor ( 
         address _treasury,
-        address _lendingPool, 
-        address _incentives,
-        uint _timelockInBlocks,
-        uint16 _referralCode
+        address _troll,
+        uint _timelockInBlocks
     ) {
         require( _treasury != address(0) );
         treasury = ITreasury( _treasury );
 
-        require( _lendingPool != address(0) );
-        lendingPool = ILendingPool( _lendingPool );
-
-        require( _incentives != address(0) );
-        incentives = IStakedTokenIncentivesController( _incentives );
+        require( _troll != address(0) );
+        troll = IComptroller( _troll );
 
         timelockInBlocks = _timelockInBlocks;
-        referralCode = _referralCode;
     }
 
 
@@ -649,28 +636,18 @@ contract AaveAllocator is Ownable {
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
-     *  @notice claims accrued stkAave rewards for all tracked aTokens
+     *  @notice claims all accrued $COMP rewards
      */
     function harvest() public {
-        address _treasury = address( treasury );
-        if( depositToTreasury ) { // claims rewards accrued to treasury
-            incentives.claimRewardsOnBehalf( aTokens, rewardsPending( _treasury ), _treasury, _treasury );
-        } else { // claims rewards accrued to this contract
-            incentives.claimRewards( aTokens, rewardsPending( address( this ) ), _treasury );
-        }
+        troll.claimComp( address( treasury ) );
     }
 
     /**
-     *  @notice claims accrued stkAave rewards for given aTokens
-     *  @param _aTokens address[] memory
+     *  @notice claims accrued $COMP rewards for given cTokens
+     *  @param _cTokens address[] calldata
      */
-    function harvestFor( address[] calldata _aTokens ) external {
-        address _treasury = address( treasury );
-        if( depositToTreasury ) { // claims rewards accrued to treasury
-            incentives.claimRewardsOnBehalf( _aTokens, rewardsPending( _treasury ), _treasury, _treasury );
-        } else { // claims rewards accrued to this contract
-            incentives.claimRewards( _aTokens, rewardsPending( address( this ) ), _treasury );
-        }
+    function harvestFor( address[] calldata _cTokens ) external {
+        troll.claimComp( address( treasury ), _cTokens );
     }
 
 
@@ -688,19 +665,19 @@ contract AaveAllocator is Ownable {
 
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
-        IERC20( token ).approve( address( lendingPool ), amount ); // approve to deposit into lending pool
-        lendingPool.deposit( token, amount, address(this), referralCode ); // deposit, returning aToken
+        cTokenData memory info = cTokenInfo[ token ];
+        CERC20 cToken = CERC20( info.cToken );
+
+        IERC20( token ).approve( info.cToken, amount ); // approve to deposit into lending pool
+        cToken.mint( amount ); // deposit, returning aToken
 
         uint value = treasury.valueOf( token, amount ); // treasury RFV calculator
         accountingFor( token, amount, value, true ); // account for deposit
         
-        if ( depositToTreasury ) { // if aTokens are being deposited into treasury
-            address aToken = aTokenInfo[ token ].aToken; // address of aToken
-            uint aBalance = IERC20( aToken ).balanceOf( address(this) ); // balance of aToken received
+        uint cBalance = cToken.balanceOf( address(this) ); // balance of aToken received
 
-            IERC20( aToken ).approve( address( treasury ), aBalance ); // approve to deposit aToken into treasury
-            treasury.deposit( aBalance, aToken, value ); // deposit using value as profit so no OHM is minted
-        }
+        cToken.approve( address( treasury ), cBalance ); // approve to deposit aToken into treasury
+        treasury.deposit( cBalance, info.cToken, value ); // deposit using value as profit so no OHM is minted
     }
 
     /**
@@ -709,14 +686,12 @@ contract AaveAllocator is Ownable {
      *  @param amount uint
      */
     function withdraw( address token, uint amount ) public onlyPolicy() {
-        address aToken = aTokenInfo[ token ].aToken; // aToken to withdraw
+        cTokenData memory info = cTokenInfo[ token ]; 
+        CERC20 cToken = CERC20( info.cToken );
 
-        if ( depositToTreasury ) { // if aTokens are being deposited into treasury
-            treasury.manage( aToken, amount ); // retrieve aToken from treasury
-        }
+        treasury.manage( info.cToken, amount ); // retrieve aToken from treasury
 
-        IERC20( aToken ).approve( address( lendingPool ), amount ); // approve to withdraw from lending pool
-        lendingPool.withdraw( token, amount, address(this) ); // withdraw from lending pool, returning asset
+        cToken.redeem( amount ); // redeem amount of cToken for token
         
         uint balance = IERC20( token ).balanceOf( address(this) ); // balance of asset received from lending pool
         uint value = treasury.valueOf( token, balance ); // treasury RFV calculator
@@ -730,16 +705,16 @@ contract AaveAllocator is Ownable {
     /**
      *  @notice adds asset and corresponding aToken to mapping
      *  @param token address
-     *  @param aToken address
+     *  @param cToken address
      */
-    function addToken( address token, address aToken, uint max ) external onlyPolicy() {
+    function addToken( address token, address cToken, uint max ) external onlyPolicy() {
         require( token != address(0) );
-        require( aToken != address(0) );
-        require( aTokenInfo[ token ].deployed == 0 ); 
+        require( cToken != address(0) );
+        require( cTokenInfo[ token ].deployed == 0 ); // cannot add token twice
 
-        aTokenInfo[ token ] = aTokenData({
+        cTokenInfo[ token ] = cTokenData({
             underlying: token,
-            aToken: aToken,
+            cToken: cToken,
             deployed: 0,
             limit: max,
             newLimit: 0,
@@ -753,9 +728,9 @@ contract AaveAllocator is Ownable {
      *  @param newMax uint
      */
     function lowerLimit( address token, uint newMax ) external onlyPolicy() {
-        require( newMax < aTokenInfo[ token ].limit );
-        require( newMax > aTokenInfo[ token ].deployed ); // cannot set limit below what has been deployed already
-        aTokenInfo[ token ].limit = newMax;
+        require( newMax < cTokenInfo[ token ].limit );
+        require( newMax > cTokenInfo[ token ].deployed ); // cannot set limit below what has been deployed already
+        cTokenInfo[ token ].limit = newMax;
     }
     
     /**
@@ -764,8 +739,8 @@ contract AaveAllocator is Ownable {
      *  @param newMax uint
      */
     function queueRaiseLimit( address token, uint newMax ) external onlyPolicy() {
-        aTokenInfo[ token ].limitChangeTimelockEnd = block.number.add( timelockInBlocks );
-        aTokenInfo[ token ].newLimit = newMax;
+        cTokenInfo[ token ].limitChangeTimelockEnd = block.number.add( timelockInBlocks );
+        cTokenInfo[ token ].newLimit = newMax;
     }
 
     /**
@@ -773,49 +748,12 @@ contract AaveAllocator is Ownable {
      *  @param token address
      */
     function raiseLimit( address token ) external onlyPolicy() {
-        require( block.number >= aTokenInfo[ token ].limitChangeTimelockEnd, "Timelock not expired" );
-        require( aTokenInfo[ token ].limitChangeTimelockEnd != 0, "Timelock not started" );
+        require( block.number >= cTokenData[ token ].limitChangeTimelockEnd, "Timelock not expired" );
+        require( cTokenInfo[ token ].limitChangeTimelockEnd != 0, "Timelock not expired" );
 
-        aTokenInfo[ token ].limit = aTokenInfo[ token ].newLimit;
-        aTokenInfo[ token ].newLimit = 0;
-        aTokenInfo[ token ].limitChangeTimelockEnd = 0;
-    }
-    
-    /**
-     *  @notice set referral code for rebate on fees
-     *  @param code uint16
-     */
-    function setReferralCode( uint16 code ) external onlyPolicy() {
-        referralCode = code;
-    }
-
-    /**
-     *  @notice deposit aTokens into treasury and begin claiming rewards on behalf of
-     */
-    function enableDepositToTreasury() external onlyPolicy() {
-        require( incentives.getClaimer( address( treasury ) ) == address(this), "Contract not approved to claim rewards" );
-        require( !depositToTreasury, "Already enabled" );
-
-        harvest(); // claim accrued rewards to this address first
-        
-        // deposit all held aTokens into treasury
-        for ( uint i = 0; i < aTokens.length; i++ ) {
-            address aToken = aTokens[i];
-            uint balance = IERC20( aToken ).balanceOf( address(this) );
-            if ( balance > 0 ) {
-                uint value = treasury.valueOf( aToken, balance );
-                IERC20( aToken ).approve( address( treasury ), balance ); // approve to deposit asset into treasury
-                treasury.deposit( balance, aToken, value ); // deposit using value as profit so no OHM is minted
-            }
-        }
-        depositToTreasury = true; // enable last
-    }
-
-    /**
-     *  @notice revert enabling aToken treasury deposits
-     */
-    function revertDepositToTreasury() external onlyPolicy() {
-        depositToTreasury = false; // future aToken deposits will be held in this contract
+        cTokenInfo[ token ].limit = cTokenInfo[ token ].newLimit;
+        cTokenInfo[ token ].newLimit = 0;
+        cTokenInfo[ token ].limitChangeTimelockEnd = 0;
     }
 
 
@@ -831,16 +769,16 @@ contract AaveAllocator is Ownable {
      */
     function accountingFor( address token, uint amount, uint value, bool add ) internal {
         if( add ) {
-            aTokenInfo[ token ].deployed = aTokenInfo[ token ].deployed.add( amount ); // track amount allocated into pool
+            cTokenInfo[ token ].deployed = cTokenInfo[ token ].deployed.add( amount ); // track amount allocated into pool
         
             totalValueDeployed = totalValueDeployed.add( value ); // track total value allocated into pools
             
         } else {
             // track amount allocated into pool
-            if ( amount < aTokenInfo[ token ].deployed ) {
-                aTokenInfo[ token ].deployed = aTokenInfo[ token ].deployed.sub( amount ); 
+            if ( amount < cTokenInfo[ token ].deployed ) {
+                cTokenInfo[ token ].deployed = cTokenInfo[ token ].deployed.sub( amount ); 
             } else {
-                aTokenInfo[ token ].deployed = 0;
+                cTokenInfo[ token ].deployed = 0;
             }
             
             // track total value allocated into pools
@@ -857,21 +795,10 @@ contract AaveAllocator is Ownable {
 
     /**
      *  @notice query all pending rewards
-     *  @param user address
      *  @return uint
      */
-    function rewardsPending( address user ) public view returns ( uint ) {
-        return incentives.getRewardsBalance( aTokens, user );
-    }
-
-    /**
-     *  @notice query pending rewards for provided aTokens
-     *  @param tokens address[]
-     *  @param user address
-     *  @return uint
-     */
-    function rewardsPendingFor( address[] calldata tokens, address user ) public view returns ( uint ) {
-        return incentives.getRewardsBalance( tokens, user );
+    function rewardsPending() public view returns ( uint ) {
+        return troll.compAccrued( address( treasury ) );
     }
 
     /**
@@ -880,8 +807,7 @@ contract AaveAllocator is Ownable {
      *  @param amount uint
      */
     function exceedsLimit( address token, uint amount ) public view returns ( bool ) {
-        uint willBeDeployed = aTokenInfo[ token ].deployed.add( amount );
-
-        return ( willBeDeployed > aTokenInfo[ token ].limit );
+        uint willBeDeployed = cTokenInfo[ token ].deployed.add( amount );
+        return ( willBeDeployed > cTokenInfo[ token ].limit );
     }
 }
