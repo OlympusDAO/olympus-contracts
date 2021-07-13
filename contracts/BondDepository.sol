@@ -514,7 +514,7 @@ contract OlympusBondDepository is Governable, Guardable {
     address[] public principals;
 
 
-    /* ======== INITIALIZATION ======== */
+    /* ======== CONSTRUCTOR ======== */
 
     constructor ( 
         address _OHM,
@@ -528,6 +528,10 @@ contract OlympusBondDepository is Governable, Guardable {
         require( _DAO != address(0) );
         DAO = _DAO;
     }
+
+
+    
+    /* ======== POLICY FUNCTIONS ======== */
 
     /**
      *  @notice initializes bond parameters
@@ -576,11 +580,6 @@ contract OlympusBondDepository is Governable, Guardable {
 
         principals.push( _principal );
     }
-
-
-
-    
-    /* ======== POLICY FUNCTIONS ======== */
 
     enum PARAMETER { VESTING, PAYOUT, FEE, DEBT }
     /**
