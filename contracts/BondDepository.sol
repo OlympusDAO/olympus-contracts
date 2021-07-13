@@ -505,11 +505,11 @@ contract OlympusBondDepository is Governable, Guardable {
     IERC20 immutable OHM; // token given as payment for bond
     ITreasury immutable treasury; // mints OHM when receives principal
     address public immutable DAO; // receives profit share from bond
-    address public staking; // to auto-stake payout
+    address public immutable staking; // to auto-stake payout
 
     mapping( address => BondType ) bonds;
 
-    mapping( address => mapping( address => Bond ) ) public bondInfo; // stores bond information for depositors
+    mapping( address => mapping( address => Bond ) ) bondInfo; // stores bond information for depositors
 
     address[] public principals;
 
@@ -519,7 +519,8 @@ contract OlympusBondDepository is Governable, Guardable {
     constructor ( 
         address _OHM,
         address _treasury, 
-        address _DAO
+        address _DAO,
+        address _staking
     ) {
         require( _OHM != address(0) );
         OHM = IERC20( _OHM );
@@ -527,6 +528,8 @@ contract OlympusBondDepository is Governable, Guardable {
         treasury = ITreasury( _treasury );
         require( _DAO != address(0) );
         DAO = _DAO;
+        require( _staking != address(0) );
+        staking = _staking;
     }
 
 
@@ -791,7 +794,34 @@ contract OlympusBondDepository is Governable, Guardable {
 
 
     /* ======== VIEW FUNCTIONS ======== */
-    
+
+    // BONDER INFO
+
+    /**
+     *  @notice returns data about an outstanding bond
+     *  @param _bonder address
+     *  @param _principal address
+     *  @return payout_ uint
+     *  @return vesting_ uint
+     *  @return lastBlock_ uint
+     *  @return pricePaid_ uint
+     */
+    function bonderInfo( 
+        address _bonder, 
+        address _principal 
+    ) external view returns (
+        uint payout_,
+        uint vesting_,
+        uint lastBlock_,
+        uint pricePaid_
+    ) {
+        Bond memory info = bondInfo[ _bonder ][ _principal ];
+        payout_ = info.payout;
+        vesting_ = info.vesting;
+        lastBlock_ = info.lastBlock;
+        pricePaid_ = info.pricePaid;
+    }
+
 
     // BOND TYPE INFO
 
