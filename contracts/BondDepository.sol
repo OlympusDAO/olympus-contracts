@@ -704,9 +704,8 @@ contract OlympusBondDepository is Governable, Guardable {
     // Info for incremental adjustments to control variable 
     struct Adjust {
         bool add; // addition or subtraction
-        uint rate; // increment
-        uint target; // BCV when adjustment finished
-        uint buffer; // minimum length (in blocks) between adjustments
+        uint delta; // BCV when adjustment finished
+        uint blocksToTarget; // blocks until target reached
         uint lastBlock; // block when last adjustment made
     }
 
@@ -781,7 +780,7 @@ contract OlympusBondDepository is Governable, Guardable {
             calculator: IBondCalculator( _calculator ),
             isLiquidityBond: ( _calculator != address(0) ),
             terms: terms,
-            adjustment: Adjust(false, 0, 0, 0, 0),
+            adjustment: Adjust(false, 0, 0, 0),
             totalDebt: _initialDebt,
             lastDecay: block.number
         });
@@ -815,26 +814,23 @@ contract OlympusBondDepository is Governable, Guardable {
     /**
      *  @notice set control variable adjustment
      *  @param _addition bool
-     *  @param _increment uint
-     *  @param _target uint
-     *  @param _buffer uint
+     *  @param _delta uint
+     *  @param _blocks uint
      */
     function setAdjustment ( 
         address _principal,
         bool _addition,
-        uint _increment, 
-        uint _target,
-        uint _buffer
+        uint _delta,
+        uint _blocks
     ) external {
         require( msg.sender == governor() || msg.sender == guardian(), "Not governor or guardian" );
         
-        require( _increment <= bonds[ _principal ].terms.controlVariable.mul( 25 ).div( 1000 ), "Increment too large" );
+        require( _blocks <= 3300, "Adjustment: Change too fast" ); // must take at least 4 hours
 
         bonds[ _principal ].adjustment = Adjust({
             add: _addition,
-            rate: _increment,
-            target: _target,
-            buffer: _buffer,
+            delta: _delta,
+            blocksToTarget: _blocks,
             lastBlock: block.number
         });
     }
@@ -860,6 +856,7 @@ contract OlympusBondDepository is Governable, Guardable {
         require( _depositor != address(0), "Invalid address" );
 
         BondType memory bondData = bonds[ _principal ];
+
         decayDebt( _principal );
         require( bondData.totalDebt <= bondData.terms.maxDebt, "Max capacity reached" );
         
@@ -894,7 +891,6 @@ contract OlympusBondDepository is Governable, Guardable {
         emit BondCreated( _amount, payout, vestEnd, priceInUSD );
         emit BondPriceChanged( bondPriceInUSD( _principal ), _bondPrice( _principal ), debtRatio( _principal ) );
 
-        adjust( _principal ); // control variable is adjusted
         return payout; 
     }
 
@@ -962,30 +958,52 @@ contract OlympusBondDepository is Governable, Guardable {
      */
     function adjust( address _principal ) internal {
         Adjust memory adjustment = bonds[ _principal ].adjustment;
-        Terms memory terms = bonds[ _principal ].terms;
 
-        uint blockCanAdjust = adjustment.lastBlock.add( adjustment.buffer );
-        if( adjustment.rate != 0 && block.number >= blockCanAdjust ) {
-            uint initial = terms.controlVariable;
-            if ( adjustment.add ) {
-                bonds[ _principal ].terms.controlVariable = terms.controlVariable.add( adjustment.rate );
-                if ( terms.controlVariable >= adjustment.target ) {
-                    bonds[ _principal ].adjustment.rate = 0;
-                }
+        if( adjustment.delta != 0 ) {
+            uint initial = bonds[ _principal ].terms.controlVariable;
+            uint blocksSinceLast = block.number.sub( adjustment.lastBlock );
+            uint changeBy = adjustment.delta.mul( blocksSinceLast ).div( adjustment.blocksToTarget );
+
+            if ( changeBy > adjustment.delta ) {
+                changeBy = adjustment.delta;
+                bonds[ _principal ].adjustment.delta = 0;
+                bonds[ _principal ].adjustment.blocksToTarget = 0;
             } else {
-                bonds[ _principal ].terms.controlVariable = terms.controlVariable.sub( adjustment.rate );
-                if ( terms.controlVariable <= adjustment.target ) {
-                    bonds[ _principal ].adjustment.rate = 0;
-                }
+                bonds[ _principal ].adjustment.delta = adjustment.delta.sub( changeBy );
+                bonds[ _principal ].adjustment.blocksToTarget = adjustment.blocksToTarget.sub( blocksSinceLast );
             }
+
+            if ( adjustment.add ) {
+                bonds[ _principal ].terms.controlVariable = bonds[ _principal ].terms.controlVariable.add( changeBy );
+            } else {
+                bonds[ _principal ].terms.controlVariable = bonds[ _principal ].terms.controlVariable.sub( changeBy );
+            }
+
             bonds[ _principal ].adjustment.lastBlock = block.number;
 
             emit ControlVariableAdjustment( 
                 initial, 
                 bonds[ _principal ].terms.controlVariable, 
-                bonds[ _principal ].adjustment.rate, 
+                changeBy, 
                 bonds[ _principal ].adjustment.add 
             );
+        }
+    }
+
+    function adjustedBCV( address _principal ) public view returns ( uint BCV_ ) {
+        Adjust memory adjustment = bonds[ _principal ].adjustment;
+
+        uint blocksSinceLast = block.number.sub( adjustment.lastBlock );
+        uint changeBy = adjustment.delta.mul( blocksSinceLast ).div( adjustment.blocksToTarget );
+
+        if ( changeBy > adjustment.delta ) {
+            changeBy = adjustment.delta;
+        }
+
+        if ( adjustment.add ) {
+            BCV_ = bonds[ _principal ].terms.controlVariable.add( changeBy );
+        } else {
+            BCV_ = bonds[ _principal ].terms.controlVariable.sub( changeBy );
         }
     }
 
@@ -1002,18 +1020,36 @@ contract OlympusBondDepository is Governable, Guardable {
 
     /* ======== VIEW FUNCTIONS ======== */
     
+    /**
+     *  @notice returns data about a bond type
+     *  @param _principal address
+     *  @return calculator_ address
+     *  @return isLiquidityBond_ bool
+     *  @return totalDebt_ uint
+     *  @return lastBondCreatedAt_ uint
+     */
     function bondTypeInfo( address _principal ) external view returns (
-        address principal_,
         address calculator_,
+        bool isLiquidityBond_,
         uint totalDebt_,
         uint lastBondCreatedAt_
     ) {
-        principal_ = address( bonds[ _principal ].principal );
         calculator_ = address( bonds[ _principal ].calculator );
+        isLiquidityBond_ = bonds[ _principal ].isLiquidityBond;
         totalDebt_ = bonds[ _principal ].totalDebt;
         lastBondCreatedAt_ = bonds[ _principal ].lastDecay;
     }
     
+    /**
+     *  @notice returns terms for a bond type
+     *  @param _principal address
+     *  @return controlVariable_ uint
+     *  @return vestingTerm_ uint
+     *  @return minimumPrice_ uint
+     *  @return maxPayout_ uint
+     *  @return fee_ uint
+     *  @return maxDebt_ uint
+     */
     function bondTerms( address _principal ) external view returns (
         uint controlVariable_,
         uint vestingTerm_,
@@ -1031,19 +1067,28 @@ contract OlympusBondDepository is Governable, Guardable {
         maxDebt_ = terms.maxDebt;
     }
     
-    function adjustmentInfo( address _principal ) external view returns (
+    /**
+     *  @notice returns pending BCV adjustment for a bond type
+     *  @param _principal address
+     *  @return controlVariable_ uint
+     *  @return add_ bool
+     *  @return delta_ uint
+     *  @return blocksToTarget_ uint
+     *  @return lastBlock_ uint
+     */
+    function bondAdjustments( address _principal ) external view returns (
         uint controlVariable_,
         bool add_,
-        uint target_,
-        uint rate_,
-        uint buffer_
+        uint delta_,
+        uint blocksToTarget_,
+        uint lastBlock_
     ) {
         controlVariable_ = bonds[ _principal ].terms.controlVariable;
         Adjust memory adjustment = bonds[ _principal ].adjustment;
         add_ = adjustment.add;
-        target_ = adjustment.target;
-        rate_ = adjustment.rate;
-        buffer_ = adjustment.buffer;
+        delta_ = adjustment.delta;
+        blocksToTarget_ = adjustment.blocksToTarget;
+        lastBlock_ = adjustment.lastBlock;
     }
 
     /**
@@ -1068,8 +1113,8 @@ contract OlympusBondDepository is Governable, Guardable {
      *  @notice calculate current bond premium
      *  @return price_ uint
      */
-    function bondPrice( address _principal ) public view returns ( uint price_ ) {        
-        price_ = bonds[ _principal ].terms.controlVariable.mul( debtRatio( _principal ) ).add( 1000000000 ).div( 1e7 );
+    function bondPrice( address _principal ) public view returns ( uint price_ ) { 
+        price_ = adjustedBCV( _principal ).mul( debtRatio( _principal ) ).add( 1000000000 ).div( 1e7 );
         if ( price_ < bonds[ _principal ].terms.minimumPrice ) {
             price_ = bonds[ _principal ].terms.minimumPrice;
         }
@@ -1080,6 +1125,7 @@ contract OlympusBondDepository is Governable, Guardable {
      *  @return price_ uint
      */
     function _bondPrice( address _principal ) internal returns ( uint price_ ) {
+        adjust( _principal );
         price_ = bonds[ _principal ].terms.controlVariable.mul( debtRatio( _principal ) ).add( 1000000000 ).div( 1e7 );
         if ( price_ < bonds[ _principal ].terms.minimumPrice ) {
             price_ = bonds[ _principal ].terms.minimumPrice;        
