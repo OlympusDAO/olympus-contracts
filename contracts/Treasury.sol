@@ -291,6 +291,7 @@ contract OlympusTreasury is Guardable, Governable {
         address calculator;
         uint timelockEnd;
         bool nullify;
+        bool executed;
     }
 
 
@@ -493,6 +494,7 @@ contract OlympusTreasury is Guardable, Governable {
     function execute( uint _index ) external {
         Queue memory info = permissionQueue[ _index ];
         require( !info.nullify, "Action has been nullified" );
+        require( !info.executed, "Action has already been executed" );
         require( block.number >= info.timelockEnd, "Timelock not complete" );
 
         if ( info.managing == STATUS.SOHM ) { // 9
@@ -505,6 +507,7 @@ contract OlympusTreasury is Guardable, Governable {
                 bondCalculator[ info.toPermit ] = info.calculator;
             }
         }
+        permissionQueue[ _index ].executed = true;
     }
 
 
@@ -529,7 +532,8 @@ contract OlympusTreasury is Guardable, Governable {
             toPermit: _address,
             calculator: _calculator,
             timelockEnd: timelock,
-            nullify: false
+            nullify: false,
+            executed: false
         } ) );
 
         emit ChangeQueued( _status, _address );
@@ -579,6 +583,7 @@ contract OlympusTreasury is Guardable, Governable {
      *  @param _index uint
      */
     function nullify( uint _index ) external onlyGuardian() {
+        require( !permissionQueue[ _index ].executed, "Action has already been executed" );
         permissionQueue[ _index ].nullify = true;
     }
 
