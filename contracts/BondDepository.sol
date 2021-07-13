@@ -845,6 +845,7 @@ contract OlympusBondDepository is Governable, Guardable {
      *  @param _amount uint
      *  @param _maxPrice uint
      *  @param _depositor address
+     *  @param _principal address
      *  @return uint
      */
     function deposit( 
@@ -954,7 +955,7 @@ contract OlympusBondDepository is Governable, Guardable {
     }
 
     /**
-     *  @notice makes incremental adjustment to control variable
+     *  @notice make adjustment to control variable
      */
     function adjust( address _principal ) internal {
         Adjust memory adjustment = bonds[ _principal ].adjustment;
@@ -990,23 +991,6 @@ contract OlympusBondDepository is Governable, Guardable {
         }
     }
 
-    function adjustedBCV( address _principal ) public view returns ( uint BCV_ ) {
-        Adjust memory adjustment = bonds[ _principal ].adjustment;
-
-        uint blocksSinceLast = block.number.sub( adjustment.lastBlock );
-        uint changeBy = adjustment.delta.mul( blocksSinceLast ).div( adjustment.blocksToTarget );
-
-        if ( changeBy > adjustment.delta ) {
-            changeBy = adjustment.delta;
-        }
-
-        if ( adjustment.add ) {
-            BCV_ = bonds[ _principal ].terms.controlVariable.add( changeBy );
-        } else {
-            BCV_ = bonds[ _principal ].terms.controlVariable.sub( changeBy );
-        }
-    }
-
     /**
      *  @notice reduce total debt
      */
@@ -1020,6 +1004,9 @@ contract OlympusBondDepository is Governable, Guardable {
 
     /* ======== VIEW FUNCTIONS ======== */
     
+
+    // BOND TYPE INFO
+
     /**
      *  @notice returns data about a bond type
      *  @param _principal address
@@ -1091,6 +1078,9 @@ contract OlympusBondDepository is Governable, Guardable {
         lastBlock_ = adjustment.lastBlock;
     }
 
+
+    // PAYOUT
+
     /**
      *  @notice determine maximum bond size
      *  @return uint
@@ -1109,12 +1099,34 @@ contract OlympusBondDepository is Governable, Guardable {
     }
 
 
+    // BOND CONTROL VARIABLE
+
+    function BCV( address _principal ) public view returns ( uint BCV_ ) {
+        Adjust memory adjustment = bonds[ _principal ].adjustment;
+
+        uint blocksSinceLast = block.number.sub( adjustment.lastBlock );
+        uint changeBy = adjustment.delta.mul( blocksSinceLast ).div( adjustment.blocksToTarget );
+
+        if ( changeBy > adjustment.delta ) {
+            changeBy = adjustment.delta;
+        }
+
+        if ( adjustment.add ) {
+            BCV_ = bonds[ _principal ].terms.controlVariable.add( changeBy );
+        } else {
+            BCV_ = bonds[ _principal ].terms.controlVariable.sub( changeBy );
+        }
+    }
+
+
+    // BOND PRICE
+
     /**
      *  @notice calculate current bond premium
      *  @return price_ uint
      */
     function bondPrice( address _principal ) public view returns ( uint price_ ) { 
-        price_ = adjustedBCV( _principal ).mul( debtRatio( _principal ) ).add( 1000000000 ).div( 1e7 );
+        price_ = BCV( _principal ).mul( debtRatio( _principal ) ).add( 1000000000 ).div( 1e7 );
         if ( price_ < bonds[ _principal ].terms.minimumPrice ) {
             price_ = bonds[ _principal ].terms.minimumPrice;
         }
@@ -1147,6 +1159,8 @@ contract OlympusBondDepository is Governable, Guardable {
         }
     }
 
+
+    // DEBT
 
     /**
      *  @notice calculate current ratio of debt to OHM supply
@@ -1193,6 +1207,8 @@ contract OlympusBondDepository is Governable, Guardable {
         }
     }
 
+
+    // VESTING
 
     /**
      *  @notice calculate how far into vesting a depositor is
