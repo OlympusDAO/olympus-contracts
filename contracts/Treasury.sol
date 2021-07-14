@@ -97,106 +97,6 @@ library Address {
     }
 }
 
-interface IGuardable {
-  function guardian() external view returns (address);
-
-  function renounceGuardian() external;
-  
-  function pushGuardian( address newGuardian_ ) external;
-  
-  function pullGuardian() external;
-}
-
-contract Guardable is IGuardable {
-
-    address internal _guardian;
-    address internal _newGuardian;
-
-    event GuardianPushed(address indexed previousGuardian, address indexed newGuardian);
-    event GuardianPulled(address indexed previousGuardian, address indexed newGuardian);
-
-    constructor () {
-        _guardian = msg.sender;
-        emit GuardianPulled( address(0), _guardian );
-    }
-
-    function guardian() public view override returns (address) {
-        return _guardian;
-    }
-
-    modifier onlyGuardian() {
-        require( _guardian == msg.sender, "Guardable: caller is not the guardian" );
-        _;
-    }
-
-    function renounceGuardian() public virtual override onlyGuardian() {
-        emit GuardianPushed( _guardian, address(0) );
-        _guardian = address(0);
-    }
-
-    function pushGuardian( address newGuardian_ ) public virtual override onlyGuardian() {
-        require( newGuardian_ != address(0), "Guardable: new guardian is the zero address");
-        emit GuardianPushed( _guardian, newGuardian_ );
-        _newGuardian = newGuardian_;
-    }
-    
-    function pullGuardian() public virtual override {
-        require( msg.sender == _newGuardian, "Guardable: must be new guardian to pull");
-        emit GuardianPulled( _guardian, _newGuardian );
-        _guardian = _newGuardian;
-    }
-}
-
-interface IGovernable {
-  function governor() external view returns (address);
-
-  function renounceGovernor() external;
-  
-  function pushGovernor( address newGovernor_ ) external;
-  
-  function pullGovernor() external;
-}
-
-contract Governable is IGovernable {
-
-    address internal _governor;
-    address internal _newGovernor;
-
-    event GovernorPushed(address indexed previousGovernor, address indexed newGovernor);
-    event GovernorPulled(address indexed previousGovernor, address indexed newGovernor);
-
-    constructor () {
-        _governor = msg.sender;
-        emit GovernorPulled( address(0), _governor );
-    }
-
-    function governor() public view override returns (address) {
-        return _governor;
-    }
-
-    modifier onlyGovernor() {
-        require( _governor == msg.sender, "Governable: caller is not the governor" );
-        _;
-    }
-
-    function renounceGovernor() public virtual override onlyGovernor() {
-        emit GovernorPushed( _governor, address(0) );
-        _governor = address(0);
-    }
-
-    function pushGovernor( address newGovernor_ ) public virtual override onlyGovernor() {
-        require( newGovernor_ != address(0), "Governable: new governor is the zero address");
-        emit GovernorPushed( _governor, newGovernor_ );
-        _newGovernor = newGovernor_;
-    }
-    
-    function pullGovernor() public virtual override {
-        require( msg.sender == _newGovernor, "Governable: must be new governor to pull");
-        emit GovernorPulled( _governor, _newGovernor );
-        _governor = _newGovernor;
-    }
-}
-
 interface IERC20 {
     function decimals() external view returns (uint8);
 
@@ -233,6 +133,102 @@ library SafeERC20 {
             // solhint-disable-next-line max-line-length
             require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
         }
+    }
+}
+
+interface IGovernable {
+    function governor() external view returns (address);
+
+    function guardian() external view returns (address);
+
+    function renounceGovernor() external;
+
+    function renounceGuardian() external;
+  
+    function pushGovernor( address newGovernor_ ) external;
+
+    function pushGuardian( address newGuardian_ ) external;
+  
+    function pullGovernor() external;
+
+    function pullGuardian() external;
+}
+
+contract Governable is IGovernable {
+
+    address internal _governor;
+    address internal _newGovernor;
+
+    address internal _guardian;
+    address internal _newGuardian;
+
+    event GovernorPushed(address indexed previousGovernor, address indexed newGovernor);
+    event GovernorPulled(address indexed previousGovernor, address indexed newGovernor);
+
+    event GuardianPushed(address indexed previousGuardian, address indexed newGuardian);
+    event GuardianPulled(address indexed previousGuardian, address indexed newGuardian);
+
+    constructor () {
+        _governor = msg.sender;
+        _guardian = msg.sender;
+        emit GovernorPulled( address(0), _governor );
+        emit GuardianPulled( address(0), _guardian );
+    }
+
+    /* ========== GOVERNOR ========== */
+
+    function governor() public view override returns (address) {
+        return _governor;
+    }
+
+    modifier onlyGovernor() {
+        require( _governor == msg.sender, "Governable: caller is not the governor" );
+        _;
+    }
+
+    function renounceGovernor() public virtual override onlyGovernor() {
+        emit GovernorPushed( _governor, address(0) );
+        _governor = address(0);
+    }
+
+    function pushGovernor( address newGovernor_ ) public virtual override onlyGovernor() {
+        require( newGovernor_ != address(0), "Governable: new governor is the zero address");
+        emit GovernorPushed( _governor, newGovernor_ );
+        _newGovernor = newGovernor_;
+    }
+    
+    function pullGovernor() public virtual override {
+        require( msg.sender == _newGovernor, "Governable: must be new governor to pull");
+        emit GovernorPulled( _governor, _newGovernor );
+        _governor = _newGovernor;
+    }
+
+    /* ========== GUARDIAN ========== */
+
+    function guardian() public view override returns (address) {
+        return _guardian;
+    }
+
+    modifier onlyGuardian() {
+        require( _guardian == msg.sender, "Guardable: caller is not the guardian" );
+        _;
+    }
+
+    function renounceGuardian() public virtual override onlyGuardian() {
+        emit GuardianPushed( _guardian, address(0) );
+        _guardian = address(0);
+    }
+
+    function pushGuardian( address newGuardian_ ) public virtual override onlyGuardian() {
+        require( newGuardian_ != address(0), "Guardable: new guardian is the zero address");
+        emit GuardianPushed( _guardian, newGuardian_ );
+        _newGuardian = newGuardian_;
+    }
+    
+    function pullGuardian() public virtual override {
+        require( msg.sender == _newGuardian, "Guardable: must be new guardian to pull");
+        emit GuardianPulled( _guardian, _newGuardian );
+        _guardian = _newGuardian;
     }
 }
 
