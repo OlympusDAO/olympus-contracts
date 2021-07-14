@@ -328,28 +328,74 @@ library FixedPoint {
     }
 }
 
-interface IGuardable {
-  function guardian() external view returns (address);
+interface IGovernable {
+    function governor() external view returns (address);
 
-  function renounceGuardian() external;
+    function guardian() external view returns (address);
+
+    function renounceGovernor() external;
+
+    function renounceGuardian() external;
   
-  function pushGuardian( address newGuardian_ ) external;
+    function pushGovernor( address newGovernor_ ) external;
+
+    function pushGuardian( address newGuardian_ ) external;
   
-  function pullGuardian() external;
+    function pullGovernor() external;
+
+    function pullGuardian() external;
 }
 
-contract Guardable is IGuardable {
+contract Governable is IGovernable {
+
+    address internal _governor;
+    address internal _newGovernor;
 
     address internal _guardian;
     address internal _newGuardian;
+
+    event GovernorPushed(address indexed previousGovernor, address indexed newGovernor);
+    event GovernorPulled(address indexed previousGovernor, address indexed newGovernor);
 
     event GuardianPushed(address indexed previousGuardian, address indexed newGuardian);
     event GuardianPulled(address indexed previousGuardian, address indexed newGuardian);
 
     constructor () {
+        _governor = msg.sender;
         _guardian = msg.sender;
+        emit GovernorPulled( address(0), _governor );
         emit GuardianPulled( address(0), _guardian );
     }
+
+    /* ========== GOVERNOR ========== */
+
+    function governor() public view override returns (address) {
+        return _governor;
+    }
+
+    modifier onlyGovernor() {
+        require( _governor == msg.sender, "Governable: caller is not the governor" );
+        _;
+    }
+
+    function renounceGovernor() public virtual override onlyGovernor() {
+        emit GovernorPushed( _governor, address(0) );
+        _governor = address(0);
+    }
+
+    function pushGovernor( address newGovernor_ ) public virtual override onlyGovernor() {
+        require( newGovernor_ != address(0), "Governable: new governor is the zero address");
+        emit GovernorPushed( _governor, newGovernor_ );
+        _newGovernor = newGovernor_;
+    }
+    
+    function pullGovernor() public virtual override {
+        require( msg.sender == _newGovernor, "Governable: must be new governor to pull");
+        emit GovernorPulled( _governor, _newGovernor );
+        _governor = _newGovernor;
+    }
+
+    /* ========== GUARDIAN ========== */
 
     function guardian() public view override returns (address) {
         return _guardian;
@@ -378,59 +424,10 @@ contract Guardable is IGuardable {
     }
 }
 
-interface IGovernable {
-  function governor() external view returns (address);
-
-  function renounceGovernor() external;
-  
-  function pushGovernor( address newGovernor_ ) external;
-  
-  function pullGovernor() external;
-}
-
-contract Governable is IGovernable {
-
-    address internal _governor;
-    address internal _newGovernor;
-
-    event GovernorPushed(address indexed previousGovernor, address indexed newGovernor);
-    event GovernorPulled(address indexed previousGovernor, address indexed newGovernor);
-
-    constructor () {
-        _governor = msg.sender;
-        emit GovernorPulled( address(0), _governor );
-    }
-
-    function governor() public view override returns (address) {
-        return _governor;
-    }
-
-    modifier onlyGovernor() {
-        require( _governor == msg.sender, "Governable: caller is not the governor" );
-        _;
-    }
-
-    function renounceGovernor() public virtual override onlyGovernor() {
-        emit GovernorPushed( _governor, address(0) );
-        _governor = address(0);
-    }
-
-    function pushGovernor( address newGovernor_ ) public virtual override onlyGovernor() {
-        require( newGovernor_ != address(0), "Governable: new governor is the zero address");
-        emit GovernorPushed( _governor, newGovernor_ );
-        _newGovernor = newGovernor_;
-    }
-    
-    function pullGovernor() public virtual override {
-        require( msg.sender == _newGovernor, "Governable: must be new governor to pull");
-        emit GovernorPulled( _governor, _newGovernor );
-        _governor = _newGovernor;
-    }
-}
-
 interface ITreasury {
     function deposit( address _from, uint _amount, address _token, uint _profit ) external returns ( uint );
     function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
+    function mintRewards( address _recipient, uint _amount ) external;
 }
 
 interface IBondCalculator {
@@ -441,12 +438,11 @@ interface IStaking {
     function stake( uint _amount, address _recipient ) external returns ( bool );
 }
 
-contract OlympusBondDepository is Governable, Guardable {
+contract OlympusBondDepository is Governable {
 
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
-
 
 
 
@@ -466,6 +462,7 @@ contract OlympusBondDepository is Governable, Guardable {
         IERC20 principal; // token to accept as payment
         IBondCalculator calculator; // contract to value principal
         bool isLiquidityBond; // is principal a liquidity token
+        bool isRiskyAsset; // mint instead of deposit (no RFV)
         Terms terms; // terms of bond
         Adjust adjustment; // adjustment to terms of bond
         uint totalDebt; // total debt from bond 
@@ -512,6 +509,7 @@ contract OlympusBondDepository is Governable, Guardable {
     mapping( address => mapping( address => Bond ) ) bondInfo; // stores bond information for depositors
 
     address[] public principals;
+
 
 
     /* ======== CONSTRUCTOR ======== */
@@ -662,10 +660,12 @@ contract OlympusBondDepository is Governable, Guardable {
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
         require( payout <= maxPayout( _principal ), "Bond too large"); // size protection because there is no slippage
 
-        uint profit = value.sub( payout );
-
-        // deposit principal from sender address to treasury
-        treasury.deposit( msg.sender, _amount, address( bondData.principal ), profit );
+        if ( !bondData.isRiskyAsset ) {
+            // deposit principal from sender address to treasury
+            treasury.deposit( msg.sender, _amount, address( bondData.principal ), value.sub( payout ) );
+        } else {
+            treasury.mintRewards( address(this), payout );
+        }
         
         // total debt is increased
         bonds[ _principal ].totalDebt = bondData.totalDebt.add( value ); 
@@ -820,6 +820,18 @@ contract OlympusBondDepository is Governable, Guardable {
         vesting_ = info.vesting;
         lastBlock_ = info.lastBlock;
         pricePaid_ = info.pricePaid;
+    }
+
+    function availablePayoutFor( address _depositor ) external view returns ( uint payout_ ) {
+        for ( uint i = 0; i < principals.length; i++ ) {
+            payout_ = payout_.add( pendingPayoutFor( _depositor, principals[ i ] ) );
+        }
+    }
+
+    function totalPayoutFor( address _depositor ) external view returns ( uint payout_ ) {
+        for ( uint i = 0; i < principals.length; i++ ) {
+            payout_ = payout_.add( bondInfo[ _depositor ][ principals[i] ].payout );
+        }
     }
 
 
