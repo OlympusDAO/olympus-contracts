@@ -822,18 +822,6 @@ contract OlympusBondDepository is Governable {
         pricePaid_ = info.pricePaid;
     }
 
-    function availablePayoutFor( address _depositor ) external view returns ( uint payout_ ) {
-        for ( uint i = 0; i < principals.length; i++ ) {
-            payout_ = payout_.add( pendingPayoutFor( _depositor, principals[ i ] ) );
-        }
-    }
-
-    function totalPayoutFor( address _depositor ) external view returns ( uint payout_ ) {
-        for ( uint i = 0; i < principals.length; i++ ) {
-            payout_ = payout_.add( bondInfo[ _depositor ][ principals[i] ].payout );
-        }
-    }
-
 
     // BOND TYPE INFO
 
@@ -1056,6 +1044,9 @@ contract OlympusBondDepository is Governable {
         }
     }
 
+
+    // PAYOUT
+    
     /**
      *  @notice calculate amount of OHM available for claim by depositor
      *  @param _depositor address
@@ -1069,6 +1060,28 @@ contract OlympusBondDepository is Governable {
             pendingPayout_ = payout;
         } else {
             pendingPayout_ = payout.mul( percentVested ).div( 10000 );
+        }
+    }
+
+    /**
+     *  @notice OHM available to be redeemed
+     *  @param _depositor address
+     *  @param payout_ uint
+     */
+    function availablePayoutFor( address _depositor ) external view returns ( uint payout_ ) {
+        for ( uint i = 0; i < principals.length; i++ ) {
+            payout_ = payout_.add( pendingPayoutFor( _depositor, principals[ i ] ) );
+        }
+    }
+
+    /**
+     *  @notice total OHM payout pending from outstanding bonds
+     *  @param _depositor address
+     *  @param payout_ uint
+     */
+    function totalPayoutFor( address _depositor ) external view returns ( uint payout_ ) {
+        for ( uint i = 0; i < principals.length; i++ ) {
+            payout_ = payout_.add( bondInfo[ _depositor ][ principals[i] ].payout );
         }
     }
 
