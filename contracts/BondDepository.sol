@@ -434,8 +434,8 @@ interface IBondCalculator {
     function markdown( address _LP ) external view returns ( uint );
 }
 
-interface IStaking {
-    function stake( uint _amount, address _recipient ) external returns ( bool );
+interface ITeller {
+    function newBond( address _bonder, uint _payout, uint _end ) external;
 }
 
 contract OlympusBondDepository is Governable {
@@ -448,9 +448,9 @@ contract OlympusBondDepository is Governable {
 
     /* ======== EVENTS ======== */
 
-    event BondCreated( uint deposit, uint indexed payout, uint indexed expires, uint indexed priceInUSD );
-    event BondRedeemed( address indexed recipient, uint payout, uint remaining );
-    event BondPriceChanged( uint indexed priceInUSD, uint indexed internalPrice, uint indexed debtRatio );
+    event USDPriceChanged( uint before, uint current );
+    event InternalPriceChanged( uint before, uint current );
+    event DebtRatioChanged( uint before, uint current, uint stdBefore, uint stdCurrent );
     event ControlVariableAdjustment( uint initialBCV, uint newBCV, uint adjustment, bool addition );
 
 
@@ -462,7 +462,7 @@ contract OlympusBondDepository is Governable {
         IERC20 principal; // token to accept as payment
         IBondCalculator calculator; // contract to value principal
         bool isLiquidityBond; // is principal a liquidity token
-        bool isRiskyAsset; // mint instead of deposit (no RFV)
+        bool isRiskAsset; // mint instead of deposit (no RFV)
         Terms terms; // terms of bond
         Adjust adjustment; // adjustment to terms of bond
         uint totalDebt; // total debt from bond 
@@ -479,13 +479,7 @@ contract OlympusBondDepository is Governable {
         uint maxDebt; // 9 decimal debt ratio, max % total supply created as debt
     }
 
-    // Info for bond holder
-    struct Bond {
-        uint payout; // OHM remaining to be paid
-        uint vesting; // Blocks left to vest
-        uint lastBlock; // Last interaction
-        uint pricePaid; // In DAI, for front end viewing
-    }
+    
 
     // Info for incremental adjustments to control variable 
     struct Adjust {
@@ -502,13 +496,12 @@ contract OlympusBondDepository is Governable {
     IERC20 immutable OHM; // token given as payment for bond
     ITreasury immutable treasury; // mints OHM when receives principal
     address public immutable DAO; // receives profit share from bond
-    address public immutable staking; // to auto-stake payout
 
     mapping( address => BondType ) bonds;
 
-    mapping( address => mapping( address => Bond ) ) bondInfo; // stores bond information for depositors
-
     address[] public principals;
+
+    ITeller teller;
 
 
 
@@ -517,8 +510,7 @@ contract OlympusBondDepository is Governable {
     constructor ( 
         address _OHM,
         address _treasury, 
-        address _DAO,
-        address _staking
+        address _DAO
     ) {
         require( _OHM != address(0) );
         OHM = IERC20( _OHM );
@@ -526,8 +518,6 @@ contract OlympusBondDepository is Governable {
         treasury = ITreasury( _treasury );
         require( _DAO != address(0) );
         DAO = _DAO;
-        require( _staking != address(0) );
-        staking = _staking;
     }
 
 
@@ -549,6 +539,7 @@ contract OlympusBondDepository is Governable {
     function addBondType( 
         address _principal,
         address _calculator,
+        bool _isRisk,
         uint _controlVariable, 
         uint _vestingTerm,
         uint _minimumPrice,
@@ -573,6 +564,7 @@ contract OlympusBondDepository is Governable {
             principal: IERC20( _principal ),
             calculator: IBondCalculator( _calculator ),
             isLiquidityBond: ( _calculator != address(0) ),
+            isRiskAsset: _isRisk,
             terms: terms,
             adjustment: Adjust(false, 0, 0, 0),
             totalDebt: _initialDebt,
@@ -627,7 +619,7 @@ contract OlympusBondDepository is Governable {
 
     
 
-    /* ======== USER FUNCTIONS ======== */
+    /* ======== MUTABLE FUNCTIONS ======== */
 
     /**
      *  @notice deposit bond
@@ -644,106 +636,52 @@ contract OlympusBondDepository is Governable {
         address _principal
     ) external returns ( uint ) {
         require( _depositor != address(0), "Invalid address" );
+        
+        uint initialUSDPrice = bondPriceInUSD( _principal ); // Stored in bond info
+        uint initialInternalPrice = bondPrice( _principal );
+        uint initialDebtRatio = debtRatio( _principal );
+        uint initialStdDebtRatio = standardizedDebtRatio( _principal );
 
-        BondType memory bondData = bonds[ _principal ];
+        BondType memory info = bonds[ _principal ];
 
         decayDebt( _principal );
-        require( bondData.totalDebt <= bondData.terms.maxDebt, "Max capacity reached" );
+        require( info.totalDebt <= info.terms.maxDebt, "Max capacity reached" );
         
-        uint priceInUSD = bondPriceInUSD( _principal ); // Stored in bond info
+        
 
         require( _maxPrice >= _bondPrice( _principal ), "Slippage limit: more than max price" ); // slippage protection
 
-        uint value = treasury.valueOf( address( bondData.principal ), _amount );
+        uint value = treasury.valueOf( _principal, _amount );
         uint payout = payoutFor( value, _principal ); // payout to bonder is computed
 
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
         require( payout <= maxPayout( _principal ), "Bond too large"); // size protection because there is no slippage
 
-        if ( !bondData.isRiskyAsset ) {
+        if ( !info.isRiskAsset ) {
             // deposit principal from sender address to treasury
-            treasury.deposit( msg.sender, _amount, address( bondData.principal ), value.sub( payout ) );
+            treasury.deposit( msg.sender, _amount, _principal, value.sub( payout ) );
         } else {
             treasury.mintRewards( address(this), payout );
         }
         
         // total debt is increased
-        bonds[ _principal ].totalDebt = bondData.totalDebt.add( value ); 
-        
-        uint vestEnd = bondData.terms.vestingTerm;
-        // depositor info is stored
-        bondInfo[ _depositor ][ _principal ] = Bond({ 
-            payout: bondInfo[ _depositor ][ _principal ].payout.add( payout ),
-            vesting: vestEnd,
-            lastBlock: block.number,
-            pricePaid: priceInUSD
-        });
+        bonds[ _principal ].totalDebt = info.totalDebt.add( value ); 
 
-        // indexed events are emitted
-        emit BondCreated( _amount, payout, vestEnd, priceInUSD );
-        emit BondPriceChanged( bondPriceInUSD( _principal ), _bondPrice( _principal ), debtRatio( _principal ) );
+        // price change event emitted        
+        emit InternalPriceChanged( initialInternalPrice, bondPrice( _principal ) );
+        emit USDPriceChanged( initialUSDPrice, bondPriceInUSD( _principal ) );
+        emit DebtRatioChanged( initialDebtRatio, debtRatio( _principal ), initialStdDebtRatio, standardizedDebtRatio( _principal ) );
+        
+        // user info stored with teller
+        teller.newBond( _depositor, payout, info.terms.vestingTerm );
 
         return payout; 
-    }
-
-    /** 
-     *  @notice redeem bond for user
-     *  @param _recipient address
-     *  @param _stake bool
-     *  @return uint
-     */ 
-    function redeem( address _recipient, bool _stake ) external returns ( uint ) {
-        uint totalPayout;
-
-        for ( uint i = 0; i < principals.length; i++ ) {
-            address principal = principals[ i ];
-            Bond memory info = bondInfo[ _recipient ][ principal ];
-            uint percentVested = percentVestedFor( _recipient, principal ); // (blocks since last interaction / vesting term remaining)
-
-            if ( percentVested >= 10000 ) { // if fully vested
-                delete bondInfo[ _recipient ][ principal ]; // delete user info
-                emit BondRedeemed( _recipient, info.payout, 0 ); // emit bond data
-                totalPayout = totalPayout.add( info.payout );
-
-            } else { // if unfinished
-                // calculate payout vested
-                uint payout = info.payout.mul( percentVested ).div( 10000 );
-
-                // store updated deposit info
-                bondInfo[ _recipient ][ principal ] = Bond({
-                    payout: info.payout.sub( payout ),
-                    vesting: info.vesting.sub( block.number.sub( info.lastBlock ) ),
-                    lastBlock: block.number,
-                    pricePaid: info.pricePaid
-                });
-
-                emit BondRedeemed( _recipient, payout, bondInfo[ _recipient ][ principal ].payout );
-                totalPayout = totalPayout.add( info.payout );
-            }
-        }
-        return stakeOrSend( _recipient, _stake, totalPayout ); // pay user everything due     
     }
 
 
 
     
-    /* ======== INTERNAL HELPER FUNCTIONS ======== */
-
-    /**
-     *  @notice allow user to stake payout automatically
-     *  @param _stake bool
-     *  @param _amount uint
-     *  @return uint
-     */
-    function stakeOrSend( address _recipient, bool _stake, uint _amount ) internal returns ( uint ) {
-        if ( !_stake ) { // if user does not want to stake
-            OHM.transfer( _recipient, _amount ); // send payout
-        } else { // if user wants to stake
-            IERC20( OHM ).approve( staking, _amount );
-            IStaking( staking ).stake( _amount, _recipient );
-        }
-        return _amount;
-    }
+    /* ======== INTERNAL FUNCTIONS ======== */
 
     /**
      *  @notice make adjustment to control variable
@@ -754,21 +692,15 @@ contract OlympusBondDepository is Governable {
         if( adjustment.delta != 0 ) {
             uint initial = bonds[ _principal ].terms.controlVariable;
             uint blocksSinceLast = block.number.sub( adjustment.lastBlock );
-            uint changeBy = adjustment.delta.mul( blocksSinceLast ).div( adjustment.blocksToTarget );
+            uint change = changeBy( _principal );
 
-            if ( changeBy > adjustment.delta ) {
-                changeBy = adjustment.delta;
-                bonds[ _principal ].adjustment.delta = 0;
-                bonds[ _principal ].adjustment.blocksToTarget = 0;
-            } else {
-                bonds[ _principal ].adjustment.delta = adjustment.delta.sub( changeBy );
-                bonds[ _principal ].adjustment.blocksToTarget = adjustment.blocksToTarget.sub( blocksSinceLast );
-            }
+            bonds[ _principal ].adjustment.delta = adjustment.delta.sub( change );
+            bonds[ _principal ].adjustment.blocksToTarget = adjustment.blocksToTarget.sub( blocksSinceLast );
 
             if ( adjustment.add ) {
-                bonds[ _principal ].terms.controlVariable = bonds[ _principal ].terms.controlVariable.add( changeBy );
+                bonds[ _principal ].terms.controlVariable = bonds[ _principal ].terms.controlVariable.add( change );
             } else {
-                bonds[ _principal ].terms.controlVariable = bonds[ _principal ].terms.controlVariable.sub( changeBy );
+                bonds[ _principal ].terms.controlVariable = bonds[ _principal ].terms.controlVariable.sub( change );
             }
 
             bonds[ _principal ].adjustment.lastBlock = block.number;
@@ -776,8 +708,8 @@ contract OlympusBondDepository is Governable {
             emit ControlVariableAdjustment( 
                 initial, 
                 bonds[ _principal ].terms.controlVariable, 
-                changeBy, 
-                bonds[ _principal ].adjustment.add 
+                change, 
+                adjustment.add 
             );
         }
     }
@@ -794,34 +726,6 @@ contract OlympusBondDepository is Governable {
 
 
     /* ======== VIEW FUNCTIONS ======== */
-
-    // BONDER INFO
-
-    /**
-     *  @notice returns data about an outstanding bond
-     *  @param _bonder address
-     *  @param _principal address
-     *  @return payout_ uint
-     *  @return vesting_ uint
-     *  @return lastBlock_ uint
-     *  @return pricePaid_ uint
-     */
-    function bonderInfo( 
-        address _bonder, 
-        address _principal 
-    ) external view returns (
-        uint payout_,
-        uint vesting_,
-        uint lastBlock_,
-        uint pricePaid_
-    ) {
-        Bond memory info = bondInfo[ _bonder ][ _principal ];
-        payout_ = info.payout;
-        vesting_ = info.vesting;
-        lastBlock_ = info.lastBlock;
-        pricePaid_ = info.pricePaid;
-    }
-
 
     // BOND TYPE INFO
 
@@ -922,17 +826,29 @@ contract OlympusBondDepository is Governable {
     function BCV( address _principal ) public view returns ( uint BCV_ ) {
         Adjust memory adjustment = bonds[ _principal ].adjustment;
 
-        uint blocksSinceLast = block.number.sub( adjustment.lastBlock );
-        uint changeBy = adjustment.delta.mul( blocksSinceLast ).div( adjustment.blocksToTarget );
-
-        if ( changeBy > adjustment.delta ) {
-            changeBy = adjustment.delta;
-        }
+        uint change = changeBy( _principal );
 
         if ( adjustment.add ) {
-            BCV_ = bonds[ _principal ].terms.controlVariable.add( changeBy );
+            BCV_ = bonds[ _principal ].terms.controlVariable.add( change );
         } else {
-            BCV_ = bonds[ _principal ].terms.controlVariable.sub( changeBy );
+            BCV_ = bonds[ _principal ].terms.controlVariable.sub( change );
+        }
+    }
+
+    /**
+     *  @notice amount to change BCV by
+     *  @param _principal address
+     *  @return changeBy_ uint
+     */
+    function changeBy( address _principal ) internal view returns ( uint changeBy_ ) {
+        Adjust memory adjustment = bonds[ _principal ].adjustment;
+
+        uint blocksSinceLast = block.number.sub( adjustment.lastBlock );
+
+        changeBy_ = adjustment.delta.mul( blocksSinceLast ).div( adjustment.blocksToTarget );
+
+        if ( changeBy_ > adjustment.delta ) {
+            changeBy_ = adjustment.delta;
         }
     }
 
@@ -995,7 +911,7 @@ contract OlympusBondDepository is Governable {
      *  @notice debt ratio in same terms for reserve or liquidity bonds
      *  @return uint
      */
-    function standardizedDebtRatio( address _principal ) external view returns ( uint ) {
+    function standardizedDebtRatio( address _principal ) public view returns ( uint ) {
         BondType memory bond = bonds[ _principal ];
         if ( bond.isLiquidityBond ) {
             return debtRatio( _principal ).mul( bond.calculator.markdown( address( bond.principal ) ) ).div( 1e9 );
@@ -1022,66 +938,6 @@ contract OlympusBondDepository is Governable {
         decay_ = bond.totalDebt.mul( blocksSinceLast ).div( bond.terms.vestingTerm );
         if ( decay_ > bond.totalDebt ) {
             decay_ = bond.totalDebt;
-        }
-    }
-
-
-    // VESTING
-
-    /**
-     *  @notice calculate how far into vesting a depositor is
-     *  @param _depositor address
-     *  @return percentVested_ uint
-     */
-    function percentVestedFor( address _depositor, address _principal ) public view returns ( uint percentVested_ ) {
-        Bond memory bond = bondInfo[ _depositor ][ _principal ];
-        uint blocksSinceLast = block.number.sub( bond.lastBlock );
-
-        if ( bond.vesting > 0 ) {
-            percentVested_ = blocksSinceLast.mul( 10000 ).div( bond.vesting );
-        } else {
-            percentVested_ = 0;
-        }
-    }
-
-
-    // PAYOUT
-    
-    /**
-     *  @notice calculate amount of OHM available for claim by depositor
-     *  @param _depositor address
-     *  @return pendingPayout_ uint
-     */
-    function pendingPayoutFor( address _depositor, address _principal ) external view returns ( uint pendingPayout_ ) {
-        uint percentVested = percentVestedFor( _depositor, _principal );
-        uint payout = bondInfo[ _depositor ][ _principal ].payout;
-
-        if ( percentVested >= 10000 ) {
-            pendingPayout_ = payout;
-        } else {
-            pendingPayout_ = payout.mul( percentVested ).div( 10000 );
-        }
-    }
-
-    /**
-     *  @notice OHM available to be redeemed
-     *  @param _depositor address
-     *  @param payout_ uint
-     */
-    function availablePayoutFor( address _depositor ) external view returns ( uint payout_ ) {
-        for ( uint i = 0; i < principals.length; i++ ) {
-            payout_ = payout_.add( pendingPayoutFor( _depositor, principals[ i ] ) );
-        }
-    }
-
-    /**
-     *  @notice total OHM payout pending from outstanding bonds
-     *  @param _depositor address
-     *  @param payout_ uint
-     */
-    function totalPayoutFor( address _depositor ) external view returns ( uint payout_ ) {
-        for ( uint i = 0; i < principals.length; i++ ) {
-            payout_ = payout_.add( bondInfo[ _depositor ][ principals[i] ].payout );
         }
     }
 
