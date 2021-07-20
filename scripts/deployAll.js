@@ -1,3 +1,8 @@
+// @dev. This script will deploy this V1.1 of Olympus. It will deploy the whole ecosystem except for the LP tokens and their bonds. 
+// This should be enough of a test environment to learn about and test implementations with the Olympus as of V1.1.
+// Not that the every instance of the Treasury's function 'valueOf' has been changed to 'valueOfToken'... 
+// This solidity function was conflicting w js object property name
+
 const { ethers } = require("hardhat");
 
 async function main() {
