@@ -497,11 +497,11 @@ contract OlympusBondDepository is Governable {
     ITreasury immutable treasury; // mints OHM when receives principal
     address public immutable DAO; // receives profit share from bond
 
-    mapping( address => BondType ) bonds;
+    mapping( address => BondType ) bonds; // query by principal address
 
-    address[] public principals;
+    address[] public principals; // for viewing
 
-    ITeller teller;
+    ITeller teller; // pays bonders
 
 
 
@@ -616,6 +616,16 @@ contract OlympusBondDepository is Governable {
         });
     }
 
+    /**
+     *  @notice set teller contract
+     *  @param _teller address
+     */
+    function setTeller( address _teller ) external onlyGovernor() {
+        require( address( teller ) == address(0) );
+        require( _teller != address(0) );
+        teller = ITeller( _teller );
+    }
+
 
     
 
@@ -642,13 +652,11 @@ contract OlympusBondDepository is Governable {
         uint initialDebtRatio = debtRatio( _principal );
         uint initialStdDebtRatio = standardizedDebtRatio( _principal );
 
+        decayDebt( _principal );
         BondType memory info = bonds[ _principal ];
 
-        decayDebt( _principal );
-        require( info.totalDebt <= info.terms.maxDebt, "Max capacity reached" );
+        require( info.totalDebt <= info.terms.maxDebt, "Max debt exceeded" );
         
-        
-
         require( _maxPrice >= _bondPrice( _principal ), "Slippage limit: more than max price" ); // slippage protection
 
         uint value = treasury.valueOf( _principal, _amount );
@@ -657,10 +665,11 @@ contract OlympusBondDepository is Governable {
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
         require( payout <= maxPayout( _principal ), "Bond too large"); // size protection because there is no slippage
 
-        if ( !info.isRiskAsset ) {
-            // deposit principal from sender address to treasury
+        if ( !info.isRiskAsset ) { // deposit principal, returning payout
+            IERC20( _principal ).approve( address( treasury ), _amount );
             treasury.deposit( msg.sender, _amount, _principal, value.sub( payout ) );
-        } else {
+        } else { // send principal and mint payout (principal not minted against)
+            IERC20( _principal ).safeTransfer( address( treasury ), _amount );
             treasury.mintRewards( address(this), payout );
         }
         
@@ -823,6 +832,11 @@ contract OlympusBondDepository is Governable {
 
     // BOND CONTROL VARIABLE
 
+    /**
+     *  @notice returns current BCV for principal including adjustment
+     *  @param _principal address
+     *  @return BCV_ uint
+     */
     function BCV( address _principal ) public view returns ( uint BCV_ ) {
         Adjust memory adjustment = bonds[ _principal ].adjustment;
 
