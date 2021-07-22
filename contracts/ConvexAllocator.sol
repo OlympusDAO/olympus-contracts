@@ -563,6 +563,13 @@ interface ITreasury {
     function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
 }
 
+interface ICurve3Pool {
+    // add liquidity (frax) to receive back FRAX3CRV-f
+    function add_liquidity(address _pool, uint256[4] memory _deposit_amounts, uint256 _min_mint_amount) external returns(uint256);
+    // remove liquidity (FRAX3CRV-f) to recieve back Frax
+    function remove_liquidity_one_coin(address _pool, uint256 _burn_amount, int128 i, uint256 _min_amount) external returns(uint256);
+}
+
 //main Convex contract(booster.sol) basic interface
 interface IConvex{
     //deposit into convex, receive a tokenized deposit.  parameter to stake immediately
@@ -585,6 +592,8 @@ interface IConvexRewards{
     function stake(uint256 _amount) external returns(bool);
     //stake a convex tokenized deposit for another address(transfering ownership)
     function stakeFor(address _account,uint256 _amount) external returns(bool);
+    //get rewards for an address
+    function rewards(address _account) external view returns(uint256);
 }
 
 /**
@@ -619,6 +628,7 @@ contract AaveAllocator is Ownable {
     IConvex immutable booster; // Convex deposit contract
     IConvexRewards immutable rewardPool; // Convex reward contract
     ITreasury immutable treasury; // Olympus Treasury
+    ICurve3Pool immutable curve3Pool; // Curve 3Pool
 
     mapping( address => tokenData ) public tokenInfo; // info for deposited tokens
     mapping( address => uint ) public pidForReserve; // convex pid for token
@@ -635,6 +645,7 @@ contract AaveAllocator is Ownable {
         address _treasury,
         address _booster, 
         address _rewardPool,
+        address _curve3Pool,
         uint _timelockInBlocks
     ) {
         require( _treasury != address(0) );
@@ -646,6 +657,9 @@ contract AaveAllocator is Ownable {
         require( _rewardPool != address(0) );
         rewardPool = IConvexRewards( _rewardPool );
 
+        require( _curve3Pool != address(0) );
+        curve3Pool = ICurve3Pool( _curve3Pool );
+
         timelockInBlocks = _timelockInBlocks;
     }
 
@@ -654,7 +668,7 @@ contract AaveAllocator is Ownable {
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
-     *  @notice claims accrued stkAave rewards for all tracked aTokens
+     *  @notice claims accrued stkAave rewards for all tracked crvTokens
      */
     function harvest( address[] memory rewardTokens ) public {
         rewardPool.getReward();
@@ -671,34 +685,40 @@ contract AaveAllocator is Ownable {
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     *  @notice withdraws asset from treasury, deposits asset into lending pool, then deposits aToken into treasury
+     *  @notice withdraws asset from treasury, deposits asset into lending pool, then deposits crvToken into treasury
      *  @param token address
      *  @param amount uint
+     *  @param minAmount uint
      */
-    function deposit( address token, uint amount ) public onlyPolicy() {
+    function deposit( address token, uint amount, uint minAmount ) public onlyPolicy() {
         require( !exceedsLimit( token, amount ) ); // ensure deposit is within bounds
+        address curveToken = tokenInfo[ token ].curveToken;
 
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
-        // deposit into curve
+        IERC20(token).approve(address(curve3Pool), amount); // approve curve pool to spend tokens
+        uint curveAmount = curve3Pool.add_liquidity(curveToken, [amount, 0, 0, 0], minAmount); // deposit into curve
 
-        IERC20( token ).approve( address(booster), curveAmount ); // approve to deposit to convex
-        booster.deposit( pidForReserve[ token ], true ); // deposit into convex
+        IERC20( curveToken ).approve( address(booster), curveAmount ); // approve to deposit to convex
+        booster.deposit( pidForReserve[ token ], curveAmount, true ); // deposit into convex
 
         uint value = treasury.valueOf( token, amount ); // treasury RFV calculator
         accountingFor( token, amount, value, true ); // account for deposit
     }
 
     /**
-     *  @notice withdraws aToken from treasury, withdraws from lending pool, and deposits asset into treasury
+     *  @notice withdraws crvToken from treasury, withdraws from lending pool, and deposits asset into treasury
      *  @param token address
      *  @param amount uint
+     *  @param minAmount uint
      */
-    function withdraw( address token, uint amount ) public onlyPolicy() {
-
+    function withdraw( address token, uint amount, uint minAmount ) public onlyPolicy() {
         rewardPool.withdrawAndUnwrap( amount, false ); // withdraw to curve token
 
-        // withdraw from curve
+        address curveToken = tokenInfo[ token ].curveToken;
+
+        IERC20(curveToken).approve(address(curve3Pool), amount); // approve 3Pool to spend curveToken
+        curve3Pool.remove_liquidity_one_coin(curveToken, amount, 0, minAmount); // withdraw from curve
 
         uint balance = IERC20( token ).balanceOf( address(this) ); // balance of asset withdrawn
         uint value = treasury.valueOf( token, balance ); // treasury RFV calculator
@@ -710,9 +730,9 @@ contract AaveAllocator is Ownable {
     }
 
     /**
-     *  @notice adds asset and corresponding aToken to mapping
+     *  @notice adds asset and corresponding crvToken to mapping
      *  @param token address
-     *  @param aToken address
+     *  @param curveToken address
      */
     function addToken( address token, address curveToken, uint max, uint pid ) external onlyPolicy() {
         require( token != address(0) );
@@ -807,8 +827,8 @@ contract AaveAllocator is Ownable {
      *  @param user address
      *  @return uint
      */
-    function rewardsPending() public view returns ( uint ) {
-        // query pending rewards
+    function rewardsPending(address user) public view returns ( uint ) {
+        return rewardPool.rewards(user);
     }
 
     /**
