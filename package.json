@@ -15,13 +15,18 @@
     "chai": "^4.3.4",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.1",
-    "hardhat": "^2.5.0"
+    "hardhat": "^2.5.0",
+    "prettier": "^2.3.2",
+    "prettier-plugin-solidity": "^1.0.0-beta.17",
+    "solhint": "^3.3.6",
+    "solhint-plugin-prettier": "0.0.5"
   },
   "scripts": {
     "test": "npx hardhat test",
     "compile": "npx hardhat compile",
-    "clean": "npx hardhat clean", 
-    "start": "npx hardhat run scripts/deployAll.js"
+    "clean": "npx hardhat clean",
+    "start": "npx hardhat run scripts/deployAll.js",
+    "lint:sol": "solhint -f table contracts/**/*.sol"
   },
   "repository": {
     "type": "git",
