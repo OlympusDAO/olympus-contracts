@@ -16,7 +16,7 @@ Local Setup Steps:
 
 
 ## 🤨 How it all works
-[[/docs/box-diagram.png]]
+![High Level Contract Interactions](./docs/box-diagram.png)
 
 ## Mainnet Contracts & Addresses
 
