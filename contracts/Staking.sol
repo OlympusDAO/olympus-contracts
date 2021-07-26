@@ -525,20 +525,12 @@ interface IsOHM {
     function gonsForBalance( uint amount ) external view returns ( uint );
 
     function balanceForGons( uint gons ) external view returns ( uint );
+    
+    function index() external view returns ( uint );
 }
 
-interface IveOHM {
-    function mint( address to, uint amount ) external returns ( bool );
-    function burn( address from, uint amount ) external returns ( bool );
-}
-
-interface ILockedStaking {
-    function unlock( uint amount_, uint bonus_, address staker_ ) external returns ( bool );
-}
-
-interface ILPRewards {
-    function enter() external returns ( bool );
-    function exit() external returns ( bool );
+interface IWarmup {
+    function retrieve( address staker_, uint amount_ ) external;
 }
 
 interface IDistributor {
@@ -553,8 +545,6 @@ contract OlympusStaking is Ownable {
     address public immutable OHM;
     address public immutable sOHM;
 
-    uint public INDEX_GONS;
-    
     struct Epoch {
         uint length;
         uint number;
@@ -563,20 +553,20 @@ contract OlympusStaking is Ownable {
     }
     Epoch public epoch;
 
-    enum CONTRACTS { DISTRIBUTOR, LPREWARDS, LOCKER }
-
     address public distributor;
-    address public LPRewards;
+    
     address public locker;
     uint public totalBonus;
+    
+    address public warmupContract;
+    uint public warmupPeriod;
     
     constructor ( 
         address _OHM, 
         address _sOHM, 
         uint _epochLength,
         uint _firstEpochNumber,
-        uint _firstEpochBlock,
-        uint _indexBalance
+        uint _firstEpochBlock
     ) {
         require( _OHM != address(0) );
         OHM = _OHM;
@@ -589,12 +579,18 @@ contract OlympusStaking is Ownable {
             endBlock: _firstEpochBlock,
             distribute: 0
         });
-
-        INDEX_GONS = IsOHM( sOHM ).gonsForBalance( _indexBalance );
     }
 
+    struct Claim {
+        uint deposit;
+        uint gons;
+        uint expiry;
+        bool lock; // prevents malicious delays
+    }
+    mapping( address => Claim ) public warmupInfo;
+
     /**
-        @notice get sOHM for OHM
+        @notice stake OHM to enter warmup
         @param _amount uint
         @return bool
      */
@@ -602,23 +598,62 @@ contract OlympusStaking is Ownable {
         rebase();
         
         IERC20( OHM ).safeTransferFrom( msg.sender, address(this), _amount );
-        IERC20( sOHM ).safeTransfer( _recipient, _amount );
 
+        Claim memory info = warmupInfo[ _recipient ];
+        require( !info.lock, "Deposits for account are locked" );
+
+        warmupInfo[ _recipient ] = Claim ({
+            deposit: info.deposit.add( _amount ),
+            gons: info.gons.add( IsOHM( sOHM ).gonsForBalance( _amount ) ),
+            expiry: epoch.number.add( warmupPeriod ),
+            lock: false
+        });
+        
+        IERC20( sOHM ).safeTransfer( warmupContract, _amount );
         return true;
+    }
+
+    /**
+        @notice retrieve sOHM from warmup
+        @param _recipient address
+     */
+    function claim ( address _recipient ) public {
+        Claim memory info = warmupInfo[ _recipient ];
+        if ( epoch.number >= info.expiry && info.expiry != 0 ) {
+            delete warmupInfo[ _recipient ];
+            IWarmup( warmupContract ).retrieve( _recipient, IsOHM( sOHM ).balanceForGons( info.gons ) );
+        }
+    }
+
+    /**
+        @notice forfeit sOHM in warmup and retrieve OHM
+     */
+    function forfeit() external {
+        Claim memory info = warmupInfo[ msg.sender ];
+        delete warmupInfo[ msg.sender ];
+
+        IWarmup( warmupContract ).retrieve( address(this), IsOHM( sOHM ).balanceForGons( info.gons ) );
+        IERC20( OHM ).safeTransfer( msg.sender, info.deposit );
+    }
+
+    /**
+        @notice prevent new deposits to address (protection from malicious activity)
+     */
+    function toggleDepositLock() external {
+        warmupInfo[ msg.sender ].lock = !warmupInfo[ msg.sender ].lock;
     }
 
     /**
         @notice redeem sOHM for OHM
         @param _amount uint
-        @return bool
+        @param _trigger bool
      */
-    function unstake( uint _amount, address _recipient ) external returns ( bool ) {
-        rebase();
-
+    function unstake( uint _amount, bool _trigger ) external {
+        if ( _trigger ) {
+            rebase();
+        }
         IERC20( sOHM ).safeTransferFrom( msg.sender, address(this), _amount );
-        IERC20( OHM ).safeTransfer( _recipient, _amount );
-
-        return true;
+        IERC20( OHM ).safeTransfer( msg.sender, _amount );
     }
 
     /**
@@ -626,23 +661,19 @@ contract OlympusStaking is Ownable {
         @return uint
      */
     function index() public view returns ( uint ) {
-        return IsOHM( sOHM ).balanceForGons( INDEX_GONS );
+        return IsOHM( sOHM ).index();
     }
 
     /**
         @notice trigger rebase if epoch over
-        @return bool
      */
-    function rebase() public returns ( bool ) {
+    function rebase() public {
         if( epoch.endBlock <= block.number ) {
 
-            if( LPRewards != address(0) ) {
-                ILPRewards( LPRewards ).enter();
-                IsOHM( sOHM ).rebase( epoch.distribute, epoch.number );
-                ILPRewards( LPRewards ).exit();
-            } else {
-                IsOHM( sOHM ).rebase( epoch.distribute, epoch.number );
-            }
+            IsOHM( sOHM ).rebase( epoch.distribute, epoch.number );
+
+            epoch.endBlock = epoch.endBlock.add( epoch.length );
+            epoch.number++;
             
             if ( distributor != address(0) ) {
                 IDistributor( distributor ).distribute();
@@ -656,10 +687,7 @@ contract OlympusStaking is Ownable {
             } else {
                 epoch.distribute = balance.sub( staked );
             }
-            epoch.endBlock = epoch.endBlock.add( epoch.length );
-            epoch.number++;
         }
-        return true;
     }
 
     /**
@@ -673,40 +701,46 @@ contract OlympusStaking is Ownable {
     /**
         @notice provide bonus to locked staking contract
         @param _amount uint
-        @return bool
      */
-    function giveBonusToLocker( uint _amount ) external returns ( bool ) {
+    function giveLockBonus( uint _amount ) external {
         require( msg.sender == locker );
         totalBonus = totalBonus.add( _amount );
         IERC20( sOHM ).safeTransfer( locker, _amount );
-        return true;
     }
 
     /**
         @notice reclaim bonus from locked staking contract
         @param _amount uint
-        @return bool
      */
-    function reclaimBonusFromLocker( uint _amount ) external returns ( bool ) {
+    function returnLockBonus( uint _amount ) external {
         require( msg.sender == locker );
         totalBonus = totalBonus.sub( _amount );
         IERC20( sOHM ).safeTransferFrom( locker, address(this), _amount );
-        return true;
     }
+
+    enum CONTRACTS { DISTRIBUTOR, WARMUP, LOCKER }
 
     /**
         @notice sets the contract address for LP staking
         @param _contract address
-        @return bool
      */
-    function setContract( CONTRACTS _contract, address _address ) external onlyManager() returns ( bool ) {
+    function setContract( CONTRACTS _contract, address _address ) external onlyManager() {
         if( _contract == CONTRACTS.DISTRIBUTOR ) { // 0
             distributor = _address;
-        } else if ( _contract == CONTRACTS.LPREWARDS ) {
-            LPRewards = _address;
-        } else if ( _contract == CONTRACTS.LOCKER ) {
+        } else if ( _contract == CONTRACTS.WARMUP ) { // 1
+            require( warmupContract == address( 0 ), "Warmup cannot be set more than once" );
+            warmupContract = _address;
+        } else if ( _contract == CONTRACTS.LOCKER ) { // 2
+            require( locker == address(0), "Locker cannot be set more than once" );
             locker = _address;
         }
-        return true;
+    }
+    
+    /**
+     * @notice set warmup period for new stakers
+     * @param _warmupPeriod uint
+     */
+    function setWarmup( uint _warmupPeriod ) external onlyManager() {
+        warmupPeriod = _warmupPeriod;
     }
 }

@@ -999,7 +999,8 @@ contract sOlympus is ERC20Permit, Ownable {
     address public stakingContract;
     address public initializer;
 
-    event LogRebase( uint256 indexed epoch, uint256 totalSupply );
+    event LogSupply(uint256 indexed epoch, uint256 timestamp, uint256 totalSupply );
+    event LogRebase( uint256 indexed epoch, uint256 rebase, uint256 index );
     event LogStakingContractUpdated( address stakingContract );
 
     struct Rebase {
@@ -1015,10 +1016,8 @@ contract sOlympus is ERC20Permit, Ownable {
 
     uint public INDEX;
 
-    mapping( address => bool ) public cannotReceive;
-
     uint256 private constant MAX_UINT256 = ~uint256(0);
-    uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 500000 * 10**9;
+    uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 5000000 * 10**9;
 
     // TOTAL_GONS is a multiple of INITIAL_FRAGMENTS_SUPPLY so that _gonsPerFragment is an integer.
     // Use the highest value that fits in a uint256 for max granularity.
@@ -1053,17 +1052,7 @@ contract sOlympus is ERC20Permit, Ownable {
 
     function setIndex( uint _INDEX ) external onlyManager() returns ( bool ) {
         require( INDEX == 0 );
-        INDEX = _INDEX;
-        return true;
-    }
-
-    /**
-        @notice allows pools to be blocked from receiving, but not sending, sOHM
-        @param address_ address
-        @return bool
-     */
-    function toggleReceiver( address address_ ) external onlyManager() returns ( bool ) {
-        cannotReceive[ address_ ] = !cannotReceive[ address_ ];
+        INDEX = gonsForBalance( _INDEX );
         return true;
     }
 
@@ -1077,7 +1066,8 @@ contract sOlympus is ERC20Permit, Ownable {
         uint256 circulatingSupply_ = circulatingSupply();
 
         if ( profit_ == 0 ) {
-            emit LogRebase( block.timestamp, _totalSupply );
+            emit LogSupply( epoch_, block.timestamp, _totalSupply );
+            emit LogRebase( epoch_, 0, index() );
             return _totalSupply;
         } else if ( circulatingSupply_ > 0 ){
             rebaseAmount = profit_.mul( _totalSupply ).div( circulatingSupply_ );
@@ -1118,7 +1108,8 @@ contract sOlympus is ERC20Permit, Ownable {
             blockNumberOccured: block.number
         }));
         
-        emit LogRebase( block.timestamp, _totalSupply );
+        emit LogSupply( epoch_, block.timestamp, _totalSupply );
+        emit LogRebase( epoch_, rebasePercent, index() );
 
         return true;
     }
@@ -1145,7 +1136,6 @@ contract sOlympus is ERC20Permit, Ownable {
     }
 
     function transfer( address to, uint256 value ) public override returns (bool) {
-        require( !cannotReceive[ to ], "Cannot send to this address" );
         uint256 gonValue = value.mul( _gonsPerFragment );
         _gonBalances[ msg.sender ] = _gonBalances[ msg.sender ].sub( gonValue );
         _gonBalances[ to ] = _gonBalances[ to ].add( gonValue );
@@ -1158,7 +1148,6 @@ contract sOlympus is ERC20Permit, Ownable {
     }
 
     function transferFrom( address from, address to, uint256 value ) public override returns ( bool ) {
-        require( !cannotReceive[ to ], "Cannot send to this address" );
        _allowedValue[ from ][ msg.sender ] = _allowedValue[ from ][ msg.sender ].sub( value );
        emit Approval( from, msg.sender,  _allowedValue[ from ][ msg.sender ] );
 
