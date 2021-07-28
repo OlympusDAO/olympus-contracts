@@ -597,11 +597,11 @@ interface IConvexRewards{
 }
 
 /**
- *  Contract deploys reserves from treasury into the Aave lending pool,
- *  earning interest and $stkAAVE.
+ *  Contract deploys reserves from treasury into the Convex lending pool,
+ *  earning interest and $CVX.
  */
 
-contract AaveAllocator is Ownable {
+contract ConvexAllocator is Ownable {
 
     /* ======== DEPENDENCIES ======== */
 
@@ -668,7 +668,7 @@ contract AaveAllocator is Ownable {
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
-     *  @notice claims accrued stkAave rewards for all tracked crvTokens
+     *  @notice claims accrued CVX rewards for all tracked crvTokens
      */
     function harvest( address[] memory rewardTokens ) public {
         rewardPool.getReward();
