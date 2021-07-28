@@ -593,7 +593,7 @@ interface IConvexRewards{
     //stake a convex tokenized deposit for another address(transfering ownership)
     function stakeFor(address _account,uint256 _amount) external returns(bool);
     //get rewards for an address
-    function rewards(address _account) external view returns(uint256);
+    function earned(address _account) external view returns(uint256);
 }
 
 /**
@@ -721,8 +721,8 @@ contract ConvexAllocator is Ownable {
         curve3Pool.remove_liquidity_one_coin(curveToken, amount, 0, minAmount); // withdraw from curve
 
         uint balance = IERC20( token ).balanceOf( address(this) ); // balance of asset withdrawn
+
         uint value = treasury.valueOf( token, balance ); // treasury RFV calculator
-        
         accountingFor( token, balance, value, false ); // account for withdrawal
 
         IERC20( token ).approve( address( treasury ), balance ); // approve to deposit asset into treasury
@@ -824,11 +824,10 @@ contract ConvexAllocator is Ownable {
 
     /**
      *  @notice query all pending rewards
-     *  @param user address
      *  @return uint
      */
-    function rewardsPending(address user) public view returns ( uint ) {
-        return rewardPool.rewards(user);
+    function rewardsPending() public view returns ( uint ) {
+        return rewardPool.earned(address(this));
     }
 
     /**
