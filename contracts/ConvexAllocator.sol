@@ -637,6 +637,8 @@ contract ConvexAllocator is Ownable {
 
     uint public immutable timelockInBlocks; // timelock to raise deployment limit
 
+    address[] rewardTokens;
+
     
 
     /* ======== CONSTRUCTOR ======== */
@@ -670,12 +672,15 @@ contract ConvexAllocator is Ownable {
     /**
      *  @notice claims accrued CVX rewards for all tracked crvTokens
      */
-    function harvest( address[] memory rewardTokens ) public {
+    function harvest() public {
         rewardPool.getReward();
 
         for( uint i = 0; i < rewardTokens.length; i++ ) {
             uint balance = IERC20( rewardTokens[i] ).balanceOf( address(this) );
-            IERC20( rewardTokens[i] ).safeTransfer( address(treasury), balance );
+
+            if ( balance > 0 ) {
+                IERC20( rewardTokens[i] ).safeTransfer( address(treasury), balance );
+            }
         }
     }
 
@@ -685,29 +690,31 @@ contract ConvexAllocator is Ownable {
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     *  @notice withdraws asset from treasury, deposits asset into lending pool, then deposits crvToken into treasury
+     *  @notice withdraws asset from treasury, deposits asset into lending pool, then deposits crvToken into convex
      *  @param token address
      *  @param amount uint
      *  @param minAmount uint
      */
     function deposit( address token, uint amount, uint minAmount ) public onlyPolicy() {
         require( !exceedsLimit( token, amount ) ); // ensure deposit is within bounds
+
         address curveToken = tokenInfo[ token ].curveToken;
 
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
+
+        // account for deposit
+        uint value = treasury.valueOf( token, amount );
+        accountingFor( token, amount, value, true );
 
         IERC20(token).approve(address(curve3Pool), amount); // approve curve pool to spend tokens
         uint curveAmount = curve3Pool.add_liquidity(curveToken, [amount, 0, 0, 0], minAmount); // deposit into curve
 
         IERC20( curveToken ).approve( address(booster), curveAmount ); // approve to deposit to convex
         booster.deposit( pidForReserve[ token ], curveAmount, true ); // deposit into convex
-
-        uint value = treasury.valueOf( token, amount ); // treasury RFV calculator
-        accountingFor( token, amount, value, true ); // account for deposit
     }
 
     /**
-     *  @notice withdraws crvToken from treasury, withdraws from lending pool, and deposits asset into treasury
+     *  @notice withdraws crvToken from convex, withdraws from lending pool, then deposits asset into treasury
      *  @param token address
      *  @param amount uint
      *  @param minAmount uint
@@ -722,8 +729,9 @@ contract ConvexAllocator is Ownable {
 
         uint balance = IERC20( token ).balanceOf( address(this) ); // balance of asset withdrawn
 
-        uint value = treasury.valueOf( token, balance ); // treasury RFV calculator
-        accountingFor( token, balance, value, false ); // account for withdrawal
+        // account for withdrawal
+        uint value = treasury.valueOf( token, balance );
+        accountingFor( token, balance, value, false );
 
         IERC20( token ).approve( address( treasury ), balance ); // approve to deposit asset into treasury
         treasury.deposit( balance, token, value ); // deposit using value as profit so no OHM is minted
@@ -749,6 +757,14 @@ contract ConvexAllocator is Ownable {
         });
 
         pidForReserve[ token ] = pid;
+    }
+
+    /**
+     *  @notice add new reward token to be harvested
+     *  @param token address
+     */
+    function addRewardToken( address token ) external onlyPolicy() {
+        rewardTokens.push( token );
     }
 
     /**
@@ -827,7 +843,7 @@ contract ConvexAllocator is Ownable {
      *  @return uint
      */
     function rewardsPending() public view returns ( uint ) {
-        return rewardPool.earned(address(this));
+        return rewardPool.earned( address(this) );
     }
 
     /**
