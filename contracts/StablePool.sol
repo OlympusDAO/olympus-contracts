@@ -314,44 +314,46 @@ contract StablePool {
         IERC20( _firstToken ).safeTransferFrom( msg.sender, address(this), _amount );
 
         uint fee = _amount.mul( swapFee ).div( 1e4 );
+        feesCollected = feesCollected.add( fee );
 
         IERC20( _secondToken ).safeTransfer( msg.sender, _amount.sub( fee ) );
     }
 
     /**
-     *  @notice add single sided liquidity to pool if pool balance is within range
+     *  @notice add single sided liquidity to pool unless token range upper bound will be exceeded
      *  @param _token address
      *  @param _amount uint
      */
     function add( address _token, uint _amount ) external {
-        require( canAdd( _token, _amount ) );
+        require( canAdd( _token, _amount ) ); // check if can add
 
-        IERC20( _token ).safeTransferFrom( msg.sender, address(this), _amount );
+        IERC20( _token ).safeTransferFrom( msg.sender, address(this), _amount ); // send token added
 
-        shareToken.mint( msg.sender, _amount );
+        shareToken.mint( msg.sender, _amount ); // mint pool token
     }
 
     /**
-     *  @notice remove single sided liquidity from pool if pool balance is within range
+     *  @notice remove single sided liquidity from pool unless token range lower bound will be exceeded
      *  @param _token address
      *  @param _amount uint
      */
     function remove( address _token, uint _amount ) external {
-        require( canAdd( _token, _amount ) );
+        require( canRemove( _token, _amount ) ); // check if can remove
 
-        IERC20( _token ).safeTransfer( msg.sender, _amount );
+        shareToken.burn( msg.sender, _amount ); // burn pool token
 
-        shareToken.burn( msg.sender, _amount );
+        IERC20( _token ).safeTransfer( msg.sender, _amount ); // send token removed
     }
 
     /**
      *  @notice deposit fees collected into treasury
      */
-    function clearFees() external {
-        require( feesCollected > 0, "No fees" );
+    function collectFees() external {
+        require( feesCollected > 0, "No fees" ); // ensure fees to collect
 
-        shareToken.mint( address(this), feesCollected );
+        shareToken.mint( address(this), feesCollected ); // mint pool token
 
+        // approve and deposit pool token to treasury
         shareToken.approve( address(treasury), feesCollected );
         treasury.deposit( 
             address( shareToken ), 
@@ -359,23 +361,12 @@ contract StablePool {
             treasury.valueOf( address( shareToken ), feesCollected )
         );
 
-        feesCollected = 0;
+        feesCollected = 0; // reset collection counter
     }
 
 
 
     /* ========== VIEW FUNCTIONS ========== */
-
-    /**
-     *  @notice get [high, low] weight of token in pool
-     *  @param _token address
-     *  @return _high uint
-     *  @return _low uint
-     */
-    function getWeight( address _token ) public view returns ( uint _high, uint _low ) {
-        _high = tokenInfo[ _token ].highWeight.mul( 1e9 ).div( totalHighWeight );
-        _low = tokenInfo[ _token ].lowWeight.mul( 1e9 ).div( totalLowWeight );
-    }
 
     /**
      *  @notice ensure pool remains in range after swap
@@ -385,13 +376,16 @@ contract StablePool {
      *  @return bool
      */
     function canExecute( address _firstToken, uint _amount, address _secondToken ) public view returns ( bool ) {
-        require( tokenInfo[ _firstToken ].accepting, "Not accepting token" );
+        require( tokenInfo[ _firstToken ].accepting, "Not accepting token" ); 
         
-        ( uint first, ) = getWeight( _firstToken );
-        ( , uint second ) = getWeight( _secondToken );
+        if ( !check( true, _firstToken, _amount ) ) { // ensure first token remains within bounds
+            return false;
+        }
 
-        check( true, first, _firstToken, _amount );
-        check( false, second, _secondToken, _amount );
+        if ( !check( false, _secondToken, _amount ) ) { // ensure second token remains within bounds
+            return false;
+        }
+
         return true;
     }
 
@@ -403,8 +397,7 @@ contract StablePool {
      */
     function canAdd( address _token, uint _amount ) public view returns ( bool ) {
         require( tokenInfo[ _token ].accepting, "Not accepting token" );
-        ( uint weight, ) = getWeight( _token );
-        return check( true, weight, _token, _amount );
+        return check( true, _token, _amount ); // true if token remains in bounds
     }
 
     /**
@@ -414,61 +407,26 @@ contract StablePool {
      *  @return bool
      */
     function canRemove( address _token, uint _amount ) public view returns ( bool ) {
-        ( , uint weight ) = getWeight( _token );
-        return check( false, weight, _token, _amount );
+        return check( false, _token, _amount ); // true if token remains in bounds
     }
 
     /**
      *  @notice check if remains in range
      *  @param _high bool
-     *  @param _weight uint
      *  @param _token address
      *  @param _amount uint
      *  @return bool
      */
-    function check( bool _high, uint _weight, address _token, uint _amount ) public view returns ( bool ) {
-        if( _high ) {
-            uint maximum = totalStables.mul( _weight ).div( 1e9 );
-            uint balance = IERC20( _token ).balanceOf( address(this) );
-            require( balance.add( _amount ) <= maximum, "Exceeds range high" );
-        } else {
-            uint minimum = totalStables.mul( _weight ).div( 1e9 );
-            uint balance = IERC20( _token ).balanceOf( address(this) );
-            require( balance.sub( _amount ) >= minimum, "Exceeds range low" );
+    function check( bool _high, address _token, uint _amount ) public view returns ( bool ) {
+        if( _high ) { // if using upper bound
+            uint maximum = totalStables.mul( tokenInfo[ _token ].highWeight ).div( 1e9 ); // maximum balance of token
+            uint balance = IERC20( _token ).balanceOf( address(this) ); // current balance of token
+            return ( balance.add( _amount ) <= maximum ); // check if remains in bounds
+        } else { // if using lower bound
+            uint minimum = totalStables.mul( tokenInfo[ _token ].lowWeight ).div( 1e9 ); // minimum balance of token
+            uint balance = IERC20( _token ).balanceOf( address(this) ); // current balance of token
+            return ( balance.sub( _amount ) >= minimum ); // check if remains in bounds
         }
-        return true;
-    }
-
-    /**
-     *  @notice test if weight can be applied while remaining in range
-     *  @param _high bool
-     *  @param _token address
-     *  @param _newWeight uint
-     *  @return uint
-     */
-    function testNewWeight( bool _high, address _token, uint _newWeight ) public view returns ( uint ) {
-        uint currentTotal;
-        uint currentWeight;
-        uint newTotal;
-
-        if ( _high ) {
-            currentWeight = tokenInfo[ _token ].highWeight;
-            currentTotal = totalHighWeight;
-        } else {
-            currentWeight = tokenInfo[ _token ].lowWeight;
-            currentTotal = totalHighWeight;
-        }
-
-        if ( _newWeight >= currentWeight ) {
-             newTotal = currentTotal.add( _newWeight.sub( currentWeight ) );
-        } else {
-             newTotal = currentTotal.sub( currentWeight.sub( _newWeight ) );
-        }
-
-        uint weight = _newWeight.mul( 1e9 ).div( newTotal );
-        check( _high, weight, _token, 1 );
-
-        return newTotal;
     }
 
 
@@ -476,17 +434,26 @@ contract StablePool {
      /* ========== POLICY FUNCTIONS ========== */
 
     /**
-     *  @notice change weights of token in pool
-     *  @param _token address
-     *  @param _newHigh uint
-     *  @param _newLow uint
+     *  @notice change bounds of tokens in pool
+     *  @param _newHighs uint[]
+     *  @param _newLows uint[]
      */
-     function changeWeights( address _token, uint _newHigh, uint _newLow ) external {
-        totalHighWeight = testNewWeight( true, _token, _newHigh );
-        totalLowWeight = testNewWeight( false, _token, _newLow );
+     function changeBounds( uint[] calldata _newHighs, uint[] calldata _newLows ) external {
+        for ( uint i = 0; i < poolTokens.length; i++ ) {
+            tokenInfo[ poolTokens[i] ].highWeight = _newHighs[i];
+            tokenInfo[ poolTokens[i] ].lowWeight = _newLows[i];
+        }
+     }
 
-        tokenInfo[ _token ].highWeight = _newHigh;
-        tokenInfo[ _token ].lowWeight = _newLow;
+    /**
+     *  @notice add new token to pool
+     *  @notice must call changeBounds to add bounds for token
+     *  @notice must call toggleAccept to activate token
+     *  @param _token address
+     */
+     function addToken( address _token ) external {
+         poolTokens.push( _token );
+         tokenInfo[ _token ].accepting = false;
      }
      
      /**
@@ -499,6 +466,7 @@ contract StablePool {
 
     /**
      *  @notice toggle whether to accept incoming token
+     *  @notice setting token to false will not allow swaps as incoming token or adds
      *  @param _token address
      */
      function toggleAccept( address _token ) external {
