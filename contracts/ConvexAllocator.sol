@@ -615,6 +615,7 @@ contract ConvexAllocator is Ownable {
     struct tokenData {
         address underlying;
         address curveToken;
+        uint index;
         uint deployed;
         uint limit;
         uint newLimit;
@@ -693,9 +694,10 @@ contract ConvexAllocator is Ownable {
      *  @notice withdraws asset from treasury, deposits asset into lending pool, then deposits crvToken into convex
      *  @param token address
      *  @param amount uint
+     *  @param amounts uint[]
      *  @param minAmount uint
      */
-    function deposit( address token, uint amount, uint minAmount ) public onlyPolicy() {
+    function deposit( address token, uint amount, uint[] calldata amounts, uint minAmount ) public onlyPolicy() {
         require( !exceedsLimit( token, amount ) ); // ensure deposit is within bounds
 
         address curveToken = tokenInfo[ token ].curveToken;
@@ -707,7 +709,7 @@ contract ConvexAllocator is Ownable {
         accountingFor( token, amount, value, true );
 
         IERC20(token).approve(address(curve3Pool), amount); // approve curve pool to spend tokens
-        uint curveAmount = curve3Pool.add_liquidity(curveToken, [amount, 0, 0, 0], minAmount); // deposit into curve
+        uint curveAmount = curve3Pool.add_liquidity(curveToken, amounts, minAmount); // deposit into curve
 
         IERC20( curveToken ).approve( address(booster), curveAmount ); // approve to deposit to convex
         booster.deposit( pidForReserve[ token ], curveAmount, true ); // deposit into convex
@@ -725,7 +727,7 @@ contract ConvexAllocator is Ownable {
         address curveToken = tokenInfo[ token ].curveToken;
 
         IERC20(curveToken).approve(address(curve3Pool), amount); // approve 3Pool to spend curveToken
-        curve3Pool.remove_liquidity_one_coin(curveToken, amount, 0, minAmount); // withdraw from curve
+        curve3Pool.remove_liquidity_one_coin(curveToken, amount, tokenInfo[ token ].index, minAmount); // withdraw from curve
 
         uint balance = IERC20( token ).balanceOf( address(this) ); // balance of asset withdrawn
 
@@ -742,7 +744,7 @@ contract ConvexAllocator is Ownable {
      *  @param token address
      *  @param curveToken address
      */
-    function addToken( address token, address curveToken, uint max, uint pid ) external onlyPolicy() {
+    function addToken( address token, address curveToken, uint index, uint max, uint pid ) external onlyPolicy() {
         require( token != address(0) );
         require( curveToken != address(0) );
         require( tokenInfo[ token ].deployed == 0 ); 
@@ -750,6 +752,7 @@ contract ConvexAllocator is Ownable {
         tokenInfo[ token ] = tokenData({
             underlying: token,
             curveToken: curveToken,
+            index: index,
             deployed: 0,
             limit: max,
             newLimit: 0,
