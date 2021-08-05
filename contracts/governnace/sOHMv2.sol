@@ -1,7 +1,3 @@
-// /**
-//  *Submitted for verification at Etherscan.io on 2021-06-12
-// */
-
 // // SPDX-License-Identifier: AGPL-3.0-or-later
 // pragma solidity 0.7.5;
 
@@ -995,21 +991,19 @@
 //     function getPrice( address _pool ) external returns ( uint );
 // }
 
-// contract sOlympus is ERC20Permit, Ownable {
+// contract sOlympusv2 is ERC20Permit, Ownable {
 
 //     /* ========== DEPENDENCIES ========== */
 
 //     using SafeMath for uint256;
-
-
 
 //     /* ========== EVENTS ========== */
 
 //     event LogSupply(uint256 indexed epoch, uint256 timestamp, uint256 totalSupply );
 //     event LogRebase( uint256 indexed epoch, uint256 rebase, uint256 index );
 //     event LogStakingContractUpdated( address stakingContract );
-
-
+//     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
+//     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
 
 //     /* ========== MODIFIERS ========== */
 
@@ -1017,7 +1011,6 @@
 //         require( msg.sender == stakingContract );
 //         _;
 //     }
-
 
 //     /* ========== DATA STRUCTURES ========== */
 
@@ -1032,7 +1025,11 @@
 //         uint blockNumberOccured;
 //     }
 
-
+//     /// @notice A checkpoint for marking number of votes from a given block
+//     struct Checkpoint {
+//         uint fromBlock;
+//         uint agnosticVotes;
+//     }
 
 //     /* ========== STATE VARIABLES ========== */
 
@@ -1062,6 +1059,15 @@
 
 //     mapping ( address => mapping ( address => uint256 ) ) private _allowedValue;
 
+//     /// @notice A record of each accounts delegate
+//     mapping (address => address) public delegates;
+    
+//     /// @notice A record of votes checkpoints for each account, by index
+//     mapping (address => mapping (uint => Checkpoint)) public checkpoints;
+
+//     /// @notice The number of checkpoints for each account
+//     mapping (address => uint) public numCheckpoints;
+
 
 
 //     /* ========== CONSTRUCTOR ========== */
@@ -1071,7 +1077,6 @@
 //         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
 //         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
 //     }
-
 
 
 //     /* ========== INITIALIZATION ========== */
@@ -1167,6 +1172,10 @@
 //         uint256 gonValue = value.mul( _gonsPerFragment );
 //         _gonBalances[ msg.sender ] = _gonBalances[ msg.sender ].sub( gonValue );
 //         _gonBalances[ to ] = _gonBalances[ to ].add( gonValue );
+
+//         /// GOV
+//         _moveDelegates(msg.sender, to, value);
+
 //         emit Transfer( msg.sender, to, value );
 //         return true;
 //     }
@@ -1178,6 +1187,10 @@
 //         uint256 gonValue = gonsForBalance( value );
 //         _gonBalances[ from ] = _gonBalances[from].sub( gonValue );
 //         _gonBalances[ to ] = _gonBalances[to].add( gonValue );
+
+//         /// GOV
+//         _moveDelegates(from, to, value);
+
 //         emit Transfer( from, to, value );
 //         return true;
 //     }
@@ -1205,7 +1218,13 @@
 //         return true;
 //     }
 
-
+//     /**
+//      * @notice Delegate votes from `msg.sender` to `delegatee`
+//      * @param delegatee The address to delegate votes to
+//      */
+//     function delegate(address delegatee) public {
+//         return _delegate(msg.sender, delegatee);
+//     }
 
 //     /* ========== INTERNAL FUNCTIONS ========== */
 
@@ -1215,7 +1234,52 @@
 //         emit Approval( owner, spender, value );
 //     }
 
+//     function safe32(uint n, string memory errorMessage) internal pure returns (uint32) {
+//         require(n < 2**32, errorMessage);
+//         return uint32(n);
+//     }
 
+//     function _delegate(address delegator, address delegatee) internal {
+//         address currentDelegate = delegates[delegator];
+//         uint delegatorBalance = toAgnostic( _balances[delegator] );
+//         delegates[delegator] = delegatee;
+
+//         emit DelegateChanged(delegator, currentDelegate, delegatee);
+
+//         _moveDelegates(currentDelegate, delegatee, delegatorBalance);
+//     }
+
+//     function _moveDelegates(address srcRep, address dstRep, uint amount) internal {
+//         uint agnosticAmount = toAgnostic(amount);
+//         if (srcRep != dstRep && amount > 0) {
+//             if (srcRep != address(0) || srcRep != stakingContract ) {
+//                 uint srcRepNum = numCheckpoints[srcRep];
+//                 uint srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].agnosticVotes : 0;
+//                 uint srcRepNew = srcRepOld.sub(agnosticAmount);
+//                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
+//             }
+
+//             if (dstRep != address(0) || dstRep != stakingContract) {
+//                 uint dstRepNum = numCheckpoints[dstRep];
+//                 uint dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].agnosticVotes : 0;
+//                 uint dstRepNew = dstRepOld.add(agnosticAmount);
+//                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
+//             }
+//         }
+//     }
+
+//     function _writeCheckpoint(address delegatee, uint nCheckpoints, uint oldVotes, uint newVotes) internal {
+//       uint blockNumber = safe32(block.number, "sOHM::_writeCheckpoint: block number exceeds 32 bits");
+
+//       if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
+//           checkpoints[delegatee][nCheckpoints - 1].agnosticVotes = newVotes;
+//       } else {
+//           checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
+//           numCheckpoints[delegatee] = nCheckpoints + 1;
+//       }
+
+//       emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
+//     }
 
 //     /* ========== VIEW FUNCTIONS ========== */
 
@@ -1243,4 +1307,75 @@
 //     function allowance( address owner_, address spender ) public view override returns ( uint256 ) {
 //         return _allowedValue[ owner_ ][ spender ];
 //     }
+
+//     /**
+//      * @notice Gets the current votes balance for `account`
+//      * @param account The address to get votes balance
+//      * @return The number of current votes for `account`
+//      */
+//     function getCurrentVotes(address account) external view returns (uint) {
+//         uint nCheckpoints = numCheckpoints[account];
+//         return nCheckpoints > 0 ? fromAgnostic( checkpoints[account][nCheckpoints - 1].agnosticVotes, block.number ): 0;
+//     }
+
+//     /**
+//      * @notice Determine the prior number of votes for an account as of a block number
+//      * @dev Block number must be a finalized block or else this function will revert to prevent misinformation.
+//      * @param account The address of the account to check
+//      * @param blockNumber The block number to get the vote balance at
+//      * @return The number of votes the account had as of the given block
+//      */
+//     function getPriorVotes(address account, uint blockNumber) public view returns (uint) {
+//         require(blockNumber < block.number, "sOHM::getPriorVotes: not yet determined");
+
+//         uint nCheckpoints = numCheckpoints[account];
+//         if (nCheckpoints == 0) {
+//             return 0;
+//         }
+
+//         // First check most recent balance
+//         if (checkpoints[account][nCheckpoints - 1].fromBlock <= blockNumber) {
+//             return fromAgnostic( checkpoints[account][nCheckpoints - 1].agnosticVotes, blockNumber );
+//         }
+
+//         // Next check implicit zero balance
+//         if (checkpoints[account][0].fromBlock > blockNumber) {
+//             return 0;
+//         }
+
+//         uint lower = 0;
+//         uint upper = nCheckpoints - 1;
+//         while (upper > lower) {
+//             uint center = upper - (upper - lower) / 2; // ceil, avoiding overflow
+//             Checkpoint memory cp = checkpoints[account][center];
+//             if (cp.fromBlock == blockNumber) {
+//                 return fromAgnostic( cp.agnosticVotes, blockNumber );
+//             } else if (cp.fromBlock < blockNumber) {
+//                 lower = center;
+//             } else {
+//                 upper = center - 1;
+//             }
+//         }
+//         return fromAgnostic( checkpoints[account][lower].agnosticVotes, blockNumber );
+//     }
+
+//     function toAgnostic( uint amount_ ) public view returns ( uint ) {
+//         return amount_.mul(10 ** decimals()).div( index() );
+//     }
+
+//     function fromAgnostic( uint amount_, uint blockNumber_ ) public view returns ( uint ) {
+//         return amount_.mul( getIndexAtBlockNumber(blockNumber_) ).div(10 ** decimals());
+//     }
+
+//     function getIndexAtBlockNumber(uint blockNumber_) public view returns(uint) {
+//         if(rebases.length == 0) {
+//             return index();
+//         }
+
+//         uint i = 1;
+//         while(rebases[rebases.length - i].blockNumberOccured > blockNumber_) {
+//             i++;
+//         }
+//         return rebases[rebases.length - i].index;
+//     }    
 // }

@@ -1,7 +1,3 @@
-// /**
-//  *Submitted for verification at Etherscan.io on 2021-06-12
-// */
-
 // // SPDX-License-Identifier: AGPL-3.0-or-later
 // pragma solidity 0.7.5;
 
@@ -719,6 +715,7 @@
 //     _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
 //     _balances[recipient] = _balances[recipient].add(amount);
 //     emit Transfer(sender, recipient, amount);
+
 //   }
 
 //     /** @dev Creates `amount` tokens and assigns them to `account`, increasing
@@ -991,35 +988,21 @@
 //     }
 // }
 
-// interface IOracle {
-//     function getPrice( address _pool ) external returns ( uint );
-// }
-
 // contract sOlympus is ERC20Permit, Ownable {
 
-//     /* ========== DEPENDENCIES ========== */
-
 //     using SafeMath for uint256;
-
-
-
-//     /* ========== EVENTS ========== */
-
-//     event LogSupply(uint256 indexed epoch, uint256 timestamp, uint256 totalSupply );
-//     event LogRebase( uint256 indexed epoch, uint256 rebase, uint256 index );
-//     event LogStakingContractUpdated( address stakingContract );
-
-
-
-//     /* ========== MODIFIERS ========== */
 
 //     modifier onlyStakingContract() {
 //         require( msg.sender == stakingContract );
 //         _;
 //     }
 
+//     address public stakingContract;
+//     address public initializer;
 
-//     /* ========== DATA STRUCTURES ========== */
+//     event LogSupply(uint256 indexed epoch, uint256 timestamp, uint256 totalSupply );
+//     event LogRebase( uint256 indexed epoch, uint256 rebase, uint256 index );
+//     event LogStakingContractUpdated( address stakingContract );
 
 //     struct Rebase {
 //         uint epoch;
@@ -1028,24 +1011,11 @@
 //         uint totalStakedAfter;
 //         uint amountRebased;
 //         uint index;
-//         uint indexAdjustedPrice;
 //         uint blockNumberOccured;
 //     }
+//     Rebase[] public rebases;
 
-
-
-//     /* ========== STATE VARIABLES ========== */
-
-//     address initializer;
-
-//     uint INDEX; // Index Gons - tracks rebase growth
-
-//     address public stakingContract; // balance used to calc rebase
-
-//     IOracle oracle; // pulls price from pool
-//     address pool;
-
-//     Rebase[] public rebases; // past rebase data    
+//     uint public INDEX;
 
 //     uint256 private constant MAX_UINT256 = ~uint256(0);
 //     uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 5000000 * 10**9;
@@ -1062,23 +1032,14 @@
 
 //     mapping ( address => mapping ( address => uint256 ) ) private _allowedValue;
 
-
-
-//     /* ========== CONSTRUCTOR ========== */
-
 //     constructor() ERC20("Staked Olympus", "sOHM", 9) ERC20Permit() {
 //         initializer = msg.sender;
 //         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
 //         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
 //     }
 
-
-
-//     /* ========== INITIALIZATION ========== */
-
-//     function initialize( address stakingContract_ ) external {
+//     function initialize( address stakingContract_ ) external returns ( bool ) {
 //         require( msg.sender == initializer );
-
 //         require( stakingContract_ != address(0) );
 //         stakingContract = stakingContract_;
 //         _gonBalances[ stakingContract ] = TOTAL_GONS;
@@ -1087,21 +1048,14 @@
 //         emit LogStakingContractUpdated( stakingContract_ );
         
 //         initializer = address(0);
+//         return true;
 //     }
 
-//     function setIndex( uint _INDEX ) external onlyManager() {
+//     function setIndex( uint _INDEX ) external onlyManager() returns ( bool ) {
 //         require( INDEX == 0 );
 //         INDEX = gonsForBalance( _INDEX );
+//         return true;
 //     }
-
-//     function setPool( address _oracle, address _pool ) external onlyManager() {
-//         oracle = IOracle( _oracle );
-//         pool = _pool;
-//     }
-
-
-
-//     /* ========== REBASE ========== */
 
 //     /**
 //         @notice increases sOHM supply to increase staking balances relative to profit_
@@ -1140,8 +1094,9 @@
 //         @param previousCirculating_ uint
 //         @param profit_ uint
 //         @param epoch_ uint
+//         @return bool
 //      */
-//     function _storeRebase( uint previousCirculating_, uint profit_, uint epoch_ ) internal {
+//     function _storeRebase( uint previousCirculating_, uint profit_, uint epoch_ ) internal returns ( bool ) {
 //         uint rebasePercent = profit_.mul( 1e18 ).div( previousCirculating_ );
 
 //         rebases.push( Rebase ( {
@@ -1151,73 +1106,14 @@
 //             totalStakedAfter: circulatingSupply(),
 //             amountRebased: profit_,
 //             index: index(),
-//             indexAdjustedPrice: index().mul( oracle.getPrice( pool ) ).div( 1e9 ),
 //             blockNumberOccured: block.number
 //         }));
         
 //         emit LogSupply( epoch_, block.timestamp, _totalSupply );
 //         emit LogRebase( epoch_, rebasePercent, index() );
-//     }
 
-
-
-//     /* ========== MUTATIVE FUNCTIONS ========== */
-
-//     function transfer( address to, uint256 value ) public override returns (bool) {
-//         uint256 gonValue = value.mul( _gonsPerFragment );
-//         _gonBalances[ msg.sender ] = _gonBalances[ msg.sender ].sub( gonValue );
-//         _gonBalances[ to ] = _gonBalances[ to ].add( gonValue );
-//         emit Transfer( msg.sender, to, value );
 //         return true;
 //     }
-
-//     function transferFrom( address from, address to, uint256 value ) public override returns (bool) {
-//        _allowedValue[ from ][ msg.sender ] = _allowedValue[ from ][ msg.sender ].sub( value );
-//        emit Approval( from, msg.sender,  _allowedValue[ from ][ msg.sender ] );
-
-//         uint256 gonValue = gonsForBalance( value );
-//         _gonBalances[ from ] = _gonBalances[from].sub( gonValue );
-//         _gonBalances[ to ] = _gonBalances[to].add( gonValue );
-//         emit Transfer( from, to, value );
-//         return true;
-//     }
-
-//     function approve( address spender, uint256 value ) public override returns (bool) {
-//          _allowedValue[ msg.sender ][ spender ] = value;
-//          emit Approval( msg.sender, spender, value );
-//          return true;
-//     }
-
-//     function increaseAllowance( address spender, uint256 addedValue ) public override returns (bool) {
-//         _allowedValue[ msg.sender ][ spender ] = _allowedValue[ msg.sender ][ spender ].add( addedValue );
-//         emit Approval( msg.sender, spender, _allowedValue[ msg.sender ][ spender ] );
-//         return true;
-//     }
-
-//     function decreaseAllowance( address spender, uint256 subtractedValue ) public override returns (bool) {
-//         uint256 oldValue = _allowedValue[ msg.sender ][ spender ];
-//         if (subtractedValue >= oldValue) {
-//             _allowedValue[ msg.sender ][ spender ] = 0;
-//         } else {
-//             _allowedValue[ msg.sender ][ spender ] = oldValue.sub( subtractedValue );
-//         }
-//         emit Approval( msg.sender, spender, _allowedValue[ msg.sender ][ spender ] );
-//         return true;
-//     }
-
-
-
-//     /* ========== INTERNAL FUNCTIONS ========== */
-
-//     // called in a permit
-//     function _approve( address owner, address spender, uint256 value ) internal override virtual {
-//         _allowedValue[owner][spender] = value;
-//         emit Approval( owner, spender, value );
-//     }
-
-
-
-//     /* ========== VIEW FUNCTIONS ========== */
 
 //     function balanceOf( address who ) public view override returns ( uint256 ) {
 //         return _gonBalances[ who ].div( _gonsPerFragment );
@@ -1240,7 +1136,214 @@
 //         return balanceForGons( INDEX );
 //     }
 
+//     function transfer( address to, uint256 value ) public override returns (bool) {
+//         uint256 gonValue = value.mul( _gonsPerFragment );
+//         _gonBalances[ msg.sender ] = _gonBalances[ msg.sender ].sub( gonValue );
+//         _gonBalances[ to ] = _gonBalances[ to ].add( gonValue );
+
+//         /// GOV
+//         _moveDelegates(msg.sender, to, value);
+
+//         emit Transfer( msg.sender, to, value );
+//         return true;
+//     }
+
 //     function allowance( address owner_, address spender ) public view override returns ( uint256 ) {
 //         return _allowedValue[ owner_ ][ spender ];
+//     }
+
+//     function transferFrom( address from, address to, uint256 value ) public override returns ( bool ) {
+//        _allowedValue[ from ][ msg.sender ] = _allowedValue[ from ][ msg.sender ].sub( value );
+//        emit Approval( from, msg.sender,  _allowedValue[ from ][ msg.sender ] );
+
+//         uint256 gonValue = gonsForBalance( value );
+//         _gonBalances[ from ] = _gonBalances[from].sub( gonValue );
+//         _gonBalances[ to ] = _gonBalances[to].add( gonValue );
+
+//         /// GOV
+//         _moveDelegates(from, to, value);
+
+//         emit Transfer( from, to, value );
+
+//         return true;
+//     }
+
+//     function approve( address spender, uint256 value ) public override returns (bool) {
+//          _allowedValue[ msg.sender ][ spender ] = value;
+//          emit Approval( msg.sender, spender, value );
+//          return true;
+//     }
+
+//     // What gets called in a permit
+//     function _approve( address owner, address spender, uint256 value ) internal override virtual {
+//         _allowedValue[owner][spender] = value;
+//         emit Approval( owner, spender, value );
+//     }
+
+//     function increaseAllowance( address spender, uint256 addedValue ) public override returns (bool) {
+//         _allowedValue[ msg.sender ][ spender ] = _allowedValue[ msg.sender ][ spender ].add( addedValue );
+//         emit Approval( msg.sender, spender, _allowedValue[ msg.sender ][ spender ] );
+//         return true;
+//     }
+
+//     function decreaseAllowance( address spender, uint256 subtractedValue ) public override returns (bool) {
+//         uint256 oldValue = _allowedValue[ msg.sender ][ spender ];
+//         if (subtractedValue >= oldValue) {
+//             _allowedValue[ msg.sender ][ spender ] = 0;
+//         } else {
+//             _allowedValue[ msg.sender ][ spender ] = oldValue.sub( subtractedValue );
+//         }
+//         emit Approval( msg.sender, spender, _allowedValue[ msg.sender ][ spender ] );
+//         return true;
+//     }
+
+//     /// GOVERNANCE DETAILS \\\
+
+//     /// @notice A record of each accounts delegate
+//     mapping (address => address) public delegates;
+
+//     /// @notice A checkpoint for marking number of votes from a given block
+//     struct Checkpoint {
+//         uint fromBlock;
+//         uint agnosticVotes;
+//     }
+
+//     /// @notice A record of votes checkpoints for each account, by index
+//     mapping (address => mapping (uint => Checkpoint)) public checkpoints;
+
+//     /// @notice The number of checkpoints for each account
+//     mapping (address => uint) public numCheckpoints;
+
+//     /// @notice An event thats emitted when an account changes its delegate
+//     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
+
+//     /// @notice An event thats emitted when a delegate account's vote balance changes
+//     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
+
+//     /**
+//      * @notice Delegate votes from `msg.sender` to `delegatee`
+//      * @param delegatee The address to delegate votes to
+//      */
+//     function delegate(address delegatee) public {
+//         return _delegate(msg.sender, delegatee);
+//     }
+
+//     function _delegate(address delegator, address delegatee) internal {
+//         address currentDelegate = delegates[delegator];
+//         uint delegatorBalance = toAgnostic( _balances[delegator] );
+//         delegates[delegator] = delegatee;
+
+//         emit DelegateChanged(delegator, currentDelegate, delegatee);
+
+//         _moveDelegates(currentDelegate, delegatee, delegatorBalance);
+//     }
+
+//     function _moveDelegates(address srcRep, address dstRep, uint amount) internal {
+//         uint agnosticAmount = toAgnostic(amount);
+//         if (srcRep != dstRep && amount > 0) {
+//             if (srcRep != address(0) && srcRep != stakingContract ) {
+//                 uint srcRepNum = numCheckpoints[srcRep];
+//                 uint srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].agnosticVotes : 0;
+//                 uint srcRepNew = srcRepOld.sub(agnosticAmount);
+//                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
+//             }
+
+//             if (dstRep != address(0) && dstRep != stakingContract) {
+//                 uint dstRepNum = numCheckpoints[dstRep];
+//                 uint dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].agnosticVotes : 0;
+//                 uint dstRepNew = dstRepOld.add(agnosticAmount);
+//                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
+//             }
+//         }
+//     }
+
+//     function _writeCheckpoint(address delegatee, uint nCheckpoints, uint oldVotes, uint newVotes) internal {
+//       uint blockNumber = safe32(block.number, "sOHM::_writeCheckpoint: block number exceeds 32 bits");
+
+//       if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
+//           checkpoints[delegatee][nCheckpoints - 1].agnosticVotes = newVotes;
+//       } else {
+//           checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
+//           numCheckpoints[delegatee] = nCheckpoints + 1;
+//       }
+
+//       emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
+//     }
+
+//     /**
+//      * @notice Gets the current votes balance for `account`
+//      * @param account The address to get votes balance
+//      * @return The number of current votes for `account`
+//      */
+//     function getCurrentVotes(address account) external view returns (uint) {
+//         uint nCheckpoints = numCheckpoints[account];
+//         return nCheckpoints > 0 ? fromAgnostic( checkpoints[account][nCheckpoints - 1].agnosticVotes, block.number ): 0;
+//     }
+
+//     /**
+//      * @notice Determine the prior number of votes for an account as of a block number
+//      * @dev Block number must be a finalized block or else this function will revert to prevent misinformation.
+//      * @param account The address of the account to check
+//      * @param blockNumber The block number to get the vote balance at
+//      * @return The number of votes the account had as of the given block
+//      */
+//     function getPriorVotes(address account, uint blockNumber) public view returns (uint) {
+//         require(blockNumber < block.number, "sOHM::getPriorVotes: not yet determined");
+
+//         uint nCheckpoints = numCheckpoints[account];
+//         if (nCheckpoints == 0) {
+//             return 0;
+//         }
+
+//         // First check most recent balance
+//         if (checkpoints[account][nCheckpoints - 1].fromBlock <= blockNumber) {
+//             return fromAgnostic( checkpoints[account][nCheckpoints - 1].agnosticVotes, blockNumber );
+//         }
+
+//         // Next check implicit zero balance
+//         if (checkpoints[account][0].fromBlock > blockNumber) {
+//             return 0;
+//         }
+
+//         uint lower = 0;
+//         uint upper = nCheckpoints - 1;
+//         while (upper > lower) {
+//             uint center = upper - (upper - lower) / 2; // ceil, avoiding overflow
+//             Checkpoint memory cp = checkpoints[account][center];
+//             if (cp.fromBlock == blockNumber) {
+//                 return fromAgnostic( cp.agnosticVotes, blockNumber );
+//             } else if (cp.fromBlock < blockNumber) {
+//                 lower = center;
+//             } else {
+//                 upper = center - 1;
+//             }
+//         }
+//         return fromAgnostic( checkpoints[account][lower].agnosticVotes, blockNumber );
+//     }
+
+//     function toAgnostic( uint amount_ ) public view returns ( uint ) {
+//         return amount_.mul(10 ** decimals()).div( index() );
+//     }
+
+//     function fromAgnostic( uint amount_, uint blockNumber_ ) public view returns ( uint ) {
+//         return amount_.mul( getIndexAtBlockNumber(blockNumber_) ).div(10 ** decimals());
+//     }
+
+//     function safe32(uint n, string memory errorMessage) internal pure returns (uint32) {
+//         require(n < 2**32, errorMessage);
+//         return uint32(n);
+//     }
+
+//     function getIndexAtBlockNumber(uint blockNumber_) public view returns(uint) {
+//         if(rebases.length == 0) {
+//             return index();
+//         }
+
+//         uint i;
+//         while(rebases[rebases.length - i].blockNumberOccured < blockNumber_) {
+//             i++;
+//         }
+
+//         return rebases[rebases.length - i].index;
 //     }
 // }
