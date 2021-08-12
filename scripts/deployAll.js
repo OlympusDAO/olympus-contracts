@@ -76,7 +76,7 @@ async function main() {
 
     // Deploy treasury
     //@dev changed function in treaury from 'valueOf' to 'valueOfToken'... solidity function was coflicting w js object property name
-    const Treasury = await ethers.getContractFactory('OlympusTreasury'); 
+    const Treasury = await ethers.getContractFactory('MockOlympusTreasury'); 
     const treasury = await Treasury.deploy( ohm.address, dai.address, frax.address, 0 );
 
     // Deploy bonding calc
@@ -105,12 +105,12 @@ async function main() {
 
     // Deploy DAI bond
     //@dev changed function call to Treasury of 'valueOf' to 'valueOfToken' in BondDepository due to change in Treausry contract
-    const DAIBond = await ethers.getContractFactory('OlympusBondDepository');
+    const DAIBond = await ethers.getContractFactory('MockOlympusBondDepository');
     const daiBond = await DAIBond.deploy(ohm.address, dai.address, treasury.address, MockDAO.address, zeroAddress);
 
     // Deploy Frax bond
     //@dev changed function call to Treasury of 'valueOf' to 'valueOfToken' in BondDepository due to change in Treausry contract
-    const FraxBond = await ethers.getContractFactory('OlympusBondDepository');
+    const FraxBond = await ethers.getContractFactory('MockOlympusBondDepository');
     const fraxBond = await FraxBond.deploy(ohm.address, frax.address, treasury.address, MockDAO.address, zeroAddress);
 
     // queue and toggle DAI and Frax bond reserve depositor
