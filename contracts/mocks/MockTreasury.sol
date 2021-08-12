@@ -242,7 +242,7 @@ interface IBondCalculator {
   function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
 }
 
-contract OlympusTreasury is Governable {
+contract MockOlympusTreasury is Governable {
 
     /* ========== DEPENDENCIES ========== */
 
@@ -355,7 +355,7 @@ contract OlympusTreasury is Governable {
 
         IERC20( _token ).safeTransferFrom( _from, address(this), _amount );
 
-        uint value = valueOf( _token, _amount );
+        uint value = valueOfToken( _token, _amount );
         // mint OHM needed and store amount of rewards for distribution
         send_ = value.sub( _profit );
         OHM.mint( msg.sender, send_ );
@@ -375,7 +375,7 @@ contract OlympusTreasury is Governable {
         require( permissions[ STATUS.RESERVETOKEN ][ _token ], "Not accepted" ); // Only reserves can be used for redemptions
         require( permissions[ STATUS.RESERVESPENDER ][ msg.sender ] == true, "Not approved" );
 
-        uint value = valueOf( _token, _amount );
+        uint value = valueOfToken( _token, _amount );
         OHM.burnFrom( msg.sender, value );
 
         totalReserves = totalReserves.sub( value );
@@ -395,7 +395,7 @@ contract OlympusTreasury is Governable {
         require( permissions[ STATUS.DEBTOR ][ msg.sender ], "Not approved" );
         require( permissions[ STATUS.RESERVETOKEN ][ _token ], "Not accepted" );
 
-        uint value = valueOf( _token, _amount );
+        uint value = valueOfToken( _token, _amount );
 
         uint maximumDebt = IERC20( sOHM ).balanceOf( msg.sender ); // Can only borrow against sOHM held
         uint availableDebt = maximumDebt.sub( debtorBalance[ msg.sender ] );
@@ -423,7 +423,7 @@ contract OlympusTreasury is Governable {
 
         IERC20( _token ).safeTransferFrom( msg.sender, address(this), _amount );
 
-        uint value = valueOf( _token, _amount );
+        uint value = valueOfToken( _token, _amount );
         debtorBalance[ msg.sender ] = debtorBalance[ msg.sender ].sub( value );
         totalDebt = totalDebt.sub( value );
 
@@ -460,7 +460,7 @@ contract OlympusTreasury is Governable {
             require( permissions[ STATUS.RESERVEMANAGER ][ msg.sender ], "Not approved" );
         }
 
-        uint value = valueOf( _token, _amount );
+        uint value = valueOfToken( _token, _amount );
         require( value <= excessReserves(), "Insufficient reserves" );
 
         totalReserves = totalReserves.sub( value );
@@ -560,13 +560,13 @@ contract OlympusTreasury is Governable {
         address[] memory reserveToken = registry[ STATUS.RESERVETOKEN ];
         for( uint i = 0; i < reserveToken.length; i++ ) {
             reserves = reserves.add ( 
-                valueOf( reserveToken[ i ], IERC20( reserveToken[ i ] ).balanceOf( address(this) ) )
+                valueOfToken( reserveToken[ i ], IERC20( reserveToken[ i ] ).balanceOf( address(this) ) )
             );
         }
         address[] memory liquidityToken = registry[ STATUS.LIQUIDITYTOKEN ];
         for( uint i = 0; i < liquidityToken.length; i++ ) {
             reserves = reserves.add (
-                valueOf( liquidityToken[ i ], IERC20( liquidityToken[ i ] ).balanceOf( address(this) ) )
+                valueOfToken( liquidityToken[ i ], IERC20( liquidityToken[ i ] ).balanceOf( address(this) ) )
             );
         }
         totalReserves = reserves;
@@ -601,7 +601,7 @@ contract OlympusTreasury is Governable {
         @param _amount uint
         @return value_ uint
      */
-    function valueOf( address _token, uint _amount ) public view returns ( uint value_ ) {
+    function valueOfToken( address _token, uint _amount ) public view returns ( uint value_ ) {
         if ( permissions[ STATUS.RESERVETOKEN ][ _token ] ) {
             // convert amount to match OHM decimals
             value_ = _amount.mul( 10 ** OHM.decimals() ).div( 10 ** IERC20( _token ).decimals() );
