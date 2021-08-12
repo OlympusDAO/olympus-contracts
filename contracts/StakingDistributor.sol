@@ -374,7 +374,7 @@ interface ITreasury {
     function mintRewards( address _recipient, uint _amount ) external;
 }
 
-contract Distributor is Governable, Guardable {
+contract Distributor is Governable {
 
     /* ========== DEPENDENCIES ========== */
 
