@@ -1,4 +1,4 @@
-pragma solidity ^0.5.16;
+pragma solidity ^0.7.5;
 pragma experimental ABIEncoderV2;
 
 import "./GovernorOHMegaInterfaces.sol";
@@ -279,7 +279,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
         Proposal storage proposal = proposals[proposalId];
         Receipt storage receipt = proposal.receipts[voter];
         require(receipt.hasVoted == false, "GovernorOHMega::castVoteInternal: voter already voted");
-        /// @notice change from original contract
+        // change from original contract
         uint votes = wsOHM.getPriorVotes(voter, proposal.startBlock);
 
         if (support == 0) {

@@ -1,4 +1,4 @@
-pragma solidity ^0.5.16;
+pragma solidity ^0.7.5;
 pragma experimental ABIEncoderV2;
 
 contract GovernorAlpha {
@@ -36,66 +36,66 @@ contract GovernorAlpha {
     uint public proposalCount;
 
     struct Proposal {
-        /// @notice Unique id for looking up a proposal
+        // Unique id for looking up a proposal
         uint id;
 
-        /// @notice Creator of the proposal
+        // Creator of the proposal
         address proposer;
 
-        /// @notice The timestamp that the proposal will be available for execution, set once the vote succeeds
+        // The timestamp that the proposal will be available for execution, set once the vote succeeds
         uint eta;
 
-        /// @notice the ordered list of target addresses for calls to be made
+        // the ordered list of target addresses for calls to be made
         address[] targets;
 
-        /// @notice The ordered list of values (i.e. msg.value) to be passed to the calls to be made
+        // The ordered list of values (i.e. msg.value) to be passed to the calls to be made
         uint[] values;
 
-        /// @notice The ordered list of function signatures to be called
+        // The ordered list of function signatures to be called
         string[] signatures;
 
-        /// @notice The ordered list of calldata to be passed to each call
+        // The ordered list of calldata to be passed to each call
         bytes[] calldatas;
 
-        /// @notice The block at which voting begins: holders must delegate their votes prior to this block
+        // The block at which voting begins: holders must delegate their votes prior to this block
         uint startBlock;
 
-        /// @notice The block at which voting ends: votes must be cast prior to this block
+        // The block at which voting ends: votes must be cast prior to this block
         uint endBlock;
 
-        /// @notice Current number of votes in favor of this proposal
+        // Current number of votes in favor of this proposal
         uint forVotes;
 
-        /// @notice Current number of votes in opposition to this proposal
+        // Current number of votes in opposition to this proposal
         uint againstVotes;
 
-        /// @notice Threshold of wsOHM at start of proposal
-        /// @notice change from original contract
+        // Threshold of wsOHM at start of proposal
+        // change from original contract
         uint thresholdAtStart;
 
-        /// @notice Number of wsOHM needed to pass vote
-        /// @notice change from original contract
+        // Number of wsOHM needed to pass vote
+        // change from original contract
         uint votesNeeded;
 
-        /// @notice Flag marking whether the proposal has been canceled
+        // Flag marking whether the proposal has been canceled
         bool canceled;
 
-        /// @notice Flag marking whether the proposal has been executed
+        // Flag marking whether the proposal has been executed
         bool executed;
 
-        /// @notice Receipts of ballots for the entire set of voters
+        // Receipts of ballots for the entire set of voters
         mapping (address => Receipt) receipts;
     }
 
     /// @notice Ballot receipt record for a voter
     struct Receipt {
-        /// @notice Whether or not a vote has been cast
+        // Whether or not a vote has been cast
         bool hasVoted;
 
-        /// @notice Whether or not the voter supports the proposal
+        // Whether or not the voter supports the proposal
         bool support;
 
-        /// @notice The number of votes the voter had, which were cast
+        // The number of votes the voter had, which were cast
         uint votes;
     }
 
@@ -292,7 +292,7 @@ contract GovernorAlpha {
         Proposal storage proposal = proposals[proposalId];
         Receipt storage receipt = proposal.receipts[voter];
         require(receipt.hasVoted == false, "GovernorAlpha::_castVote: voter already voted");
-        /// @notice change from original contract
+        // change from original contract
         uint votes = wsOHM.getPriorVotes(voter, proposal.startBlock);
 
         if (support) {
