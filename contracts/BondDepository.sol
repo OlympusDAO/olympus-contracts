@@ -586,7 +586,7 @@ library FixedPoint {
 
 interface ITreasury {
     function deposit( uint _amount, address _token, uint _profit ) external returns ( bool );
-    function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
+    function valueOfToken( address _token, uint _amount ) external view returns ( uint value_ );
 }
 
 interface IBondCalculator {
@@ -825,7 +825,7 @@ contract OlympusBondDepository is Ownable {
 
         require( _maxPrice >= nativePrice, "Slippage limit: more than max price" ); // slippage protection
 
-        uint value = ITreasury( treasury ).valueOf( principle, _amount );
+        uint value = ITreasury( treasury ).valueOfToken( principle, _amount );
         uint payout = payoutFor( value ); // payout to bonder is computed
 
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
