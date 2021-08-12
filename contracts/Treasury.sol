@@ -242,7 +242,7 @@ interface IBondCalculator {
   function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
 }
 
-contract OlympusTreasury is Guardable, Governable {
+contract OlympusTreasury is Governable {
 
     /* ========== DEPENDENCIES ========== */
 
