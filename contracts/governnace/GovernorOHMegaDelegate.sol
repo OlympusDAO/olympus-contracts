@@ -14,7 +14,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
 
     /// @notice The maximum setable proposal threshold
     /// @notice change from original contract
-    uint public constant MAX_PROPOSAL_THRESHOLDPERCENT = 100000; // 1.00% of wsOHM circulating supply : In ten-thosandaths 10000 = 1.00%
+    uint public constant MAX_PROPOSAL_THRESHOLDPERCENT = 10000; // 1.00% of wsOHM circulating supply : In ten-thosandaths 10000 = 1.00%
 
     /// @notice The minimum setable voting period
     uint public constant MIN_VOTING_PERIOD = 5760; // About 24 hours
