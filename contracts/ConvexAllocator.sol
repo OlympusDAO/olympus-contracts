@@ -615,7 +615,7 @@ contract ConvexAllocator is Ownable {
     struct tokenData {
         address underlying;
         address curveToken;
-        uint index;
+        int128 index;
         uint deployed;
         uint limit;
         uint newLimit;
@@ -697,7 +697,7 @@ contract ConvexAllocator is Ownable {
      *  @param amounts uint[]
      *  @param minAmount uint
      */
-    function deposit( address token, uint amount, uint[] calldata amounts, uint minAmount ) public onlyPolicy() {
+    function deposit( address token, uint amount, uint[4] calldata amounts, uint minAmount ) public onlyPolicy() {
         require( !exceedsLimit( token, amount ) ); // ensure deposit is within bounds
 
         address curveToken = tokenInfo[ token ].curveToken;
@@ -744,7 +744,7 @@ contract ConvexAllocator is Ownable {
      *  @param token address
      *  @param curveToken address
      */
-    function addToken( address token, address curveToken, uint index, uint max, uint pid ) external onlyPolicy() {
+    function addToken( address token, address curveToken, int128 index, uint max, uint pid ) external onlyPolicy() {
         require( token != address(0) );
         require( curveToken != address(0) );
         require( tokenInfo[ token ].deployed == 0 ); 
