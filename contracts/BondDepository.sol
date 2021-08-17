@@ -9,7 +9,7 @@ import "./types/Governable.sol";
 import "./types/Guardable.sol";
 
 import "./interfaces/ITreasury.sol";
-import "./interfaces/IBondCalculator.sol";
+import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITeller.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IERC20Metadata.sol";
@@ -36,7 +36,7 @@ contract OlympusBondDepository is Governable, Guardable {
     // Info about each type of bond
     struct BondType {
         IERC20 principal; // token to accept as payment
-        IBondCalculator calculator; // contract to value principal
+        IBondingCalculator calculator; // contract to value principal
         bool isLiquidityBond; // is principal a liquidity token
         bool isRiskAsset; // mint instead of deposit (no RFV)
         Terms terms; // terms of bond
@@ -138,7 +138,7 @@ contract OlympusBondDepository is Governable, Guardable {
 
         bonds[ _principal ] = BondType({
             principal: IERC20( _principal ),
-            calculator: IBondCalculator( _calculator ),
+            calculator: IBondingCalculator( _calculator ),
             isLiquidityBond: ( _calculator != address(0) ),
             isRiskAsset: _isRisk,
             terms: terms,
