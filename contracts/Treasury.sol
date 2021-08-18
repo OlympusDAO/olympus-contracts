@@ -1,88 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
+
 import "./libraries/SafeMath.sol";
-import "./libraries/Address.sol";
+import "./libraries/SafeERC20.sol";
 
 import "./types/Governable.sol";
 import "./types/Guardable.sol";
 
+import "./interfaces/IBondingCalculator.sol";
+import "./interfaces/IERC20Metadata.sol";
 
-// TODO(zx): how can you fix this?
-// Cannot move this out because the contract relies on `decimals()` to be included as part of the interface. 
-// decimals() is not part of the standard erc20 interface defintion. 
-// IERC20 & SafeERC20 are _NOT_ the common ones. 
-// Similar to BondDepository
-interface IERC20 {
-    function decimals() external view returns (uint8);
-
-    function totalSupply() external view returns (uint256);
-
-    function balanceOf(address account) external view returns (uint256);
-
-    function transfer(address recipient, uint256 amount) external returns (bool);
-
-    function allowance(address owner, address spender) external view returns (uint256);
-
-    function approve(address spender, uint256 amount) external returns (bool);
-
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-}
-
-library SafeERC20 {
-    using SafeMath for uint256;
-    using Address for address;
-
-    function safeTransfer(IERC20 token, address to, uint256 value) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
-    }
-
-    function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
-    }
-
-    function safeApprove(IERC20 token, address spender, uint256 value) internal {
-
-        require((value == 0) || (token.allowance(address(this), spender) == 0),
-            "SafeERC20: approve from non-zero to non-zero allowance"
-        );
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));
-    }
-
-    function safeIncreaseAllowance(IERC20 token, address spender, uint256 value) internal {
-        uint256 newAllowance = token.allowance(address(this), spender).add(value);
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
-    }
-
-    function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {
-        uint256 newAllowance = token.allowance(address(this), spender).sub(value, "SafeERC20: decreased allowance below zero");
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
-    }
-
-    function _callOptionalReturn(IERC20 token, bytes memory data) private {
-
-        bytes memory returndata = address(token).functionCall(data, "SafeERC20: low-level call failed");
-        if (returndata.length > 0) { // Return data is optional
-            // solhint-disable-next-line max-line-length
-            require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
-        }
-    }
-}
-
-
-interface IOHMERC20 is IERC20 {
-    function mint( uint256 amount_ ) external;
-    function mint( address account_, uint256 ammount_ ) external;
-    function burnFrom(address account_, uint256 amount_) external;
-}
-
-interface IBondCalculator {
-  function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
-}
 
 contract OlympusTreasury is Governable, Guardable {
 
@@ -446,9 +374,10 @@ contract OlympusTreasury is Governable, Guardable {
     function valueOf( address _token, uint _amount ) public view returns ( uint value_ ) {
         if ( permissions[ STATUS.RESERVETOKEN ][ _token ] ) {
             // convert amount to match OHM decimals
-            value_ = _amount.mul( 10 ** OHM.decimals() ).div( 10 ** IERC20( _token ).decimals() );
+            value_ = _amount.mul( 10 ** IERC20Metadata(address(OHM)).decimals() )
+                .div( 10 ** IERC20Metadata( _token ).decimals() );
         } else if ( permissions[ STATUS.LIQUIDITYTOKEN ][ _token ] ) {
-            value_ = IBondCalculator( bondCalculator[ _token ] ).valuation( _token, _amount );
+            value_ = IBondingCalculator( bondCalculator[ _token ] ).valuation( _token, _amount );
         }
     }
 }
