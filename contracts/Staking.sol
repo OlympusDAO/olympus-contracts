@@ -6,12 +6,31 @@ import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
-import "./interfaces/IsOHM.sol";
-import "./interfaces/IWarmup.sol";
-import "./interfaces/IDistributor.sol";
-
 import "./types/Governable.sol";
 
+
+
+interface IsOHM is IERC20 {
+    function rebase( uint256 ohmProfit_, uint epoch_) external returns (uint256);
+
+    function circulatingSupply() external view returns (uint256);
+
+    function balanceOf(address who) external override view returns (uint256);
+
+    function gonsForBalance( uint amount ) external view returns ( uint );
+
+    function balanceForGons( uint gons ) external view returns ( uint );
+    
+    function index() external view returns ( uint );
+}
+
+interface IWarmup {
+    function retrieve( address staker_, uint amount_ ) external;
+}
+
+interface IDistributor {
+    function distribute() external returns ( bool );
+}
 
 contract OlympusStaking is Governable {
 

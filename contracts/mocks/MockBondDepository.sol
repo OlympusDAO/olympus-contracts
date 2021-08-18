@@ -430,7 +430,7 @@ interface ITreasury {
     function mintRewards( address _recipient, uint _amount ) external;
 }
 
-interface IBondingCalculator {
+interface IBondCalculator {
     function markdown( address _LP ) external view returns ( uint );
 }
 
@@ -460,7 +460,7 @@ contract MockOlympusBondDepository is Governable {
     // Info about each type of bond
     struct BondType {
         IERC20 principal; // token to accept as payment
-        IBondingCalculator calculator; // contract to value principal
+        IBondCalculator calculator; // contract to value principal
         bool isLiquidityBond; // is principal a liquidity token
         bool isRiskAsset; // mint instead of deposit (no RFV)
         Terms terms; // terms of bond
@@ -562,7 +562,7 @@ contract MockOlympusBondDepository is Governable {
 
         bonds[ _principal ] = BondType({
             principal: IERC20( _principal ),
-            calculator: IBondingCalculator( _calculator ),
+            calculator: IBondCalculator( _calculator ),
             isLiquidityBond: ( _calculator != address(0) ),
             isRiskAsset: _isRisk,
             terms: terms,

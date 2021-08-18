@@ -238,7 +238,7 @@ interface IOHMERC20 is IERC20 {
     function burnFrom(address account_, uint256 amount_) external;
 }
 
-interface IBondingCalculator {
+interface IBondCalculator {
   function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
 }
 
@@ -606,7 +606,7 @@ contract MockOlympusTreasury is Governable {
             // convert amount to match OHM decimals
             value_ = _amount.mul( 10 ** OHM.decimals() ).div( 10 ** IERC20( _token ).decimals() );
         } else if ( permissions[ STATUS.LIQUIDITYTOKEN ][ _token ] ) {
-            value_ = IBondingCalculator( bondCalculator[ _token ] ).valuation( _token, _amount );
+            value_ = IBondCalculator( bondCalculator[ _token ] ).valuation( _token, _amount );
         }
     }
 }
