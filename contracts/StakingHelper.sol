@@ -99,5 +99,5 @@ contract StakingHelper {
     }
 
     // TODO to stake OHM and donate 
-    function stakeAndRedirect( uint _amount,  ) external {}
+    function stakeAndRedirect( uint _amount ) external {}
 }
