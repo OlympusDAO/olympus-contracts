@@ -4,9 +4,21 @@ pragma solidity 0.7.5;
 import "./libraries/Address.sol";
 import "./libraries/SafeMath.sol";
 
+
 import "./types/ERC20Permit.sol";
 import "./types/Ownable.sol";
-import "./types/ManagerOwnable.sol";
+
+
+interface IOracle {
+    function getPrice( address _pool ) external returns ( uint );
+}
+
+contract ManagerOwnable is Ownable {
+    modifier onlyManager() {
+        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+        _;
+    }
+}
 
 contract sOlympus is ERC20Permit, ManagerOwnable {
 

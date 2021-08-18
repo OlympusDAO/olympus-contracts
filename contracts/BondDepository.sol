@@ -5,14 +5,87 @@ import "./libraries/SafeMath.sol";
 import "./libraries/FixedPoint.sol";
 import "./libraries/Address.sol";
 
+
 import "./types/Governable.sol";
 import "./types/Guardable.sol";
 
-import "./interfaces/ITreasury.sol";
-import "./interfaces/IBondingCalculator.sol";
-import "./interfaces/ITeller.sol";
-import "./interfaces/IERC20.sol";
-import "./interfaces/IERC20Metadata.sol";
+
+interface ITreasury {
+    function deposit( address _from, uint _amount, address _token, uint _profit ) external returns ( uint );
+    function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
+    function mintRewards( address _recipient, uint _amount ) external;
+}
+
+interface IBondCalculator {
+    function markdown( address _LP ) external view returns ( uint );
+}
+
+interface ITeller {
+    function newBond( address _bonder, uint _payout, uint _end ) external;
+}
+// TODO(zx): how can you fix this?
+// Cannot move this out because the contract relies on `decimals()` to be included as part of the interface. 
+// decimals() is not part of the standard erc20 interface defintion. 
+// IERC20 & SafeERC20 are _NOT_ the common ones. 
+interface IERC20 {
+    function decimals() external view returns (uint8);
+
+    function totalSupply() external view returns (uint256);
+
+    function balanceOf(address account) external view returns (uint256);
+
+    function transfer(address recipient, uint256 amount) external returns (bool);
+
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+library SafeERC20 {
+    using SafeMath for uint256;
+    using Address for address;
+
+    function safeTransfer(IERC20 token, address to, uint256 value) internal {
+        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
+    }
+
+    function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
+        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
+    }
+
+    function safeApprove(IERC20 token, address spender, uint256 value) internal {
+
+        require((value == 0) || (token.allowance(address(this), spender) == 0),
+            "SafeERC20: approve from non-zero to non-zero allowance"
+        );
+        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));
+    }
+
+    function safeIncreaseAllowance(IERC20 token, address spender, uint256 value) internal {
+        uint256 newAllowance = token.allowance(address(this), spender).add(value);
+        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
+    }
+
+    function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {
+        uint256 newAllowance = token.allowance(address(this), spender).sub(value, "SafeERC20: decreased allowance below zero");
+        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
+    }
+
+    function _callOptionalReturn(IERC20 token, bytes memory data) private {
+
+        bytes memory returndata = address(token).functionCall(data, "SafeERC20: low-level call failed");
+        if (returndata.length > 0) { // Return data is optional
+            // solhint-disable-next-line max-line-length
+            require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
+        }
+    }
+}
 
 contract OlympusBondDepository is Governable, Guardable {
 
@@ -36,7 +109,7 @@ contract OlympusBondDepository is Governable, Guardable {
     // Info about each type of bond
     struct BondType {
         IERC20 principal; // token to accept as payment
-        IBondingCalculator calculator; // contract to value principal
+        IBondCalculator calculator; // contract to value principal
         bool isLiquidityBond; // is principal a liquidity token
         bool isRiskAsset; // mint instead of deposit (no RFV)
         Terms terms; // terms of bond
@@ -138,7 +211,7 @@ contract OlympusBondDepository is Governable, Guardable {
 
         bonds[ _principal ] = BondType({
             principal: IERC20( _principal ),
-            calculator: IBondingCalculator( _calculator ),
+            calculator: IBondCalculator( _calculator ),
             isLiquidityBond: ( _calculator != address(0) ),
             isRiskAsset: _isRisk,
             terms: terms,
@@ -465,7 +538,7 @@ contract OlympusBondDepository is Governable, Guardable {
         if( bond.isLiquidityBond ) {
             price_ = bondPrice( _principal ).mul( bond.calculator.markdown( address( bond.principal ) ) ).div( 100 );
         } else {
-            price_ = bondPrice( _principal ).mul( 10 ** IERC20Metadata(bond.principal).decimals() ).div( 100 );
+            price_ = bondPrice( _principal ).mul( 10 ** bond.principal.decimals() ).div( 100 );
         }
     }
 
