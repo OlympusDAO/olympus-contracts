@@ -37,19 +37,29 @@ interface IStaking {
          but recipient debt is recorded as non-agnostic OHM value.
  */
 contract RebaseDirector is ERC20 {
-    using SafeMath for uint;
+    //using SafeMath for uint;
     using SafeERC20 for IERC20;
 
 	address public immutable staking;
     address public immutable OHM;
     address public immutable sOHM;
 
-    //mapping(address => uint) public principal;
-    mapping(address => mapping (address => uint)) public principal;
-    //mapping(address => address) public receiver;
-    mapping(address => uint) public totalDebt;
+    // Agnostic value of vault sOHM balance
+    uint public agnosticBalance;
 
-    constructor ( 
+    // Info for donation recipient
+    struct RecipientInfo {
+        uint256 shares;
+        uint256 totalDebt;
+    }
+
+    // Donor principal amount
+    mapping(address => mapping (address => uint)) public principal;
+
+    // All recipient information
+    mapping(address => RecipientInfo) public recipientInfo;
+
+    constructor (
 		address _staking,
         address _OHM, 
         address _sOHM
@@ -69,27 +79,28 @@ contract RebaseDirector is ERC20 {
     // TODO Override decimals function if needed
 
     /**
-        @notice Stakes OHM, records sender address and redirects yield to recipient
-        @param _principal Amount of sOHM debt issued by user and owed by receiver
-        @param _receiver Address to direct staking yield to
+        @notice Stakes OHM, records sender address and issue shares to recipient
+        @param _principal Amount of sOHM debt issued by user and owed by recipient
+        @param _recipient Address to direct staking yield and vault shares to
      */
-    function redirectTo(uint _principal, address _receiver) external returns ( bool ) {
+    function deposit(uint _principal, address _recipient) external returns ( bool ) {
         require(_principal > 0, "Invalid deposit amount");
-        require(_receiver != address(0), "Invalid recipient address");
+        require(_recipient != address(0), "Invalid recipient address");
         require(IERC20(sOHM).balanceOf(msg.sender) < _principal, "Not enough sOHM");
 
-        uint agnosticValue = toAgnostic(_principal);
-
-        // Record user's initial stake amount as flat value
-        principal[msg.sender][_receiver] = principal[msg.sender][_receiver] + agnosticValue;
-
-        // Add to receivers debt as flat value (for cross-reference)
-        totalDebt[_receiver] = totalDebt[_receiver] + _principal;
-
-        // TODO Stake donor's OHM on behalf of receiver (maybe not necessary if using sOHM)
-
         // Transfer sOHM to this contract
-        IERC20(OHM).transferFrom(msg.sender, address(this), _principal);
+        IERC20(sOHM).transferFrom(msg.sender, address(this), _principal);
+
+        uint agnosticPrincipal = _toAgnostic(_principal);
+
+        // Add to total vault balance
+        agnosticBalance = agnosticBalance + agnosticPrincipal;
+
+        // Record user's initial stake amount as agnostic value
+        principal[msg.sender][_recipient] = principal[msg.sender][_recipient] + agnosticPrincipal;
+
+        // Add to receivers debt as flat value
+        recipientInfo[_recipient].totalDebt = recipientInfo[_recipient].totalDebt + _principal;
 
         // TODO Issue vault shares to recipient
 
@@ -100,25 +111,56 @@ contract RebaseDirector is ERC20 {
         @notice Get claimable balance of an address
      */
     function claimableBalance(address _who) public view returns (uint) {
-        require(totalDebt[_who] == 0, "No claimable balance");
+        require(recipientInfo[_who].totalDebt == 0, "No claimable balance");
 
-        return IsOHM(sOHM).balanceOf(address(this)) - toAgnostic(totalDebt[_who]);
+        return IsOHM(sOHM).balanceOf(address(this)) - _toAgnostic(recipientInfo[_who].totalDebt);
     }
 
-    function claim(address _who) public returns (uint) {
-        require(totalDebt[_who] == 0, "No claimable balance");
+    /**
+        @notice Redeem vault shares for underlying sOHM
+     */
+    function redeem(address _who) public returns (uint) {
+        //require(totalDebt[_who] == 0, "No claimable balance");
         // TODO
     }
 
-    function toAgnostic( uint amount_ ) public view returns ( uint ) {
-        return amount_
-            .mul( 10 ** decimals() )
-            .div( IsOHM(sOHM).index() );
+    /************************
+    * Conversion Functions  *
+    ************************/
+
+    // TODO replace with governance's toWOHM
+    /**
+        @notice Agnostic value maintains rebases. Agnostic value is amount / index
+     */
+    function _toAgnostic(uint _amount) internal view returns ( uint ) {
+        return _amount
+            * (10 ** decimals())
+            / (IsOHM(sOHM).index());
      }
 
-     function fromAgnostic( uint amount_ ) public view returns ( uint ) {
-        return amount_
-            .mul( IsOHM(sOHM).index() )
-            .div( 10 ** decimals() );
+    // TODO replace with governance's fromWOHM
+     function _fromAgnostic(uint _amount) internal view returns ( uint ) {
+        return _amount
+            * (IsOHM(sOHM).index())
+            / (10 ** decimals());
      }
+
+    /**
+        @notice Get share value for some amount
+            shares = amount * totalSupply / assets_under_management
+     */
+    function _shareValue(uint _shares) internal view returns ( uint ) {
+        uint agnosticAmount = (_shares * agnosticBalance) / totalSupply();
+
+        return _fromAgnostic(agnosticAmount);
+    }
+
+    /**
+        @notice shares / totalSupply = amount / assets_under_management
+     */
+    function _sharesForAmount( uint _amount ) internal view returns ( uint ) {
+        uint shares = (_toAgnostic(_amount) * totalSupply()) / agnosticBalance;
+
+        return shares;
+    }
 }
