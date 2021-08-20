@@ -542,11 +542,11 @@ contract wOHM is IERC20 {
         @param _amount uint
         @return uint
      */
-    function wrap( uint _amount ) external returns ( uint ) {
+    function wrap( uint _amount, address _recipient ) external returns ( uint ) {
         IERC20( sOHM ).safeTransferFrom( msg.sender, address(this), _amount );
         
         uint value = sOHMTowOHM( _amount );
-        _mint( msg.sender, value );
+        _mint( _recipient, value );
         return value;
     }
 
@@ -555,11 +555,11 @@ contract wOHM is IERC20 {
         @param _amount uint
         @return uint
      */
-    function unwrap( uint _amount ) external returns ( uint ) {
+    function unwrap( uint _amount, address _recipient ) external returns ( uint ) {
         _burn( msg.sender, _amount );
 
         uint value = wOHMTosOHM( _amount );
-        IERC20( sOHM ).safeTransfer( msg.sender, value );
+        IERC20( sOHM ).safeTransfer( _recipient, value );
         return value;
     }
 
