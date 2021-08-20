@@ -9,30 +9,8 @@ import "./interfaces/IERC2612Permit.sol";
 
 import "./types/ERC20Permit.sol";
 import "./types/Ownable.sol";
+import "./types/VaultOwned.sol";
 
-
-
-
-contract VaultOwned is Ownable {
-    
-  address internal _vault;
-
-  function setVault( address vault_ ) external onlyOwner() returns ( bool ) {
-    _vault = vault_;
-
-    return true;
-  }
-
-  function vault() public view returns (address) {
-    return _vault;
-  }
-
-  modifier onlyVault() {
-    require( _vault == msg.sender, "VaultOwned: caller is not the Vault" );
-    _;
-  }
-
-}
 
 contract OlympusERC20Token is ERC20Permit, VaultOwned {
 
