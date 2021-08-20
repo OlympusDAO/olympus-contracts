@@ -8,6 +8,8 @@ import "./types/ERC20Permit.sol";
 import "./types/Ownable.sol";
 import "./types/ManagerOwnable.sol";
 
+import "./interfaces/IOracle.sol";
+
 contract sOlympus is ERC20Permit, ManagerOwnable {
 
     /* ========== DEPENDENCIES ========== */

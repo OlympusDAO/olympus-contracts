@@ -10,6 +10,7 @@ import "./types/Guardable.sol";
 
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/IERC20Metadata.sol";
+import "./interfaces/IOHMERC20.sol";
 
 
 contract OlympusTreasury is Governable, Guardable {

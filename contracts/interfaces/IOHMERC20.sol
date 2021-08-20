@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-import "./interfaces/IERC20.sol";
+import "./IERC20.sol";
 
 interface IOHMERC20 is IERC20 {
     function mint( uint256 amount_ ) external;

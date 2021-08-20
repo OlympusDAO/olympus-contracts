@@ -4,6 +4,7 @@ pragma solidity 0.7.5;
 import "./libraries/SafeMath.sol";
 import "./libraries/FixedPoint.sol";
 import "./libraries/Address.sol";
+import "./libraries/SafeERC20.sol";
 
 import "./types/Governable.sol";
 import "./types/Guardable.sol";
@@ -11,7 +12,6 @@ import "./types/Guardable.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITeller.sol";
-import "./interfaces/IERC20.sol";
 import "./interfaces/IERC20Metadata.sol";
 
 contract OlympusBondDepository is Governable, Guardable {
@@ -465,7 +465,7 @@ contract OlympusBondDepository is Governable, Guardable {
         if( bond.isLiquidityBond ) {
             price_ = bondPrice( _principal ).mul( bond.calculator.markdown( address( bond.principal ) ) ).div( 100 );
         } else {
-            price_ = bondPrice( _principal ).mul( 10 ** IERC20Metadata(bond.principal).decimals() ).div( 100 );
+            price_ = bondPrice( _principal ).mul( 10 ** IERC20Metadata(address(bond.principal)).decimals() ).div( 100 );
         }
     }
 
