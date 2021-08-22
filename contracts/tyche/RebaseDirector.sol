@@ -184,12 +184,17 @@ contract TycheRebaseDirector is ERC20 {
         // TODO Recipient debts only get cleared when shares are redeemed
      */
     function redeem(uint _shares) public {
-        //require(totalDebt[_who] == 0, "No claimable balance");
+        require(balanceOf(msg.sender) > 0, "Caller does not own vault shares");
 
-        //require(balanceOf(msg.sender) > 0, );
+        uint recipientDebt = recipientInfo[msg.sender].totalDebt;
+        require(recipientDebt == 0, "No claimable balance");
 
-        //uint sohmAmount = _shareValue(_shares);
-        //_burn(msg.sender, _shares);
+        // Clear out recipient balances
+        // TODO
+
+        // Transfer flat amount that shares are worth to recipient
+        uint flatAmount = _shareValue(_shares);
+        IERC20(sOHM).safeTransferFrom(address(this), msg.sender, flatAmount);
     }
 
     /************************
