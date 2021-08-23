@@ -10,11 +10,11 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
 
     /// @notice The minimum setable proposal threshold
     /// @notice change from original contract
-    uint public constant MIN_PROPOSAL_THRESHOLDPERCENT = 5000; // 0.50% of wsOHM supply : In ten-thosandaths 5000 = 0.50%
+    uint public constant MIN_PROPOSAL_THRESHOLDPERCENT = 5000; // 0.50% of sOHM supply : In ten-thosandaths 5000 = 0.50%
 
     /// @notice The maximum setable proposal threshold
     /// @notice change from original contract
-    uint public constant MAX_PROPOSAL_THRESHOLDPERCENT = 10000; // 1.00% of wsOHM circulating supply : In ten-thosandaths 10000 = 1.00%
+    uint public constant MAX_PROPOSAL_THRESHOLDPERCENT = 10000; // 1.00% of sOHM circulating supply : In ten-thosandaths 10000 = 1.00%
 
     /// @notice The minimum setable voting period
     uint public constant MIN_VOTING_PERIOD = 5760; // About 24 hours
@@ -28,7 +28,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
     /// @notice The max setable voting delay
     uint public constant MAX_VOTING_DELAY = 40320; // About 1 week
 
-    /// @notice The percent of wsOHM in support of a proposal required in order for a quorum to be reached and for a vote to succeed
+    /// @notice The percent of sOHM in support of a proposal required in order for a quorum to be reached and for a vote to succeed
     /// @notice change from original contract
     uint public constant quorumPercent = 40000; // In ten-thosandaths 40000 = 4.00%
 
@@ -44,15 +44,17 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
     /**
       * @notice Used to initialize the contract during delegator contructor
       * @param timelock_ The address of the Timelock
+      * @param sOHM_ The address of the sOHM token
       * @param wsOHM_ The address of the wsOHM token
       * @param votingPeriod_ The initial voting period
       * @param votingDelay_ The initial voting delay
       * @param proposalThreshold_ The initial proposal threshold percent in ten-thousandths
       */
-    function initialize(address timelock_, address wsOHM_, uint votingPeriod_, uint votingDelay_, uint proposalThreshold_) public {
+    function initialize(address timelock_, address sOHM_, address wsOHM_, uint votingPeriod_, uint votingDelay_, uint proposalThreshold_) public {
         require(address(timelock) == address(0), "GovernorOHMega::initialize: can only initialize once");
         require(msg.sender == admin, " GovernorOHMega::initialize: admin only");
         require(timelock_ != address(0), "GovernorOHMega::initialize: invalid timelock address");
+        require(sOHM_ != address(0), "GovernorOHMega::initialize: invalid sOHM address");
         require(wsOHM_ != address(0), "GovernorOHMega::initialize: invalid wsOHM address");
         require(votingPeriod_ >= MIN_VOTING_PERIOD && votingPeriod_ <= MAX_VOTING_PERIOD, "GovernorOHMega::initialize: invalid voting period");
         require(votingDelay_ >= MIN_VOTING_DELAY && votingDelay_ <= MAX_VOTING_DELAY, "GovernorOHMega::initialize: invalid voting delay");
@@ -60,6 +62,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
 
         timelock = TimelockInterface(timelock_);
 
+        sOHM = sOHMInterface(sOHM_);
         wsOHM = wsOHMInterface(wsOHM_);
         votingPeriod = votingPeriod_;
         votingDelay = votingDelay_;
@@ -79,7 +82,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
         // Reject proposals before initiating as Governor
         require(initialProposalId != 0, "GovernorOHMega::propose: Governor OHMega not active");
         /// @notice change from original contract
-        require(wsOHM.getPriorVotes(msg.sender, sub256(block.number, 1)) > getVotesFromPercent(proposalThreshold), "GovernorOHMega::propose: proposer votes below proposal threshold");
+        require(wsOHM.getPriorVotes(msg.sender, sub256(block.number, 1)) > getVotesFromPercentOfsOHMSupply(proposalThreshold), "GovernorOHMega::propose: proposer votes below proposal threshold");
         require(targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length, "GovernorOHMega::propose: proposal function information arity mismatch");
         require(targets.length != 0, "GovernorOHMega::propose: must provide actions");
         require(targets.length <= proposalMaxOperations, "GovernorOHMega::propose: too many actions");
@@ -109,9 +112,9 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
             againstVotes: 0,
             abstainVotes: 0,
             /// @notice change from original contract
-            thresholdAtStart: getVotesFromPercent(proposalThreshold),
+            thresholdAtStart: getVotesFromPercentOfsOHMSupply(proposalThreshold),
             /// @notice change from original contract
-            votesNeeded: getVotesFromPercent(quorumPercent),
+            votesNeeded: getVotesFromPercentOfsOHMSupply(quorumPercent),
             canceled: false,
             executed: false
         });
@@ -192,8 +195,8 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
       * @return votes
       */
       /// @notice change from original contract
-    function getVotesFromPercent(uint percent) public view returns (uint256 votes) {
-        return div256(mul256(wsOHM.totalSupply(), percent), 10 ** 6); 
+    function getVotesFromPercentOfsOHMSupply(uint percent) public view returns (uint256 votes) {
+        return wsOHM.sOHMTowOHM(div256(mul256(sOHM.circulatingSupply(), percent), 1e6)); 
     }
 
     /**

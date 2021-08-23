@@ -84,6 +84,10 @@ contract GovernorOHMegaDelegateStorageV1 is GovernorOHMegaDelegatorStorage {
     /// @notice change from original contract
     wsOHMInterface public wsOHM;
 
+    /// @notice The address of the sOHM
+    /// @notice change from original contract
+    sOHMInterface public sOHM;
+
     /// @notice The official record of all proposals ever proposed
     mapping (uint => Proposal) public proposals;
 
@@ -184,7 +188,12 @@ interface TimelockInterface {
 /// @notice change from original contract
 interface wsOHMInterface {
     function getPriorVotes(address account, uint blockNumber) external view returns (uint);
-    function totalSupply() external view returns (uint);
+    function sOHMTowOHM( uint _amount ) external view returns ( uint );
+}
+
+/// @notice change from original contract
+interface sOHMInterface {
+    function circulatingSupply() external view returns ( uint );
 }
 
 
