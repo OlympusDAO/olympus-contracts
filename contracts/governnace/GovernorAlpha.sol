@@ -5,13 +5,13 @@ contract GovernorAlpha {
     /// @notice The name of this contract
     string public constant name = "Olympus Governor Alpha";
 
-    /// @notice The percent of wsOHM in support of a proposal required in order for a quorum to be reached and for a vote to succeed
+    /// @notice The percent of sOHM in support of a proposal required in order for a quorum to be reached and for a vote to succeed
     /// @notice change from original contract
     function quorumPercent() public pure returns (uint) { return 40000; } // In ten-thosandaths 40000 = 4.00%
 
     /// @notice The maximum setable proposal threshold percent
     /// @notice change from original contract
-    function proposalThresholdPercent() public pure returns (uint) { return 100000; } // 1.00% of wsOHM circulating supply : In ten-thosandaths 10000 = 1.00%
+    function proposalThresholdPercent() public pure returns (uint) { return 100000; } // 1.00% of sOHM circulating supply : In ten-thosandaths 10000 = 1.00%
 
     /// @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
@@ -28,6 +28,10 @@ contract GovernorAlpha {
     /// @notice The address of the Wrapped wsOHM token
     /// @notice change from original contract
     wsOHMInterface public wsOHM;
+
+    /// @notice The address of the sOHM token
+    /// @notice change from original contract
+    sOHMInterface public sOHM;
 
     /// @notice The address of the Governor Guardian
     address public guardian;
@@ -138,8 +142,10 @@ contract GovernorAlpha {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint id);
 
-    constructor(address timelock_, address wsOHM_, address guardian_ ) public {
+    constructor(address timelock_, address sOHM_, address wsOHM_, address guardian_ ) public {
         timelock = TimelockInterface(timelock_);
+        /// @notice change from original contract
+        sOHM = sOHMInterface(sOHM_);
         /// @notice change from original contract
         wsOHM = wsOHMInterface(wsOHM_);
         guardian = guardian_;
@@ -147,7 +153,7 @@ contract GovernorAlpha {
 
     function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
         /// @notice change from original contract
-        require(wsOHM.getPriorVotes(msg.sender, sub256(block.number, 1)) > getVotesFromPercent(proposalThresholdPercent()), "GovernorAlpha::propose: proposer votes below proposal threshold");
+        require(wsOHM.getPriorVotes(msg.sender, sub256(block.number, 1)) > getVotesFromPercentOfsOHMSupply(proposalThresholdPercent()), "GovernorAlpha::propose: proposer votes below proposal threshold");
         require(targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length, "GovernorAlpha::propose: proposal function information arity mismatch");
         require(targets.length != 0, "GovernorAlpha::propose: must provide actions");
         require(targets.length <= proposalMaxOperations(), "GovernorAlpha::propose: too many actions");
@@ -176,9 +182,9 @@ contract GovernorAlpha {
             forVotes: 0,
             againstVotes: 0,
             /// @notice change from original contract
-            thresholdAtStart: getVotesFromPercent(proposalThresholdPercent()),
+            thresholdAtStart: getVotesFromPercentOfsOHMSupply(proposalThresholdPercent()),
             /// @notice change from original contract
-            votesNeeded: getVotesFromPercent(quorumPercent()),
+            votesNeeded: getVotesFromPercentOfsOHMSupply(quorumPercent()),
             canceled: false,
             executed: false
         });
@@ -243,8 +249,8 @@ contract GovernorAlpha {
       * @return votes
       */
       /// @notice change from original contract
-    function getVotesFromPercent(uint percent) public view returns (uint256 votes) {
-        return div256(mul256(wsOHM.totalSupply(), percent), 10 ** 6); 
+    function getVotesFromPercentOfsOHMSupply(uint percent) public view returns (uint256 votes) {
+        return wsOHM.sOHMTowOHM(div256(mul256(sOHM.circulatingSupply(), percent), 1e6)); 
     }
 
     function getReceipt(uint proposalId, address voter) public view returns (Receipt memory) {
@@ -379,8 +385,14 @@ interface TimelockInterface {
     function executeTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external payable returns (bytes memory);
 }
 
+/// @notice change from original contract
 interface wsOHMInterface {
     function getPriorVotes(address account, uint blockNumber) external view returns (uint);
-    function totalSupply() external view returns (uint);
+    function sOHMTowOHM( uint _amount ) external view returns ( uint );
+}
+
+/// @notice change from original contract
+interface sOHMInterface {
+    function circulatingSupply() external view returns ( uint );
 }
 
