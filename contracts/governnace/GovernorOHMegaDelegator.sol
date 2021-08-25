@@ -4,9 +4,11 @@ pragma experimental ABIEncoderV2;
 import "./GovernorOHMegaInterfaces.sol";
 
 contract GovernorOHMegaDelegator is GovernorOHMegaDelegatorStorage, GovernorOHMegaEvents {
+    /// @notice change from original contract
 	constructor(
 			address timelock_,
-			address wsohm_,
+            address sOHM_,
+			address wsOHM_,
 			address admin_,
 	        address implementation_,
 	        uint votingPeriod_,
@@ -16,9 +18,10 @@ contract GovernorOHMegaDelegator is GovernorOHMegaDelegatorStorage, GovernorOHMe
         // Admin set to msg.sender for initialization
         admin = msg.sender;
 
-        delegateTo(implementation_, abi.encodeWithSignature("initialize(address,address,uint256,uint256,uint256)",
+        delegateTo(implementation_, abi.encodeWithSignature("initialize(address,address,address,uint256,uint256,uint256)",
                                                             timelock_,
-                                                            wsohm_,
+                                                            sOHM_,
+                                                            wsOHM_,
                                                             votingPeriod_,
                                                             votingDelay_,
                                                             proposalThreshold_));
