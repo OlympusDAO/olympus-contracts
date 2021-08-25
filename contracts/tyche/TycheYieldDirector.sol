@@ -36,7 +36,7 @@ interface IStaking {
     @dev User's deposited stake is recorded as agnostic values (value / index) for the user,
          but recipient debt is recorded as non-agnostic OHM value.
  */
-contract TycheRebaseDirector is ERC20 {
+contract TycheYieldDirector is ERC20 {
     //using SafeMath for uint;
     using SafeERC20 for IERC20;
 
@@ -98,7 +98,7 @@ contract TycheRebaseDirector is ERC20 {
     function deposit(uint _amount, address _recipient) public {
         require(_amount > 0, "Invalid deposit amount");
         require(_recipient != address(0), "Invalid recipient address");
-        require(IERC20(sOHM).balanceOf(msg.sender) < _amount, "Not enough sOHM");
+        require(IERC20(sOHM).balanceOf(msg.sender) >= _amount, "Not enough sOHM");
 
         // TODO should it take sOHM or OHM??
 
@@ -108,15 +108,17 @@ contract TycheRebaseDirector is ERC20 {
         uint agnosticAmount = _toAgnostic(_amount);
 
         // Add to total agnostic vault balance
+        // TODO record flat amount as total sOHM donated
         totalAgnosticBalance = totalAgnosticBalance + agnosticAmount;
 
         // Record donors's issued debt to recipient address
         principal[msg.sender][_recipient] = principal[msg.sender][_recipient] + _amount;
 
         // Add to receivers balance as agnostic value and debt as flat value
-        recipientInfo[_recipient].totalDebt = recipientInfo[_recipient].totalDebt + _amount;
         recipientInfo[_recipient].agnosticBalance = recipientInfo[_recipient].agnosticBalance + agnosticAmount;
+        recipientInfo[_recipient].totalDebt = recipientInfo[_recipient].totalDebt + _amount;
 
+        // TODO vault shares might not be necessary
         // Issue vault shares to recipient
         uint sharesToIssue = _sharesForAmount(_amount);
         _mint(_recipient, sharesToIssue);
@@ -139,8 +141,6 @@ contract TycheRebaseDirector is ERC20 {
 
         require(totalPrincipal > 0, "Donation amount is 0");
 
-        uint beforeBalance = totalAgnosticBalance;
-
         uint agnosticAmount = _toAgnostic(_amount);
 
         // Remove agnostic value and debt from recipient
@@ -156,6 +156,7 @@ contract TycheRebaseDirector is ERC20 {
         // Transfer sOHM from vault back to donor
         IERC20(sOHM).safeTransferFrom(address(this), msg.sender, _amount);
 
+        // TODO vault shares might not be necessary
         // TODO verify this is accurate
         // Adjust recipient vault shares balance
         _burn(_recipient, _sharesForAmount(_amount));
@@ -173,9 +174,6 @@ contract TycheRebaseDirector is ERC20 {
      */
     function claimableBalance(address _who) public view returns (uint) {
         uint recipientDebt = recipientInfo[_who].totalDebt;
-
-        require(recipientDebt == 0, "No claimable balance");
-
         return IsOHM(sOHM).balanceOf(address(this)) - _toAgnostic(recipientDebt);
     }
 
@@ -219,7 +217,7 @@ contract TycheRebaseDirector is ERC20 {
      }
 
     /**
-        @notice Get share value for some amount
+        @notice Get flat sOHM value for some amount of shares
             shares = amount * totalSupply / assets_under_management
      */
     function _shareValue(uint _shares) internal view returns ( uint ) {
@@ -229,8 +227,8 @@ contract TycheRebaseDirector is ERC20 {
     }
 
     /**
-        @notice shares / totalSupply = amount / assets_under_management
         @notice Calculate shares for some 
+            shares / totalSupply = amount / assets_under_management
      */
     function _sharesForAmount( uint _amount ) internal view returns ( uint ) {
         uint totalSupply = totalSupply();
