@@ -1,248 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-library SafeMath {
 
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, "SafeMath: addition overflow");
+import "./libraries/SafeMath.sol";
+import "./libraries/SafeERC20.sol";
 
-        return c;
-    }
+import "./types/Governable.sol";
+import "./types/Guardable.sol";
 
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        return sub(a, b, "SafeMath: subtraction overflow");
-    }
+import "./interfaces/IBondingCalculator.sol";
+import "./interfaces/IERC20Metadata.sol";
+import "./interfaces/IOHMERC20.sol";
 
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b <= a, errorMessage);
-        uint256 c = a - b;
 
-        return c;
-    }
-
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-
-        uint256 c = a * b;
-        require(c / a == b, "SafeMath: multiplication overflow");
-
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        return div(a, b, "SafeMath: division by zero");
-    }
-
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b > 0, errorMessage);
-        uint256 c = a / b;
-        return c;
-    }
-}
-
-library Address {
-
-  function isContract(address account) internal view returns (bool) {
-        // This method relies in extcodesize, which returns 0 for contracts in
-        // construction, since the code is only stored at the end of the
-        // constructor execution.
-
-        uint256 size;
-        // solhint-disable-next-line no-inline-assembly
-        assembly { size := extcodesize(account) }
-        return size > 0;
-    }
-
-    function functionCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {
-        return _functionCallWithValue(target, data, 0, errorMessage);
-    }
-
-    function _functionCallWithValue(address target, bytes memory data, uint256 weiValue, string memory errorMessage) private returns (bytes memory) {
-        require(isContract(target), "Address: call to non-contract");
-
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = target.call{ value: weiValue }(data);
-        if (success) {
-            return returndata;
-        } else {
-            if (returndata.length > 0) {
-                // solhint-disable-next-line no-inline-assembly
-                assembly {
-                    let returndata_size := mload(returndata)
-                    revert(add(32, returndata), returndata_size)
-                }
-            } else {
-                revert(errorMessage);
-            }
-        }
-    }
-
-    function _verifyCallResult(bool success, bytes memory returndata, string memory errorMessage) private pure returns(bytes memory) {
-        if (success) {
-            return returndata;
-        } else {
-            if (returndata.length > 0) {
-                // solhint-disable-next-line no-inline-assembly
-                assembly {
-                    let returndata_size := mload(returndata)
-                    revert(add(32, returndata), returndata_size)
-                }
-            } else {
-                revert(errorMessage);
-            }
-        }
-    }
-}
-
-interface IERC20 {
-    function decimals() external view returns (uint8);
-
-    function balanceOf(address account) external view returns (uint256);
-
-    function transfer(address recipient, uint256 amount) external returns (bool);
-
-    function approve(address spender, uint256 amount) external returns (bool);
-
-    function totalSupply() external view returns (uint256);
-
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-}
-
-library SafeERC20 {
-    using SafeMath for uint256;
-    using Address for address;
-
-    function safeTransfer(IERC20 token, address to, uint256 value) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
-    }
-
-    function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
-    }
-
-    function _callOptionalReturn(IERC20 token, bytes memory data) private {
-        bytes memory returndata = address(token).functionCall(data, "SafeERC20: low-level call failed");
-        if (returndata.length > 0) { // Return data is optional
-            // solhint-disable-next-line max-line-length
-            require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
-        }
-    }
-}
-
-interface IGovernable {
-    function governor() external view returns (address);
-
-    function guardian() external view returns (address);
-
-    function renounceGovernor() external;
-
-    function renounceGuardian() external;
-  
-    function pushGovernor( address newGovernor_ ) external;
-
-    function pushGuardian( address newGuardian_ ) external;
-  
-    function pullGovernor() external;
-
-    function pullGuardian() external;
-}
-
-contract Governable is IGovernable {
-
-    address internal _governor;
-    address internal _newGovernor;
-
-    address internal _guardian;
-    address internal _newGuardian;
-
-    event GovernorPushed(address indexed previousGovernor, address indexed newGovernor);
-    event GovernorPulled(address indexed previousGovernor, address indexed newGovernor);
-
-    event GuardianPushed(address indexed previousGuardian, address indexed newGuardian);
-    event GuardianPulled(address indexed previousGuardian, address indexed newGuardian);
-
-    constructor () {
-        _governor = msg.sender;
-        _guardian = msg.sender;
-        emit GovernorPulled( address(0), _governor );
-        emit GuardianPulled( address(0), _guardian );
-    }
-
-    /* ========== GOVERNOR ========== */
-
-    function governor() public view override returns (address) {
-        return _governor;
-    }
-
-    modifier onlyGovernor() {
-        require( _governor == msg.sender, "Governable: caller is not the governor" );
-        _;
-    }
-
-    function renounceGovernor() public virtual override onlyGovernor() {
-        emit GovernorPushed( _governor, address(0) );
-        _governor = address(0);
-    }
-
-    function pushGovernor( address newGovernor_ ) public virtual override onlyGovernor() {
-        require( newGovernor_ != address(0), "Governable: new governor is the zero address");
-        emit GovernorPushed( _governor, newGovernor_ );
-        _newGovernor = newGovernor_;
-    }
-    
-    function pullGovernor() public virtual override {
-        require( msg.sender == _newGovernor, "Governable: must be new governor to pull");
-        emit GovernorPulled( _governor, _newGovernor );
-        _governor = _newGovernor;
-    }
-
-    /* ========== GUARDIAN ========== */
-
-    function guardian() public view override returns (address) {
-        return _guardian;
-    }
-
-    modifier onlyGuardian() {
-        require( _guardian == msg.sender, "Guardable: caller is not the guardian" );
-        _;
-    }
-
-    function renounceGuardian() public virtual override onlyGuardian() {
-        emit GuardianPushed( _guardian, address(0) );
-        _guardian = address(0);
-    }
-
-    function pushGuardian( address newGuardian_ ) public virtual override onlyGuardian() {
-        require( newGuardian_ != address(0), "Guardable: new guardian is the zero address");
-        emit GuardianPushed( _guardian, newGuardian_ );
-        _newGuardian = newGuardian_;
-    }
-    
-    function pullGuardian() public virtual override {
-        require( msg.sender == _newGuardian, "Guardable: must be new guardian to pull");
-        emit GuardianPulled( _guardian, _newGuardian );
-        _guardian = _newGuardian;
-    }
-}
-
-interface IOHMERC20 is IERC20 {
-    function mint( uint256 amount_ ) external;
-    function mint( address account_, uint256 ammount_ ) external;
-    function burnFrom(address account_, uint256 amount_) external;
-}
-
-interface IBondCalculator {
-  function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
-}
-
-contract OlympusTreasury is Governable {
+contract OlympusTreasury is Governable, Guardable {
 
     /* ========== DEPENDENCIES ========== */
 
@@ -604,9 +375,10 @@ contract OlympusTreasury is Governable {
     function valueOf( address _token, uint _amount ) public view returns ( uint value_ ) {
         if ( permissions[ STATUS.RESERVETOKEN ][ _token ] ) {
             // convert amount to match OHM decimals
-            value_ = _amount.mul( 10 ** OHM.decimals() ).div( 10 ** IERC20( _token ).decimals() );
+            value_ = _amount.mul( 10 ** IERC20Metadata(address(OHM)).decimals() )
+                .div( 10 ** IERC20Metadata( _token ).decimals() );
         } else if ( permissions[ STATUS.LIQUIDITYTOKEN ][ _token ] ) {
-            value_ = IBondCalculator( bondCalculator[ _token ] ).valuation( _token, _amount );
+            value_ = IBondingCalculator( bondCalculator[ _token ] ).valuation( _token, _amount );
         }
     }
 }
