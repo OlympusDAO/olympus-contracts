@@ -64,9 +64,9 @@ contract wsOHMStakingHelper {
     function unwrapAndUnstake(uint _amount, address _recipient) external returns(uint) {
         IERC20( wsOHM ).safeTransferFrom( msg.sender, address(this), _amount );
 
-        IERC20( wsOHM ).approve( wsOHM, _amount );
         uint _amountsOHM = IwsOHM( wsOHM ).unwrap( _amount );
 
+        IERC20( sOHM ).approve( staking, _amountsOHM );
         IStaking( staking ).unstake( _amountsOHM, true );
 
         IERC20( OHM ).transfer(_recipient, _amountsOHM);
