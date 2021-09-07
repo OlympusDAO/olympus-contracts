@@ -4,16 +4,18 @@ pragma experimental ABIEncoderV2;
 import "./GovernorOHMegaInterfaces.sol";
 
 contract GovernorOHMegaDelegator is GovernorOHMegaDelegatorStorage, GovernorOHMegaEvents {
-    /// @notice change from original contract
+    	
+	/// @notice change from original contract
 	constructor(
-			address timelock_,
-            address sOHM_,
-			address wsOHM_,
-			address admin_,
-	        address implementation_,
-	        uint votingPeriod_,
-	        uint votingDelay_,
-            uint proposalThreshold_) public {
+	    address timelock_,
+	    address sOHM_,
+	    address wsOHM_,
+	    address admin_,
+	    address implementation_,
+	    uint votingPeriod_,
+	    uint votingDelay_,
+	    uint proposalThreshold_
+	) public {
 
         // Admin set to msg.sender for initialization
         admin = msg.sender;
@@ -32,7 +34,7 @@ contract GovernorOHMegaDelegator is GovernorOHMegaDelegatorStorage, GovernorOHMe
 	}
 
 
-	/**
+    /**
      * @notice Called by the admin to update the implementation of the delegator
      * @param implementation_ The address of the new implementation for delegation
      */
@@ -61,7 +63,7 @@ contract GovernorOHMegaDelegator is GovernorOHMegaDelegatorStorage, GovernorOHMe
         }
     }
 
-	/**
+    /**
      * @dev Delegates execution to an implementation contract.
      * It returns to the external caller whatever the implementation returns
      * or forwards reverts.
