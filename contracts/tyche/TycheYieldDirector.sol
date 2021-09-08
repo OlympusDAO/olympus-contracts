@@ -44,18 +44,23 @@ contract TycheYieldDirector is ERC20 {
     address public immutable OHM;
     address public immutable sOHM;
 
-    // Agnostic value of vault sOHM balance
-    uint public totalAgnosticBalance;
 
     // Info for donation recipient
     struct RecipientInfo {
-        uint256 shares;
-        uint256 totalDebt;
-        uint256 agnosticBalance;
+        uint totalDebt;
+        uint agnosticValue;
+    }
+
+    struct DonorInfo {
+        address recipient;
+        uint amount;
     }
 
     // Donor principal amount
     mapping(address => mapping (address => uint)) public principal;
+    //mapping(address => uint) public donorIndex;
+    //DonorInfo[][] public donorInfo;
+    mapping(address => DonorInfo[]) public donorInfo;
 
     // All recipient information
     mapping(address => RecipientInfo) public recipientInfo;
@@ -79,8 +84,6 @@ contract TycheYieldDirector is ERC20 {
         sOHM = _sOHM;
     }
 
-    // TODO Override decimals function if needed
-
     /************************
     * Donor Functions
     ************************/
@@ -95,40 +98,33 @@ contract TycheYieldDirector is ERC20 {
              before the donor withdraws, then the donor should recieve the remaining rebases.
              TODO
      */
-    function deposit(uint _amount, address _recipient) public {
+    function deposit(uint _amount, address _recipient) external {
         require(_amount > 0, "Invalid deposit amount");
         require(_recipient != address(0), "Invalid recipient address");
         require(IERC20(sOHM).balanceOf(msg.sender) >= _amount, "Not enough sOHM");
 
-        // TODO should it take sOHM or OHM??
-
         // Transfer sOHM to this contract
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), _amount);
 
-        uint agnosticAmount = _toAgnostic(_amount);
-
-        // Add to total agnostic vault balance
-        // TODO record flat amount as total sOHM donated
-        totalAgnosticBalance = totalAgnosticBalance + agnosticAmount;
-
         // Record donors's issued debt to recipient address
-        principal[msg.sender][_recipient] = principal[msg.sender][_recipient] + _amount;
+        //principal[msg.sender][_recipient] += _amount;
+
+        DonorInfo[] storage info = donorInfo[msg.sender];
+
+        // Record new donor info or update existing data
+        int recipientIndex = _getRecipientIndex(info, _recipient);
+        if(recipientIndex == -1) {
+            info.push(DonorInfo({
+                recipient: _recipient,
+                amount: _amount
+            }));
+        } else {
+            info[uint(recipientIndex)].amount += _amount;
+        }
 
         // Add to receivers balance as agnostic value and debt as flat value
-        recipientInfo[_recipient].agnosticBalance = recipientInfo[_recipient].agnosticBalance + agnosticAmount;
-        recipientInfo[_recipient].totalDebt = recipientInfo[_recipient].totalDebt + _amount;
-
-        // TODO vault shares might not be necessary
-        // Issue vault shares to recipient
-        uint sharesToIssue = _sharesForAmount(_amount);
-        _mint(_recipient, sharesToIssue);
-    }
-
-    /**
-        @notice Deposit all of caller's sOHM and issue shares to the recipient
-     */
-    function depositAll(address _recipient) external {
-        deposit(IERC20(sOHM).balanceOf(msg.sender), _recipient);
+        recipientInfo[_recipient].agnosticValue += _toAgnostic(_amount);
+        recipientInfo[_recipient].totalDebt += _amount;
     }
 
     /**
@@ -137,69 +133,113 @@ contract TycheYieldDirector is ERC20 {
         @param _recipient Donee address
      */
     function withdraw(uint _amount, address _recipient) external {
-        uint totalPrincipal = principal[msg.sender][_recipient];
+        DonorInfo[] storage info = donorInfo[msg.sender];
+        int recipientIndex = _getRecipientIndex(info, _recipient);
+        require(recipientIndex > 0, "No donations to recipient");
 
-        require(totalPrincipal > 0, "Donation amount is 0");
-
-        uint agnosticAmount = _toAgnostic(_amount);
-
-        // Remove agnostic value and debt from recipient
-        recipientInfo[_recipient].totalDebt = recipientInfo[_recipient].totalDebt - _amount;
-        recipientInfo[_recipient].agnosticBalance = recipientInfo[_recipient].agnosticBalance - agnosticAmount;
-
-        // Remove agnostic value and debt from vault
-        totalAgnosticBalance = totalAgnosticBalance - agnosticAmount;
+        // Subtract agnostic amount and debt from recipient
+        recipientInfo[_recipient].totalDebt -= _amount;
+        recipientInfo[_recipient].agnosticValue -= _toAgnostic(_amount);
 
         // Subtract flat sOHM amount from donor's principal
-        principal[msg.sender][_recipient] = principal[msg.sender][_recipient] - _amount;
+        info[uint(recipientIndex)].amount -= _amount;
+
+        // Delete recipient from donor info if amount is 0
+        if(info[uint(recipientIndex)].amount == 0)
+            delete info[uint(recipientIndex)];
 
         // Transfer sOHM from vault back to donor
         IERC20(sOHM).safeTransferFrom(address(this), msg.sender, _amount);
-
-        // TODO vault shares might not be necessary
-        // TODO verify this is accurate
-        // Adjust recipient vault shares balance
-        _burn(_recipient, _sharesForAmount(_amount));
     }
 
-    // TODO WithdrawAll
-    // TODO use EnumerableMap to loop through all recipients and withdraw
+    /**
+        @notice Withdraw from all donor positions
+     */
+    function withdrawAll() external {
+        DonorInfo[] storage info = donorInfo[msg.sender];
+        require(info.length != 0, "User not donating to anything");
+
+        uint total = 0;
+        for (uint index = 0; index < info.length; index++) {
+            // TODO check if this is actually more efficient
+            DonorInfo storage donatedTo = info[index];
+            total += donatedTo.amount;
+
+            // Subtract from recipient debt
+            recipientInfo[donatedTo.recipient].totalDebt -= donatedTo.amount;
+            recipientInfo[donatedTo.recipient].agnosticValue -= _toAgnostic(donatedTo.amount);
+        }
+
+        delete donorInfo[msg.sender];
+
+        // Transfer donor's total sOHM from vault back to donor
+        IERC20(sOHM).safeTransferFrom(address(this), msg.sender, total);
+    }
+
+    /**
+        @notice Return total amount of user's sOHM being donated
+     */
+    function totalDonated() external view returns ( uint ) {
+        DonorInfo[] storage info = donorInfo[msg.sender];
+        require(info.length != 0, "User not donating to anything");
+
+        uint total = 0;
+        for (uint index = 0; index < info.length; index++) {
+            // TODO check if this is actually more efficient
+            total += info[index].amount;
+        }
+        return total;
+    }
+
 
     /************************
     * Donor Functions
     ************************/
 
     /**
-        @notice Get claimable balance of an address
+        @notice Get redeemable flat sOHM balance of an address
      */
-    function claimableBalance(address _who) public view returns (uint) {
-        uint recipientDebt = recipientInfo[_who].totalDebt;
-        return IsOHM(sOHM).balanceOf(address(this)) - _toAgnostic(recipientDebt);
+    function redeemableBalance(address _who) external view returns (uint) {
+        RecipientInfo storage info = recipientInfo[_who];
+
+        uint redeemable = info.agnosticValue - _toAgnostic(info.totalDebt);
+
+        return IsOHM(sOHM).balanceOf(address(this)) - _fromAgnostic(redeemable);
     }
 
     /**
-        @notice Redeem vault shares for underlying sOHM
-        // TODO Recipient debts only get cleared when shares are redeemed
+        @notice Redeem recipient's full amount of sOHM
      */
-    function redeem(uint _shares) public {
-        require(balanceOf(msg.sender) > 0, "Caller does not own vault shares");
+    function redeem() external {
+        RecipientInfo storage info = recipientInfo[msg.sender];
 
-        uint recipientDebt = recipientInfo[msg.sender].totalDebt;
-        require(recipientDebt == 0, "No claimable balance");
+        require(info.totalDebt == 0, "No claimable balance");
 
-        // Clear out recipient balances
-        // TODO
+        uint redeemable = info.agnosticValue - _toAgnostic(info.totalDebt);
 
-        // Transfer flat amount that shares are worth to recipient
-        uint flatAmount = _shareValue(_shares);
-        IERC20(sOHM).safeTransferFrom(address(this), msg.sender, flatAmount);
+        // Clear out recipient balance
+        info.totalDebt = 0;
+        info.agnosticValue = 0;
+
+        // Transfer sOHM to recipient
+        IERC20(sOHM).safeTransfer(msg.sender, _fromAgnostic(redeemable));
+    }
+
+    function _getRecipientIndex(DonorInfo[] storage info, address _recipient) internal view returns( int ) {
+        int existingIndex = -1;
+        for (uint i = 0; i < info.length; i++) {
+            if(info[i].recipient == _recipient) {
+                existingIndex = int(i);
+                break;
+            }
+        }
+        return existingIndex;
     }
 
     /************************
     * Conversion Functions
     ************************/
 
-    // TODO replace with governance's toWOHM
     /**
         @notice Agnostic value maintains rebases. Agnostic value is amount / index
      */
@@ -207,37 +247,11 @@ contract TycheYieldDirector is ERC20 {
         return _amount
             * (10 ** decimals())
             / (IsOHM(sOHM).index());
-     }
+    }
 
-    // TODO replace with governance's fromWOHM
-     function _fromAgnostic(uint _amount) internal view returns ( uint ) {
+    function _fromAgnostic(uint _amount) internal view returns ( uint ) {
         return _amount
             * (IsOHM(sOHM).index())
             / (10 ** decimals());
-     }
-
-    /**
-        @notice Get flat sOHM value for some amount of shares
-            shares = amount * totalSupply / assets_under_management
-     */
-    function _shareValue(uint _shares) internal view returns ( uint ) {
-        uint agnosticAmount = (_shares * totalAgnosticBalance) / totalSupply();
-
-        return _fromAgnostic(agnosticAmount);
-    }
-
-    /**
-        @notice Calculate shares for some 
-            shares / totalSupply = amount / assets_under_management
-     */
-    function _sharesForAmount( uint _amount ) internal view returns ( uint ) {
-        uint totalSupply = totalSupply();
-
-        if (totalSupply > 0) {
-            uint shares = (_toAgnostic(_amount) * totalSupply) / totalAgnosticBalance;
-            return shares;
-        } else {
-            return 0;
-        }
     }
 }
