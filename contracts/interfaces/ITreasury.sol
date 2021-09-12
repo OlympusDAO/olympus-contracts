@@ -9,4 +9,8 @@ interface ITreasury {
     function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
     
     function mintRewards( address _recipient, uint _amount ) external;
+
+    function incurDebt( uint amount_, address token_ ) external;
+    
+    function repayDebtWithReserve( uint amount_, address token_ ) external;
 }
