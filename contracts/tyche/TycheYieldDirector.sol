@@ -28,7 +28,7 @@ interface IStaking {
 }
 
 /**
-    @title RebaseDirector 
+    @title TycheYieldDirector 
     @notice This contract allows users to stake their OHM and redirect their
             rebases to an address (or NFT). Users will be able to withdraw their
             principal stake at any time. Donation recipients can also withdraw at
@@ -37,32 +37,27 @@ interface IStaking {
          but recipient debt is recorded as non-agnostic OHM value.
  */
 contract TycheYieldDirector is ERC20 {
-    //using SafeMath for uint;
     using SafeERC20 for IERC20;
 
 	address public immutable staking;
     address public immutable OHM;
     address public immutable sOHM;
 
-
-    // Info for donation recipient
-    struct RecipientInfo {
-        uint totalDebt;
-        uint agnosticValue;
-    }
-
-    struct DonorInfo {
+    struct DonationInfo {
         address recipient;
-        uint amount;
+        // TODO can be packed
+        uint amount; // total non-agnostic amount deposited
+        uint agnosticAmount; // cumulative agnostic value deposited
     }
 
-    // Donor principal amount
-    mapping(address => mapping (address => uint)) public principal;
-    //mapping(address => uint) public donorIndex;
-    //DonorInfo[][] public donorInfo;
-    mapping(address => DonorInfo[]) public donorInfo;
+    struct RecipientInfo {
+        // TODO can be packed
+        uint totalDebt; // Non-agnostic debt
+        uint agnosticAmount;
+        uint indexAtRedeem;
+    }
 
-    // All recipient information
+    mapping(address => DonationInfo[]) public donationInfo;
     mapping(address => RecipientInfo) public recipientInfo;
 
     // TODO Add events
@@ -107,24 +102,34 @@ contract TycheYieldDirector is ERC20 {
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), _amount);
 
         // Record donors's issued debt to recipient address
-        //principal[msg.sender][_recipient] += _amount;
+        DonationInfo[] storage info = donationInfo[msg.sender];
 
-        DonorInfo[] storage info = donorInfo[msg.sender];
-
-        // Record new donor info or update existing data
         int recipientIndex = _getRecipientIndex(info, _recipient);
         if(recipientIndex == -1) {
-            info.push(DonorInfo({
+            info.push(DonationInfo({
                 recipient: _recipient,
-                amount: _amount
+                amount: _amount,
+                agnosticAmount: _toAgnostic(_amount)
             }));
         } else {
             info[uint(recipientIndex)].amount += _amount;
+            info[uint(recipientIndex)].agnosticAmount += _toAgnostic(_amount);
         }
 
         // Add to receivers balance as agnostic value and debt as flat value
-        recipientInfo[_recipient].agnosticValue += _toAgnostic(_amount);
+        recipientInfo[_recipient].agnosticAmount += _toAgnostic(_amount);
         recipientInfo[_recipient].totalDebt += _amount;
+    }
+
+    /**
+        @notice Get withdrawable flat sOHM amount for specific recipient
+     */
+    function withdrawableBalance(address _recipient) external view returns ( uint ) {
+        DonationInfo[] storage donation = donationInfo[msg.sender];
+        int recipientIndex = _getRecipientIndex(donation, _recipient);
+        require(recipientIndex > 0, "No donations to recipient");
+
+        return donation[uint(recipientIndex)].amount;
     }
 
     /**
@@ -133,44 +138,55 @@ contract TycheYieldDirector is ERC20 {
         @param _recipient Donee address
      */
     function withdraw(uint _amount, address _recipient) external {
-        DonorInfo[] storage info = donorInfo[msg.sender];
-        int recipientIndex = _getRecipientIndex(info, _recipient);
-        require(recipientIndex > 0, "No donations to recipient");
+        DonationInfo[] storage info = donationInfo[msg.sender];
 
-        // Subtract agnostic amount and debt from recipient
-        recipientInfo[_recipient].totalDebt -= _amount;
-        recipientInfo[_recipient].agnosticValue -= _toAgnostic(_amount);
+        int recipientIndexSigned = _getRecipientIndex(info, _recipient);
+        require(recipientIndexSigned > 0, "No donations to recipient");
+
+        uint recipientIndex = uint(recipientIndexSigned);
 
         // Subtract flat sOHM amount from donor's principal
         info[uint(recipientIndex)].amount -= _amount;
 
-        // Delete recipient from donor info if amount is 0
+        // Delete recipient from donor info if donated amount is 0
         if(info[uint(recipientIndex)].amount == 0)
             delete info[uint(recipientIndex)];
 
-        // Transfer sOHM from vault back to donor
-        IERC20(sOHM).safeTransferFrom(address(this), msg.sender, _amount);
+        bool recipientHasRedeemed = recipientInfo[_recipient].totalDebt != 0;
+        if(recipientHasRedeemed) {
+            // Give donor rebases since recipient redeemed
+            uint agnosticValueAtRedeem = _toAgnosticAtIndex(_amount, recipientInfo[_recipient].indexAtRedeem);
+            uint withdrawalAmount = _toAgnostic(_amount) - agnosticValueAtRedeem + info[recipientIndex].amount;
+
+            IERC20(sOHM).safeTransferFrom(address(this), msg.sender, withdrawalAmount);
+        } else {
+            // Subtract agnostic amount and debt from recipient
+            recipientInfo[_recipient].totalDebt -= _amount;
+            recipientInfo[_recipient].agnosticAmount -= _toAgnostic(_amount);
+
+            IERC20(sOHM).safeTransferFrom(address(this), msg.sender, _amount);
+        }
     }
 
     /**
         @notice Withdraw from all donor positions
      */
     function withdrawAll() external {
-        DonorInfo[] storage info = donorInfo[msg.sender];
+        DonationInfo[] storage info = donationInfo[msg.sender];
         require(info.length != 0, "User not donating to anything");
 
         uint total = 0;
         for (uint index = 0; index < info.length; index++) {
-            // TODO check if this is actually more efficient
-            DonorInfo storage donatedTo = info[index];
+            // TODO does this save an SLOAD?
+            DonationInfo storage donatedTo = info[index];
             total += donatedTo.amount;
 
             // Subtract from recipient debt
             recipientInfo[donatedTo.recipient].totalDebt -= donatedTo.amount;
-            recipientInfo[donatedTo.recipient].agnosticValue -= _toAgnostic(donatedTo.amount);
+            recipientInfo[donatedTo.recipient].agnosticAmount -= _toAgnostic(donatedTo.amount);
         }
 
-        delete donorInfo[msg.sender];
+        delete donationInfo[msg.sender];
 
         // Transfer donor's total sOHM from vault back to donor
         IERC20(sOHM).safeTransferFrom(address(this), msg.sender, total);
@@ -180,12 +196,11 @@ contract TycheYieldDirector is ERC20 {
         @notice Return total amount of user's sOHM being donated
      */
     function totalDonated() external view returns ( uint ) {
-        DonorInfo[] storage info = donorInfo[msg.sender];
-        require(info.length != 0, "User not donating to anything");
+        DonationInfo[] storage info = donationInfo[msg.sender];
+        require(info.length != 0, "User is not donating");
 
         uint total = 0;
         for (uint index = 0; index < info.length; index++) {
-            // TODO check if this is actually more efficient
             total += info[index].amount;
         }
         return total;
@@ -193,39 +208,57 @@ contract TycheYieldDirector is ERC20 {
 
 
     /************************
-    * Donor Functions
+    * Recipient Functions
     ************************/
 
     /**
         @notice Get redeemable flat sOHM balance of an address
      */
-    function redeemableBalance(address _who) external view returns (uint) {
+    function recipientBalance(address _who) external view returns (uint) {
         RecipientInfo storage info = recipientInfo[_who];
 
-        uint redeemable = info.agnosticValue - _toAgnostic(info.totalDebt);
+        uint redeemable = info.agnosticAmount - _toAgnostic(info.totalDebt);
 
         return IsOHM(sOHM).balanceOf(address(this)) - _fromAgnostic(redeemable);
     }
 
     /**
-        @notice Redeem recipient's full amount of sOHM
+        @notice Redeem recipient's full donated amount of sOHM
      */
     function redeem() external {
-        RecipientInfo storage info = recipientInfo[msg.sender];
+        RecipientInfo storage recipient = recipientInfo[msg.sender];
 
-        require(info.totalDebt == 0, "No claimable balance");
+        require(recipient.totalDebt == 0, "No claimable balance");
 
-        uint redeemable = info.agnosticValue - _toAgnostic(info.totalDebt);
+        uint redeemable = _fromAgnostic(recipient.agnosticAmount) - recipient.totalDebt;
 
         // Clear out recipient balance
-        info.totalDebt = 0;
-        info.agnosticValue = 0;
+        recipient.totalDebt = 0;
+        recipient.agnosticAmount = 0;
+
+        // Record index when recipient redeemed
+        recipient.indexAtRedeem = IsOHM(sOHM).index();
 
         // Transfer sOHM to recipient
-        IERC20(sOHM).safeTransfer(msg.sender, _fromAgnostic(redeemable));
+        IERC20(sOHM).safeTransfer(msg.sender, redeemable);
     }
 
-    function _getRecipientIndex(DonorInfo[] storage info, address _recipient) internal view returns( int ) {
+    /************************
+    * Conversion Functions
+    ************************/
+    /**
+        @notice Calculate withdrawable amount based on recipient state
+        @return 
+     */
+    // TODO
+
+    /**
+        @notice Get array index of a particular recipient in a donor's donationInfo array.
+        @param info Reference to sender's donationInfo array
+        @param _recipient Recipient address to look for in array
+        @return Array index of recipient address. If not present, return -1.
+     */
+    function _getRecipientIndex(DonationInfo[] storage info, address _recipient) internal view returns (int) {
         int existingIndex = -1;
         for (uint i = 0; i < info.length; i++) {
             if(info[i].recipient == _recipient) {
@@ -241,12 +274,18 @@ contract TycheYieldDirector is ERC20 {
     ************************/
 
     /**
-        @notice Agnostic value maintains rebases. Agnostic value is amount / index
+        @notice Agnostic value earns rebases. Agnostic value is amount / rebase_index
      */
     function _toAgnostic(uint _amount) internal view returns ( uint ) {
         return _amount
             * (10 ** decimals())
             / (IsOHM(sOHM).index());
+    }
+
+    function _toAgnosticAtIndex(uint _amount, uint _index) internal view returns ( uint ) {
+        return _amount
+            * (10 ** decimals())
+            / _index;
     }
 
     function _fromAgnostic(uint _amount) internal view returns ( uint ) {
