@@ -39,7 +39,7 @@ interface IStaking {
 contract TycheYieldDirector is ERC20 {
     using SafeERC20 for IERC20;
 
-	address public immutable staking;
+    //address public immutable staking;
     address public immutable OHM;
     address public immutable sOHM;
 
@@ -60,20 +60,23 @@ contract TycheYieldDirector is ERC20 {
     mapping(address => RecipientInfo) public recipientInfo;
 
     // TODO Add events
+    event Deposit();
+    event Withdrawal();
+    event Redeem();
 
     constructor (
-		address _staking,
+		//address _staking,
         address _OHM, 
         address _sOHM
     )
-        ERC20("Olympus donor vault", "dOHM")
+        ERC20("Tyche Vault", "tOHM")
     {
-        require(_staking != address(0));
+        //require(_staking != address(0));
         require(_OHM != address(0));
         require(_sOHM != address(0));
         // TODO add governance address
 
-        staking = _staking;
+        //staking = _staking;
         OHM = _OHM;
         sOHM = _sOHM;
     }
