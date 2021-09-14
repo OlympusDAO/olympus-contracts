@@ -120,7 +120,7 @@ contract TycheYieldDirector is ERC20 {
         @notice Get withdrawable flat sOHM amount for specific recipient
      */
     function withdrawableBalance(address _recipient) external view returns ( uint ) {
-        DonationInfo[] storage donation = donationInfo[msg.sender];
+        DonationInfo[] memory donation = donationInfo[msg.sender];
         int recipientIndex = _getRecipientIndex(donation, _recipient);
         require(recipientIndex > 0, "No donations to recipient");
 
@@ -166,8 +166,7 @@ contract TycheYieldDirector is ERC20 {
 
         uint total = 0;
         for (uint index = 0; index < donations.length; index++) {
-            // TODO does this save an SLOAD?
-            DonationInfo storage donation = donations[index];
+            DonationInfo memory donation = donations[index];
             total += donation.amount;
 
             // Subtract from recipient debts if recipient has not redeemed
@@ -187,7 +186,7 @@ contract TycheYieldDirector is ERC20 {
         @notice Return total amount of user's sOHM being donated
      */
     function totalDonations() external view returns ( uint ) {
-        DonationInfo[] storage donations = donationInfo[msg.sender];
+        DonationInfo[] memory donations = donationInfo[msg.sender];
         require(donations.length != 0, "User is not donating");
 
         uint total = 0;
@@ -206,7 +205,7 @@ contract TycheYieldDirector is ERC20 {
         @notice Get redeemable flat sOHM balance of an address
      */
     function recipientBalance(address _who) public view returns (uint) {
-        RecipientInfo storage recipient = recipientInfo[_who];
+        RecipientInfo memory recipient = recipientInfo[_who];
 
         uint redeemable = _fromAgnostic(recipient.agnosticAmount)
             - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastRedeem)
@@ -217,7 +216,6 @@ contract TycheYieldDirector is ERC20 {
 
     /**
         @notice Redeem recipient's full donated amount of sOHM at current index
-
         @dev Note that a recipient redeeming their vault shares effectively pays back all
              sOHM debt to donors at the time of redeem. Any future incurred debt will
              be accounted for with a subsequent redeem or a withdrawal by the specific donor.
@@ -250,7 +248,7 @@ contract TycheYieldDirector is ERC20 {
         @param _recipient Recipient address to look for in array
         @return Array index of recipient address. If not present, return -1.
      */
-    function _getRecipientIndex(DonationInfo[] storage info, address _recipient) internal view returns (int) {
+    function _getRecipientIndex(DonationInfo[] memory info, address _recipient) internal pure returns (int) {
         int existingIndex = -1;
         for (uint i = 0; i < info.length; i++) {
             if(info[i].recipient == _recipient) {
