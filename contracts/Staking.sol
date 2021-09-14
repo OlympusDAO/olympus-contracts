@@ -579,15 +579,11 @@ contract OlympusStaking is Governable {
     Epoch public epoch;
 
     address public distributor;
-    address public locker;
     address public warmupContract;
 
-    uint public totalBonus;
     uint public warmupPeriod;
 
     mapping( address => Claim ) public warmupInfo;
-
-    uint public rebate;
 
 
 
@@ -692,8 +688,6 @@ contract OlympusStaking is Governable {
      */
     function rebase() public {
         if( epoch.endBlock <= block.number ) {
-            sOHM.safeTransfer( msg.sender, rebate );
-
             sOHM.rebase( epoch.distribute, epoch.number );
 
             epoch.endBlock = epoch.endBlock.add( epoch.length );
@@ -703,7 +697,7 @@ contract OlympusStaking is Governable {
                 IDistributor( distributor ).distribute();
             }
 
-            uint balance = contractBalance();
+            uint balance = sOHM.balanceOf( address(this) );
             uint staked = IsOHM( sOHM ).circulatingSupply();
 
             if( balance <= staked ) {
@@ -727,35 +721,21 @@ contract OlympusStaking is Governable {
     }
 
     /**
-        @notice returns contract OHM holdings, including bonuses provided
+        @notice returns static balance instead of rebasing
+        @param _amount uint
         @return uint
      */
-    function contractBalance() public view returns ( uint ) {
-        return OHM.balanceOf( address(this) ).add( totalBonus );
-    }
-
-
-
-    /* ========== LOCKED STAKING FUNCTIONS ========== */
-
-    /**
-        @notice provide bonus to locked staking contract
-        @param _amount uint
-     */
-    function giveLockBonus( uint _amount ) external {
-        require( msg.sender == locker );
-        totalBonus = totalBonus.add( _amount );
-        sOHM.safeTransfer( locker, _amount );
+    function getAgnosticBalance( uint _amount ) external view returns ( uint ) {
+        return _amount.mul( 1e9 ).div( index() );
     }
 
     /**
-        @notice reclaim bonus from locked staking contract
+        @notice converts static balance back to rebased
         @param _amount uint
+        @return uint
      */
-    function returnLockBonus( uint _amount ) external {
-        require( msg.sender == locker );
-        totalBonus = totalBonus.sub( _amount );
-        sOHM.safeTransferFrom( locker, address(this), _amount );
+    function fromAgnosticBalance( uint _amount ) external view returns ( uint ) {
+        return _amount.mul( index() ).div( 1e9 );
     }
 
 
@@ -772,9 +752,6 @@ contract OlympusStaking is Governable {
         } else if ( _contract == CONTRACTS.WARMUP ) { // 1
             require( warmupContract == address( 0 ), "Warmup cannot be set more than once" );
             warmupContract = _address;
-        } else if ( _contract == CONTRACTS.LOCKER ) { // 2
-            require( locker == address(0), "Locker cannot be set more than once" );
-            locker = _address;
         }
     }
     
@@ -784,13 +761,5 @@ contract OlympusStaking is Governable {
      */
     function setWarmup( uint _warmupPeriod ) external onlyGovernor() {
         warmupPeriod = _warmupPeriod;
-    }
-
-    /**
-     *  @notice set rebate to send to address that triggers rebase. compensation for gas.
-     *  @param _amount uint
-     */
-    function setRebate( uint _amount ) external onlyGovernor() {
-        rebate = _amount;
     }
 }
