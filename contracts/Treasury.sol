@@ -1,3 +1,7 @@
+/**
+ *Submitted for verification at Etherscan.io on 2021-05-28
+*/
+
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
@@ -97,6 +101,56 @@ library Address {
     }
 }
 
+interface IOwnable {
+  function manager() external view returns (address);
+
+  function renounceManagement() external;
+  
+  function pushManagement( address newOwner_ ) external;
+  
+  function pullManagement() external;
+}
+
+contract Ownable is IOwnable {
+
+    address internal _owner;
+    address internal _newOwner;
+
+    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
+    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+
+    constructor () {
+        _owner = msg.sender;
+        emit OwnershipPushed( address(0), _owner );
+    }
+
+    function manager() public view override returns (address) {
+        return _owner;
+    }
+
+    modifier onlyManager() {
+        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+        _;
+    }
+
+    function renounceManagement() public virtual override onlyManager() {
+        emit OwnershipPushed( _owner, address(0) );
+        _owner = address(0);
+    }
+
+    function pushManagement( address newOwner_ ) public virtual override onlyManager() {
+        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipPushed( _owner, newOwner_ );
+        _newOwner = newOwner_;
+    }
+    
+    function pullManagement() public virtual override {
+        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
+        emit OwnershipPulled( _owner, _newOwner );
+        _owner = _newOwner;
+    }
+}
+
 interface IERC20 {
     function decimals() external view returns (uint8);
 
@@ -136,125 +190,60 @@ library SafeERC20 {
     }
 }
 
-interface IGuardable {
-    function guardian() external view returns (address);
-
-    function renounceGuardian() external;
-  
-    function pushGuardian( address newGuardian_ ) external;
-  
-    function pullGuardian() external;
-}
-
-contract Guardable is IGuardable {
-
-    address internal _guardian;
-    address internal _newGuardian;
-
-    event GuardianPushed(address indexed previousGuardian, address indexed newGuardian);
-    event GuardianPulled(address indexed previousGuardian, address indexed newGuardian);
-
-    constructor () {
-        _guardian = msg.sender;
-        emit GuardianPulled( address(0), _guardian );
-    }
-
-
-    function guardian() public view override returns (address) {
-        return _guardian;
-    }
-
-    modifier onlyGuardian() {
-        require( _guardian == msg.sender, "Guardable: caller is not the guardian" );
-        _;
-    }
-
-    function renounceGuardian() public virtual override onlyGuardian() {
-        emit GuardianPushed( _guardian, address(0) );
-        _guardian = address(0);
-    }
-
-    function pushGuardian( address newGuardian_ ) public virtual override onlyGuardian() {
-        require( newGuardian_ != address(0), "Guardable: new guardian is the zero address");
-        emit GuardianPushed( _guardian, newGuardian_ );
-        _newGuardian = newGuardian_;
-    }
-    
-    function pullGuardian() public virtual override {
-        require( msg.sender == _newGuardian, "Guardable: must be new guardian to pull");
-        emit GuardianPulled( _guardian, _newGuardian );
-        _guardian = _newGuardian;
-    }
-}
-
 interface IBondCalculator {
   function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
 }
 
-contract OlympusTreasury is Guardable {
+contract OlympusTreasury is Ownable {
 
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
-
-
     /* ========== EVENTS ========== */
 
-    event ReservesManaged( address indexed token, uint amount );
-    event RewardsDispensed( address indexed caller, address indexed recipient, uint amount );
-    event ChangeQueued( STATUS indexed status, address queued );
-    event ChangeActivated( STATUS indexed status, address activated, bool result );
-
-
-
-    /* ========== DATA STRUCTURES ========== */
-
-    enum STATUS {
-        RESERVETOKEN,
-        LIQUIDITYTOKEN,
-        MANAGER, 
-        DISPENSEE
-    }
-
-    struct Queue {
-        STATUS managing;
-        address toPermit;
-        address calculator;
-        uint timelockEnd;
-        bool nullify;
-        bool executed;
-    }
-
-
+    event Managed( address indexed token, uint amount );
+    event Dispensed( address indexed caller, address indexed recipient, uint amount );
+    event ChangeQueued( MANAGING indexed managing, address queued );
+    event ChangeActivated( MANAGING indexed managing, address activated, bool result );
 
     /* ========== STATE VARIABLES ========== */
 
     IERC20 immutable OHM;
-
-    mapping( STATUS => address[] ) public registry;
-    mapping( STATUS => mapping( address => bool ) ) public permissions;
-    
-    Queue[] public permissionQueue;
     uint public immutable blocksNeededForQueue;
-    
-    mapping( address => address ) public bondCalculator;
-    
 
+    address[] public reserveTokens; // Push only, beware false-positives.
+    mapping( address => bool ) public isReserveToken;
+    mapping( address => uint ) public reserveTokenQueue; // Delays changes to mapping.
+
+    address[] public liquidityTokens; // Push only, beware false-positives.
+    mapping( address => bool ) public isLiquidityToken;
+    mapping( address => uint ) public LiquidityTokenQueue; // Delays changes to mapping.
+
+    mapping( address => address ) public bondCalculator; // bond calculator for liquidity token
+
+    address[] public managers; // Push only, beware false-positives. Only for viewing.
+    mapping( address => bool ) public isManager;
+    mapping( address => uint ) public ManagerQueue; // Delays changes to mapping.
+
+    address[] public dispensees; // Push only, beware false-positives. Only for viewing.
+    mapping( address => bool ) public isDispensee;
+    mapping( address => uint ) public dispenseeQueue; // Delays changes to mapping.
 
     /* ========== CONSTRUCTOR ========== */
-
-    constructor ( address _OHM, uint _blocksNeededForQueue ) {
+    
+    constructor (
+        address _OHM,
+        uint _blocksNeededForQueue
+    ) {
         require( _OHM != address(0) );
         OHM = IERC20( _OHM );
-        
+
         blocksNeededForQueue = _blocksNeededForQueue;
     }
 
-
-
-    /* ========== MUTATIVE FUNCTIONS ========== */
+    /* ========== INTERACTION FUNCTIONS ========== */
 
     /**
         @notice allow approved address to withdraw assets
@@ -262,95 +251,106 @@ contract OlympusTreasury is Guardable {
         @param _amount uint
      */
     function manage( address _token, uint _amount ) external {
-        require( permissions[ STATUS.MANAGER ][ msg.sender ], "Not approved" );
+        require( isManager[ msg.sender ], "Not approved" );
 
         IERC20( _token ).safeTransfer( msg.sender, _amount );
 
-        emit ReservesManaged( _token, _amount );
+        emit Managed( _token, _amount );
     }
 
     /**
         @notice send epoch reward to staking contract
      */
     function dispense( address _recipient, uint _amount ) external {
-        require( permissions[ STATUS.DISPENSEE ][ msg.sender ], "Not approved" );
+        require( isDispensee[ msg.sender ], "Not approved" );
 
         OHM.transfer( _recipient, _amount );
 
-        emit RewardsDispensed( msg.sender, _recipient, _amount );
+        emit Dispensed( msg.sender, _recipient, _amount );
     } 
 
-    /**
-     *  @notice enable queued permission
-     *  @param _index uint
-     */
-    function execute( uint _index ) external {
-        Queue memory info = permissionQueue[ _index ];
-        require( !info.nullify, "Action has been nullified" );
-        require( !info.executed, "Action has already been executed" );
-        require( block.number >= info.timelockEnd, "Timelock not complete" );
+    /* ========== MUTABLE FUNCTIONS ========== */
 
-        registry[ info.managing ].push( info.toPermit );
-        permissions[ info.managing ][ info.toPermit ] = true;
-        
-        if ( info.managing == STATUS.LIQUIDITYTOKEN ) { // 5
-            bondCalculator[ info.toPermit ] = info.calculator;
-        }
-        
-        permissionQueue[ _index ].executed = true;
-    }
-
-
-
-    /* ========== GOVERNOR FUNCTIONS ========== */
+    enum MANAGING { RESERVETOKEN, LIQUIDITYTOKEN, MANAGER, DISPENSEE }
 
     /**
-        @notice queue address to receive permission
-        @param _status STATUS
+        @notice queue address to change boolean in mapping
+        @param _managing MANAGING
         @param _address address
+        @return bool
      */
-    function queue( STATUS _status, address _address, address _calculator ) external onlyGuardian() {
+    function queue( MANAGING _managing, address _address ) external onlyManager() returns ( bool ) {
         require( _address != address(0) );
+        if ( _managing == MANAGING.RESERVETOKEN ) { // 0
+            reserveTokenQueue[ _address ] = block.number.add( blocksNeededForQueue );
+        } else if ( _managing == MANAGING.LIQUIDITYTOKEN ) { // 1
+            LiquidityTokenQueue[ _address ] = block.number.add( blocksNeededForQueue );
+        } else if ( _managing == MANAGING.MANAGER ) { // 2
+            ManagerQueue[ _address ] = block.number.add( blocksNeededForQueue );
+        } else if ( _managing == MANAGING.DISPENSEE ) { // 3
+            dispenseeQueue[ _address ] = block.number.add( blocksNeededForQueue );
+        } else return false;
 
-        uint timelock = block.number;
-        if ( _status == STATUS.MANAGER || _status == STATUS.DISPENSEE ) {
-            timelock = block.number.add( blocksNeededForQueue );
-        }
-
-        permissionQueue.push( Queue({
-            managing: _status,
-            toPermit: _address,
-            calculator: _calculator,
-            timelockEnd: timelock,
-            nullify: false,
-            executed: false
-        } ) );
-
-        emit ChangeQueued( _status, _address );
-    }
-
-
-
-    /* ========== GUARDIAN FUNCTIONS ========== */
-
-    /**
-     *  @notice disable permission from address
-     *  @param _status STATUS
-     *  @param _toDisable address
-     */
-    function disable( STATUS _status, address _toDisable ) external onlyGuardian() {
-        permissions[ _status ][ _toDisable ] = false;
+        emit ChangeQueued( _managing, _address );
+        return true;
     }
 
     /**
-     *  @notice prevents queued action from taking place
-     *  @param _index uint
+        @notice verify queue then set boolean in mapping
+        @param _managing MANAGING
+        @param _address address
+        @param _calculator address
+        @return bool
      */
-    function nullify( uint _index ) external onlyGuardian() {
-        permissionQueue[ _index ].nullify = true;
+    function toggle( MANAGING _managing, address _address, address _calculator ) external onlyManager() returns ( bool ) {
+        require( _address != address(0) );
+        bool result;
+        if ( _managing == MANAGING.RESERVETOKEN ) { // 0
+            if ( requirements( reserveTokenQueue, isReserveToken, _address ) ) {
+                reserveTokenQueue[ _address ] = 0;
+                if( !listContains( reserveTokens, _address ) ) {
+                    reserveTokens.push( _address );
+                }
+            }
+            result = !isReserveToken[ _address ];
+            isReserveToken[ _address ] = result;
+
+        } else if ( _managing == MANAGING.LIQUIDITYTOKEN ) { // 1
+            if ( requirements( LiquidityTokenQueue, isLiquidityToken, _address ) ) {
+                LiquidityTokenQueue[ _address ] = 0;
+                if( !listContains( liquidityTokens, _address ) ) {
+                    liquidityTokens.push( _address );
+                }
+            }
+            result = !isLiquidityToken[ _address ];
+            isLiquidityToken[ _address ] = result;
+            bondCalculator[ _address ] = _calculator;
+
+        } else if ( _managing == MANAGING.MANAGER ) { // 2
+            if ( requirements( ManagerQueue, isManager, _address ) ) {
+                ManagerQueue[ _address ] = 0;
+                if( !listContains( managers, _address ) ) {
+                    managers.push( _address );
+                }
+            }
+            result = !isManager[ _address ];
+            isManager[ _address ] = result;
+
+        } else if ( _managing == MANAGING.DISPENSEE ) { // 3
+            if ( requirements( dispenseeQueue, isDispensee, _address ) ) {
+                dispenseeQueue[ _address ] = 0;
+                if( !listContains( dispensees, _address ) ) {
+                    dispensees.push( _address );
+                }
+            }
+            result = !isDispensee[ _address ];
+            isDispensee[ _address ] = result;
+
+        } else return false;
+
+        emit ChangeActivated( _managing, _address, result );
+        return true;
     }
-
-
 
     /* ========== VIEW FUNCTIONS ========== */
 
@@ -361,11 +361,45 @@ contract OlympusTreasury is Guardable {
         @return value_ uint
      */
     function valueOf( address _token, uint _amount ) public view returns ( uint value_ ) {
-        if ( permissions[ STATUS.RESERVETOKEN ][ _token ] ) {
+        if ( isReserveToken[ _token ] ) {
             // convert amount to match OHM decimals
             value_ = _amount.mul( 10 ** OHM.decimals() ).div( 10 ** IERC20( _token ).decimals() );
-        } else if ( permissions[ STATUS.LIQUIDITYTOKEN ][ _token ] ) {
+        } else if ( isLiquidityToken[ _token ] ) {
             value_ = IBondCalculator( bondCalculator[ _token ] ).valuation( _token, _amount );
         }
+    }
+
+    /**
+        @notice checks requirements and returns altered structs
+        @param queue_ mapping( address => uint )
+        @param status_ mapping( address => bool )
+        @param _address address
+        @return bool 
+     */
+    function requirements( 
+        mapping( address => uint ) storage queue_, 
+        mapping( address => bool ) storage status_, 
+        address _address 
+    ) internal view returns ( bool ) {
+        if ( !status_[ _address ] ) {
+            require( queue_[ _address ] != 0, "Must queue" );
+            require( queue_[ _address ] <= block.number, "Queue not expired" );
+            return true;
+        } return false;
+    }
+
+    /**
+        @notice checks array to ensure against duplicate
+        @param _list address[]
+        @param _token address
+        @return bool
+     */
+    function listContains( address[] storage _list, address _token ) internal view returns ( bool ) {
+        for( uint i = 0; i < _list.length; i++ ) {
+            if( _list[ i ] == _token ) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -585,7 +585,7 @@ library FixedPoint {
 }
 
 interface ITreasury {
-    function disperse( uint _amount, uint _toStaking ) external;
+    function disperse( address _recipient, uint _amount ) external;
     function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
 }
 
@@ -839,7 +839,8 @@ contract OlympusBondDepository is Ownable {
         principle.safeTransferFrom( msg.sender, address(this), _amount ); // for privacy on block explorer
         principle.safeTransferFrom( address(this), address( treasury ), _amount ); // transfer to treasury
         
-        treasury.disperse( payout, toStaking ); // get payout
+        treasury.disperse( address(this), payout.add( toStaking ) ); // get payout
+        OHM.transfer( staking, toStaking ); // send rewards to staking
         
         // total debt is increased
         totalDebt = totalDebt.add( value ); 
