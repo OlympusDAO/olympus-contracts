@@ -21,7 +21,7 @@
 #### Technical Details
 All accounting inside the Tyche vault is easiest to understand by evaluating everything with respect to the rebase index.
 
-- V_a: Agnostic OHM value (# of OHM / current_index)
+- V_a: Agnostic OHM value (# of sOHM / current_index)
 - Di: Index at time of donor deposit
 - Wi: Index at time of donor withdrawal
 - Ri_n: Index at nth redemption by recipient

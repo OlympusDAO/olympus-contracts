@@ -263,6 +263,8 @@ contract TycheYieldDirector is ERC20 {
     * Conversion Functions
     ************************/
 
+    // TODO These can be replaced with wsOHM contract functions
+
     /**
         @notice Convert flat sOHM value to agnostic value at current index
         @param _amount Non-agnostic value to convert from
