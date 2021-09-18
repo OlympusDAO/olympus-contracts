@@ -2,8 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-//import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -36,7 +34,7 @@ interface IStaking {
     @dev User's deposited stake is recorded as agnostic values (value / index) for the user,
          but recipient debt is recorded as non-agnostic OHM value.
  */
-contract TycheYieldDirector is ERC20 {
+contract TycheYieldDirector {
     using SafeERC20 for IERC20;
 
     //address public immutable staking;
@@ -68,9 +66,7 @@ contract TycheYieldDirector is ERC20 {
 		//address _staking,
         address _OHM, 
         address _sOHM
-    )
-        ERC20("Tyche Vault", "tOHM")
-    {
+    ) {
         //require(_staking != address(0));
         require(_OHM != address(0));
         require(_sOHM != address(0));
@@ -273,7 +269,7 @@ contract TycheYieldDirector is ERC20 {
      */
     function _toAgnostic(uint _amount) internal view returns ( uint ) {
         return _amount
-            * (10 ** decimals())
+            * (10 ** ERC20(sOHM).decimals())
             / (IsOHM(sOHM).index());
     }
 
@@ -286,7 +282,7 @@ contract TycheYieldDirector is ERC20 {
     function _fromAgnostic(uint _amount) internal view returns ( uint ) {
         return _amount
             * (IsOHM(sOHM).index())
-            / (10 ** decimals());
+            / (10 ** ERC20(sOHM).decimals());
     }
 
     /**
@@ -299,6 +295,6 @@ contract TycheYieldDirector is ERC20 {
     function _fromAgnosticAtIndex(uint _amount, uint _index) internal view returns ( uint ) {
         return _amount
             * _index
-            / (10 ** decimals());
+            / (10 ** ERC20(sOHM).decimals());
     }
 }
