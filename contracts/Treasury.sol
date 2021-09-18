@@ -101,53 +101,89 @@ library Address {
     }
 }
 
-interface IOwnable {
-  function manager() external view returns (address);
-
-  function renounceManagement() external;
+interface IQueueable {
+  function queuer() external view returns (address);
   
-  function pushManagement( address newOwner_ ) external;
+  function pushQueuer( address newOwner_ ) external;
   
-  function pullManagement() external;
+  function pullQueuer() external;
 }
 
-contract Ownable is IOwnable {
+contract Queueable is IQueueable {
 
-    address internal _owner;
-    address internal _newOwner;
+    address internal _queuer;
+    address internal _newQueuer;
 
-    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
-    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+    event QueuerPushed(address indexed previousQueuer, address indexed newQueuer );
+    event QueuerPulled(address indexed previousQueuer, address indexed newQueuer );
 
     constructor () {
-        _owner = msg.sender;
-        emit OwnershipPushed( address(0), _owner );
+        _queuer = msg.sender;
+        emit QueuerPushed( address(0), _queuer );
     }
 
-    function manager() public view override returns (address) {
-        return _owner;
+    function queuer() public view override returns (address) {
+        return _queuer;
     }
 
-    modifier onlyManager() {
-        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+    modifier onlyQueuer() {
+        require( _queuer == msg.sender, "Ownable: caller is not the owner" );
         _;
     }
 
-    function renounceManagement() public virtual override onlyManager() {
-        emit OwnershipPushed( _owner, address(0) );
-        _owner = address(0);
-    }
-
-    function pushManagement( address newOwner_ ) public virtual override onlyManager() {
-        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipPushed( _owner, newOwner_ );
-        _newOwner = newOwner_;
+    function pushQueuer( address newQueuer_ ) public virtual override onlyQueuer() {
+        require( newQueuer_ != address(0), "Ownable: new owner is the zero address");
+        emit QueuerPushed( _queuer, newQueuer_ );
+        _newQueuer = newQueuer_;
     }
     
-    function pullManagement() public virtual override {
-        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
-        emit OwnershipPulled( _owner, _newOwner );
-        _owner = _newOwner;
+    function pullQueuer() public virtual override {
+        require( msg.sender == _newQueuer, "Ownable: must be new owner to pull");
+        emit QueuerPulled( _queuer, _newQueuer );
+        _queuer = _newQueuer;
+    }
+}
+
+interface IExecutable {
+  function executor() external view returns (address);
+  
+  function pushExecutor( address newExecutor_ ) external;
+  
+  function pullExecutor() external;
+}
+
+contract Executable is IExecutable {
+
+    address internal _executor;
+    address internal _newExecutor;
+
+    event ExecutorPushed(address indexed previousExecutor, address indexed newExecutor );
+    event ExecutorPulled(address indexed previousExecutor, address indexed newExecutor );
+
+    constructor () {
+        _executor = msg.sender;
+        emit ExecutorPushed( address(0), _executor );
+    }
+
+    function executor() public view override returns (address) {
+        return _executor;
+    }
+
+    modifier onlyExecutor() {
+        require( _executor == msg.sender, "Ownable: caller is not the owner" );
+        _;
+    }
+
+    function pushExecutor( address newExecutor_ ) public virtual override onlyExecutor() {
+        require( newExecutor_ != address(0), "Ownable: new owner is the zero address");
+        emit ExecutorPushed( _executor, newExecutor_ );
+        _newExecutor = newExecutor_;
+    }
+    
+    function pullExecutor() public virtual override {
+        require( msg.sender == _newExecutor, "Ownable: must be new owner to pull");
+        emit ExecutorPulled( _executor, _newExecutor );
+        _executor = _newExecutor;
     }
 }
 
@@ -194,7 +230,7 @@ interface IBondCalculator {
   function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
 }
 
-contract OlympusTreasury is Ownable {
+contract OlympusTreasury is Queueable, Executable {
 
     /* ========== DEPENDENCIES ========== */
 
@@ -279,7 +315,7 @@ contract OlympusTreasury is Ownable {
         @param _address address
         @return bool
      */
-    function queue( MANAGING _managing, address _address ) external onlyManager() returns ( bool ) {
+    function queue( MANAGING _managing, address _address ) external onlyQueuer() returns ( bool ) {
         require( _address != address(0) );
         if ( _managing == MANAGING.RESERVETOKEN ) { // 0
             reserveTokenQueue[ _address ] = block.number.add( blocksNeededForQueue );
@@ -302,7 +338,7 @@ contract OlympusTreasury is Ownable {
         @param _calculator address
         @return bool
      */
-    function toggle( MANAGING _managing, address _address, address _calculator ) external onlyManager() returns ( bool ) {
+    function toggle( MANAGING _managing, address _address, address _calculator ) external onlyExecutor() returns ( bool ) {
         require( _address != address(0) );
         bool result;
         if ( _managing == MANAGING.RESERVETOKEN ) { // 0

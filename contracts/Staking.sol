@@ -23,6 +23,14 @@ library SafeMath {
         return c;
     }
 
+    function add32(uint32 a, uint32 b) internal pure returns (uint32) {
+        uint32 c = a + b;
+        require(c >= a, "SafeMath: addition overflow");
+
+        return c;
+    }
+
+
     /**
      * @dev Returns the subtraction of two unsigned integers, reverting on
      * overflow (when the result is negative).
@@ -545,7 +553,8 @@ contract OlympusStaking is Governable {
 
     /* ========== DEPENDENCIES ========== */
 
-    using SafeMath for uint256;
+    using SafeMath for uint;
+    using SafeMath for uint32;
     using SafeERC20 for IERC20;
     using SafeERC20 for IsOHM;
 
@@ -554,9 +563,9 @@ contract OlympusStaking is Governable {
     /* ========== DATA STRUCTURES ========== */
 
     struct Epoch {
-        uint length;
+        uint32 length;
         uint number;
-        uint endBlock;
+        uint32 endTime;
         uint distribute;
     }
 
@@ -567,7 +576,7 @@ contract OlympusStaking is Governable {
         bool lock; // prevents malicious delays
     }
 
-    enum CONTRACTS { DISTRIBUTOR, WARMUP, LOCKER }
+    enum CONTRACTS { DISTRIBUTOR, WARMUP }
 
 
 
@@ -592,9 +601,9 @@ contract OlympusStaking is Governable {
     constructor ( 
         address _OHM, 
         address _sOHM, 
-        uint _epochLength,
+        uint32 _epochLength,
         uint _firstEpochNumber,
-        uint _firstEpochBlock
+        uint32 _firstEpochTime
     ) {
         require( _OHM != address(0) );
         OHM = IERC20( _OHM );
@@ -604,7 +613,7 @@ contract OlympusStaking is Governable {
         epoch = Epoch({
             length: _epochLength,
             number: _firstEpochNumber,
-            endBlock: _firstEpochBlock,
+            endTime: _firstEpochTime,
             distribute: 0
         });
     }
@@ -687,10 +696,10 @@ contract OlympusStaking is Governable {
         @notice trigger rebase if epoch over
      */
     function rebase() public {
-        if( epoch.endBlock <= block.number ) {
+        if( epoch.endTime <= block.timestamp ) {
             sOHM.rebase( epoch.distribute, epoch.number );
 
-            epoch.endBlock = epoch.endBlock.add( epoch.length );
+            epoch.endTime = epoch.endTime.add32( epoch.length );
             epoch.number++;
             
             if ( distributor != address(0) ) {
