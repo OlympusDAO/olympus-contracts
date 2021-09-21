@@ -1,28 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity ^0.7.5;
 
 import "./types/ERC20.sol";
 import "./libraries/SafeERC20.sol";
 import "./types/Ownable.sol";
 
-interface IsOHM {
-    function rebase( uint256 ohmProfit_, uint epoch_) external returns (uint256);
-
-    function circulatingSupply() external view returns (uint256);
-
-    function balanceOf(address who) external view returns (uint256);
-
-    function gonsForBalance( uint amount ) external view returns ( uint );
-
-    function balanceForGons( uint gons ) external view returns ( uint );
-    
-    function index() external view returns ( uint );
-}
-
-interface IStaking {
-    function stake( uint _amount, address _recipient ) external returns ( bool );
-    function claim( address _recipient ) external;
-}
+import "./interfaces/IsOHM.sol";
 
 /**
     @title TycheYieldDirector 
