@@ -1,7 +1,11 @@
 const { ethers, waffle } = require("hardhat")
-const { expect } = require("chai");
+const chai = require("chai");
+const { FakeContract, smock } = require("@defi-wonderland/smock");
 
 const { provider, deployContract } = waffle;
+const { expect } = chai;
+
+chai.use(smock.matchers);
 
 describe('TycheYieldDirector', async () => {
 
@@ -48,6 +52,8 @@ describe('TycheYieldDirector', async () => {
         
         //owner = await ethers.getSigner("0x763a641383007870ae96067818f1649e5586f6de")
 
+        erc20Factory = await ethers.getContractFactory('MockERC20');
+
         stakingFactory = await ethers.getContractFactory('OlympusStaking');
         ohmFactory = await ethers.getContractFactory('OlympusERC20Token');
         sOhmFactory = await ethers.getContractFactory('sOlympus');
@@ -60,6 +66,9 @@ describe('TycheYieldDirector', async () => {
     })
 
     beforeEach(async function() {
+        mockDai = await smock.fake(erc20Factory);
+        mockLp = await smock.fake(erc20Factory);
+
         ohm = await ohmFactory.deploy();
         //ohm = await ohmFactory.attach("0x383518188C0C6d7730D91b2c03a03C837814a899");
         //await ohm.transferOwnership(deployer);
@@ -69,20 +78,21 @@ describe('TycheYieldDirector', async () => {
         stakingHelper = await stakingHelperFactory.deploy(staking.address, ohm.address);
         treasury = await treasuryFactory.deploy(
           ohm.address,
-          "0x6b175474e89094c44da98b954eedeac495271d0f",
-          "0x34d7d7aaf50ad4944b70b320acb24c95fa2def7c",
+          mockDai.address,
+          mockLp.address,
           "1"
         );
-        //distributor = await distributorFactory.deploy(treasury.address, ohm.address, "2200", "1");
+        distributor = await distributorFactory.deploy(treasury.address, ohm.address, "2200", "1");
+        warmup = warmupFactory.deploy();
         tyche = await tycheFactory.deploy(ohm.address, sOhm.address);
 
         // Setup for each component
         ohm.setVault(deployer.address)
         sOhm.initialize(staking.address);
 
-        // Set distributor, warmup, and locker
+        // Set distributor, warmup, and locker for staking contract
         //staking.setContract("0", distributor.address);
-        //staking.setContract("1", warmup.address);
+        staking.setContract("1", warmup.address);
     });
 
     it('should set token addresses correctly', async () => {

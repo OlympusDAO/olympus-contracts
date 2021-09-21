@@ -1,11 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.7.5;
+pragma solidity ^0.8.4;
 
-import "./types/ERC20.sol";
-import "./libraries/SafeERC20.sol";
-import "./types/Ownable.sol";
+//import "./types/ERC20.sol";
+//import "./types/Ownable.sol";
+//import "./libraries/SafeERC20.sol";
+//import "./libraries/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./interfaces/IsOHM.sol";
+//import "./interfaces/IsOHM.sol";
+
+interface IsOHM {
+    function rebase( uint256 ohmProfit_, uint epoch_) external returns (uint256);
+    function circulatingSupply() external view returns (uint256);
+    function balanceOf(address who) external view returns (uint256);
+    function gonsForBalance( uint amount ) external view returns ( uint );
+    function balanceForGons( uint gons ) external view returns ( uint );
+    function index() external view returns ( uint );
+}
 
 /**
     @title TycheYieldDirector 
@@ -18,6 +32,7 @@ import "./interfaces/IsOHM.sol";
  */
 contract TycheYieldDirector {
     using SafeERC20 for IERC20;
+    //using SafeMath for uint;
 
     //address public immutable staking;
     address public immutable OHM;
@@ -54,7 +69,6 @@ contract TycheYieldDirector {
         require(_sOHM != address(0));
         // TODO add governance address
 
-        //staking = _staking;
         OHM = _OHM;
         sOHM = _sOHM;
     }
