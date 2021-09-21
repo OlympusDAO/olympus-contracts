@@ -9,17 +9,6 @@ import "../interfaces/IERC20.sol";
 import "../interfaces/IsOHM.sol";
 import "../types/ERC20.sol";
 
-
-
-// TODO(zx): These staking interfaces are not consistent. 
-interface IStaking {
-    function stake( uint _amount, address _recipient ) external returns ( bool );
-
-    function unstake( uint _amount, address _recipient ) external returns ( bool );
-
-    function index() external view returns ( uint );
-}
-
 contract wOHM is IERC20 {
     /* ========== DEPENDENCIES ========== */
 
