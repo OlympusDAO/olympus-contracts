@@ -636,24 +636,24 @@ contract OlympusBondDepository is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    IERC20 immutable OHM; // token given as payment for bond
-    IERC20 immutable principal; // token used to create bond
-    ITreasury immutable treasury; // mints OHM when receives principal
+    IERC20 immutable OHM;           // token given as payment for bond
+    IERC20 immutable principal;     // token used to create bond
+    ITreasury immutable treasury;   // mints OHM when receives principal
 
-    bool public immutable isLiquidityBond; // LP and Reserve bonds are treated slightly different
-    address public immutable bondCalculator; // calculates value of LP tokens
+    bool public immutable isLiquidityBond;      // LP and Reserve bonds are treated slightly different
+    address public immutable bondCalculator;    // calculates value of LP tokens
 
-    address public staking; // to auto-stake payout
-    address public stakingHelper; // to stake and claim if no staking warmup
+    address public staking;         // to auto-stake payout
+    address public stakingHelper;   // to stake and claim if no staking warmup
     bool public useHelper;
 
-    Terms public terms; // stores terms for new bonds
-    Adjust public adjustment; // stores adjustment to BCV data
+    Terms public terms;         // stores terms for new bonds
+    Adjust public adjustment;   // stores adjustment to BCV data
 
     mapping( address => Bond ) public bondInfo; // stores bond information for depositors
 
-    uint public totalDebt; // total value of outstanding bonds; used for pricing
-    uint32 public lastDecay; // reference block for debt decay
+    uint public totalDebt;      // total value of outstanding bonds; used for pricing
+    uint32 public lastDecay;    // reference block for debt decay
     
     uint public immutable fixedSupply;
 
@@ -700,6 +700,8 @@ contract OlympusBondDepository is Ownable {
         address _principal,
         address _treasury, 
         address _bondCalculator,
+        address _staking, 
+        address _stakingHelper,
         uint _fixedSupply
     ) {
         require( _OHM != address(0) );
@@ -708,6 +710,10 @@ contract OlympusBondDepository is Ownable {
         principal = IERC20( _principal );
         require( _treasury != address(0) );
         treasury = ITreasury( _treasury );
+        require( _staking != address(0) );
+        staking = _staking;
+        require( _stakingHelper != address(0) );
+        stakingHelper = _stakingHelper;
         // bondCalculator should be address(0) if not LP bond
         bondCalculator = _bondCalculator;
         isLiquidityBond = ( _bondCalculator != address(0) );
