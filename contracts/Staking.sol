@@ -627,7 +627,7 @@ contract OlympusStaking is Governable {
         @param _amount uint
         @param _claim bool
      */
-    function stake( uint _amount, address _recipient, bool _claim ) external {
+    function stake( uint _amount, address _recipient, bool _claim ) external returns ( uint agnostic_ ) {
         rebase();
         
         OHM.safeTransferFrom( msg.sender, address(this), _amount );
@@ -647,6 +647,7 @@ contract OlympusStaking is Governable {
             
             sOHM.safeTransfer( warmupContract, _amount );
         }
+        return getAgnosticBalance( _amount );
     }
 
     /**
