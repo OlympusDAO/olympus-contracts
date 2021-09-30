@@ -12,6 +12,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 //import "./interfaces/IsOHM.sol";
 
+import "hardhat/console.sol";
+
 interface IsOHM {
     function rebase( uint256 ohmProfit_, uint epoch_) external returns (uint256);
     function circulatingSupply() external view returns (uint256);
@@ -87,6 +89,8 @@ contract TycheYieldDirector {
         require(_recipient != address(0), "Invalid recipient address");
         require(IERC20(sOHM).balanceOf(msg.sender) >= _amount, "Not enough sOHM");
 
+        console.log(_amount);
+
         // Transfer sOHM to this contract
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -106,6 +110,8 @@ contract TycheYieldDirector {
         // Add to receivers balance as agnostic value and debt as flat value
         recipientInfo[_recipient].agnosticAmount += _toAgnostic(_amount);
         recipientInfo[_recipient].totalDebt += _amount;
+        console.log(_toAgnostic(_amount));
+        console.log(_amount);
     }
 
     /**

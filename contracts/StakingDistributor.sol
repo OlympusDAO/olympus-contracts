@@ -11,8 +11,6 @@ import "./interfaces/ITreasury.sol";
 import "./types/Governable.sol";
 import "./types/Guardable.sol";
 
-import "hardhat/console.sol";
-
 contract Distributor is Governable, Guardable {
 
     /* ========== DEPENDENCIES ========== */
@@ -68,34 +66,23 @@ contract Distributor is Governable, Guardable {
     /**
         @notice send epoch reward to staking contract
      */
-    function distribute() external {
-        console.log("IN DISTRIBUTE");
-        console.log(nextEpochBlock);
-
+    // TODO remove returns when done testing. Hardhat says function returns data (it shouldn't)
+    function distribute() external returns (bool) {
         if ( nextEpochBlock <= block.number ) {
-            console.log("INSIDE IF");
             nextEpochBlock = nextEpochBlock.add( epochLength ); // set next epoch block
 
             // distribute rewards to each recipient
-            console.log("THIS BREAKS");
-            console.log(info.length);
             for ( uint i = 0; i < info.length; i++ ) {
                 if ( info[ i ].rate > 0 ) {
-                    console.log("CALL TREASURY MINTREWARDS");
-                    console.log(info[i].rate);
-                    console.log(nextRewardAt( info[ i ].rate ));
-                    
                     treasury.mintRewards( // mint and send from treasury
                         info[ i ].recipient, 
                         nextRewardAt( info[ i ].rate ) 
                     );
-                    console.log("CALL ADJUST");
                     adjust( i ); // check for adjustment
-                    console.log("done");
                 }
             }
         }
-        console.log("done done");
+        return true;
     }
     
     
@@ -132,7 +119,6 @@ contract Distributor is Governable, Guardable {
         @return uint
      */
     function nextRewardAt( uint _rate ) public view returns ( uint ) {
-        console.log("calling next reward at");
         return OHM.totalSupply().mul( _rate ).div( 1000000 );
     }
 

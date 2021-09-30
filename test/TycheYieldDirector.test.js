@@ -50,7 +50,6 @@ describe('TycheYieldDirector', async () => {
     beforeEach(async function() {
         //dai = await smock.fake(erc20Factory);
         //lpToken = await smock.fake(erc20Factory);
-        console.log("FAKLJRFKLA")
         dai = await erc20Factory.deploy(0);
         lpToken = await erc20Factory.deploy(0);
 
@@ -106,8 +105,13 @@ describe('TycheYieldDirector', async () => {
         // and 8,400,000 are in treasury as excesss reserves
         await treasury.deposit(deployer.address, '9000000000000000000000000', dai.address, '8400000000000000');
 
+        // Add staking as recipient of distributor with a test reward rate
         await distributor.addRecipient(staking.address, initialRewardRate);
     });
+
+    beforeEach(async () => {
+
+    })
 
     it('should set token addresses correctly', async () => {
         await tyche.deployed();
@@ -117,21 +121,37 @@ describe('TycheYieldDirector', async () => {
     });
 
     it('should deposit tokens to recipient correctly', async () => {
-        // Just get to non-zero block number
-        //mineBlocks(1);
-
         expect(await ohm.balanceOf(deployer.address)).to.equal("600000000000000");
 
-        //await ohm.approve(stakingHelper.address, "2000");
-        //await stakingHelper.stake("1000");
+        // Get sOHM in deployer wallet
+        const sohmAmount = "1000"
+        await ohm.approve(staking.address, sohmAmount);
+        await staking.stake(sohmAmount, deployer.address, true);
 
-        console.log("approve")
-        await ohm.approve(staking.address, "10000");
-        await staking.stake("1000", deployer.address, true);
+        expect(await sOhm.balanceOf(deployer.address)).to.equal(sohmAmount);
 
-        //await tyche.deposit("10", bob.address);
+        // Deposit sOHM into Tyche and donate to Bob
+        const principal = "100.1";
+        await sOhm.approve(tyche.address, largeApproval);
+        await tyche.deposit(principal, bob.address);
 
-        //await expect(tyche.donationInfo[alice.address][0].recipient).is.equal(bob.address);
+        // Verify donor info
+        const donationInfo = await tyche.donationInfo(deployer.address, "0");
+        await expect(donationInfo.recipient).is.equal(bob.address);
+        await expect(donationInfo.amount).is.equal(principal);
+
+        // Verify recipient data
+        const recipientInfo = await tyche.recipientInfo(bob.address);
+
+        await expect(recipientInfo.totalDebt).is.equal(principal);
+
+        const index = await sOhm.index();
+        console.log("INDEX IS " + index);
+        await expect(recipientInfo.agnosticAmount).is.equal(principal / index);
+        //await expect(recipientInfo.indexAtLastRedeem).is.equal("0");
     });
  
+    it('should properly donate yield', async () => {
+
+    });
 });

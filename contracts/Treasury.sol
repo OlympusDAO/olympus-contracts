@@ -12,8 +12,6 @@ import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/IERC20Metadata.sol";
 import "./interfaces/IOHMERC20.sol";
 
-import "hardhat/console.sol";
-
 contract OlympusTreasury is Governable, Guardable {
 
     /* ========== DEPENDENCIES ========== */
@@ -247,14 +245,10 @@ contract OlympusTreasury is Governable, Guardable {
         @notice send epoch reward to staking contract
      */
     function mintRewards( address _recipient, uint _amount ) external {
-        console.log("MINT REWARDS");
         require( permissions[ STATUS.REWARDMANAGER ][ msg.sender ], "Not approved" );
-        console.log("APPROVAL WORKED");
         require( _amount <= excessReserves(), "Insufficient reserves" );
 
-        console.log("wtffff 1");
         OHM.mint( _recipient, _amount );
-        console.log("wtffff 2");
 
         emit RewardsMinted( msg.sender, _recipient, _amount );
     } 
@@ -368,7 +362,6 @@ contract OlympusTreasury is Governable, Guardable {
         @return uint
      */
     function excessReserves() public view returns ( uint ) {
-        console.log("BREAKS HERE HUH");
         return totalReserves.sub( OHM.totalSupply().sub( totalDebt ) );
     }
 

@@ -12,8 +12,6 @@ import "./interfaces/IDistributor.sol";
 
 import "./types/Governable.sol";
 
-import "hardhat/console.sol";
-
 contract OlympusStaking is Governable {
 
     /* ========== DEPENDENCIES ========== */
@@ -96,7 +94,6 @@ contract OlympusStaking is Governable {
         @param _claim bool
      */
     function stake( uint _amount, address _recipient, bool _claim ) external {
-        console.log("WTF 1"); // TODO
         rebase();
         
         OHM.safeTransferFrom( msg.sender, address(this), _amount );
@@ -165,28 +162,17 @@ contract OlympusStaking is Governable {
         @notice trigger rebase if epoch over
      */
     function rebase() public {
-        console.log("WTF"); // TODO
-        console.log(epoch.endBlock);
-        console.log(block.number);
-
         if( epoch.endBlock <= block.number ) {
-            console.log("WE'RE IN");
-
             sOHM.safeTransfer( msg.sender, rebate );
 
             sOHM.rebase( epoch.distribute, epoch.number );
 
             epoch.endBlock = epoch.endBlock.add( epoch.length );
             epoch.number++;
-
-            console.log("CHECKPOINT 1");
-            console.log(distributor);
             
             if ( distributor != address(0) ) {
                 IDistributor( distributor ).distribute();
             }
-
-            console.log("CHECKPOINT 2");
 
             uint balance = contractBalance();
             uint staked = IsOHM( sOHM ).circulatingSupply();
