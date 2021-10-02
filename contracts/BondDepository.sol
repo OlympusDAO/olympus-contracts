@@ -24,10 +24,8 @@ contract OlympusBondDepository is Governable, Guardable {
 
     /* ======== EVENTS ======== */
 
-    event USDPriceChanged( uint before, uint current );
-    event InternalPriceChanged( uint before, uint current );
-    event DebtRatioChanged( uint before, uint current, uint stdBefore, uint stdCurrent );
-    event ControlVariableAdjustment( uint initialBCV, uint newBCV, uint adjustment, bool addition );
+    event beforeBond( uint index, uint price, uint internalPrice, uint debtRatio );
+    event afterBond( uint index, uint price, uint internalPrice, uint debtRatio );
 
 
 
@@ -69,15 +67,13 @@ contract OlympusBondDepository is Governable, Guardable {
 
     /* ======== STATE VARIABLES ======== */
 
-    IERC20 immutable OHM; // token given as payment for bond
-    ITreasury immutable treasury; // mints OHM when receives principal
-    address public immutable DAO; // receives profit share from bond
+    mapping( uint => BondType ) public bonds;
+    address[] public BIDs; // bond IDs
 
-    mapping( address => BondType ) bonds; // query by principal address
+    ITeller public teller; // handles payment
 
-    address[] public principals; // for viewing
-
-    ITeller teller; // pays bonders
+    ITreasury immutable treasury;
+    IERC20 immutable OHM;
 
 
 
@@ -85,15 +81,12 @@ contract OlympusBondDepository is Governable, Guardable {
 
     constructor ( 
         address _OHM,
-        address _treasury, 
-        address _DAO
+        address _treasury
     ) {
         require( _OHM != address(0) );
         OHM = IERC20( _OHM );
         require( _treasury != address(0) );
         treasury = ITreasury( _treasury );
-        require( _DAO != address(0) );
-        DAO = _DAO;
     }
 
 
@@ -101,16 +94,16 @@ contract OlympusBondDepository is Governable, Guardable {
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     *  @notice initializes bond parameters
-     *  @param _principal address
-     *  @param _calculator address
-     *  @param _controlVariable uint
-     *  @param _vestingTerm uint
-     *  @param _minimumPrice uint
-     *  @param _maxPayout uint
-     *  @param _fee uint
-     *  @param _maxDebt uint
-     *  @param _initialDebt uint
+     * @notice initializes bond parameters
+     * @param _principal address
+     * @param _calculator address
+     * @param _controlVariable uint
+     * @param _vestingTerm uint
+     * @param _minimumPrice uint
+     * @param _maxPayout uint
+     * @param _fee uint
+     * @param _maxDebt uint
+     * @param _initialDebt uint
      */
     function addBondType( 
         address _principal,
@@ -136,7 +129,7 @@ contract OlympusBondDepository is Governable, Guardable {
             maxDebt: _maxDebt
         });
 
-        bonds[ _principal ] = BondType({
+        bonds[ BIDs.length ] = BondType({
             principal: IERC20( _principal ),
             calculator: IBondingCalculator( _calculator ),
             isLiquidityBond: ( _calculator != address(0) ),
@@ -147,35 +140,37 @@ contract OlympusBondDepository is Governable, Guardable {
             lastDecay: block.number
         });
 
-        principals.push( _principal );
+        BIDs.push( BIDs.length );
     }
 
     enum PARAMETER { VESTING, PAYOUT, FEE, DEBT }
     /**
-     *  @notice set parameters for new bonds
-     *  @param _parameter PARAMETER
-     *  @param _input uint
+     * @notice set parameters for new bonds
+     * @param _BID uint
+     * @param _parameter PARAMETER
+     * @param _input uint
      */
-    function setBondTerms ( address _principal, PARAMETER _parameter, uint _input ) external onlyGovernor() {
+    function setBondTerms ( uint _BID, PARAMETER _parameter, uint _input ) external onlyGovernor() {
         if ( _parameter == PARAMETER.VESTING ) { // 0
-            bonds[ _principal ].terms.vestingTerm = _input;
+            bonds[ _BID ].terms.vestingTerm = _input;
         } else if ( _parameter == PARAMETER.PAYOUT ) { // 1
-            bonds[ _principal ].terms.maxPayout = _input;
+            bonds[ _BID ].terms.maxPayout = _input;
         } else if ( _parameter == PARAMETER.FEE ) { // 2
-            bonds[ _principal ].terms.fee = _input;
+            bonds[ _BID ].terms.fee = _input;
         } else if ( _parameter == PARAMETER.DEBT ) { // 3
-            bonds[ _principal ].terms.maxDebt = _input;
+            bonds[ _BID ].terms.maxDebt = _input;
         }
     }
 
     /**
-     *  @notice set control variable adjustment
-     *  @param _addition bool
-     *  @param _delta uint
-     *  @param _blocks uint
+     * @notice set control variable adjustment
+     * @param _BID uint
+     * @param _addition bool
+     * @param _delta uint
+     * @param _blocks uint
      */
     function setAdjustment ( 
-        address _principal,
+        uint _BID,
         bool _addition,
         uint _delta,
         uint _blocks
@@ -184,7 +179,7 @@ contract OlympusBondDepository is Governable, Guardable {
         
         require( _blocks <= 3300, "Adjustment: Change too fast" ); // must take at least 4 hours
 
-        bonds[ _principal ].adjustment = Adjust({
+        bonds[ _BID ].adjustment = Adjust({
             add: _addition,
             delta: _delta,
             blocksToTarget: _blocks,
@@ -193,8 +188,8 @@ contract OlympusBondDepository is Governable, Guardable {
     }
 
     /**
-     *  @notice set teller contract
-     *  @param _teller address
+     * @notice set teller contract
+     * @param _teller address
      */
     function setTeller( address _teller ) external onlyGovernor() {
         require( address( teller ) == address(0) );
@@ -208,54 +203,50 @@ contract OlympusBondDepository is Governable, Guardable {
     /* ======== MUTABLE FUNCTIONS ======== */
 
     /**
-     *  @notice deposit bond
-     *  @param _amount uint
-     *  @param _maxPrice uint
-     *  @param _depositor address
-     *  @param _principal address
-     *  @return uint
+     * @notice deposit bond
+     * @param _amount uint
+     * @param _maxPrice uint
+     * @param _depositor address
+     * @param _BID uint
+     * @return uint
      */
     function deposit( 
         uint _amount, 
         uint _maxPrice,
         address _depositor,
-        address _principal
+        uint _BID
     ) external returns ( uint ) {
         require( _depositor != address(0), "Invalid address" );
-        
-        uint initialUSDPrice = bondPriceInUSD( _principal ); // Stored in bond info
-        uint initialInternalPrice = bondPrice( _principal );
-        uint initialDebtRatio = debtRatio( _principal );
-        uint initialStdDebtRatio = standardizedDebtRatio( _principal );
 
-        decayDebt( _principal );
-        BondType memory info = bonds[ _principal ];
+        BondType memory info = bonds[ _BID ];
+        address principal = address( info.principal );
+
+        emit beforeBond( _BID, bondPriceInUSD( principal ), bondPrice( principal ), debtRatio( principal ) ); 
+        
+        decayDebt( principal );
 
         require( info.totalDebt <= info.terms.maxDebt, "Max debt exceeded" );
         
-        require( _maxPrice >= _bondPrice( _principal ), "Slippage limit: more than max price" ); // slippage protection
+        require( _maxPrice >= _bondPrice( principal ), "Slippage limit: more than max price" ); // slippage protection
 
-        uint value = treasury.valueOf( _principal, _amount );
-        uint payout = payoutFor( value, _principal ); // payout to bonder is computed
+        uint value = treasury.valueOf( principal, _amount );
+        uint payout = payoutFor( value, principal ); // payout to bonder is computed
 
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
-        require( payout <= maxPayout( _principal ), "Bond too large"); // size protection because there is no slippage
+        require( payout <= maxPayout( principal ), "Bond too large"); // size protection because there is no slippage
 
-        if ( !info.isRiskAsset ) { // deposit principal, returning payout
-            IERC20( _principal ).approve( address( treasury ), _amount );
-            treasury.deposit( msg.sender, _amount, _principal, value.sub( payout ) );
+        if ( !info.isRiskAsset ) { // deposit principal
+            info.principal.approve( address( treasury ), _amount );
+            treasury.deposit( msg.sender, _amount, principal, value );
         } else { // send principal and mint payout (principal not minted against)
-            IERC20( _principal ).safeTransfer( address( treasury ), _amount );
-            treasury.mintRewards( address(this), payout );
+            info.principal.safeTransfer( address( treasury ), _amount );
         }
         
         // total debt is increased
-        bonds[ _principal ].totalDebt = info.totalDebt.add( value ); 
+        bonds[ _BID ].totalDebt = info.totalDebt.add( value ); 
 
         // price change event emitted        
-        emit InternalPriceChanged( initialInternalPrice, bondPrice( _principal ) );
-        emit USDPriceChanged( initialUSDPrice, bondPriceInUSD( _principal ) );
-        emit DebtRatioChanged( initialDebtRatio, debtRatio( _principal ), initialStdDebtRatio, standardizedDebtRatio( _principal ) );
+        emit afterBond( _BID, bondPriceInUSD( principal ), bondPrice( principal ), debtRatio( principal ) );
         
         // user info stored with teller
         teller.newBond( _depositor, payout, info.terms.vestingTerm );
@@ -269,30 +260,31 @@ contract OlympusBondDepository is Governable, Guardable {
     /* ======== INTERNAL FUNCTIONS ======== */
 
     /**
-     *  @notice make adjustment to control variable
+     * @notice make adjustment to control variable
+     * @param _BID uint
      */
-    function adjust( address _principal ) internal {
-        Adjust memory adjustment = bonds[ _principal ].adjustment;
+    function adjust( uint _BID ) internal {
+        Adjust memory adjustment = bonds[ _BID ].adjustment;
 
         if( adjustment.delta != 0 ) {
-            uint initial = bonds[ _principal ].terms.controlVariable;
+            uint initial = bonds[ _BID ].terms.controlVariable;
             uint blocksSinceLast = block.number.sub( adjustment.lastBlock );
-            uint change = changeBy( _principal );
+            uint change = changeBy( _BID );
 
-            bonds[ _principal ].adjustment.delta = adjustment.delta.sub( change );
-            bonds[ _principal ].adjustment.blocksToTarget = adjustment.blocksToTarget.sub( blocksSinceLast );
+            bonds[ _BID ].adjustment.delta = adjustment.delta.sub( change );
+            bonds[ _BID ].adjustment.blocksToTarget = adjustment.blocksToTarget.sub( blocksSinceLast );
 
             if ( adjustment.add ) {
-                bonds[ _principal ].terms.controlVariable = bonds[ _principal ].terms.controlVariable.add( change );
+                bonds[ _principal ].terms.controlVariable = bonds[ _BID ].terms.controlVariable.add( change );
             } else {
-                bonds[ _principal ].terms.controlVariable = bonds[ _principal ].terms.controlVariable.sub( change );
+                bonds[ _principal ].terms.controlVariable = bonds[ _BID ].terms.controlVariable.sub( change );
             }
 
-            bonds[ _principal ].adjustment.lastBlock = block.number;
+            bonds[ _BID ].adjustment.lastBlock = block.number;
 
             emit ControlVariableAdjustment( 
                 initial, 
-                bonds[ _principal ].terms.controlVariable, 
+                bonds[ _BID ].terms.controlVariable, 
                 change, 
                 adjustment.add 
             );
@@ -300,11 +292,12 @@ contract OlympusBondDepository is Governable, Guardable {
     }
 
     /**
-     *  @notice reduce total debt
+     * @notice reduce total debt
+     * @param _BID uint
      */
-    function decayDebt( address _principal ) internal {
-        bonds[ _principal ].totalDebt = bonds[ _principal ].totalDebt.sub( debtDecay( _principal ) );
-        bonds[ _principal ].lastDecay = block.number;
+    function decayDebt( uint _BID ) internal {
+        bonds[ _BID ].totalDebt = bonds[ _BID ].totalDebt.sub( debtDecay( _BID ) );
+        bonds[ _BID ].lastDecay = block.number;
     }
 
 
@@ -315,36 +308,40 @@ contract OlympusBondDepository is Governable, Guardable {
     // BOND TYPE INFO
 
     /**
-     *  @notice returns data about a bond type
-     *  @param _principal address
-     *  @return calculator_ address
-     *  @return isLiquidityBond_ bool
-     *  @return totalDebt_ uint
-     *  @return lastBondCreatedAt_ uint
+     * @notice returns data about a bond type
+     * @param _BID uint
+     * @return principal_ address
+     * @return calculator_ address
+     * @return isLiquidityBond_ bool
+     * @return totalDebt_ uint
+     * @return lastBondCreatedAt_ uint
      */
-    function bondTypeInfo( address _principal ) external view returns (
+    function bondTypeInfo( uint _BID ) external view returns (
+        address principal_,
         address calculator_,
         bool isLiquidityBond_,
         uint totalDebt_,
         uint lastBondCreatedAt_
     ) {
-        calculator_ = address( bonds[ _principal ].calculator );
-        isLiquidityBond_ = bonds[ _principal ].isLiquidityBond;
-        totalDebt_ = bonds[ _principal ].totalDebt;
-        lastBondCreatedAt_ = bonds[ _principal ].lastDecay;
+        BondType memory info = bonds[ _BID ];
+        principal_ = address( info.principal );
+        calculator_ = address( info.calculator );
+        isLiquidityBond_ = info.isLiquidityBond;
+        totalDebt_ = info.totalDebt;
+        lastBondCreatedAt_ = info.lastDecay;
     }
     
     /**
-     *  @notice returns terms for a bond type
-     *  @param _principal address
-     *  @return controlVariable_ uint
-     *  @return vestingTerm_ uint
-     *  @return minimumPrice_ uint
-     *  @return maxPayout_ uint
-     *  @return fee_ uint
-     *  @return maxDebt_ uint
+     * @notice returns terms for a bond type
+     * @param _BID uint
+     * @return controlVariable_ uint
+     * @return vestingTerm_ uint
+     * @return minimumPrice_ uint
+     * @return maxPayout_ uint
+     * @return fee_ uint
+     * @return maxDebt_ uint
      */
-    function bondTerms( address _principal ) external view returns (
+    function bondTerms( uint _BID ) external view returns (
         uint controlVariable_,
         uint vestingTerm_,
         uint minimumPrice_,
@@ -352,7 +349,7 @@ contract OlympusBondDepository is Governable, Guardable {
         uint fee_,
         uint maxDebt_
     ) {
-        Terms memory terms = bonds[ _principal ].terms;
+        Terms memory terms = bonds[ _BID ].terms;
         controlVariable_ = terms.controlVariable;
         vestingTerm_ = terms.vestingTerm;
         minimumPrice_ = terms.minimumPrice;
@@ -362,23 +359,25 @@ contract OlympusBondDepository is Governable, Guardable {
     }
     
     /**
-     *  @notice returns pending BCV adjustment for a bond type
-     *  @param _principal address
-     *  @return controlVariable_ uint
-     *  @return add_ bool
-     *  @return delta_ uint
-     *  @return blocksToTarget_ uint
-     *  @return lastBlock_ uint
+     * @notice returns pending BCV adjustment for a bond type
+     * @param _principal address
+     * @return controlVariable_ uint
+     * @return add_ bool
+     * @return delta_ uint
+     * @return blocksToTarget_ uint
+     * @return lastBlock_ uint
      */
-    function bondAdjustments( address _principal ) external view returns (
+    function bondAdjustment( uint _BID ) external view returns (
         uint controlVariable_,
         bool add_,
         uint delta_,
         uint blocksToTarget_,
         uint lastBlock_
     ) {
-        controlVariable_ = bonds[ _principal ].terms.controlVariable;
-        Adjust memory adjustment = bonds[ _principal ].adjustment;
+        BondType memory info = bonds[ _BID ];
+        Adjust memory adjustment = info.adjustment;
+
+        controlVariable_ = info.terms.controlVariable;
         add_ = adjustment.add;
         delta_ = adjustment.delta;
         blocksToTarget_ = adjustment.blocksToTarget;
@@ -389,49 +388,61 @@ contract OlympusBondDepository is Governable, Guardable {
     // PAYOUT
 
     /**
-     *  @notice determine maximum bond size
-     *  @return uint
+     * @notice determine maximum bond size
+     * @param _BID uint
+     * @return uint
      */
-    function maxPayout( address _principal ) public view returns ( uint ) {
-        return OHM.totalSupply().mul( bonds[ _principal ].terms.maxPayout ).div( 100000 );
+    function maxPayout( uint _BID ) public view returns ( uint ) {
+        return OHM.totalSupply().mul( bonds[ _BID ].terms.maxPayout ).div( 100000 );
     }
 
     /**
-     *  @notice calculate interest due for new bond
-     *  @param _value uint
-     *  @return uint
+     * @notice payout due for amount of treasury value
+     * @param _value uint
+     * @param _BID uint
+     * @return uint
      */
-    function payoutFor( uint _value, address _principal ) public view returns ( uint ) {
-        return FixedPoint.fraction( _value, bondPrice( _principal ) ).decode112with18().div( 1e16 );
+    function payoutFor( uint _value, uint _BID ) public view returns ( uint ) {
+        return FixedPoint.fraction( _value, bondPrice( _BID ) ).decode112with18().div( 1e16 );
+    }
+
+    /**
+     * @notice payout due for amount of token
+     * @param _amount uint
+     * @param _BID uint
+     */
+    function payoutForAmount( uint _amount, uint _BID ) public view returns ( uint ) {
+        address principal = address( bonds[ _BID ].principal );
+        return payoutFor( ITreasury.valueOf( principal, _amount), principal );
     }
 
 
     // BOND CONTROL VARIABLE
 
     /**
-     *  @notice returns current BCV for principal including adjustment
-     *  @param _principal address
-     *  @return BCV_ uint
+     * @notice returns current BCV for principal including adjustment
+     * @param _BID uint
+     * @return BCV_ uint
      */
-    function BCV( address _principal ) public view returns ( uint BCV_ ) {
-        Adjust memory adjustment = bonds[ _principal ].adjustment;
+    function BCV( uint _BID ) public view returns ( uint BCV_ ) {
+        Adjust memory info = bonds[ _BID ];
 
-        uint change = changeBy( _principal );
+        uint change = changeBy( _BID );
 
-        if ( adjustment.add ) {
-            BCV_ = bonds[ _principal ].terms.controlVariable.add( change );
+        if ( info.adjustment.add ) {
+            BCV_ = info.terms.controlVariable.add( change );
         } else {
-            BCV_ = bonds[ _principal ].terms.controlVariable.sub( change );
+            BCV_ = info.terms.controlVariable.sub( change );
         }
     }
 
     /**
      *  @notice amount to change BCV by
-     *  @param _principal address
+     *  @param _BID uint
      *  @return changeBy_ uint
      */
-    function changeBy( address _principal ) internal view returns ( uint changeBy_ ) {
-        Adjust memory adjustment = bonds[ _principal ].adjustment;
+    function changeBy( uint _BID ) internal view returns ( uint changeBy_ ) {
+        Adjust memory adjustment = bonds[ _BID ].adjustment;
 
         uint blocksSinceLast = block.number.sub( adjustment.lastBlock );
 
@@ -446,40 +457,43 @@ contract OlympusBondDepository is Governable, Guardable {
     // BOND PRICE
 
     /**
-     *  @notice calculate current bond premium
-     *  @return price_ uint
+     * @notice calculate current bond premium
+     * @param _BID uint
+     * @return price_ uint
      */
-    function bondPrice( address _principal ) public view returns ( uint price_ ) { 
-        price_ = BCV( _principal ).mul( debtRatio( _principal ) ).add( 1000000000 ).div( 1e7 );
-        if ( price_ < bonds[ _principal ].terms.minimumPrice ) {
-            price_ = bonds[ _principal ].terms.minimumPrice;
+    function bondPrice( address _BID ) public view returns ( uint price_ ) { 
+        price_ = BCV( _BID ).mul( debtRatio( _BID ) ).add( 1000000000 ).div( 1e7 );
+        if ( price_ < bonds[ _BID ].terms.minimumPrice ) {
+            price_ = bonds[ _BID ].terms.minimumPrice;
         }
     }
 
     /**
-     *  @notice calculate current bond price and remove floor if above
-     *  @return price_ uint
+     * @notice calculate current bond price and remove floor if above
+     * @return price_ uint
      */
-    function _bondPrice( address _principal ) internal returns ( uint price_ ) {
-        adjust( _principal );
-        price_ = bonds[ _principal ].terms.controlVariable.mul( debtRatio( _principal ) ).add( 1000000000 ).div( 1e7 );
-        if ( price_ < bonds[ _principal ].terms.minimumPrice ) {
-            price_ = bonds[ _principal ].terms.minimumPrice;        
-        } else if ( bonds[ _principal ].terms.minimumPrice != 0 ) {
-            bonds[ _principal ].terms.minimumPrice = 0;
+    function _bondPrice( address _BID ) internal returns ( uint price_ ) {
+        BondType memory info = bonds[ _BID ];
+        adjust( _BID );
+        price_ = info.terms.controlVariable.mul( debtRatio( _BID ) ).add( 1000000000 ).div( 1e7 );
+        if ( price_ < info.terms.minimumPrice ) {
+            price_ = info.terms.minimumPrice;        
+        } else if ( info.terms.minimumPrice != 0 ) {
+            bonds[ _BID ].terms.minimumPrice = 0;
         }
     }
 
     /**
-     *  @notice converts bond price to DAI value
-     *  @return price_ uint
+     * @notice converts bond price to DAI value
+     * @param _BID uint
+     * @return price_ uint
      */
-    function bondPriceInUSD( address _principal ) public view returns ( uint price_ ) {
-        BondType memory bond = bonds[ _principal ];
+    function bondPriceInUSD( uint _BID ) public view returns ( uint price_ ) {
+        BondType memory bond = bonds[ _BID ];
         if( bond.isLiquidityBond ) {
-            price_ = bondPrice( _principal ).mul( bond.calculator.markdown( address( bond.principal ) ) ).div( 100 );
+            price_ = bondPrice( _BID ).mul( bond.calculator.markdown( address( bond.principal ) ) ).div( 100 );
         } else {
-            price_ = bondPrice( _principal ).mul( 10 ** IERC20Metadata(address(bond.principal)).decimals() ).div( 100 );
+            price_ = bondPrice( _BID ).mul( 10 ** IERC20Metadata(address(bond.principal)).decimals() ).div( 100 );
         }
     }
 
@@ -487,59 +501,50 @@ contract OlympusBondDepository is Governable, Guardable {
     // DEBT
 
     /**
-     *  @notice calculate current ratio of debt to OHM supply
-     *  @return debtRatio_ uint
+     * @notice calculate current ratio of debt to OHM supply
+     * @param _BID uint
+     * @return debtRatio_ uint
      */
-    function debtRatio( address _principal ) public view returns ( uint debtRatio_ ) {   
+    function debtRatio( uint _BID ) public view returns ( uint debtRatio_ ) {   
         debtRatio_ = FixedPoint.fraction( 
-            currentDebt( _principal ).mul( 1e9 ), 
+            currentDebt( _BID ).mul( 1e9 ), 
             OHM.totalSupply()
         ).decode112with18().div( 1e18 );
     }
 
     /**
-     *  @notice debt ratio in same terms for reserve or liquidity bonds
-     *  @return uint
+     * @notice debt ratio in same terms for reserve or liquidity bonds
+     * @return uint
      */
-    function standardizedDebtRatio( address _principal ) public view returns ( uint ) {
-        BondType memory bond = bonds[ _principal ];
+    function standardizedDebtRatio( uint _BID ) public view returns ( uint ) {
+        BondType memory bond = bonds[ _BID ];
         if ( bond.isLiquidityBond ) {
-            return debtRatio( _principal ).mul( bond.calculator.markdown( address( bond.principal ) ) ).div( 1e9 );
+            return debtRatio( _BID ).mul( bond.calculator.markdown( address( bond.principal ) ) ).div( 1e9 );
         } else {
-            return debtRatio( _principal );
+            return debtRatio( _BID );
         }
     }
 
     /**
-     *  @notice calculate debt factoring in decay
-     *  @return uint
+     * @notice calculate debt factoring in decay
+     * @param _BID uint
+     * @return uint
      */
-    function currentDebt( address _principal ) public view returns ( uint ) {
-        return bonds[ _principal ].totalDebt.sub( debtDecay( _principal ) );
+    function currentDebt( uint _BID ) public view returns ( uint ) {
+        return bonds[ _BID ].totalDebt.sub( debtDecay( _BID ) );
     }
 
     /**
-     *  @notice amount to decay total debt by
-     *  @return decay_ uint
+     * @notice amount to decay total debt by
+     * @param _BID uint
+     * @return decay_ uint
      */
-    function debtDecay( address _principal ) public view returns ( uint decay_ ) {
-        BondType memory bond = bonds[ _principal ];
+    function debtDecay( uint _BID ) public view returns ( uint decay_ ) {
+        BondType memory bond = bonds[ _BID ];
         uint blocksSinceLast = block.number.sub( bond.lastDecay );
         decay_ = bond.totalDebt.mul( blocksSinceLast ).div( bond.terms.vestingTerm );
         if ( decay_ > bond.totalDebt ) {
             decay_ = bond.totalDebt;
         }
-    }
-
-
-
-    /* ======= AUXILLIARY ======= */
-
-    /**
-     *  @notice allow anyone to send lost tokens (except OHM) to the DAO
-     */
-    function recoverLostToken( address _token ) external {
-        require( _token != address( OHM ) );
-        IERC20( _token ).safeTransfer( DAO, IERC20( _token ).balanceOf( address(this) ) );
     }
 }
