@@ -91,33 +91,33 @@ describe('TycheYieldDirector', async () => {
         // TODO set locker
 
         // queue and toggle reward manager
-        await treasury.queue('8', distributor.address, zeroAddress);
+        await treasury.queue('8', distributor.address);
         await treasury.execute('0');
         // queue and toggle deployer reserve depositor
-        await treasury.queue('0', deployer.address, zeroAddress);
+        await treasury.queue('0', deployer.address);
         await treasury.execute('1');
         // queue and toggle liquidity depositor
-        await treasury.queue('4', deployer.address, zeroAddress);
+        await treasury.queue('4', deployer.address);
         await treasury.execute('2');
-
-        // TODO
-        // Deposit 9,000,000 DAI to treasury, 600,000 OHM gets minted to deployer
-        // and 8,400,000 are in treasury as excesss reserves
-
-        // Deposit 10,000 DAI to treasury, 10,000 OHM gets minted to deployer with 1000 as excess reserves
-        await treasury.deposit(deployer.address, '10000000000000000000000', dai.address, '9000000000000');
-
-        // Add staking as recipient of distributor with a test reward rate
-        await distributor.addRecipient(staking.address, initialRewardRate);
-
-        // Get sOHM in deployer wallet
-        const sohmAmount = "1000"
-        await ohm.approve(staking.address, sohmAmount);
-        await stakingHelper.stake(sohmAmount, deployer.address);
-        //await staking.stake(sohmAmount, deployer.address, true);
-
-        // Approve sOHM to be deposited to Tyche
-        await sOhm.approve(tyche.address, largeApproval);
+//
+//        // TODO
+//        // Deposit 9,000,000 DAI to treasury, 600,000 OHM gets minted to deployer
+//        // and 8,400,000 are in treasury as excesss reserves
+//
+//        // Deposit 10,000 DAI to treasury, 10,000 OHM gets minted to deployer with 1000 as excess reserves
+//        await treasury.deposit(deployer.address, '10000000000000000000000', dai.address, '9000000000000');
+//
+//        // Add staking as recipient of distributor with a test reward rate
+//        await distributor.addRecipient(staking.address, initialRewardRate);
+//
+//        // Get sOHM in deployer wallet
+//        const sohmAmount = "1000"
+//        await ohm.approve(staking.address, sohmAmount);
+//        await stakingHelper.stake(sohmAmount, deployer.address);
+//        //await staking.stake(sohmAmount, deployer.address, true);
+//
+//        // Approve sOHM to be deposited to Tyche
+//        await sOhm.approve(tyche.address, largeApproval);
     });
 
     it('should set token addresses correctly', async () => {
