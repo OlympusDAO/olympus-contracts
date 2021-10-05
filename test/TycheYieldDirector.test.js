@@ -13,6 +13,14 @@ const { parseUnits } = utils;
 
 describe('TycheYieldDirector', async () => {
 
+    // Reward rate of .1%
+    const initialRewardRate = "1000";
+    const largeApproval = '100000000000000000000000000000000';
+    const zeroAddress = '0x0000000000000000000000000000000000000000';
+    // Initial mint for Frax and DAI (10,000,000)
+    const initialMint = '10000000000000000000000000';
+
+    // TODO remove
     const mineBlocks = async (blockNumber_) => {
         while (blockNumber_ > 0) {
           blockNumber_--;
@@ -30,29 +38,18 @@ describe('TycheYieldDirector', async () => {
         });
     }
 
-    const calcIndex = async (index_, rate_, numRebases_) => index_ * ((1+rate_) ** numRebases_);
-
+    // TODO needs cleanup. use Bignumber.
     const triggerRebase = async (rewardRate_) => {
         const currentIndex = await sOhm.index() / 10 ** 9;
         //const rewardRate = BigNumber.from(rewardRate_);//.toNumber() / 10 ** 9;
         const rewardRate = rewardRate_ / 10 ** 6;
         //const nextIndex = currentIndex.add(currentIndex.mul(rewardRate))
         const nextIndex = currentIndex + (currentIndex * rewardRate)
-        console.log(currentIndex.toString())
-        console.log(rewardRate.toString())
-        console.log(nextIndex.toString())
 
         mineBlock();
         await staking.rebase();
         await expect(await sOhm.index()).is.equal(nextIndex * 10 ** 9);
     }
-
-    // Reward rate of .1%
-    const initialRewardRate = "1000";
-    const largeApproval = '100000000000000000000000000000000';
-    const zeroAddress = '0x0000000000000000000000000000000000000000';
-    // Initial mint for Frax and DAI (10,000,000)
-    const initialMint = '10000000000000000000000000';
 
 
     before(async () => {
@@ -186,7 +183,7 @@ describe('TycheYieldDirector', async () => {
     it('should properly donate yield', async () => {
         console.log("TEST REBASING");
 
-        triggerRebase(initialRewardRate);
+        //triggerRebase(initialRewardRate);
 
         // Deposit sOHM into Tyche and donate to Bob
         // TODO test with floating point number
@@ -202,5 +199,10 @@ describe('TycheYieldDirector', async () => {
         mineBlocks(1);
         await staking.rebase();
         await expect(await sOhm.index()).is.equal("10020010000");
+
+        triggerRebase(initialRewardRate);
+        triggerRebase(initialRewardRate);
+        triggerRebase(initialRewardRate);
+        console.log("DONE")
     });
 });
