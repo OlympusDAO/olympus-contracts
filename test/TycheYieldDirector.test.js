@@ -3,13 +3,19 @@ const chai = require("chai");
 //const { FakeContract, smock } = require("@defi-wonderland/smock");
 const { expect } = chai;
 
+const {
+    utils,
+} = require("ethers");
+
+const { parseUnits } = utils;
+
 //chai.use(smock.matchers);
 
 describe('TycheYieldDirector', async () => {
 
-    async function mineBlocks(blockNumber) {
-        while (blockNumber > 0) {
-          blockNumber--;
+    const mineBlocks = async (blockNumber_) => {
+        while (blockNumber_ > 0) {
+          blockNumber_--;
           await hre.network.provider.request({
             method: "evm_mine",
             params: [],
@@ -17,6 +23,31 @@ describe('TycheYieldDirector', async () => {
         }
     }
 
+    const mineBlock = async () => {
+        await hre.network.provider.request({
+          method: "evm_mine",
+          params: [],
+        });
+    }
+
+    const calcIndex = async (index_, rate_, numRebases_) => index_ * ((1+rate_) ** numRebases_);
+
+    const triggerRebase = async (rewardRate_) => {
+        const currentIndex = await sOhm.index() / 10 ** 9;
+        //const rewardRate = BigNumber.from(rewardRate_);//.toNumber() / 10 ** 9;
+        const rewardRate = rewardRate_ / 10 ** 6;
+        //const nextIndex = currentIndex.add(currentIndex.mul(rewardRate))
+        const nextIndex = currentIndex + (currentIndex * rewardRate)
+        console.log(currentIndex.toString())
+        console.log(rewardRate.toString())
+        console.log(nextIndex.toString())
+
+        mineBlock();
+        await staking.rebase();
+        await expect(await sOhm.index()).is.equal(nextIndex * 10 ** 9);
+    }
+
+    // Reward rate of .1%
     const initialRewardRate = "1000";
     const largeApproval = '100000000000000000000000000000000';
     const zeroAddress = '0x0000000000000000000000000000000000000000';
@@ -54,7 +85,8 @@ describe('TycheYieldDirector', async () => {
         // TODO use promise.all
         ohm = await ohmFactory.deploy();
         sOhm = await sOhmFactory.deploy();
-        staking = await stakingFactory.deploy(ohm.address, sOhm.address, "10", "1", "9");
+        // Set epoch length at 1 block
+        staking = await stakingFactory.deploy(ohm.address, sOhm.address, "1", "1", "9");
         stakingHelper = await stakingHelperFactory.deploy(staking.address, ohm.address);
         //treasury = await smock.fake(treasuryFactory);
         treasury = await treasuryFactory.deploy(
@@ -83,7 +115,8 @@ describe('TycheYieldDirector', async () => {
 
         // Initialization for sOHM contract. Set index to 1.
         await sOhm.initialize(staking.address);
-        await sOhm.setIndex("1"); // TODO Should this be something different?
+        // Set index to 10
+        await sOhm.setIndex("10000000000");
 
         // Set treasury, distributor, warmup, and locker for staking contract
         await staking.setContract("0", distributor.address);
@@ -104,14 +137,14 @@ describe('TycheYieldDirector', async () => {
         // Deposit 9,000,000 DAI to treasury, 600,000 OHM gets minted to deployer
         // and 8,400,000 are in treasury as excesss reserves
 
-        // Deposit 10,000 DAI to treasury, 10,000 OHM gets minted to deployer with 1000 as excess reserves
+        // Deposit 10,000 DAI to treasury, 1,000 OHM gets minted to deployer with 9000 as excess reserves (ready to be minted)
         await treasury.deposit('10000000000000000000000', dai.address, '9000000000000');
 
         // Add staking as recipient of distributor with a test reward rate
         await distributor.addRecipient(staking.address, initialRewardRate);
 
         // Get sOHM in deployer wallet
-        const sohmAmount = "1000"
+        const sohmAmount = "1000000000000"
         await ohm.approve(stakingHelper.address, sohmAmount);
         await stakingHelper.stake(sohmAmount);
         //await staking.stake(sohmAmount, deployer.address, true);
@@ -128,31 +161,23 @@ describe('TycheYieldDirector', async () => {
     });
 
     it('should deposit tokens to recipient correctly', async () => {
-        //expect(await ohm.balanceOf(deployer.address)).to.equal("600000000000000");
-
-        //// Get sOHM in deployer wallet
-        //const sohmAmount = "1000"
-        //await ohm.approve(staking.address, sohmAmount);
-        //await staking.stake(sohmAmount, deployer.address, true);
-
-        //expect(await sOhm.balanceOf(deployer.address)).to.equal(sohmAmount);
-
-        // Deposit sOHM into Tyche and donate to Bob
+        // Deposit 100 sOHM into Tyche and donate to Bob
         // TODO test with floating point number
-        const principal = "100";
+        const principal = "100000000000";
         await tyche.deposit(principal, bob.address);
 
         // Verify donor info
         const donationInfo = await tyche.donationInfo(deployer.address, "0");
         await expect(donationInfo.recipient).is.equal(bob.address);
-        await expect(donationInfo.amount).is.equal(principal);
+        await expect(donationInfo.amount).is.equal("100000000000"); // 10 * 10 ** 9
+        //await expect(donationInfo.amount).is.equal(principal);
 
         // Verify recipient data
         const recipientInfo = await tyche.recipientInfo(bob.address);
-        await expect(recipientInfo.totalDebt).is.equal(principal);
+        await expect(recipientInfo.totalDebt).is.equal("100000000000");
 
         const index = await sOhm.index();
-        await expect(recipientInfo.agnosticAmount).is.equal(principal / index);
+        await expect(recipientInfo.agnosticAmount).is.equal((principal / index) * 10 ** 9 );
         await expect(recipientInfo.indexAtLastRedeem).is.equal("0");
 
         // TODO rebase and test again
@@ -161,19 +186,21 @@ describe('TycheYieldDirector', async () => {
     it('should properly donate yield', async () => {
         console.log("TEST REBASING");
 
+        triggerRebase(initialRewardRate);
+
         // Deposit sOHM into Tyche and donate to Bob
         // TODO test with floating point number
         const principal = "100";
         await tyche.deposit(principal, bob.address);
 
-        await expect(await sOhm.index()).is.equal("1");
+        await expect(await sOhm.index()).is.equal("10000000000");
 
         mineBlocks(1);
         await staking.rebase();
-        await expect(await sOhm.index()).is.equal("1000001");
+        await expect(await sOhm.index()).is.equal("10010000000");
 
         mineBlocks(1);
         await staking.rebase();
-        await expect(await sOhm.index()).is.equal("2001001");
+        await expect(await sOhm.index()).is.equal("10020010000");
     });
 });

@@ -147,6 +147,7 @@ contract TycheYieldDirector {
         // Subtract agnostic amount and debt from recipient if they have not yet redeemed
         if(recipientInfo[_recipient].totalDebt > 0) {
             recipientInfo[_recipient].totalDebt -= _amount;
+            // TODO explain this
             recipientInfo[_recipient].agnosticAmount -= _toAgnostic(_amount);
         }
 
@@ -270,7 +271,7 @@ contract TycheYieldDirector {
      */
     function _toAgnostic(uint _amount) internal view returns ( uint ) {
         return _amount
-            //* (10 ** ERC20(sOHM).decimals())
+            * (10 ** ERC20(sOHM).decimals())
             / (IsOHM(sOHM).index());
     }
 
@@ -282,8 +283,8 @@ contract TycheYieldDirector {
      */
     function _fromAgnostic(uint _amount) internal view returns ( uint ) {
         return _amount
-            * (IsOHM(sOHM).index());
-            /// (10 ** ERC20(sOHM).decimals());
+            * (IsOHM(sOHM).index())
+            / (10 ** ERC20(sOHM).decimals());
     }
 
     /**
@@ -293,9 +294,9 @@ contract TycheYieldDirector {
 
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index
      */
-    function _fromAgnosticAtIndex(uint _amount, uint _index) internal pure returns ( uint ) {
+    function _fromAgnosticAtIndex(uint _amount, uint _index) internal view returns ( uint ) {
         return _amount
-            * _index;
-            /// (10 ** ERC20(sOHM).decimals());
+            * _index
+            / (10 ** ERC20(sOHM).decimals());
     }
 }
