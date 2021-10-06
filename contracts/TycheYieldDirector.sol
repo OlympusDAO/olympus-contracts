@@ -94,8 +94,8 @@ contract TycheYieldDirector {
 
         // Record donors's issued debt to recipient address
         DonationInfo[] storage info = donationInfo[msg.sender];
+        int recipientIndex = _getRecipientIndex(msg.sender, _recipient);
 
-        int recipientIndex = _getRecipientIndex(info, _recipient);
         if(recipientIndex == -1) {
             info.push(DonationInfo({
                 recipient: _recipient,
@@ -109,8 +109,7 @@ contract TycheYieldDirector {
         recipientInfo[_recipient].agnosticAmount += _toAgnostic(_amount);
         recipientInfo[_recipient].totalDebt += _amount;
 
-        //console.log(_toAgnostic(_amount));
-        //console.log(_amount);
+        // TODO add `Deposited` event
     }
 
     /**
@@ -118,7 +117,7 @@ contract TycheYieldDirector {
      */
     function withdrawableBalance(address _recipient) external view returns ( uint ) {
         DonationInfo[] memory donation = donationInfo[msg.sender];
-        int recipientIndex = _getRecipientIndex(donation, _recipient);
+        int recipientIndex = _getRecipientIndex(msg.sender, _recipient);
         require(recipientIndex > 0, "No donations to recipient");
 
         return donation[uint(recipientIndex)].amount;
@@ -128,12 +127,15 @@ contract TycheYieldDirector {
         @notice Withdraw donor's sOHM from vault and subtracts debt from recipient
         @param _amount Non-agnostic sOHM amount to withdraw
         @param _recipient Donee address
+        @dev note on withdrawal:
+            Agnostic value of _amount is different from when it was deposited. The remaining
+            amount is left with the recipient so they can keep receiving rebases on the remaining amount.
      */
     function withdraw(uint _amount, address _recipient) external {
         DonationInfo[] storage donations = donationInfo[msg.sender];
+        int recipientIndexSigned = _getRecipientIndex(msg.sender, _recipient);
 
-        int recipientIndexSigned = _getRecipientIndex(donations, _recipient);
-        require(recipientIndexSigned > 0, "No donations to recipient");
+        require(recipientIndexSigned >= 0, "No donations to recipient");
 
         uint recipientIndex = uint(recipientIndexSigned);
 
@@ -147,11 +149,14 @@ contract TycheYieldDirector {
         // Subtract agnostic amount and debt from recipient if they have not yet redeemed
         if(recipientInfo[_recipient].totalDebt > 0) {
             recipientInfo[_recipient].totalDebt -= _amount;
-            // TODO explain this
+            // Agnostic value of _amount is different from when it was deposited. The remaining
+            // amount is left with the recipient so they can keep receiving rebases on the remaining amount.
             recipientInfo[_recipient].agnosticAmount -= _toAgnostic(_amount);
         }
 
-        IERC20(sOHM).safeTransferFrom(address(this), msg.sender, _amount);
+        IERC20(sOHM).safeTransfer(msg.sender, _amount);
+
+        // TODO emit `Withdrawn` event
     }
 
 
@@ -177,7 +182,7 @@ contract TycheYieldDirector {
         // Delete donor's entire donations array
         delete donationInfo[msg.sender];
 
-        IERC20(sOHM).safeTransferFrom(address(this), msg.sender, total);
+        IERC20(sOHM).safeTransfer(msg.sender, total);
     }
 
     /**
@@ -242,11 +247,14 @@ contract TycheYieldDirector {
 
     /**
         @notice Get array index of a particular recipient in a donor's donationInfo array.
-        @param info Reference to sender's donationInfo array
+        @param _donor Donor address
         @param _recipient Recipient address to look for in array
         @return Array index of recipient address. If not present, return -1.
      */
-    function _getRecipientIndex(DonationInfo[] memory info, address _recipient) internal pure returns (int) {
+    //function _getRecipientIndex(DonationInfo[] memory info, address _recipient) internal pure returns (int) {
+    function _getRecipientIndex(address _donor, address _recipient) internal view returns (int) {
+        DonationInfo[] storage info = donationInfo[_donor];
+
         int existingIndex = -1;
         for (uint i = 0; i < info.length; i++) {
             if(info[i].recipient == _recipient) {

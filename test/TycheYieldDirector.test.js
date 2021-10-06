@@ -38,17 +38,21 @@ describe('TycheYieldDirector', async () => {
         });
     }
 
+    // Calculate index after some number of epochs. Takes principal and rebase rate.
+    // TODO verify this works
+    const calcIndex = (principal, rate, epochs) => principal * (1 + rate) ** epochs;
+
     // TODO needs cleanup. use Bignumber.
-    const triggerRebase = async (rewardRate_) => {
-        const currentIndex = await sOhm.index() / 10 ** 9;
-        //const rewardRate = BigNumber.from(rewardRate_);//.toNumber() / 10 ** 9;
-        const rewardRate = rewardRate_ / 10 ** 6;
-        //const nextIndex = currentIndex.add(currentIndex.mul(rewardRate))
-        const nextIndex = currentIndex + (currentIndex * rewardRate)
+    // Mine block and rebase. Returns the new index.
+    const triggerRebase = async () => {
+        //const currentIndex = await sOhm.index() / 10 ** 9;
+        //const rewardRate = initialRewardRate / 10 ** 6;
+        //const nextIndex = currentIndex + (currentIndex * rewardRate)
 
         mineBlock();
         await staking.rebase();
-        await expect(await sOhm.index()).is.equal(nextIndex * 10 ** 9);
+
+        return await sOhm.index();
     }
 
 
@@ -150,6 +154,19 @@ describe('TycheYieldDirector', async () => {
         await sOhm.approve(tyche.address, largeApproval);
     });
 
+    it('should rebase properly', async () => {
+        await expect(await sOhm.index()).is.equal("10000000000");
+
+        await triggerRebase();
+        await expect(await sOhm.index()).is.equal("10010000000");
+
+        await triggerRebase();
+        await expect(await sOhm.index()).is.equal("10020010000");
+
+        await triggerRebase();
+        await expect(await sOhm.index()).is.equal("10030030010");
+    });
+
     it('should set token addresses correctly', async () => {
         await tyche.deployed();
 
@@ -166,43 +183,67 @@ describe('TycheYieldDirector', async () => {
         // Verify donor info
         const donationInfo = await tyche.donationInfo(deployer.address, "0");
         await expect(donationInfo.recipient).is.equal(bob.address);
-        await expect(donationInfo.amount).is.equal("100000000000"); // 10 * 10 ** 9
+        await expect(donationInfo.amount).is.equal(principal); // 10 * 10 ** 9
         //await expect(donationInfo.amount).is.equal(principal);
 
         // Verify recipient data
         const recipientInfo = await tyche.recipientInfo(bob.address);
-        await expect(recipientInfo.totalDebt).is.equal("100000000000");
+        await expect(recipientInfo.totalDebt).is.equal(principal);
 
         const index = await sOhm.index();
         await expect(recipientInfo.agnosticAmount).is.equal((principal / index) * 10 ** 9 );
         await expect(recipientInfo.indexAtLastRedeem).is.equal("0");
 
-        // TODO rebase and test again
+        //const newIndex = await triggerRebase();
+        //await expect(recipientInfo.agnosticAmount).is.equal((principal / newIndex) * 10 ** 9 );
     });
+
+    // TODO test depositing to multiple addresses, then withdrawAll
  
-    it('should properly donate yield', async () => {
-        console.log("TEST REBASING");
-
-        //triggerRebase(initialRewardRate);
-
+    it('should withdraw correct amount of tokens before recipient redeems', async () => {
         // Deposit sOHM into Tyche and donate to Bob
         // TODO test with floating point number
-        const principal = "100";
+        const principal = "100000000000";
         await tyche.deposit(principal, bob.address);
 
-        await expect(await sOhm.index()).is.equal("10000000000");
+        //const recipientBeforeWithdraw = await tyche.recipientInfo(bob.address);
+        //await expect(recipientBeforeWithdraw.totalDebt).is.equal("100000000000");
+        const donationInfo = await tyche.donationInfo(deployer.address, "0");
+        await expect(donationInfo.recipient).is.equal(bob.address);
+        await expect(donationInfo.amount).is.equal(principal); // 10 * 10 ** 9
 
-        mineBlocks(1);
-        await staking.rebase();
+        // Test after 1 rebase
+        await triggerRebase();
         await expect(await sOhm.index()).is.equal("10010000000");
 
-        mineBlocks(1);
-        await staking.rebase();
-        await expect(await sOhm.index()).is.equal("10020010000");
+        await tyche.withdraw(principal, bob.address);
 
-        triggerRebase(initialRewardRate);
-        triggerRebase(initialRewardRate);
-        triggerRebase(initialRewardRate);
-        console.log("DONE")
+        // Verify donor and recipient data is properly subtracted
+        //await expect(await tyche.donationInfo(deployer.address, "0")).to.be.reverted;
+
+        const donationInfo2 = await tyche.donationInfo(deployer.address, "0");
+        await expect(donationInfo2.recipient).is.equal(bob.address);
+        await expect(donationInfo2.amount).is.equal(principal); // 10 * 10 ** 9
+
+        const recipientInfo = await tyche.recipientInfo(bob.address);
+        await expect(recipientInfo.totalDebt).is.equal("0");
+
+        //const index = await sOhm.index();
+        //await expect(recipientInfo.agnosticAmount).is.equal((principal / index) * 10 ** 9 );
+        //await expect(recipientInfo.indexAtLastRedeem).is.equal("0");
+        
     });
+
+    //it('should withdraw correct amount of tokens after recipient redeems', async () => {
+    //    // Deposit sOHM into Tyche and donate to Bob
+    //    const principal = "100";
+    //    await tyche.deposit(principal, bob.address);
+    //    
+    //    // TODO
+    //});
+
+    //it('should redeem proper amount after multiple deposit and withdrawals', async () => {
+    //    // TODO
+    //});
+
 });
