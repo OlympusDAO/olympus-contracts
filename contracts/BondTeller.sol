@@ -66,6 +66,10 @@ contract BondTeller {
 
     mapping( address => Bond[] ) public bonderInfo; // user data
 
+    mapping( uint => address ) public FIDs; // front end operator ID and address
+
+    uint public feReward;
+
 
 
     /* ========== CONSTRUCTOR ========== */
@@ -109,13 +113,16 @@ contract BondTeller {
         address _principal,
         uint _principalPaid,
         uint _payout, 
-        uint _vesting
+        uint _vesting,
+        uint _fid
     ) external onlyDepository() {
-        treasury.mintRewards( address(this), _payout );
+        treasury.mintRewards( address(this), _payout.add( feReward ) );
 
-        OHM.approve( staking, _payout ); // approve staking payout
+        OHM.approve( staking, _payout.add( feReward ) ); // approve staking payout
 
-        uint staked = IStaking( staking ).stake( _payout, address(this), true );
+        uint staked = IStaking( staking ).stake( _payout.add( feReward ), address(this), true );
+
+        sOHM.safeTransfer( FIDs[ _fid ], feReward );
 
         // store bond & stake payout
         bonderInfo[ _bonder ].push( Bond({ 
@@ -167,7 +174,21 @@ contract BondTeller {
         return dues;
     }
 
+    // create ID as front end operator
+    function addFID( uint _fid, address _address ) external {
+        require( FIDs[ _fid ] == address(0), "FID already mapped" );
+        FIDs[ _fid ] = _address;
+    }
 
+
+
+    /* ========== OWNABLE FUNCTIONS ========== */
+
+    function setFEReward( uint reward ) external {
+        require( msg.sender == policy, "Only policy" );
+
+        feReward = reward;
+    }
 
     /* ========== INTERNAL FUNCTIONS ========== */
 
