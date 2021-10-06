@@ -114,13 +114,13 @@ contract TycheYieldDirector {
 
     /**
         @notice Get withdrawable flat sOHM amount for specific recipient
+        TODO should this allow choosing donor (not default to msg.sender)?
      */
     function withdrawableBalance(address _recipient) external view returns ( uint ) {
-        DonationInfo[] memory donation = donationInfo[msg.sender];
         int recipientIndex = _getRecipientIndex(msg.sender, _recipient);
-        require(recipientIndex > 0, "No donations to recipient");
+        require(recipientIndex >= 0, "No donations to recipient");
 
-        return donation[uint(recipientIndex)].amount;
+        return donationInfo[msg.sender][uint(recipientIndex)].amount;
     }
 
     /**
@@ -183,6 +183,7 @@ contract TycheYieldDirector {
         delete donationInfo[msg.sender];
 
         IERC20(sOHM).safeTransfer(msg.sender, total);
+        // TODO emit `WithdrawAll` event
     }
 
     /**
@@ -205,7 +206,7 @@ contract TycheYieldDirector {
     ************************/
 
     /**
-        @notice Get redeemable flat sOHM balance of an address
+        @notice Get redeemable flat sOHM balance of a recipient address
      */
     function recipientBalance(address _who) public view returns (uint) {
         RecipientInfo memory recipient = recipientInfo[_who];
@@ -237,12 +238,12 @@ contract TycheYieldDirector {
         // Record index when recipient redeemed
         recipient.indexAtLastRedeem = IsOHM(sOHM).index();
 
-        // Transfer sOHM to recipient
         IERC20(sOHM).safeTransfer(msg.sender, redeemable);
+        // TODO emit `Redeem` 
     }
 
     /************************
-    * Conversion Functions
+    * Utility Functions
     ************************/
 
     /**
@@ -251,7 +252,6 @@ contract TycheYieldDirector {
         @param _recipient Recipient address to look for in array
         @return Array index of recipient address. If not present, return -1.
      */
-    //function _getRecipientIndex(DonationInfo[] memory info, address _recipient) internal pure returns (int) {
     function _getRecipientIndex(address _donor, address _recipient) internal view returns (int) {
         DonationInfo[] storage info = donationInfo[_donor];
 
@@ -265,12 +265,7 @@ contract TycheYieldDirector {
         return existingIndex;
     }
 
-    /************************
-    * Conversion Functions
-    ************************/
-
     // TODO These can be replaced with wsOHM contract functions
-
     /**
         @notice Convert flat sOHM value to agnostic value at current index
         @param _amount Non-agnostic value to convert from
