@@ -139,17 +139,15 @@ contract TycheYieldDirector {
 
         uint recipientIndex = uint(recipientIndexSigned);
 
-        // Subtract flat sOHM amount from donor's principal
         donations[recipientIndex].amount -= _amount;
 
-        // Delete recipient from donor info if donated amount is 0
         if(donations[recipientIndex].amount == 0)
             delete donations[recipientIndex];
 
         // Subtract agnostic amount and debt from recipient if they have not yet redeemed
         if(recipientInfo[_recipient].totalDebt > 0) {
             recipientInfo[_recipient].totalDebt -= _amount;
-            // Agnostic value of _amount is different from when it was deposited. The remaining
+            // NOTE: Agnostic value of _amount is different from when it was deposited. The remaining
             // amount is left with the recipient so they can keep receiving rebases on the remaining amount.
             recipientInfo[_recipient].agnosticAmount -= _toAgnostic(_amount);
         }
@@ -208,7 +206,7 @@ contract TycheYieldDirector {
     /**
         @notice Get redeemable flat sOHM balance of a recipient address
      */
-    function recipientBalance(address _who) public view returns (uint) {
+    function redeemableBalance(address _who) public view returns (uint) {
         RecipientInfo memory recipient = recipientInfo[_who];
 
         uint redeemable = _fromAgnostic(recipient.agnosticAmount)
@@ -229,7 +227,7 @@ contract TycheYieldDirector {
 
         require(recipient.totalDebt == 0, "No claimable balance");
 
-        uint redeemable = recipientBalance(msg.sender);
+        uint redeemable = redeemableBalance(msg.sender);
 
         // Clear out recipient balance
         recipient.totalDebt = 0;
@@ -248,8 +246,6 @@ contract TycheYieldDirector {
 
     /**
         @notice Get array index of a particular recipient in a donor's donationInfo array.
-        @param _donor Donor address
-        @param _recipient Recipient address to look for in array
         @return Array index of recipient address. If not present, return -1.
      */
     function _getRecipientIndex(address _donor, address _recipient) internal view returns (int) {
@@ -268,8 +264,6 @@ contract TycheYieldDirector {
     // TODO These can be replaced with wsOHM contract functions
     /**
         @notice Convert flat sOHM value to agnostic value at current index
-        @param _amount Non-agnostic value to convert from
-
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index
      */
     function _toAgnostic(uint _amount) internal view returns ( uint ) {
@@ -280,8 +274,6 @@ contract TycheYieldDirector {
 
     /**
         @notice Convert agnostic value at current index to flat sOHM value
-        @param _amount Agnostic value to convert from
-
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index
      */
     function _fromAgnostic(uint _amount) internal view returns ( uint ) {
@@ -292,9 +284,6 @@ contract TycheYieldDirector {
 
     /**
         @notice Convert flat sOHM value to agnostic value at a given index value
-        @param _amount Amount of sOHM to convert
-        @param _index Index used for conversion to agnostic value
-
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index
      */
     function _fromAgnosticAtIndex(uint _amount, uint _index) internal view returns ( uint ) {

@@ -217,7 +217,7 @@ describe('TycheYieldDirector', async () => {
         await expect(recipientInfo0.indexAtLastRedeem).is.equal("0");
 
         // Recipient should not have a balance yet (since no rebase has happened)
-        await expect(await tyche.recipientBalance(bob.address)).is.equal("0");
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal("0");
 
         // Test after 1 rebase
         await triggerRebase();
@@ -231,31 +231,35 @@ describe('TycheYieldDirector', async () => {
         await expect(recipientInfo1.totalDebt).is.equal(principal);
         await expect(recipientInfo1.indexAtLastRedeem).is.equal("0");
 
-        // Check if donated amount is correct after rebase. Should be .1 OHM.
-        const donatedAmount = "100000000";
-        await expect(await tyche.recipientBalance(bob.address)).is.equal(donatedAmount);
+        // Check if donated amount is correct after rebase.
+        const donatedAmount = "100000000"; // .1
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal(donatedAmount);
 
         await tyche.withdraw(principal, bob.address);
 
-        // Verify donor and recipient data is properly subtracted
-        const donationInfo2 = await tyche.donationInfo(deployer.address, "0");
-        await expect(donationInfo2.recipient).is.equal(ZERO_ADDRESS);
-        await expect(donationInfo2.amount).is.equal("0");
+        // Verify donor and recipient data is properly updated
+        const donationInfo1 = await tyche.donationInfo(deployer.address, "0");
+        await expect(donationInfo1.recipient).is.equal(ZERO_ADDRESS);
+        await expect(donationInfo1.amount).is.equal("0");
 
         const recipientInfo = await tyche.recipientInfo(bob.address);
         await expect(recipientInfo.totalDebt).is.equal("0");
 
-        // Check recipient's balance
-        await expect(await tyche.recipientBalance(bob.address)).is.equal(donatedAmount);
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal(donatedAmount);
+
+        await tyche.connect(bob).redeem();
+
+        await expect(await sOhm.balanceOf(bob.address)).is.equal(donatedAmount);
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal("0");
     });
 
-    //it('should withdraw correct amount of tokens after recipient redeems', async () => {
-    //    // Deposit sOHM into Tyche and donate to Bob
-    //    const principal = "100";
-    //    await tyche.deposit(principal, bob.address);
-    //    
-    //    // TODO
-    //});
+    it('should withdraw correct amount of tokens after recipient redeems', async () => {
+        // Deposit sOHM into Tyche and donate to Bob
+        const principal = "100";
+        await tyche.deposit(principal, bob.address);
+        
+        // TODO
+    });
 
     //it('should redeem proper amount after multiple deposit and withdrawals', async () => {
     //    // TODO
