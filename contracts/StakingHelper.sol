@@ -97,7 +97,3 @@ contract StakingHelper {
         IStaking( staking ).stake( _amount, msg.sender );
         IStaking( staking ).claim( msg.sender );
     }
-
-    // TODO to stake OHM and donate 
-    function stakeAndRedirect( uint _amount ) external {}
-}
