@@ -224,8 +224,7 @@ contract TycheYieldDirector {
      */
     function redeem() external {
         RecipientInfo storage recipient = recipientInfo[msg.sender];
-
-        require(recipient.totalDebt == 0, "No claimable balance");
+        require(recipient.agnosticAmount > 0, "No claimable balance");
 
         uint redeemable = redeemableBalance(msg.sender);
 

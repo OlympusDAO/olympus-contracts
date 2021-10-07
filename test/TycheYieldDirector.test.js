@@ -197,9 +197,7 @@ describe('TycheYieldDirector', async () => {
         //await expect(recipientInfo.agnosticAmount).is.equal((principal / newIndex) * 10 ** 9 );
     });
 
-    // TODO test depositing to multiple addresses, then withdrawAll
- 
-    it('should withdraw correct amount of tokens before recipient redeems', async () => {
+    it('should withdraw tokens', async () => {
         // Deposit 100 sOHM into Tyche and donate to Bob
         const principal = "100000000000"; // 100
         await tyche.deposit(principal, bob.address);
@@ -208,7 +206,6 @@ describe('TycheYieldDirector', async () => {
         await expect(donationInfo.recipient).is.equal(bob.address);
         await expect(donationInfo.amount).is.equal(principal); // 100 * 10 ** 9
 
-        // Verify recipient balance before rebase
         const index0 = await sOhm.index();
         const recipientInfo0 = await tyche.recipientInfo(bob.address);
         const agnosticAmountBeforeRebase = principal / index0 * 10 ** 9;
@@ -216,22 +213,19 @@ describe('TycheYieldDirector', async () => {
         await expect(recipientInfo0.agnosticAmount).is.equal(agnosticAmountBeforeRebase);
         await expect(recipientInfo0.indexAtLastRedeem).is.equal("0");
 
-        // Recipient should not have a balance yet (since no rebase has happened)
         await expect(await tyche.redeemableBalance(bob.address)).is.equal("0");
 
-        // Test after 1 rebase
+        // First rebase
         await triggerRebase();
 
         const index1 = await sOhm.index();
         await expect(index1).is.equal("10010000000"); // 10.01
 
-        // Verify recipient balance after rebase. Agnostic amount should not change.
         const recipientInfo1 = await tyche.recipientInfo(bob.address);
         await expect(recipientInfo1.agnosticAmount).is.equal(agnosticAmountBeforeRebase);
         await expect(recipientInfo1.totalDebt).is.equal(principal);
         await expect(recipientInfo1.indexAtLastRedeem).is.equal("0");
 
-        // Check if donated amount is correct after rebase.
         const donatedAmount = "100000000"; // .1
         await expect(await tyche.redeemableBalance(bob.address)).is.equal(donatedAmount);
 
@@ -242,25 +236,92 @@ describe('TycheYieldDirector', async () => {
         await expect(donationInfo1.recipient).is.equal(ZERO_ADDRESS);
         await expect(donationInfo1.amount).is.equal("0");
 
-        const recipientInfo = await tyche.recipientInfo(bob.address);
-        await expect(recipientInfo.totalDebt).is.equal("0");
-
+        const recipientInfo2 = await tyche.recipientInfo(bob.address);
+        await expect(recipientInfo2.agnosticAmount).is.equal("9990010"); // .009~
+        await expect(recipientInfo2.totalDebt).is.equal("0");
         await expect(await tyche.redeemableBalance(bob.address)).is.equal(donatedAmount);
+    });
+
+    it('should redeem tokens', async () => {
+        // Deposit 100 sOHM into Tyche and donate to Bob
+        const principal = "100000000000"; // 100
+        await tyche.deposit(principal, bob.address);
+        await triggerRebase();
+        await tyche.connect(bob).redeem();
+    });
+
+    it('should withdraw tokens before recipient redeems', async () => {
+        // Deposit 100 sOHM into Tyche and donate to Bob
+        const principal = "100000000000"; // 100
+        await tyche.deposit(principal, bob.address);
+        await triggerRebase();
+
+        const donatedAmount = "100000000"; // .1
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal(donatedAmount);
+
+        const recipientInfo0 = await tyche.recipientInfo(bob.address);
+        await expect(await recipientInfo0.agnosticAmount).is.equal("10000000000"); // 10
+
+        // Withdraw
+        await tyche.withdraw(principal, bob.address);
+
+        const recipientInfo1 = await tyche.recipientInfo(bob.address);
+        await expect(await recipientInfo1.agnosticAmount).is.equal("9990010");
+
+        // Second rebase
+        await triggerRebase();
+
+        const recipientInfo2 = await tyche.recipientInfo(bob.address);
+        await expect(await recipientInfo2.agnosticAmount).is.equal("9990010"); // .009~
+        const redeemable = "100100000";
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal(redeemable); // .1001
 
         await tyche.connect(bob).redeem();
 
-        await expect(await sOhm.balanceOf(bob.address)).is.equal(donatedAmount);
-        await expect(await tyche.redeemableBalance(bob.address)).is.equal("0");
+        await expect(await sOhm.balanceOf(bob.address)).is.equal(redeemable);
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal("0"); // TODO
+
+        const recipientInfo3 = await tyche.recipientInfo(bob.address);
+        await expect(recipientInfo3.indexAtLastRedeem).is.equal("10020010000"); // 10.01
     });
 
-    it('should withdraw correct amount of tokens after recipient redeems', async () => {
-        // Deposit sOHM into Tyche and donate to Bob
-        const principal = "100";
+
+    it('should withdraw tokens after recipient redeems', async () => {
+        // Deposit 100 sOHM into Tyche and donate to Bob
+        const principal = "100000000000"; // 100
         await tyche.deposit(principal, bob.address);
+
+        const index0 = await sOhm.index();
+        const agnosticAmountBeforeRebase = principal / index0 * 10 ** 9;
+
+        const recipientInfo0 = await tyche.recipientInfo(bob.address);
+        await expect(recipientInfo0.agnosticAmount).is.equal(agnosticAmountBeforeRebase);
+
+        await triggerRebase();
+
+        const recipientInfo1 = await tyche.recipientInfo(bob.address);
+        await expect(recipientInfo1.agnosticAmount).is.equal(agnosticAmountBeforeRebase);
+        await expect(recipientInfo1.totalDebt).is.equal(principal);
+
+        await tyche.connect(bob).redeem();
+
+        // Second rebase
+        await triggerRebase();
         
-        // TODO
+        await tyche.withdraw(principal, bob.address);
+
+        // TODO brain is dead. revisit later
+        const redeemable = "100100000";
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal(redeemable); // .1001
+
+        await expect(await sOhm.balanceOf(bob.address)).is.equal(redeemable);
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal("0");
+
+        const recipientInfo3 = await tyche.recipientInfo(bob.address);
+        await expect(recipientInfo3.indexAtLastRedeem).is.equal("10020010000"); // 10.01
     });
 
+    // TODO test depositing to multiple addresses, then withdrawAll
     //it('should redeem proper amount after multiple deposit and withdrawals', async () => {
     //    // TODO
     //});
