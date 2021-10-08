@@ -2,11 +2,10 @@
 pragma solidity 0.7.5;
 
 import "./interfaces/IERC20.sol";
-import "./interfaces/IBondDepository.sol";
 import "./interfaces/ITeller.sol";
+import "./interfaces/IBondDepository.sol";
 
 import "./libraries/NonFungibleToken.sol";
-
 
 // @author Dionysus
 contract NonFungibleBondManager is NonFungibleToken("Olympus Bond", "BOND") {
@@ -30,6 +29,7 @@ contract NonFungibleBondManager is NonFungibleToken("Olympus Bond", "BOND") {
 
     event BondMinted ( uint amount, uint maxPrice, address depositor, uint tokenId, uint index );
 
+    event BondReemed ( address owner, uint dues );
     
     /////////////// public logic  ///////////////
 
@@ -55,7 +55,7 @@ contract NonFungibleBondManager is NonFungibleToken("Olympus Bond", "BOND") {
         safeTransferFrom( IERC20( principal ), msg.sender, address( this ), _amount );
         // deposit to bond depo, ( this contract becomes proxy owner of purchased bond )
         ( payout, index ) = depository.deposit( _amount, _maxPrice, address( this ), _BID, _FID );
-        // mint user a NFT that represents their ownership of a unique bond
+        // mint user a NFT that represents their proxied ownership
         _safeMint( _depositor, totalNFBs );
         // map the nft to the newly created bonds id 
         NFBToIndex[ totalNFBs ] = index;
@@ -83,6 +83,8 @@ contract NonFungibleBondManager is NonFungibleToken("Olympus Bond", "BOND") {
             if ( teller.payoutFor( address( this ), NFBToIndex[ tokenIds[ i ] ] ) == 0 ) _burn( i );
             // redeem bond, and add dues to return
             dues += teller.redeem( address( this ), _recipient, NFBToIndex[ tokenIds[ i ] ] );
+            // emit redemption
+            emit BondReemed ( msg.sender, dues );
         }
     }
     
