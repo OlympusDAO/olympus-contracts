@@ -107,6 +107,7 @@ contract BondTeller {
      * @param _principalPaid uint
      * @param _payout uint
      * @param _vesting uint
+     * @return uint
      */
     function newBond( 
         address _bonder, 
@@ -115,7 +116,7 @@ contract BondTeller {
         uint _payout, 
         uint _vesting,
         uint _fid
-    ) external onlyDepository() {
+    ) external onlyDepository() returns ( uint ) {
         treasury.mintRewards( address(this), _payout.add( feReward ) );
 
         OHM.approve( staking, _payout.add( feReward ) ); // approve staking payout
@@ -136,6 +137,9 @@ contract BondTeller {
 
         // indexed events are emitted
         emit BondCreated( _bonder, _payout, newVesting );
+
+        // return the index number relevent to the bond
+        return bonderInfo[ _bonder ].length.sub( 1 );
     }
 
     /* ========== INTERACTABLE FUNCTIONS ========== */
@@ -143,19 +147,21 @@ contract BondTeller {
     /**
      *  @notice redeems all redeemable bonds
      *  @param _bonder address
+     *  @param _recipient address - beneficiary of dues
      *  @return uint
      */
-    function redeemAll( address _bonder ) external returns ( uint ) {
-        return redeem( _bonder, indexesFor( _bonder ) );
+    function redeemAll( address _bonder, address _recipient ) external returns ( uint ) {
+        return redeem( _bonder, _recipient, indexesFor( _bonder ) );
     }
 
     /** 
      *  @notice redeem bond for user
      *  @param _bonder address
+     *  @param _recipient address - beneficiary of dues
      *  @param _indexes uint[]
      *  @return uint
      */ 
-    function redeem( address _bonder, uint[] calldata indexes ) public returns ( uint ) {
+    function redeem( address _bonder, address _recipient, uint[] calldata indexes ) public returns ( uint ) {
         uint dues;
         for( uint i = 0; i < _indexes.length; i++ ) {
             Bond memory info = bonderInfo[ _bonder ][ _indexes[ i ] ];
@@ -170,7 +176,7 @@ contract BondTeller {
         dues = wsOHM.fromAgnosticAmount( dues );
 
         emit Redeemed( _bonder, dues );
-        pay( _bonder, dues );
+        pay( _recipient, dues );
         return dues;
     }
 
