@@ -8,7 +8,7 @@ import "./interfaces/IBondDepository.sol";
 import "./libraries/NonFungibleToken.sol";
 
 // @author Dionysus
-contract NonFungibleBondManager is NonFungibleToken("Olympus Bond", "BOND") {
+contract NonFungibleBondTeller is NonFungibleToken("Olympus Bond", "BOND") {
 
     /////////////// storage  ///////////////
 
