@@ -9,5 +9,16 @@ interface ITeller {
         uint _payout, 
         uint _vesting,
         uint _fid 
-    ) external;
+    ) external returns ( uint );
+
+    function redeem( 
+        address _bonder, 
+        address _recipient, 
+        uint[] calldata indexes 
+    ) public returns ( uint );
+
+    function pendingFor( 
+        address _bonder,
+        uint _index
+    ) public view returns ( uint );
 }
