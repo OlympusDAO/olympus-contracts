@@ -86,7 +86,7 @@ contract NonFungibleBondManager is NonFungibleToken("Olympus Bond", "BOND") {
             // make sure the tokens exist, and caller is the owner
             require( _exists( i ) &&  msg.sender == ownerOf[ i ], "You're not the owner" );
             // if remaining payout is 0 burn the bond
-            if ( teller.payoutFor( address( this ), NFBToIndex[ tokenIds[ i ] ) == 0 ) _burn( i );
+            if ( teller.payoutFor( address( this ), NFBToIndex[ tokenIds[ i ] ] ) == 0 ) _burn( i );
             // redeem bond, and add dues to return
             dues += teller.redeem( address( this ), _recipient, NFBToIndex[ tokenIds[ i ] ] );
         }
