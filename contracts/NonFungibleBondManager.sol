@@ -5,17 +5,11 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/IBondDepository.sol";
 import "./interfaces/ITeller.sol";
 
-import "./libraries/SafeERC20.sol";
 import "./libraries/NonFungibleToken.sol";
 
 
 // @author Dionysus
 contract NonFungibleBondManager is NonFungibleToken("Olympus Bond", "BOND") {
-
-    /////////////// imports  ///////////////
-
-    using SafeERC20 for IERC20;
-
 
     /////////////// storage  ///////////////
 
@@ -37,7 +31,7 @@ contract NonFungibleBondManager is NonFungibleToken("Olympus Bond", "BOND") {
     event BondMinted ( uint amount, uint maxPrice, address depositor, uint tokenId, uint index );
 
     
-    /////////////// bond logic  ///////////////
+    /////////////// public logic  ///////////////
 
     /**
      * @notice deposit bond
@@ -58,7 +52,7 @@ contract NonFungibleBondManager is NonFungibleToken("Olympus Bond", "BOND") {
         // fetch what principal is being used
         ( address principal, ) = depository.bondTypeInfo( _BID );
         // transfer users principal to this contract
-        IERC20( principal ).safeTransferFrom( msg.sender, address( this ), _amount );
+        safeTransferFrom( IERC20( principal ), msg.sender, address( this ), _amount );
         // deposit to bond depo, ( this contract becomes proxy owner of purchased bond )
         ( payout, index ) = depository.deposit( _amount, _maxPrice, address( this ), _BID, _FID );
         // mint user a NFT that represents their ownership of a unique bond
@@ -90,5 +84,19 @@ contract NonFungibleBondManager is NonFungibleToken("Olympus Bond", "BOND") {
             // redeem bond, and add dues to return
             dues += teller.redeem( address( this ), _recipient, NFBToIndex[ tokenIds[ i ] ] );
         }
+    }
+    
+    /////////////// internal logic  ///////////////
+    
+    /// @dev one less import
+    function safeTransferFrom(
+        IERC20 token,
+        address from,
+        address to,
+        uint256 value
+    ) internal {
+        (bool success, bytes memory data)
+            = address(token).call(abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, value) );
+        require(success && (data.length == 0 || abi.decode(data, (bool))), "TRANSFER_FROM_FAILED");
     }
 }
