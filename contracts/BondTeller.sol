@@ -147,21 +147,19 @@ contract BondTeller {
     /**
      *  @notice redeems all redeemable bonds
      *  @param _bonder address
-     *  @param _recipient address - beneficiary of dues
      *  @return uint
      */
-    function redeemAll( address _bonder, address _recipient ) external returns ( uint ) {
-        return redeem( _bonder, _recipient, indexesFor( _bonder ) );
+    function redeemAll( address _bonder ) external returns ( uint ) {
+        return redeem( _bonder, indexesFor( _bonder ) );
     }
 
     /** 
      *  @notice redeem bond for user
      *  @param _bonder address
-     *  @param _recipient address - beneficiary of dues
      *  @param _indexes uint[]
      *  @return uint
      */ 
-    function redeem( address _bonder, address _recipient, uint[] calldata indexes ) public returns ( uint ) {
+    function redeem( address _bonder, uint[] calldata indexes ) public returns ( uint ) {
         uint dues;
         for( uint i = 0; i < _indexes.length; i++ ) {
             Bond memory info = bonderInfo[ _bonder ][ _indexes[ i ] ];
@@ -176,7 +174,7 @@ contract BondTeller {
         dues = wsOHM.fromAgnosticAmount( dues );
 
         emit Redeemed( _bonder, dues );
-        pay( _recipient, dues );
+        pay( _bonder, dues );
         return dues;
     }
 
