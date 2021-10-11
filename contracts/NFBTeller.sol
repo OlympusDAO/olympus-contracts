@@ -6,11 +6,17 @@ import "./interfaces/ITeller.sol";
 import "./interfaces/IBondDepository.sol";
 
 import "./libraries/NonFungibleToken.sol";
+import "./libraries/SafeERC20.sol";
 
 // @author Dionysus
 contract NonFungibleBondTeller is NonFungibleToken("Olympus Bond", "BOND") {
 
+    using SafeERC20 for IERC20;
+
     /////////////// storage  ///////////////
+
+    // Interface sOHM
+    IERC20 public sOHM;
 
     // Interface Teller
     ITeller public teller;
@@ -30,6 +36,20 @@ contract NonFungibleBondTeller is NonFungibleToken("Olympus Bond", "BOND") {
     event BondMinted ( uint amount, uint maxPrice, address depositor, uint tokenId, uint index );
 
     event BondReemed ( address owner, uint dues );
+    
+    
+    /////////////// construction ///////////////
+    
+    constructor(
+        IERC20 _sOHM,
+        ITeller _teller,
+        IBondDepository _depo
+    ) {
+        sOHM = _sOHM;
+        teller = _teller;
+        depository = _depo;
+    }
+    
     
     /////////////// public logic  ///////////////
 
@@ -52,7 +72,7 @@ contract NonFungibleBondTeller is NonFungibleToken("Olympus Bond", "BOND") {
         // fetch what principal is being used
         ( address principal, ) = depository.bondTypeInfo( _BID );
         // transfer users principal to this contract
-        safeTransferFrom( IERC20( principal ), msg.sender, address( this ), _amount );
+        IERC20( principal ).safeTransferFrom( msg.sender, address( this ), _amount );
         // deposit to bond depo, ( this contract becomes proxy owner of purchased bond )
         ( payout, index ) = depository.deposit( _amount, _maxPrice, address( this ), _BID, _FID );
         // mint user a NFT that represents their proxied ownership
@@ -69,12 +89,10 @@ contract NonFungibleBondTeller is NonFungibleToken("Olympus Bond", "BOND") {
     /** 
      *  @notice redeem bond
      *  @param tokenIds uint[]
-     *  @param _recipient of payout
      *  @return total dues
      */
     function redeem( 
-        uint[] calldata tokenIds,
-        address _recipient 
+        uint[] calldata tokenIds
     ) external returns ( uint dues ) {
         for (uint i; i < tokenIds.length; i++) {
             // make sure the tokens exist, and caller is the owner
@@ -82,23 +100,11 @@ contract NonFungibleBondTeller is NonFungibleToken("Olympus Bond", "BOND") {
             // if remaining payout is 0 burn the bond
             if ( teller.payoutFor( address( this ), NFBToIndex[ tokenIds[ i ] ] ) == 0 ) _burn( i );
             // redeem bond, and add dues to return
-            dues += teller.redeem( address( this ), _recipient, NFBToIndex[ tokenIds[ i ] ] );
+            dues += teller.redeem( address( this ), NFBToIndex[ tokenIds[ i ] ] );
             // emit redemption
             emit BondReemed ( msg.sender, dues );
         }
-    }
-    
-    /////////////// internal logic  ///////////////
-    
-    /// @dev one less import
-    function safeTransferFrom(
-        IERC20 token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
-        (bool success, bytes memory data)
-            = address(token).call(abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, value) );
-        require(success && (data.length == 0 || abi.decode(data, (bool))), "TRANSFER_FROM_FAILED");
+        // transfer owner their funds
+        sOHM.safeTransfer( msg.sender, dues );
     }
 }
