@@ -97,3 +97,4 @@ contract StakingHelper {
         IStaking( staking ).stake( _amount, msg.sender );
         IStaking( staking ).claim( msg.sender );
     }
+}

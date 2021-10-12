@@ -40,6 +40,8 @@ contract TycheYieldDirector {
     address public immutable OHM;
     address public immutable sOHM;
 
+    uint public immutable DECIMALS; // Decimals of OHM and sOHM
+
     struct DonationInfo {
         address recipient;
         // TODO can be packed
@@ -56,23 +58,21 @@ contract TycheYieldDirector {
     mapping(address => DonationInfo[]) public donationInfo;
     mapping(address => RecipientInfo) public recipientInfo;
 
-    // TODO Add events
-    event Deposit();
-    event Withdrawal();
-    event Redeem();
+    event Deposited(address _donor, address _recipient, uint _amount);
+    event Withdrawal(address _donor, address _recipient, uint _amount);
+    event Redeemed(address _recipient, uint _amount);
 
     constructor (
-		//address _staking,
         address _OHM, 
         address _sOHM
     ) {
-        //require(_staking != address(0));
         require(_OHM != address(0));
         require(_sOHM != address(0));
         // TODO add governance address
 
         OHM = _OHM;
         sOHM = _sOHM;
+        DECIMALS = 10 ** ERC20(_sOHM).decimals();
     }
 
     /************************
@@ -110,6 +110,7 @@ contract TycheYieldDirector {
         recipientInfo[_recipient].totalDebt += _amount;
 
         // TODO add `Deposited` event
+        emit Deposited(msg.sender, _recipient, _amount);
     }
 
     /**
@@ -144,17 +145,17 @@ contract TycheYieldDirector {
         if(donations[recipientIndex].amount == 0)
             delete donations[recipientIndex];
 
-        // Subtract agnostic amount and debt from recipient if they have not yet redeemed
+        // If recipient has redeemed, they have already paid their debt
         if(recipientInfo[_recipient].totalDebt > 0) {
             recipientInfo[_recipient].totalDebt -= _amount;
-            // NOTE: Agnostic value of _amount is different from when it was deposited. The remaining
-            // amount is left with the recipient so they can keep receiving rebases on the remaining amount.
-            recipientInfo[_recipient].agnosticAmount -= _toAgnostic(_amount);
         }
+        // NOTE: Agnostic value of _amount is different from when it was deposited. The remaining
+        // amount is left with the recipient so they can keep receiving rebases.
+        recipientInfo[_recipient].agnosticAmount -= _toAgnostic(_amount);
 
         IERC20(sOHM).safeTransfer(msg.sender, _amount);
 
-        // TODO emit `Withdrawn` event
+        emit Withdrawal(msg.sender, _recipient, _amount);
     }
 
 
@@ -173,8 +174,8 @@ contract TycheYieldDirector {
             // Subtract from recipient debts if recipient has not redeemed
             if(recipientInfo[donation.recipient].totalDebt > 0) {
                 recipientInfo[donation.recipient].totalDebt -= donation.amount;
-                recipientInfo[donation.recipient].agnosticAmount -= _toAgnostic(donation.amount);
             }
+            recipientInfo[donation.recipient].agnosticAmount -= _toAgnostic(donation.amount);
         }
 
         // Delete donor's entire donations array
@@ -226,17 +227,21 @@ contract TycheYieldDirector {
         RecipientInfo storage recipient = recipientInfo[msg.sender];
         require(recipient.agnosticAmount > 0, "No claimable balance");
 
+        uint index = IsOHM(sOHM).index();
+        require(index != recipient.indexAtLastRedeem, "Already redeemed this epoch");
+
         uint redeemable = redeemableBalance(msg.sender);
 
-        // Clear out recipient balance
+        // Pay off debts
         recipient.totalDebt = 0;
-        recipient.agnosticAmount = 0;
+        recipient.agnosticAmount -= _toAgnostic(redeemable);
 
         // Record index when recipient redeemed
-        recipient.indexAtLastRedeem = IsOHM(sOHM).index();
+        recipient.indexAtLastRedeem = index;
 
         IERC20(sOHM).safeTransfer(msg.sender, redeemable);
-        // TODO emit `Redeem` 
+
+        emit Redeemed(msg.sender, redeemable);
     }
 
     /************************
@@ -267,7 +272,7 @@ contract TycheYieldDirector {
      */
     function _toAgnostic(uint _amount) internal view returns ( uint ) {
         return _amount
-            * (10 ** ERC20(sOHM).decimals())
+            * DECIMALS
             / (IsOHM(sOHM).index());
     }
 
@@ -278,7 +283,7 @@ contract TycheYieldDirector {
     function _fromAgnostic(uint _amount) internal view returns ( uint ) {
         return _amount
             * (IsOHM(sOHM).index())
-            / (10 ** ERC20(sOHM).decimals());
+            / DECIMALS;
     }
 
     /**
@@ -288,6 +293,6 @@ contract TycheYieldDirector {
     function _fromAgnosticAtIndex(uint _amount, uint _index) internal view returns ( uint ) {
         return _amount
             * _index
-            / (10 ** ERC20(sOHM).decimals());
+            / DECIMALS;
     }
 }
