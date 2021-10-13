@@ -122,8 +122,8 @@ contract OlympusBondDepository is Governable, Guardable {
     ) external onlyGuardian() {
         // TODO: need a reverse lookup table to determine if the bond already exists. 
         // You can have multiple bonds with the same principle!
-        // require( bonds[ _principal ].terms.controlVariable == 0, "Bonds must be initialized from 0" );
-        // require( address( bonds[ _principal ].principal ) == address(0), "Cannot replace existing bond" );
+        require( bonds[ _principal ].terms.controlVariable == 0, "Bonds must be initialized from 0" );
+        require( address( bonds[ _principal ].principal ) == address(0), "Cannot replace existing bond" );
 
         Terms memory terms = Terms ({
             controlVariable: _controlVariable,
