@@ -60,6 +60,7 @@ contract BCVPC is PolicyOwnable {
     constructor(address _OHM) {
         require( _OHM != address(0) );
         OHM = IERC20( _OHM );
+        period = uint(69); //TODO: idk pls fix 
     } 
 
 
