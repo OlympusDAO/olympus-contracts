@@ -440,7 +440,9 @@ contract OlympusTreasury is Ownable {
 
     /**
      *  @notice enable permission from queue
-     *  @param _index uint
+     *  @param _status STATUS
+     *  @param _address address
+     *  @param _calculator address     
      */
     function enable( STATUS _status, address _address, address _calculator ) external onlyManager() {
         if ( _status == STATUS.SOHM ) { // 9

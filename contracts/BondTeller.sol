@@ -5,6 +5,9 @@ import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
+import "./interfaces/ITreasury.sol";
+
+import "./types/PolicyOwnable.sol";
 
 // TODO(zx): These staking Interfaces are not consistent
 interface IStaking {
@@ -16,7 +19,7 @@ interface IwsOHM {
     function fromAgnosticAmount( uint _amount ) external view returns ( uint );
 }
 
-contract BondTeller {
+contract BondTeller is PolicyOwnable {
 
     /* ========== DEPENDENCIES ========== */
 
@@ -135,7 +138,7 @@ contract BondTeller {
         } ) );
 
         // indexed events are emitted
-        emit BondCreated( _bonder, _payout, newVesting );
+        emit BondCreated( _bonder, _payout, _vesting );
     }
 
     /* ========== INTERACTABLE FUNCTIONS ========== */
@@ -152,10 +155,10 @@ contract BondTeller {
     /** 
      *  @notice redeem bond for user
      *  @param _bonder address
-     *  @param _indexes uint[]
+     *  @param _indexes uint[] 
      *  @return uint
      */ 
-    function redeem( address _bonder, uint[] calldata indexes ) public returns ( uint ) {
+    function redeem( address _bonder, uint[] calldata _indexes ) public returns ( uint ) {
         uint dues;
         for( uint i = 0; i < _indexes.length; i++ ) {
             Bond memory info = bonderInfo[ _bonder ][ _indexes[ i ] ];
@@ -184,9 +187,7 @@ contract BondTeller {
 
     /* ========== OWNABLE FUNCTIONS ========== */
 
-    function setFEReward( uint reward ) external {
-        require( msg.sender == policy, "Only policy" );
-
+    function setFEReward( uint reward ) external onlyPolicy() {
         feReward = reward;
     }
 
@@ -194,8 +195,8 @@ contract BondTeller {
 
     /**
      *  @notice send payout
+     *  @param _bonder address
      *  @param _amount uint
-     *  @return uint
      */
     function pay( address _bonder, uint _amount ) internal {
         sOHM.transfer( _bonder, _amount );
@@ -210,7 +211,7 @@ contract BondTeller {
      *  @param _bonder address
      *  @return indexes_ uint
      */
-    function indexesFor( address _bonder ) public view returns ( uint[] indexes_ ) {
+    function indexesFor( address _bonder ) public view returns ( uint[] memory indexes_ ) {
         Bond[] memory info = bonderInfo[ _bonder ];
         for( uint i = 0; i < info.length; i++ ) {
             if( info[ i ].redeemed == 0 ) {
@@ -243,7 +244,7 @@ contract BondTeller {
     function pendingForIndexes( 
         address _bonder, 
         uint[] calldata _indexes 
-    ) external view returns ( uint pendingPayout_ ) {
+    ) public view returns ( uint pendingPayout_ ) {
         for( uint i = 0; i < _indexes.length; i++ ) {
             pendingPayout_ = pendingPayout_.add( pendingFor( _bonder, i ) );
         }
@@ -264,7 +265,7 @@ contract BondTeller {
      * @param _bonder address
      * @return pending_ uint[]
      */
-    function allPendingFor( address _bonder ) external view returns ( uint[] pending_ ) {
+    function allPendingFor( address _bonder, uint[] calldata _indexes ) external view returns ( uint[] memory pending_ ) {
         for( uint i = 0; i < _indexes.length; i++ ) {
             pending_.push( wsOHM.fromAgnosticAmount( pendingFor( _bonder, i ) ) );
         }
@@ -275,7 +276,8 @@ contract BondTeller {
 
     /**
      *  @notice calculate how far into vesting a depositor is
-     *  @param _depositor address
+     *  @param _bonder address
+     *  @param _index uint
      *  @return percentVested_ uint
      */
     function percentVestedFor( address _bonder, uint _index ) public view returns ( uint percentVested_ ) {
@@ -292,7 +294,7 @@ contract BondTeller {
      *  @param _bonder address
      *  @return percents_ uint[]
      */
-    function allPercentVestedFor( address _bonder ) external view returns ( uint[] percents_ ) {
+    function allPercentVestedFor( address _bonder ) external view returns ( uint[] memory percents_ ) {
         uint[] memory indexes = indexesFor( _bonder );
 
         for( uint i = 0; i < indexes.length; i++ ) {

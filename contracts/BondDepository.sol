@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
+pragma experimental ABIEncoderV2;
 
 import "./libraries/SafeMath.sol";
 import "./libraries/FixedPoint.sol";
@@ -26,6 +27,8 @@ contract OlympusBondDepository is Governable, Guardable {
 
     event beforeBond( uint index, uint price, uint internalPrice, uint debtRatio );
     event afterBond( uint index, uint price, uint internalPrice, uint debtRatio );
+    event ControlVariableAdjustment( uint initialBCV, uint newBCV, uint adjustment, bool addition );
+
 
 
 
@@ -117,8 +120,10 @@ contract OlympusBondDepository is Governable, Guardable {
         uint _maxDebt,
         uint _initialDebt
     ) external onlyGuardian() {
-        require( bonds[ _principal ].terms.controlVariable == 0, "Bonds must be initialized from 0" );
-        require( address( bonds[ _principal ].principal ) == address(0), "Cannot replace existing bond" );
+        // TODO: need a reverse lookup table to determine if the bond already exists. 
+        // You can have multiple bonds with the same principle!
+        // require( bonds[ _principal ].terms.controlVariable == 0, "Bonds must be initialized from 0" );
+        // require( address( bonds[ _principal ].principal ) == address(0), "Cannot replace existing bond" );
 
         Terms memory terms = Terms ({
             controlVariable: _controlVariable,
@@ -140,7 +145,7 @@ contract OlympusBondDepository is Governable, Guardable {
             lastDecay: block.number
         });
 
-        BIDs.push( BIDs.length );
+        BIDs.push( _principal ); 
     }
 
     enum PARAMETER { VESTING, PAYOUT, FEE, DEBT }
@@ -275,9 +280,9 @@ contract OlympusBondDepository is Governable, Guardable {
             bonds[ _BID ].adjustment.blocksToTarget = adjustment.blocksToTarget.sub( blocksSinceLast );
 
             if ( adjustment.add ) {
-                bonds[ _principal ].terms.controlVariable = bonds[ _BID ].terms.controlVariable.add( change );
+                bonds[ _BID ].terms.controlVariable = bonds[ _BID ].terms.controlVariable.add( change );
             } else {
-                bonds[ _principal ].terms.controlVariable = bonds[ _BID ].terms.controlVariable.sub( change );
+                bonds[ _BID ].terms.controlVariable = bonds[ _BID ].terms.controlVariable.sub( change );
             }
 
             bonds[ _BID ].adjustment.lastBlock = block.number;
@@ -360,7 +365,7 @@ contract OlympusBondDepository is Governable, Guardable {
     
     /**
      * @notice returns pending BCV adjustment for a bond type
-     * @param _principal address
+     * @param _BID uint
      * @return controlVariable_ uint
      * @return add_ bool
      * @return delta_ uint

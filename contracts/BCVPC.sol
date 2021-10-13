@@ -3,6 +3,11 @@ pragma solidity 0.7.5;
 
 import "./libraries/SafeMath.sol";
 
+import "./interfaces/IERC20.sol";
+
+import "./types/PolicyOwnable.sol";
+
+
 interface IDepository {
     function setAdjustment ( 
         uint _index,
@@ -21,7 +26,11 @@ interface IDepository {
     );
 }
 
-contract BCVPC {
+
+
+
+// TODO: What is this contract?
+contract BCVPC is PolicyOwnable {
 
     using SafeMath for uint;
 
@@ -33,8 +42,8 @@ contract BCVPC {
     }
 
 
-
     /* ========== STATE VARIABLES ========== */
+    IERC20 immutable OHM;
 
     uint public targetPercent; // target total OHM as payouts during period
     uint public immutable period; // length in blocks
@@ -46,6 +55,12 @@ contract BCVPC {
     mapping( uint => uint ) public weights; // weight per bond type
     uint public totalWeight; // total weight (denominator)
 
+
+
+    constructor(address _OHM) {
+        require( _OHM != address(0) );
+        OHM = IERC20( _OHM );
+    } 
 
 
     /* ========== MUTABLE FUNCTIONS ========== */
@@ -86,8 +101,8 @@ contract BCVPC {
     /* ========== ONLY POLICY ========== */
 
     // policy sets target sum of OHM paid per period length
-    function setTargetSum( uint _target ) external onlyPolicy() {
-        targetSum = _target;
+    function setTargetPercent( uint _target ) external onlyPolicy() {
+        targetPercent = _target;
     }
 
     // policy sets a weight for each bond (determines portion of target sum allocated)
@@ -101,18 +116,18 @@ contract BCVPC {
     /* ========== VIEW FUNCTIONS ========== */
 
     function getTarget() public view returns ( uint ) {
-        return ohm.totalSupply.mul( targetPercent ).div( 1e9 );
+        return OHM.totalSupply().mul( targetPercent ).div( 1e9 );
     }
 
     // returns sum of OHM paid for a bond in the past period
     function getSum( uint _index ) public view returns ( uint sum_ ) {
         uint blockstampAfter = block.number.sub( period );
 
-        uint[] memory array = payouts[ _index ];
+        Payout[] memory array = payouts[ _index ];
 
         for( uint i = 0; i < array.length; i++ ) {
             if( array[i].blockstamp > blockstampAfter ) {
-                sum_ = sum_.add( array[i].payout );
+                sum_ = sum_.add( array[i].amount );
             }
         }
     }
