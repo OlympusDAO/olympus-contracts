@@ -19,6 +19,7 @@ interface IwsOHM {
     function fromAgnosticAmount( uint _amount ) external view returns ( uint );
 }
 
+// TODO(zx): This doesn't compile
 contract BondTeller is PolicyOwnable {
 
     /* ========== DEPENDENCIES ========== */

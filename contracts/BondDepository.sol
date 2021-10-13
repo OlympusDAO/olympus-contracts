@@ -15,6 +15,7 @@ import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITeller.sol";
 import "./interfaces/IERC20Metadata.sol";
 
+// TODO(zx): this doesn't compile
 contract OlympusBondDepository is Governable, Guardable {
 
     using FixedPoint for *;
