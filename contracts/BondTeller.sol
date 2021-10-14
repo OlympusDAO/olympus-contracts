@@ -20,6 +20,11 @@ interface ITreasury {
     function mintRewards( address _to, uint _amount ) external;
 }
 
+interface IwsOHM {
+    function getAgnosticAmount( uint _amount ) external view returns ( uint );
+    function fromAgnosticAmount( uint _amount ) external view returns ( uint );
+}
+
 contract BondTeller {
 
     /* ========== DEPENDENCIES ========== */
@@ -31,6 +36,7 @@ contract BondTeller {
 
     /* ========== EVENTS ========== */
 
+    event BondCreated( address indexed bonder, uint payout, uint expires );
     event Redeemed( address indexed bonder, uint payout );
 
 
@@ -158,6 +164,17 @@ contract BondTeller {
         return redeem( _bonder, indexesFor[ _bonder ] );
     }
 
+    /* ========== INTERACTABLE FUNCTIONS ========== */
+
+    /**
+     *  @notice redeems all redeemable bonds
+     *  @param _bonder address
+     *  @return uint
+     */
+    function redeemAll( address _bonder ) external returns ( uint ) {
+        return redeem( _bonder, indexesFor( _bonder ) );
+    }
+
     /** 
      *  @notice redeem bond for user
      *  @param _bonder address
@@ -259,6 +276,16 @@ contract BondTeller {
         return pendingForIndexes( _bonder, indexesFor[ _bonder ] );
     }
 
+    /**
+     * @notice amount of each bond claimable as array
+     * @param _bonder address
+     * @return pending_ uint[]
+     */
+    function allPendingFor( address _bonder ) external view returns ( uint[] pending_ ) {
+        for( uint i = 0; i < _indexes.length; i++ ) {
+            pending_.push( wsOHM.fromAgnosticAmount( pendingFor( _bonder, i ) ) );
+        }
+    }
 
     // VESTING
 

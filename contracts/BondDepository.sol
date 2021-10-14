@@ -27,6 +27,7 @@ contract OlympusBondDepository is Governable, Guardable {
 
     event beforeBond( uint index, uint price, uint internalPrice, uint debtRatio );
     event CreateBond( uint index, uint amount, uint payout, uint expires );
+    event afterBond( uint index, uint price, uint internalPrice, uint debtRatio );
 
 
 
@@ -170,6 +171,16 @@ contract OlympusBondDepository is Governable, Guardable {
      */
     function deprecateBond( uint _id ) external onlyGuardian() {
         bonds[ _id ].capacity = 0;
+    }
+
+    /**
+     * @notice set teller contract
+     * @param _teller address
+     */
+    function setTeller( address _teller ) external onlyGovernor() {
+        require( address( teller ) == address(0) );
+        require( _teller != address(0) );
+        teller = ITeller( _teller );
     }
 
 
