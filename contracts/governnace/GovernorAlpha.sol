@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 contract GovernorAlpha {
     /// @notice The name of this contract
-    string public constant name = "Olympus Governor Alpha";
+    string public constant name = "Olympus Governor OHMega";
 
     /// @notice The percent of sOHM in support of a proposal required in order for a quorum to be reached and for a vote to succeed
     /// @notice change from original contract
