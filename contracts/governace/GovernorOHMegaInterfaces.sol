@@ -82,7 +82,7 @@ contract GovernorOHMegaDelegateStorageV1 is GovernorOHMegaDelegatorStorage {
 
     /// @notice The address of the Wrapped sOHM
     /// @notice change from original contract
-    wsOHMInterface public wsOHM;
+    gOHMInterface public gOHM;
 
     /// @notice The address of the sOHM
     /// @notice change from original contract
@@ -132,11 +132,11 @@ contract GovernorOHMegaDelegateStorageV1 is GovernorOHMegaDelegatorStorage {
         /// @notice Current number of votes for abstaining for this proposal
         uint abstainVotes;
 
-        /// @notice Threshold of wsOHM at start of proposal
+        /// @notice Threshold of gOHM at start of proposal
         /// @notice change from original contract
         uint thresholdAtStart;
 
-        /// @notice Number of wsOHM needed to pass vote
+        /// @notice Number of gOHM needed to pass vote
         /// @notice change from original contract
         uint votesNeeded;
 
@@ -186,9 +186,10 @@ interface TimelockInterface {
 }
 
 /// @notice change from original contract
-interface wsOHMInterface {
+interface gOHMInterface {
     function getPriorVotes(address account, uint blockNumber) external view returns (uint);
-    function sOHMTowOHM( uint _amount ) external view returns ( uint );
+    function balanceTo( uint _amount ) external view returns ( uint );
+    function balanceFrom( uint _amount ) external view returns ( uint );
 }
 
 /// @notice change from original contract

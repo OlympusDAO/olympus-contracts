@@ -186,7 +186,7 @@ contract gOHM is IERC20 {
      * @return The number of votes the account had as of the given block
      */
     function getPriorVotes(address account, uint blockNumber) external view returns (uint) {
-        require(blockNumber < block.number, "wsOHM::getPriorVotes: not yet determined");
+        require(blockNumber < block.number, "gOHM::getPriorVotes: not yet determined");
 
         uint nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
@@ -337,7 +337,7 @@ contract gOHM is IERC20 {
     }
 
     function _writeCheckpoint(address delegatee, uint nCheckpoints, uint oldVotes, uint newVotes) internal {
-      uint blockNumber = safe32(block.number, "wsOHM::_writeCheckpoint: block number exceeds 32 bits");
+      uint blockNumber = safe32(block.number, "gOHM::_writeCheckpoint: block number exceeds 32 bits");
 
       if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
           checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;

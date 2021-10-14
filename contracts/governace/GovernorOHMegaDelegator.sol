@@ -8,7 +8,7 @@ contract GovernorOHMegaDelegator is GovernorOHMegaDelegatorStorage, GovernorOHMe
 	constructor(
 			address timelock_,
             address sOHM_,
-			address wsOHM_,
+			address gOHM_,
 			address admin_,
 	        address implementation_,
 	        uint votingPeriod_,
@@ -21,7 +21,7 @@ contract GovernorOHMegaDelegator is GovernorOHMegaDelegatorStorage, GovernorOHMe
         delegateTo(implementation_, abi.encodeWithSignature("initialize(address,address,address,uint256,uint256,uint256)",
                                                             timelock_,
                                                             sOHM_,
-                                                            wsOHM_,
+                                                            gOHM_,
                                                             votingPeriod_,
                                                             votingDelay_,
                                                             proposalThreshold_));

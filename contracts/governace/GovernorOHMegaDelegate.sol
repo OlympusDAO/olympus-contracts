@@ -45,17 +45,17 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
       * @notice Used to initialize the contract during delegator contructor
       * @param timelock_ The address of the Timelock
       * @param sOHM_ The address of the sOHM token
-      * @param wsOHM_ The address of the wsOHM token
+      * @param gOHM_ The address of the gOHM token
       * @param votingPeriod_ The initial voting period
       * @param votingDelay_ The initial voting delay
       * @param proposalThreshold_ The initial proposal threshold percent in ten-thousandths
       */
-    function initialize(address timelock_, address sOHM_, address wsOHM_, uint votingPeriod_, uint votingDelay_, uint proposalThreshold_) public {
+    function initialize(address timelock_, address sOHM_, address gOHM_, uint votingPeriod_, uint votingDelay_, uint proposalThreshold_) public {
         require(address(timelock) == address(0), "GovernorOHMega::initialize: can only initialize once");
         require(msg.sender == admin, " GovernorOHMega::initialize: admin only");
         require(timelock_ != address(0), "GovernorOHMega::initialize: invalid timelock address");
         require(sOHM_ != address(0), "GovernorOHMega::initialize: invalid sOHM address");
-        require(wsOHM_ != address(0), "GovernorOHMega::initialize: invalid wsOHM address");
+        require(gOHM_ != address(0), "GovernorOHMega::initialize: invalid gOHM address");
         require(votingPeriod_ >= MIN_VOTING_PERIOD && votingPeriod_ <= MAX_VOTING_PERIOD, "GovernorOHMega::initialize: invalid voting period");
         require(votingDelay_ >= MIN_VOTING_DELAY && votingDelay_ <= MAX_VOTING_DELAY, "GovernorOHMega::initialize: invalid voting delay");
         require(proposalThreshold_ >= MIN_PROPOSAL_THRESHOLDPERCENT && proposalThreshold_ <= MAX_PROPOSAL_THRESHOLDPERCENT, "GovernorOHMega::initialize: invalid proposal threshold");
@@ -63,7 +63,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
         timelock = TimelockInterface(timelock_);
 
         sOHM = sOHMInterface(sOHM_);
-        wsOHM = wsOHMInterface(wsOHM_);
+        gOHM = gOHMInterface(gOHM_);
         votingPeriod = votingPeriod_;
         votingDelay = votingDelay_;
         proposalThreshold = proposalThreshold_;
@@ -82,7 +82,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
         // Reject proposals before initiating as Governor
         require(initialProposalId != 0, "GovernorOHMega::propose: Governor OHMega not active");
         /// @notice change from original contract
-        require(wsOHM.getPriorVotes(msg.sender, sub256(block.number, 1)) > getVotesFromPercentOfsOHMSupply(proposalThreshold), "GovernorOHMega::propose: proposer votes below proposal threshold");
+        require(gOHM.getPriorVotes(msg.sender, sub256(block.number, 1)) > getVotesFromPercentOfsOHMSupply(proposalThreshold), "GovernorOHMega::propose: proposer votes below proposal threshold");
         require(targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length, "GovernorOHMega::propose: proposal function information arity mismatch");
         require(targets.length != 0, "GovernorOHMega::propose: must provide actions");
         require(targets.length <= proposalMaxOperations, "GovernorOHMega::propose: too many actions");
@@ -169,7 +169,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
 
         Proposal storage proposal = proposals[proposalId];
         /// @notice change from original contract
-        require(msg.sender == proposal.proposer || wsOHM.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposal.thresholdAtStart, "GovernorOHMega::cancel: proposer above threshold");
+        require(msg.sender == proposal.proposer || gOHM.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposal.thresholdAtStart, "GovernorOHMega::cancel: proposer above threshold");
 
         proposal.canceled = true;
         for (uint i = 0; i < proposal.targets.length; i++) {
@@ -196,7 +196,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
       */
       /// @notice change from original contract
     function getVotesFromPercentOfsOHMSupply(uint percent) public view returns (uint256 votes) {
-        return wsOHM.sOHMTowOHM(div256(mul256(sOHM.circulatingSupply(), percent), 1e6)); 
+        return gOHM.balanceTo(div(mul256(sOHM.circulatingSupply(), percent), 1e6)); 
     }
 
     /**
@@ -283,7 +283,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
         Receipt storage receipt = proposal.receipts[voter];
         require(receipt.hasVoted == false, "GovernorOHMega::castVoteInternal: voter already voted");
         /// @notice change from original contract
-        uint votes = wsOHM.getPriorVotes(voter, proposal.startBlock);
+        uint votes = gOHM.getPriorVotes(voter, proposal.startBlock);
 
         if (support == 0) {
             proposal.againstVotes = add256(proposal.againstVotes, votes);
@@ -416,12 +416,8 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
         return c;
     }
 
-    function div256(uint256 a, uint256 b) internal pure returns (uint256) {
-        return div(a, b, "division by zero");
-    }
-
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b > 0, errorMessage);
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b > 0,  "division by zero");
         uint256 c = a / b;
         // assert(a == b * c + a % b); // There is no case in which this doesn't hold
 
