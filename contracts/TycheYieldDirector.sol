@@ -140,18 +140,48 @@ contract TycheYieldDirector {
 
         uint recipientIndex = uint(recipientIndexSigned);
 
+        require(donations[recipientIndex].amount >= _amount, "Amount to withdraw is greater than deposited");
+
         donations[recipientIndex].amount -= _amount;
 
-        if(donations[recipientIndex].amount == 0)
+        if(donations[recipientIndex].amount == 0) {
             delete donations[recipientIndex];
-
-        // If recipient has redeemed, they have already paid their debt
-        if(recipientInfo[_recipient].totalDebt > 0) {
-            recipientInfo[_recipient].totalDebt -= _amount;
         }
-        // NOTE: Agnostic value of _amount is different from when it was deposited. The remaining
-        // amount is left with the recipient so they can keep receiving rebases.
-        recipientInfo[_recipient].agnosticAmount -= _toAgnostic(_amount);
+
+        RecipientInfo storage recipient = recipientInfo[_recipient];
+
+        console.log("amount");
+        console.log(_amount);
+        console.log("before");
+        console.log(recipient.agnosticAmount);
+        console.log(recipient.totalDebt);
+
+        // Record how much is currently redeemable. Withdrawal should not change redeemable amount.
+        //uint redeemable = _fromAgnostic(recipient.agnosticAmount) - recipient.totalDebt;
+        //console.log("redeemable");
+        //console.log(redeemable);
+        //console.log(IsOHM(sOHM).index());
+
+        // TODO If recipient has redeemed, they have already paid their debt. If not, pay off now.
+        // If recipient hasn't paid debt, pay off now
+        if(recipient.totalDebt > 0) {
+            recipient.totalDebt = recipient.totalDebt - _amount;
+
+            // NOTE: Agnostic value of _amount is different from when it was deposited. The remaining
+            // amount is left with the recipient so they can keep receiving rebases.
+            uint redeemable = _fromAgnostic(recipient.agnosticAmount) - _amount;
+            recipient.agnosticAmount = _toAgnostic(redeemable); // TODO this gives precision error sometimes
+        }
+
+        //recipient.agnosticAmount -= _toAgnostic(_amount); // TODO
+
+        console.log("after");
+        console.log(recipient.agnosticAmount);
+        console.log(_fromAgnostic(recipient.agnosticAmount));
+        console.log(_fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastRedeem));
+        console.log(recipient.totalDebt);
+
+        console.log(redeemableBalance(_recipient));
 
         IERC20(sOHM).safeTransfer(msg.sender, _amount);
 
