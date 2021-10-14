@@ -5,353 +5,251 @@ pragma solidity 0.7.5;
 import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
+import "./interfaces/IERC20.sol";
+import "./interfaces/IsOHM.sol";
+import "./interfaces/IgOHM.sol";
+import "./interfaces/IDistributor.sol";
+
 import "./types/Governable.sol";
-import "./types/Guardable.sol";
-
-import "./interfaces/IBondingCalculator.sol";
-import "./interfaces/IERC20Metadata.sol";
-import "./interfaces/IOHMERC20.sol";
 
 
-contract OlympusTreasury is Governable, Guardable {
+contract OlympusStaking is Governable {
 
     /* ========== DEPENDENCIES ========== */
 
-    using SafeMath for uint;
+    using SafeMath for uint256;
     using SafeERC20 for IERC20;
-
-
-
-    /* ========== EVENTS ========== */
-
-    event Deposit( address indexed token, uint amount, uint value );
-    event Withdrawal( address indexed token, uint amount, uint value );
-    event CreateDebt( address indexed debtor, address indexed token, uint amount, uint value );
-    event RepayDebt( address indexed debtor, address indexed token, uint amount, uint value );
-    event ReservesManaged( address indexed token, uint amount );
-    event ReservesUpdated( uint indexed totalReserves );
-    event ReservesAudited( uint indexed totalReserves );
-    event RewardsMinted( address indexed caller, address indexed recipient, uint amount );
-    event ChangeQueued( STATUS indexed status, address queued );
-    event ChangeActivated( STATUS indexed status, address activated, bool result );
+    using SafeERC20 for IsOHM;
+    using SafeERC20 for IgOHM;
 
 
 
     /* ========== DATA STRUCTURES ========== */
 
-    enum STATUS {
-        RESERVEDEPOSITOR,
-        RESERVESPENDER,
-        RESERVETOKEN, 
-        RESERVEMANAGER, 
-        LIQUIDITYDEPOSITOR, 
-        LIQUIDITYTOKEN, 
-        LIQUIDITYMANAGER, 
-        DEBTOR, 
-        REWARDMANAGER, 
-        SOHM 
+    struct Epoch {
+        uint length;
+        uint number;
+        uint endBlock;
+        uint distribute;
     }
 
-    struct Queue {
-        STATUS managing;
-        address toPermit;
-        address calculator;
-        uint timelockEnd;
-        bool nullify;
-        bool executed;
+    struct Claim {
+        uint deposit;
+        uint gons;
+        uint expiry;
+        bool lock; // prevents malicious delays
     }
+
+    enum CONTRACTS { DISTRIBUTOR, gOHM }
 
 
 
     /* ========== STATE VARIABLES ========== */
 
-    IOHMERC20 immutable OHM;
-    address sOHM;
+    IERC20 public immutable OHM;
+    IsOHM public immutable sOHM;
+    IgOHM public gOHM;
 
-    mapping( STATUS => address[] ) public registry;
-    mapping( STATUS => mapping( address => bool ) ) public permissions;
+    Epoch public epoch;
+
+    address public distributor;
+
+    mapping( address => Claim ) public warmupInfo;
+    uint public gonsInWarmup;
+    uint public warmupPeriod;
+
     
-    Queue[] public permissionQueue;
-    uint public immutable blocksNeededForQueue;
-    
-    mapping( address => address ) public bondCalculator;
-
-    mapping( address => uint ) public debtorBalance;
-    
-    uint public totalReserves;
-    uint public totalDebt;
-
-
 
     /* ========== CONSTRUCTOR ========== */
-
-    constructor (
-        address _OHM,
-        address _DAI,
-        address _OHMDAI,
-        uint _blocksNeededForQueue
+    
+    constructor ( 
+        address _OHM, 
+        address _sOHM, 
+        uint _epochLength,
+        uint _firstEpochNumber,
+        uint _firstEpochBlock
     ) {
         require( _OHM != address(0) );
-        OHM = IOHMERC20( _OHM );
-
-        permissions[ STATUS.RESERVETOKEN ][ _DAI ] = true;
-        registry[ STATUS.RESERVETOKEN ].push( _DAI );
-
-        permissions[ STATUS.LIQUIDITYTOKEN ][ _OHMDAI ] = true;
-        registry[ STATUS.LIQUIDITYTOKEN ].push( _OHMDAI );
-
-        blocksNeededForQueue = _blocksNeededForQueue;
+        OHM = IERC20( _OHM );
+        require( _sOHM != address(0) );
+        sOHM = IsOHM( _sOHM );
+        
+        epoch = Epoch({
+            length: _epochLength,
+            number: _firstEpochNumber,
+            endBlock: _firstEpochBlock,
+            distribute: 0
+        });
     }
 
-
+    
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     /**
-        @notice allow approved address to deposit an asset for OHM
-        @param _from address
-        @param _amount uint
-        @param _token address
-        @param _profit uint
-        @return send_ uint
+     * @notice stake OHM to enter warmup
+     * @param _amount uint
+     * @param _recipient address
+     * @param _claim bool
+     * @param _rebasing bool
      */
-    function deposit( address _from, uint _amount, address _token, uint _profit ) external returns ( uint send_ ) {
-        if ( permissions[ STATUS.RESERVETOKEN ][ _token ] ) {
-            require( permissions[ STATUS.RESERVEDEPOSITOR ][ msg.sender ], "Not approved" );
-        } else if ( permissions[ STATUS.LIQUIDITYTOKEN ][ _token ] ) {
-            require( permissions[ STATUS.LIQUIDITYDEPOSITOR ][ msg.sender ], "Not approved" );
+    function stake( uint _amount, address _recipient, bool _rebasing, bool _claim ) external returns ( uint ) {
+        rebase();
+
+        OHM.safeTransferFrom( msg.sender, address(this), _amount );
+
+        if ( _claim && warmupPeriod == 0 ) {
+            return _send( _recipient, _amount, _rebasing );
+
         } else {
-            require( 1 == 0 ); // guarantee revert
+            Claim memory info = warmupInfo[ _recipient ];
+
+            if ( !info.lock ) {
+                require( _recipient == msg.sender, "External deposits for account are locked" );
+            }
+
+            warmupInfo[ _recipient ] = Claim ({
+                deposit: info.deposit.add( _amount ),
+                gons: info.gons.add( sOHM.gonsForBalance( _amount ) ),
+                expiry: epoch.number.add( warmupPeriod ),
+                lock: info.lock
+            });
+
+            gonsInWarmup = gonsInWarmup.add( sOHM.gonsForBalance( _amount ) );
+
+            return _amount;
+        }
+    }
+
+    /**
+     * @notice retrieve stake from warmup
+     * @param _recipient address
+     * @param _rebasing bool
+     */
+    function claim ( address _recipient, bool _rebasing ) public returns ( uint ) {
+        Claim memory info = warmupInfo[ _recipient ];
+
+        if ( !info.lock ) {
+            require( _recipient == msg.sender, "External claims for account are locked" );
         }
 
-        IERC20( _token ).safeTransferFrom( _from, address(this), _amount );
+        if ( epoch.number >= info.expiry && info.expiry != 0 ) {
+            delete warmupInfo[ _recipient ];
 
-        uint value = valueOf( _token, _amount );
-        // mint OHM needed and store amount of rewards for distribution
-        send_ = value.sub( _profit );
-        OHM.mint( msg.sender, send_ );
+            gonsInWarmup = gonsInWarmup.sub( info.gons );
 
-        totalReserves = totalReserves.add( value );
-        emit ReservesUpdated( totalReserves );
-
-        emit Deposit( _token, _amount, value );
+            return _send( _recipient, sOHM.balanceForGons( info.gons ), _rebasing );
+        }
+        return 0;
     }
 
     /**
-        @notice allow approved address to burn OHM for reserves
-        @param _amount uint
-        @param _token address
+     * @notice forfeit stake and retrieve OHM
      */
-    function withdraw( uint _amount, address _token ) external {
-        require( permissions[ STATUS.RESERVETOKEN ][ _token ], "Not accepted" ); // Only reserves can be used for redemptions
-        require( permissions[ STATUS.RESERVESPENDER ][ msg.sender ] == true, "Not approved" );
+    function forfeit() external returns ( uint ) {
+        Claim memory info = warmupInfo[ msg.sender ];
+        delete warmupInfo[ msg.sender ];
 
-        uint value = valueOf( _token, _amount );
-        OHM.burnFrom( msg.sender, value );
+        gonsInWarmup = gonsInWarmup.sub( info.gons );
 
-        totalReserves = totalReserves.sub( value );
-        emit ReservesUpdated( totalReserves );
+        OHM.safeTransfer( msg.sender, info.deposit );
 
-        IERC20( _token ).safeTransfer( msg.sender, _amount );
-
-        emit Withdrawal( _token, _amount, value );
+        return info.deposit;
     }
 
     /**
-        @notice allow approved address to borrow reserves
-        @param _amount uint
-        @param _token address
+     * @notice prevent new deposits or claims from ext. address (protection from malicious activity)
      */
-    function incurDebt( uint _amount, address _token ) external {
-        require( permissions[ STATUS.DEBTOR ][ msg.sender ], "Not approved" );
-        require( permissions[ STATUS.RESERVETOKEN ][ _token ], "Not accepted" );
+    function toggleLock() external {
+        warmupInfo[ msg.sender ].lock = !warmupInfo[ msg.sender ].lock;
+    }
 
-        uint value = valueOf( _token, _amount );
+    /**
+     * @notice redeem sOHM for OHM
+     * @param _amount uint
+     * @param _trigger bool
+     * @param _rebasing bool
+     */
+    function unstake( uint _amount, bool _trigger, bool _rebasing ) external returns ( uint ) {
+        if ( _trigger ) {
+            rebase();
+        }
 
-        uint maximumDebt = IERC20( sOHM ).balanceOf( msg.sender ); // Can only borrow against sOHM held
-        uint availableDebt = maximumDebt.sub( debtorBalance[ msg.sender ] );
-        require( value <= availableDebt, "Exceeds debt limit" );
-
-        debtorBalance[ msg.sender ] = debtorBalance[ msg.sender ].add( value );
-        totalDebt = totalDebt.add( value );
-
-        totalReserves = totalReserves.sub( value );
-        emit ReservesUpdated( totalReserves );
-
-        IERC20( _token ).transfer( msg.sender, _amount );
+        uint amount = _amount;
+        if ( _rebasing ) {
+            sOHM.safeTransferFrom( msg.sender, address(this), _amount );
+        } else {
+            gOHM.burn( msg.sender, _amount ); // amount was given in gOHM terms
+            amount = gOHM.balanceFrom( _amount ); // convert amount to OHM terms
+        }
         
-        emit CreateDebt( msg.sender, _token, _amount, value );
+        OHM.safeTransfer( msg.sender, amount );
+
+        return amount;
     }
 
     /**
-        @notice allow approved address to repay borrowed reserves with reserves
-        @param _amount uint
-        @param _token address
+     * @notice convert _amount sOHM into gBalance_ gOHM
+     * @param _amount uint
+     * @return gBalance_ uint
      */
-    function repayDebtWithReserve( uint _amount, address _token ) external {
-        require( permissions[ STATUS.DEBTOR ][ msg.sender ], "Not approved" );
-        require( permissions[ STATUS.RESERVETOKEN ][ _token ], "Not accepted" );
+    function wrap( uint _amount ) external returns ( uint gBalance_ ) {
+        sOHM.safeTransferFrom( msg.sender, address(this), _amount );
 
-        IERC20( _token ).safeTransferFrom( msg.sender, address(this), _amount );
-
-        uint value = valueOf( _token, _amount );
-        debtorBalance[ msg.sender ] = debtorBalance[ msg.sender ].sub( value );
-        totalDebt = totalDebt.sub( value );
-
-        totalReserves = totalReserves.add( value );
-        emit ReservesUpdated( totalReserves );
-
-        emit RepayDebt( msg.sender, _token, _amount, value );
+        gBalance_ = gOHM.balanceTo( _amount );
+        gOHM.mint( msg.sender, gBalance_ );
     }
 
     /**
-        @notice allow approved address to repay borrowed reserves with OHM
-        @param _amount uint
+     * @notice convert _amount gOHM into sBalance_ sOHM
+     * @param _amount uint
+     * @return sBalance_ uint
      */
-    function repayDebtWithOHM( uint _amount ) external {
-        require( permissions[ STATUS.DEBTOR ][ msg.sender ], "Not approved" );
+    function unwrap( uint _amount ) external returns ( uint sBalance_ ) {
+        gOHM.burn( msg.sender, _amount );
 
-        IOHMERC20( OHM ).burnFrom( msg.sender, _amount );
-
-        debtorBalance[ msg.sender ] = debtorBalance[ msg.sender ].sub( _amount );
-        totalDebt = totalDebt.sub( _amount );
-
-        emit RepayDebt( msg.sender, address( OHM ), _amount, _amount );
+        sBalance_ = gOHM.balanceFrom( _amount );
+        sOHM.safeTransfer( msg.sender, sBalance_ );
     }
 
     /**
-        @notice allow approved address to withdraw assets
-        @param _token address
-        @param _amount uint
+        @notice trigger rebase if epoch over
      */
-    function manage( address _token, uint _amount ) external {
-        if( permissions[ STATUS.LIQUIDITYTOKEN ][ _token ] ) {
-            require( permissions[ STATUS.LIQUIDITYMANAGER ][ msg.sender ], "Not approved" );
-        } else {
-            require( permissions[ STATUS.RESERVEMANAGER ][ msg.sender ], "Not approved" );
-        }
+    function rebase() public {
+        if( epoch.endBlock <= block.number ) {
+            sOHM.rebase( epoch.distribute, epoch.number );
 
-        uint value = valueOf( _token, _amount );
-        require( value <= excessReserves(), "Insufficient reserves" );
-
-        totalReserves = totalReserves.sub( value );
-        emit ReservesUpdated( totalReserves );
-
-        IERC20( _token ).safeTransfer( msg.sender, _amount );
-
-        emit ReservesManaged( _token, _amount );
-    }
-
-    /**
-        @notice send epoch reward to staking contract
-     */
-    function mintRewards( address _recipient, uint _amount ) external {
-        require( permissions[ STATUS.REWARDMANAGER ][ msg.sender ], "Not approved" );
-        require( _amount <= excessReserves(), "Insufficient reserves" );
-
-        OHM.mint( _recipient, _amount );
-
-        emit RewardsMinted( msg.sender, _recipient, _amount );
-    } 
-
-    /**
-     *  @notice enable queued permission
-     *  @param _index uint
-     */
-    function execute( uint _index ) external {
-        Queue memory info = permissionQueue[ _index ];
-        require( !info.nullify, "Action has been nullified" );
-        require( !info.executed, "Action has already been executed" );
-        require( block.number >= info.timelockEnd, "Timelock not complete" );
-
-        if ( info.managing == STATUS.SOHM ) { // 9
-            sOHM = info.toPermit;
-        } else {
-            registry[ info.managing ].push( info.toPermit );
-            permissions[ info.managing ][ info.toPermit ] = true;
+            epoch.endBlock = epoch.endBlock.add( epoch.length );
+            epoch.number++;
             
-            if ( info.managing == STATUS.LIQUIDITYTOKEN ) { // 5
-                bondCalculator[ info.toPermit ] = info.calculator;
+            if ( distributor != address(0) ) {
+                IDistributor( distributor ).distribute();
+            }
+
+            if( contractBalance() <= totalStaked() ) {
+                epoch.distribute = 0;
+            } else {
+                epoch.distribute = contractBalance().sub( totalStaked() );
             }
         }
-        permissionQueue[ _index ].executed = true;
     }
 
-
-
-    /* ========== GOVERNOR FUNCTIONS ========== */
+    /* ========== INTERNAL FUNCTIONS ========== */
 
     /**
-        @notice queue address to receive permission
-        @param _status STATUS
-        @param _address address
+     * @notice send staker their amount as sOHM or gOHM
+     * @param _recipient address
+     * @param _amount uint
+     * @param _rebasing bool
      */
-    function queue( STATUS _status, address _address, address _calculator ) external onlyGovernor() {
-        require( _address != address(0) );
-
-        uint timelock = block.number.add( blocksNeededForQueue );
-        if ( _status == STATUS.RESERVEMANAGER || _status == STATUS.LIQUIDITYMANAGER ) {
-            timelock = block.number.add( blocksNeededForQueue.mul( 2 ) );
+    function _send( address _recipient, uint _amount, bool _rebasing ) internal returns ( uint ) {
+        if ( _rebasing ) {
+            sOHM.safeTransfer( _recipient, _amount ); // send as sOHM (equal unit as OHM)
+            return _amount;
+        } else {
+            gOHM.mint( _recipient, gOHM.balanceTo( _amount ) ); // send as gOHM (convert units from OHM)
+            return gOHM.balanceTo( _amount );
         }
-
-        permissionQueue.push( Queue({
-            managing: _status,
-            toPermit: _address,
-            calculator: _calculator,
-            timelockEnd: timelock,
-            nullify: false,
-            executed: false
-        } ) );
-
-        emit ChangeQueued( _status, _address );
-    }
-
-
-
-    /* ========== GOVERNOR or GUARDIAN FUNCTIONS ========== */
-
-    /**
-     *  @notice disable permission from address
-     *  @param _status STATUS
-     *  @param _toDisable address
-     */
-    function disable( STATUS _status, address _toDisable ) external {
-        require( msg.sender == governor() || msg.sender == guardian(), "Not governor or guardian" );
-        permissions[ _status ][ _toDisable ] = false;
-    }
-
-    /* ========== GUARDIAN FUNCTIONS ========== */
-
-    /**
-        @notice takes inventory of all tracked assets
-        @notice always consolidate to recognized reserves before audit
-     */
-    function auditReserves() external onlyGuardian() {
-        uint reserves;
-        address[] memory reserveToken = registry[ STATUS.RESERVETOKEN ];
-        for( uint i = 0; i < reserveToken.length; i++ ) {
-            reserves = reserves.add ( 
-                valueOf( reserveToken[ i ], IERC20( reserveToken[ i ] ).balanceOf( address(this) ) )
-            );
-        }
-        address[] memory liquidityToken = registry[ STATUS.LIQUIDITYTOKEN ];
-        for( uint i = 0; i < liquidityToken.length; i++ ) {
-            reserves = reserves.add (
-                valueOf( liquidityToken[ i ], IERC20( liquidityToken[ i ] ).balanceOf( address(this) ) )
-            );
-        }
-        totalReserves = reserves;
-        emit ReservesUpdated( reserves );
-        emit ReservesAudited( reserves );
-    }
-
-    /**
-     *  @notice prevents queued action from taking place
-     *  @param _index uint
-     */
-    function nullify( uint _index ) external onlyGuardian() {
-        require( !permissionQueue[ _index ].executed, "Action has already been executed" );
-        permissionQueue[ _index ].nullify = true;
     }
 
 
@@ -359,26 +257,48 @@ contract OlympusTreasury is Governable, Guardable {
     /* ========== VIEW FUNCTIONS ========== */
 
     /**
-        @notice returns excess reserves not backing tokens
+        @notice returns the sOHM index, which tracks rebase growth
         @return uint
      */
-    function excessReserves() public view returns ( uint ) {
-        return totalReserves.sub( OHM.totalSupply().sub( totalDebt ) );
+    function index() public view returns ( uint ) {
+        return sOHM.index();
     }
 
     /**
-        @notice returns OHM valuation of asset
-        @param _token address
-        @param _amount uint
-        @return value_ uint
+        @notice returns contract OHM holdings, including bonuses provided
+        @return uint
      */
-    function valueOf( address _token, uint _amount ) public view returns ( uint value_ ) {
-        if ( permissions[ STATUS.RESERVETOKEN ][ _token ] ) {
-            // convert amount to match OHM decimals
-            value_ = _amount.mul( 10 ** IERC20Metadata(address(OHM)).decimals() )
-                .div( 10 ** IERC20Metadata( _token ).decimals() );
-        } else if ( permissions[ STATUS.LIQUIDITYTOKEN ][ _token ] ) {
-            value_ = IBondingCalculator( bondCalculator[ _token ] ).valuation( _token, _amount );
+    function contractBalance() public view returns ( uint ) {
+        return OHM.balanceOf( address(this) );
+    }
+
+    function totalStaked() public view returns ( uint ) {
+        return sOHM.circulatingSupply() // circulating sOHM plus
+            .add( sOHM.balanceForGons( gonsInWarmup ) ); // OHM in warmup
+    }
+
+
+
+    /* ========== MANAGERIAL FUNCTIONS ========== */
+
+    /**
+        @notice sets the contract address for LP staking
+        @param _contract address
+     */
+    function setContract( CONTRACTS _contract, address _address ) external onlyGovernor() {
+        if( _contract == CONTRACTS.DISTRIBUTOR ) { // 0
+            distributor = _address;
+        } else if ( _contract == CONTRACTS.gOHM ) { // 1
+            require( address( gOHM ) == address( 0 ) ); // only set once
+            gOHM = IgOHM( _address );
         }
+    }
+    
+    /**
+     * @notice set warmup period for new stakers
+     * @param _warmupPeriod uint
+     */
+    function setWarmup( uint _warmupPeriod ) external onlyGovernor() {
+        warmupPeriod = _warmupPeriod;
     }
 }
