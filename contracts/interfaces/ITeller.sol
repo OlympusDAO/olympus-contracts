@@ -7,7 +7,7 @@ interface ITeller {
         address _principal,
         uint _principalPaid,
         uint _payout, 
-        uint _vesting,
-        uint _fid 
+        uint _expires,
+        address _feo
     ) external;
 }
