@@ -13,4 +13,6 @@ interface ITreasury {
     function incurDebt( uint amount_, address token_ ) external;
     
     function repayDebtWithReserve( uint amount_, address token_ ) external;
+
+    function manage( address _token, uint _amount ) external;
 }

@@ -3,6 +3,8 @@ pragma solidity 0.7.5;
 
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IUniswapV2Router.sol";
+import "./interfaces/IERC20.sol";
+import "./libraries/SafeERC20.sol";
 
 interface IOHM is IERC20 {
     function vault() external view returns ( address ); // mint access --> treasury
@@ -10,15 +12,20 @@ interface IOHM is IERC20 {
 
 contract Defender {
 
+    using SafeERC20 for IERC20;
+
     struct Pool {
         IERC20 token;
+        address token0;
+        address token1;
         bool sushi;
     }
 
     address immutable DAO;
     IOHM immutable OHM;
     ITreasury immutable treasury;
-    IUniswapV2Router immutable router;
+    IUniswapV2Router immutable sushiRouter; 
+    IUniswapV2Router immutable uniRouter;
 
     uint public reward;
     Pool[] public pools;
@@ -26,15 +33,18 @@ contract Defender {
     constructor ( 
         address _OHM,
         address _treasury,
-        address _router,
+        address _sushiRouter,
+        address _uniRouter,
         address _DAO
     ) {
         require( _OHM != address(0) );
-        OHM = IOHM( OHM );
+        OHM = IOHM( _OHM );
         require( _treasury != address(0) );
         treasury = ITreasury( _treasury );
-        require( _router != address(0) );
-        router = IUniswapV2Router( _router );
+        require( _sushiRouter != address(0) );
+        sushiRouter = IUniswapV2Router( _sushiRouter );
+        require( _uniRouter != address(0) );
+        uniRouter = IUniswapV2Router( _uniRouter );
         require( _DAO != address(0) );
         DAO = _DAO;
     }
@@ -52,22 +62,18 @@ contract Defender {
             Pool memory pool = pools[i];
 
             uint balance = pool.token.balanceOf( address(treasury) );
-            treasury.manage( address(pool.token), amount );
-
-            address token0;
-            address token1;
+            treasury.manage( address(pool.token), balance );
 
             if( pool.sushi ) {
-                (token0, token1) = sushiRouter.removeLiquidity( balance );
+                pool.token.approve(address(sushiRouter), balance);
+                sushiRouter.removeLiquidity( pool.token0, pool.token1, balance, 0, 0, address(treasury), block.number + 15 );
             } else {
-                (token0, token1) = uniRouter.removeLiquidity( balance );
+                pool.token.approve(address(uniRouter), balance);
+                uniRouter.removeLiquidity( pool.token0, pool.token1, balance, 0, 0, address(treasury), block.number + 15 );
             }
-
-            IERC20( token0 ).safeTransfer( address(treasury), IERC20( token0 ).balanceOf( address(this) ) );
-            IERC20( token1 ).safeTransfer( address(treasury), IERC20( token1 ).balanceOf( address(this) ) );
         }
 
-        OHM.safeTransferFrom( address(this), msg.sender, reward );
+        IERC20(address(OHM)).safeTransferFrom( address(this), msg.sender, reward );
     }
 
     // send OHM then raise reward
@@ -79,13 +85,15 @@ contract Defender {
 
     // add new liquidity pool tokens
     // specify if sushi or uni pool 
-    function addPools( address[] memory _pools, bool[] memory _sushi ) external {
+    function addPools( address[] memory _pools, address[] memory _token0, address[] memory _token1, bool[] memory _sushi ) external {
         require( msg.sender == DAO );
 
         for( uint i = 0; i < _pools.length; i++ ) {
             require( _pools[i] != address(0) );
             pools.push( Pool({
                 token: IERC20( _pools[i] ),
+                token0: _token0[i],
+                token1: _token1[i],
                 sushi: _sushi [i]
             }));
         }
