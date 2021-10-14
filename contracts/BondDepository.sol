@@ -39,6 +39,8 @@ contract OlympusBondDepository is Governable, Guardable {
         IBondingCalculator calculator; // contract to value principal
 
         Terms terms; // terms of bond
+        bool termsSet; // have terms been set
+
         uint capacity; // capacity remaining
         bool capacityIsPayout; // capacity limit is for payout vs principal
 
@@ -94,47 +96,32 @@ contract OlympusBondDepository is Governable, Guardable {
      * @notice creates a new bond type
      * @param _principal address
      * @param _calculator address
-     * @param _controlVariable uint
-     * @param _fixedTerm bool
-     * @param _vestingTerm uint
-     * @param _expiration uint
-     * @param _conclusion uint
-     * @param _maxPayout uint
-     * @param _maxDebt uint
-     * @param _initialDebt uint
      * @param _capacity uint
      * @param _capacityIsPayout bool
      */
     function addBond( 
         address _principal,
         address _calculator,
-        uint _controlVariable, 
-        bool _fixedTerm,
-        uint _vestingTerm,
-        uint _expiration,
-        uint _conclusion,
-        uint _maxPayout,
-        uint _maxDebt,
-        uint _initialDebt,
         uint _capacity,
         bool _capacityIsPayout
     ) external onlyGuardian() returns ( uint id_ ) {
         Terms memory terms = Terms ({
-            controlVariable: _controlVariable,
-            fixedTerm: _fixedTerm,
-            vestingTerm: _vestingTerm,
-            expiration: _expiration,
-            conclusion: _conclusion,
-            minimumPrice: 1e27,
-            maxPayout: _maxPayout,
-            maxDebt: _maxDebt
+            controlVariable: 0,
+            fixedTerm: false,
+            vestingTerm: 0,
+            expiration: 0,
+            conclusion: 0,
+            minimumPrice: 0,
+            maxPayout: 0,
+            maxDebt: 0
         });
 
         bonds[ IDs.length ] = Bond({
             principal: IERC20( _principal ),
             calculator: IBondingCalculator( _calculator ),
             terms: terms,
-            totalDebt: _initialDebt,
+            termsSet: false,
+            totalDebt: 0,
             lastDecay: block.number,
             capacity: _capacity,
             capacityIsPayout: _capacityIsPayout
@@ -147,12 +134,44 @@ contract OlympusBondDepository is Governable, Guardable {
     /**
      * @notice set minimum price for new bond
      * @param _id uint
-     * @param _price uint
+     * @param _controlVariable uint
+     * @param _fixedTerm bool
+     * @param _vestingTerm uint
+     * @param _expiration uint
+     * @param _conclusion uint
+     * @param _minimumPrice uint
+     * @param _maxPayout uint
+     * @param _maxDebt uint
+     * @param _initialDebt uint
      */
-    function initializeBond( uint _id, uint _price ) external onlyGuardian() {
-        require( bonds[ _id ].terms.minimumPrice == 1e27, "Already initialized" );
-        require( _price != 1e27 );
-        bonds[ _id ].terms.minimumPrice = _price;
+    function setTerms( 
+        uint _id, 
+        uint _controlVariable,
+        bool _fixedTerm,
+        uint _vestingTerm,
+        uint _expiration,
+        uint _conclusion,
+        uint _minimumPrice,
+        uint _maxPayout,
+        uint _maxDebt,
+        uint _initialDebt
+    ) external onlyGuardian() {
+        require( !bonds[ _id ].termsSet, "Already set" );
+
+        Terms memory terms = Terms ({
+            controlVariable: _controlVariable,
+            fixedTerm: _fixedTerm,
+            vestingTerm: _vestingTerm,
+            expiration: _expiration,
+            conclusion: _conclusion,
+            minimumPrice: _minimumPrice,
+            maxPayout: _maxPayout,
+            maxDebt: _maxDebt
+        });
+
+        bonds[ _id ].terms = terms;
+        bonds[ _id ].totalDebt = _initialDebt;
+        bonds[ _id ].termsSet = true;
     }
 
     /**
@@ -198,7 +217,7 @@ contract OlympusBondDepository is Governable, Guardable {
 
         Bond memory info = bonds[ _BID ];
 
-        require( bonds[ _BID ].terms.minimumPrice != 1e27, "Not initialized" );
+        require( bonds[ _BID ].termsSet, "Not initialized" );
         require( block.number < info.terms.conclusion, "Bond concluded" );
 
         emit beforeBond( _BID, bondPriceInUSD( _BID ), bondPrice( _BID ), debtRatio( _BID ) ); 
@@ -272,14 +291,12 @@ contract OlympusBondDepository is Governable, Guardable {
      * @param _BID uint
      * @return principal_ address
      * @return calculator_ address
-     * @return isLiquidityBond_ bool
      * @return totalDebt_ uint
      * @return lastBondCreatedAt_ uint
      */
     function bondInfo( uint _BID ) external view returns (
         address principal_,
         address calculator_,
-        bool isLiquidityBond_,
         uint totalDebt_,
         uint lastBondCreatedAt_
     ) {
@@ -297,7 +314,6 @@ contract OlympusBondDepository is Governable, Guardable {
      * @return vestingTerm_ uint
      * @return minimumPrice_ uint
      * @return maxPayout_ uint
-     * @return fee_ uint
      * @return maxDebt_ uint
      */
     function bondTerms( uint _BID ) external view returns (
@@ -305,7 +321,6 @@ contract OlympusBondDepository is Governable, Guardable {
         uint vestingTerm_,
         uint minimumPrice_,
         uint maxPayout_,
-        uint fee_,
         uint maxDebt_
     ) {
         Terms memory terms = bonds[ _BID ].terms;
