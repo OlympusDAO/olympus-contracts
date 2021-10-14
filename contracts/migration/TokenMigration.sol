@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
 interface IERC20 {
@@ -101,7 +102,13 @@ interface IRouter {
 
 
 
-contract OlympusLPMigration {
+contract OlympusTokenMigration {
+
+    struct Token {
+        address token;
+        bool reserveToken;
+    }
+
     address public DAI;
     address public oldOHM;
     address public newOHM;
@@ -113,30 +120,70 @@ contract OlympusLPMigration {
     
     address public oldTreasury;
     address public newTreasury;
+
+    Token[] public tokens;
+
+    function migrate() external {
+        _migrateLP();
+        _migrateTokens();
+    }
+
+    /**
+    *   @notice adds tokens to tokens array
+    *   @param _tokens address[]
+    */
+    function addTokens( address[] memory _tokens, bool[] memory _reserveToken  ) external {
+
+        for( uint i = 0; i < _tokens.length; i++ ) {
+            tokens.push( Token({
+                token: _tokens[i],
+                reserveToken: _reserveToken[i]
+            }));
+        }
+
+    }
+
+    /**
+    *   @notice Migrates tokens from old treasury to new treasury
+    */
+    function _migrateTokens() internal {
+        for( uint i = 0; i < tokens.length; i++ ) {
+            Token memory _token = tokens[i];
+
+            uint balance = IERC20(_token.token).balanceOf( oldTreasury );
+            IOldTreasury(oldTreasury).manage( _token.token, balance );
+
+            if(_token.reserveToken) {
+                uint tokenValue = INewTreasury(newTreasury).valueOf(_token.token, balance);
+                INewTreasury(newTreasury).deposit(address(this), balance, _token.token, tokenValue);
+            } else {
+                IERC20(_token.token).transfer( newTreasury, balance );
+            }
+        }
+    }
     
-    function  migrate() external {
+    /**
+    *   @notice Migrates OHM/DAI SLP to new OHM contract
+    */
+    function _migrateLP() internal {
         uint oldLPAmount = IERC20(oldOHMDAISLP).balanceOf(oldTreasury);
         IOldTreasury(oldTreasury).manage(oldOHMDAISLP, oldLPAmount);
         
         IERC20(oldOHMDAISLP).approve(sushiRouter, oldLPAmount);
-        
         (uint amountA, uint amountB) = IRouter(sushiRouter).removeLiquidity(DAI, oldOHM, oldLPAmount, 0, 0, address(this), block.number + 15);
         
         IOldTreasury(oldTreasury).withdraw(amountB, DAI);
         
         IERC20(DAI).approve(newTreasury, amountB * 10 ** 9);
-        
         INewTreasury(newTreasury).deposit(address(this), amountB * 10 ** 9, DAI, 0);
         
         IERC20(DAI).approve(sushiRouter, amountA);
         IERC20(newOHM).approve(sushiRouter, amountB);
-        
         (,, uint _newLiquidity) = IRouter(sushiRouter).addLiquidity(DAI, newOHM, amountA, amountB, 0, 0, address(this), block.number + 15);
         
         uint _newLPValue = INewTreasury(newTreasury).valueOf(newOHMDAISLP, _newLiquidity);
         
         IERC20(newOHMDAISLP).approve(newTreasury, _newLPValue);
-        
         INewTreasury(newTreasury).deposit(address(this), _newLiquidity, newOHMDAISLP, _newLPValue);
     }
 }
