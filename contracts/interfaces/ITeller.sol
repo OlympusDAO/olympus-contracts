@@ -9,5 +9,5 @@ interface ITeller {
         uint _payout, 
         uint _expires,
         address _feo
-    ) external;
+    ) external returns ( uint index_ );
 }
