@@ -82,6 +82,8 @@ interface IOldTreasury {
     function mint( address _recipient, uint _amount ) external;
     
     function manage( address _token, uint _amount ) external;
+
+    function excessReserves() external view returns ( uint );
 }
 
 interface INewTreasury {
@@ -180,7 +182,15 @@ contract OlympusTokenMigration {
             IOldTreasury(oldTreasury).manage( _token.token, balance );
 
             if(_token.reserveToken) {
+                uint excessReserves = IOldTreasury(oldTreasury).excessReserves();
                 uint tokenValue = INewTreasury(newTreasury).valueOf(_token.token, balance);
+
+                if ( tokenValue > excessReserves ) {
+                    tokenValue = excessReserves;
+                    balance = excessReserves * 10 ** 9;
+                }
+
+                IERC20(_token.token).approve(newTreasury, balance);
                 INewTreasury(newTreasury).deposit(address(this), balance, _token.token, tokenValue);
             } else {
                 IERC20(_token.token).transfer( newTreasury, balance );
