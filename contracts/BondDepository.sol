@@ -145,16 +145,6 @@ contract OlympusBondDepository is Governable, Guardable {
     }
 
     /**
-     * @notice set teller contract
-     * @param _teller address
-     */
-    function setTeller( address _teller ) external onlyGovernor() {
-        require( address( teller ) == address(0) );
-        require( _teller != address(0) );
-        teller = ITeller( _teller );
-    }
-
-    /**
      * @notice set minimum price for new bond
      * @param _id uint
      * @param _price uint
