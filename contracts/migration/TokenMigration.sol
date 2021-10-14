@@ -215,11 +215,6 @@ contract OlympusTokenMigration {
         
         IERC20(DAI).approve(sushiRouter, amountA);
         IERC20(newOHM).approve(sushiRouter, amountB);
-        (,, uint _newLiquidity) = IRouter(sushiRouter).addLiquidity(DAI, newOHM, amountA, amountB, 0, 0, address(this), block.number + 15);
-        
-        uint _newLPValue = INewTreasury(newTreasury).valueOf(newOHMDAISLP, _newLiquidity);
-        
-        IERC20(newOHMDAISLP).approve(newTreasury, _newLPValue);
-        INewTreasury(newTreasury).deposit(address(this), _newLiquidity, newOHMDAISLP, _newLPValue);
+        IRouter(sushiRouter).addLiquidity(DAI, newOHM, amountA, amountB, 0, 0, newTreasury, block.number + 15);
     }
 }
