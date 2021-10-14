@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
+pragma abicoder v2;
 
 import "./libraries/SafeMath.sol";
 import "./libraries/FixedPoint.sol";
@@ -24,23 +25,22 @@ contract OlympusBondDepository is Governable, Guardable {
 
     /* ======== EVENTS ======== */
 
-    event USDPriceChanged( uint before, uint current );
-    event InternalPriceChanged( uint before, uint current );
-    event DebtRatioChanged( uint before, uint current, uint stdBefore, uint stdCurrent );
-    event ControlVariableAdjustment( uint initialBCV, uint newBCV, uint adjustment, bool addition );
+    event beforeBond( uint index, uint price, uint internalPrice, uint debtRatio );
+    event CreateBond( uint index, uint amount, uint payout, uint expires );
 
 
 
     /* ======== STRUCTS ======== */
 
     // Info about each type of bond
-    struct BondType {
+    struct Bond {
         IERC20 principal; // token to accept as payment
         IBondingCalculator calculator; // contract to value principal
-        bool isLiquidityBond; // is principal a liquidity token
-        bool isRiskAsset; // mint instead of deposit (no RFV)
+
         Terms terms; // terms of bond
-        Adjust adjustment; // adjustment to terms of bond
+        uint capacity; // capacity remaining
+        bool capacityIsPayout; // capacity limit is for payout vs principal
+
         uint totalDebt; // total debt from bond 
         uint lastDecay; // last block when debt was decayed
     }
@@ -48,36 +48,28 @@ contract OlympusBondDepository is Governable, Guardable {
     // Info for creating new bonds
     struct Terms {
         uint controlVariable; // scaling variable for price
-        uint vestingTerm; // in blocks
+
+        bool fixedTerm; // fixed term or fixed expiration
+        uint vestingTerm; // term in blocks (fixed-term)
+        uint expiration; // block number bond matures (fixed-expiration)
+        uint conclusion; // block number bond no longer offered
+        
         uint minimumPrice; // vs principal value
         uint maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
-        uint fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
         uint maxDebt; // 9 decimal debt ratio, max % total supply created as debt
-    }
-
-    
-
-    // Info for incremental adjustments to control variable 
-    struct Adjust {
-        bool add; // addition or subtraction
-        uint delta; // BCV when adjustment finished
-        uint blocksToTarget; // blocks until target reached
-        uint lastBlock; // block when last adjustment made
     }
 
 
 
     /* ======== STATE VARIABLES ======== */
 
-    IERC20 immutable OHM; // token given as payment for bond
-    ITreasury immutable treasury; // mints OHM when receives principal
-    address public immutable DAO; // receives profit share from bond
+    mapping( uint => Bond ) public bonds;
+    address[] public IDs; // bond IDs
 
-    mapping( address => BondType ) bonds;
+    ITeller public teller; // handles payment
 
-    address[] public principals;
-
-    ITeller teller;
+    ITreasury immutable treasury;
+    IERC20 immutable OHM;
 
 
 
@@ -85,15 +77,12 @@ contract OlympusBondDepository is Governable, Guardable {
 
     constructor ( 
         address _OHM,
-        address _treasury, 
-        address _DAO
+        address _treasury
     ) {
         require( _OHM != address(0) );
         OHM = IERC20( _OHM );
         require( _treasury != address(0) );
         treasury = ITreasury( _treasury );
-        require( _DAO != address(0) );
-        DAO = _DAO;
     }
 
 
@@ -101,95 +90,86 @@ contract OlympusBondDepository is Governable, Guardable {
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     *  @notice initializes bond parameters
-     *  @param _principal address
-     *  @param _calculator address
-     *  @param _controlVariable uint
-     *  @param _vestingTerm uint
-     *  @param _minimumPrice uint
-     *  @param _maxPayout uint
-     *  @param _fee uint
-     *  @param _maxDebt uint
-     *  @param _initialDebt uint
+     * @notice creates a new bond type
+     * @param _principal address
+     * @param _calculator address
+     * @param _controlVariable uint
+     * @param _fixedTerm bool
+     * @param _vestingTerm uint
+     * @param _expiration uint
+     * @param _conclusion uint
+     * @param _maxPayout uint
+     * @param _maxDebt uint
+     * @param _initialDebt uint
+     * @param _capacity uint
+     * @param _capacityIsPayout bool
      */
-    function addBondType( 
+    function addBond( 
         address _principal,
         address _calculator,
-        bool _isRisk,
         uint _controlVariable, 
+        bool _fixedTerm,
         uint _vestingTerm,
-        uint _minimumPrice,
+        uint _expiration,
+        uint _conclusion,
         uint _maxPayout,
-        uint _fee,
         uint _maxDebt,
-        uint _initialDebt
-    ) external onlyGuardian() {
-        require( bonds[ _principal ].terms.controlVariable == 0, "Bonds must be initialized from 0" );
-        require( address( bonds[ _principal ].principal ) == address(0), "Cannot replace existing bond" );
-
+        uint _initialDebt,
+        uint _capacity,
+        bool _capacityIsPayout
+    ) external onlyGuardian() returns ( uint id_ ) {
         Terms memory terms = Terms ({
             controlVariable: _controlVariable,
+            fixedTerm: _fixedTerm,
             vestingTerm: _vestingTerm,
-            minimumPrice: _minimumPrice,
+            expiration: _expiration,
+            conclusion: _conclusion,
+            minimumPrice: 1e27,
             maxPayout: _maxPayout,
-            fee: _fee,
             maxDebt: _maxDebt
         });
 
-        bonds[ _principal ] = BondType({
+        bonds[ IDs.length ] = Bond({
             principal: IERC20( _principal ),
             calculator: IBondingCalculator( _calculator ),
-            isLiquidityBond: ( _calculator != address(0) ),
-            isRiskAsset: _isRisk,
             terms: terms,
-            adjustment: Adjust(false, 0, 0, 0),
             totalDebt: _initialDebt,
-            lastDecay: block.number
+            lastDecay: block.number,
+            capacity: _capacity,
+            capacityIsPayout: _capacityIsPayout
         });
 
-        principals.push( _principal );
-    }
-
-    enum PARAMETER { VESTING, PAYOUT, FEE, DEBT }
-    /**
-     *  @notice set parameters for new bonds
-     *  @param _parameter PARAMETER
-     *  @param _input uint
-     */
-    function setBondTerms ( address _principal, PARAMETER _parameter, uint _input ) external onlyGovernor() {
-        if ( _parameter == PARAMETER.VESTING ) { // 0
-            bonds[ _principal ].terms.vestingTerm = _input;
-        } else if ( _parameter == PARAMETER.PAYOUT ) { // 1
-            bonds[ _principal ].terms.maxPayout = _input;
-        } else if ( _parameter == PARAMETER.FEE ) { // 2
-            bonds[ _principal ].terms.fee = _input;
-        } else if ( _parameter == PARAMETER.DEBT ) { // 3
-            bonds[ _principal ].terms.maxDebt = _input;
-        }
+        id_ = IDs.length;
+        IDs.push( _principal );
     }
 
     /**
-     *  @notice set control variable adjustment
-     *  @param _addition bool
-     *  @param _delta uint
-     *  @param _blocks uint
+     * @notice set teller contract
+     * @param _teller address
      */
-    function setAdjustment ( 
-        address _principal,
-        bool _addition,
-        uint _delta,
-        uint _blocks
-    ) external {
-        require( msg.sender == governor() || msg.sender == guardian(), "Not governor or guardian" );
-        
-        require( _blocks <= 3300, "Adjustment: Change too fast" ); // must take at least 4 hours
+    function setTeller( address _teller ) external onlyGovernor() {
+        require( address( teller ) == address(0) );
+        require( _teller != address(0) );
+        teller = ITeller( _teller );
+    }
 
-        bonds[ _principal ].adjustment = Adjust({
-            add: _addition,
-            delta: _delta,
-            blocksToTarget: _blocks,
-            lastBlock: block.number
-        });
+    /**
+     * @notice set minimum price for new bond
+     * @param _id uint
+     * @param _price uint
+     */
+    function initializeBond( uint _id, uint _price ) external {
+        require( bonds[ _id ].terms.minimumPrice == 1e27, "Already initialized" );
+        require( _price != 1e27 );
+        bonds[ _id ].terms.minimumPrice = _price;
+    }
+
+    /**
+     * @notice disable existing bond
+     * @param _id uint
+     */
+    function deprecateBond( uint _id ) external {
+        bonds[ _id ].capacity = 0;
     }
 
 
@@ -198,104 +178,85 @@ contract OlympusBondDepository is Governable, Guardable {
     /* ======== MUTABLE FUNCTIONS ======== */
 
     /**
-     *  @notice deposit bond
-     *  @param _amount uint
-     *  @param _maxPrice uint
-     *  @param _depositor address
-     *  @param _principal address
-     *  @return uint
+     * @notice deposit bond
+     * @param _amount uint
+     * @param _maxPrice uint
+     * @param _depositor address
+     * @param _BID uint
+     * @param _feo address
+     * @return uint
      */
     function deposit( 
         uint _amount, 
         uint _maxPrice,
         address _depositor,
-        address _principal
-    ) external returns ( uint ) {
+        uint _BID,
+        address _feo
+    ) external returns ( uint, uint ) {
         require( _depositor != address(0), "Invalid address" );
+
+        Bond memory info = bonds[ _BID ];
+
+        require( bonds[ _BID ].terms.minimumPrice != 1e27, "Not initialized" );
+        require( block.number < info.terms.conclusion, "Bond concluded" );
+
+        emit beforeBond( _BID, bondPriceInUSD( _BID ), bondPrice( _BID ), debtRatio( _BID ) ); 
         
-        uint initialUSDPrice = bondPriceInUSD( _principal ); // Stored in bond info
-        uint initialInternalPrice = bondPrice( _principal );
-        uint initialDebtRatio = debtRatio( _principal );
-        uint initialStdDebtRatio = standardizedDebtRatio( _principal );
+        decayDebt( _BID );
 
-        BondType memory info = bonds[ _principal ];
+        require( info.totalDebt <= info.terms.maxDebt, "Max debt exceeded" );
+        require( _maxPrice >= _bondPrice( _BID ), "Slippage limit: more than max price" ); // slippage protection
 
-        decayDebt( _principal );
-        require( info.totalDebt <= info.terms.maxDebt, "Max capacity reached" );
-        
-        
+        uint value = treasury.valueOf( address( info.principal ), _amount );
+        uint payout = payoutFor( value, _BID ); // payout to bonder is computed
 
-        require( _maxPrice >= _bondPrice( _principal ), "Slippage limit: more than max price" ); // slippage protection
-
-        uint value = treasury.valueOf( _principal, _amount );
-        uint payout = payoutFor( value, _principal ); // payout to bonder is computed
-
-        require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
-        require( payout <= maxPayout( _principal ), "Bond too large"); // size protection because there is no slippage
-
-        if ( !info.isRiskAsset ) {
-            // deposit principal from sender address to treasury
-            treasury.deposit( msg.sender, _amount, _principal, value.sub( payout ) );
-        } else {
-            treasury.mintRewards( address(this), payout );
+        // ensure there is remaining capacity for bond
+        if( info.capacityIsPayout ) { // capacity in payout terms
+            require( info.capacity >= payout, "Bond concluded" );
+            info.capacity = info.capacity.sub( payout );
+        } else { // capacity in principal terms
+            require( info.capacity >= _amount, "Bond concluded" );
+            info.capacity = info.capacity.sub( _amount );
         }
         
-        // total debt is increased
-        bonds[ _principal ].totalDebt = info.totalDebt.add( value ); 
+        require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
+        require( payout <= maxPayout( _BID ), "Bond too large"); // size protection because there is no slippage
 
-        // price change event emitted        
-        emit InternalPriceChanged( initialInternalPrice, bondPrice( _principal ) );
-        emit USDPriceChanged( initialUSDPrice, bondPriceInUSD( _principal ) );
-        emit DebtRatioChanged( initialDebtRatio, debtRatio( _principal ), initialStdDebtRatio, standardizedDebtRatio( _principal ) );
+        info.principal.safeTransfer( address( treasury ), _amount ); // send payout to treasury
+        
+        bonds[ _BID ].totalDebt = info.totalDebt.add( value ); // increase total debt
+
+        uint expiration = info.terms.vestingTerm.add( block.number );
+        if ( !info.terms.fixedTerm ) {
+            expiration = info.terms.expiration;
+        }
         
         // user info stored with teller
-        teller.newBond( _depositor, payout, info.terms.vestingTerm );
+        uint index = teller.newBond( 
+            _depositor, 
+            address(info.principal),
+            _amount,
+            payout, 
+            expiration, 
+            _feo 
+        );
 
-        return payout; 
+        emit CreateBond( _BID, _amount, payout, expiration );
+
+        return ( payout, index ); 
     }
-
 
 
     
     /* ======== INTERNAL FUNCTIONS ======== */
 
     /**
-     *  @notice make adjustment to control variable
+     * @notice reduce total debt
+     * @param _BID uint
      */
-    function adjust( address _principal ) internal {
-        Adjust memory adjustment = bonds[ _principal ].adjustment;
-
-        if( adjustment.delta != 0 ) {
-            uint initial = bonds[ _principal ].terms.controlVariable;
-            uint blocksSinceLast = block.number.sub( adjustment.lastBlock );
-            uint change = changeBy( _principal );
-
-            bonds[ _principal ].adjustment.delta = adjustment.delta.sub( change );
-            bonds[ _principal ].adjustment.blocksToTarget = adjustment.blocksToTarget.sub( blocksSinceLast );
-
-            if ( adjustment.add ) {
-                bonds[ _principal ].terms.controlVariable = bonds[ _principal ].terms.controlVariable.add( change );
-            } else {
-                bonds[ _principal ].terms.controlVariable = bonds[ _principal ].terms.controlVariable.sub( change );
-            }
-
-            bonds[ _principal ].adjustment.lastBlock = block.number;
-
-            emit ControlVariableAdjustment( 
-                initial, 
-                bonds[ _principal ].terms.controlVariable, 
-                change, 
-                adjustment.add 
-            );
-        }
-    }
-
-    /**
-     *  @notice reduce total debt
-     */
-    function decayDebt( address _principal ) internal {
-        bonds[ _principal ].totalDebt = bonds[ _principal ].totalDebt.sub( debtDecay( _principal ) );
-        bonds[ _principal ].lastDecay = block.number;
+    function decayDebt( uint _BID ) internal {
+        bonds[ _BID ].totalDebt = bonds[ _BID ].totalDebt.sub( debtDecay( _BID ) );
+        bonds[ _BID ].lastDecay = block.number;
     }
 
 
@@ -306,36 +267,39 @@ contract OlympusBondDepository is Governable, Guardable {
     // BOND TYPE INFO
 
     /**
-     *  @notice returns data about a bond type
-     *  @param _principal address
-     *  @return calculator_ address
-     *  @return isLiquidityBond_ bool
-     *  @return totalDebt_ uint
-     *  @return lastBondCreatedAt_ uint
+     * @notice returns data about a bond type
+     * @param _BID uint
+     * @return principal_ address
+     * @return calculator_ address
+     * @return isLiquidityBond_ bool
+     * @return totalDebt_ uint
+     * @return lastBondCreatedAt_ uint
      */
-    function bondTypeInfo( address _principal ) external view returns (
+    function bondInfo( uint _BID ) external view returns (
+        address principal_,
         address calculator_,
         bool isLiquidityBond_,
         uint totalDebt_,
         uint lastBondCreatedAt_
     ) {
-        calculator_ = address( bonds[ _principal ].calculator );
-        isLiquidityBond_ = bonds[ _principal ].isLiquidityBond;
-        totalDebt_ = bonds[ _principal ].totalDebt;
-        lastBondCreatedAt_ = bonds[ _principal ].lastDecay;
+        Bond memory info = bonds[ _BID ];
+        principal_ = address( info.principal );
+        calculator_ = address( info.calculator );
+        totalDebt_ = info.totalDebt;
+        lastBondCreatedAt_ = info.lastDecay;
     }
     
     /**
-     *  @notice returns terms for a bond type
-     *  @param _principal address
-     *  @return controlVariable_ uint
-     *  @return vestingTerm_ uint
-     *  @return minimumPrice_ uint
-     *  @return maxPayout_ uint
-     *  @return fee_ uint
-     *  @return maxDebt_ uint
+     * @notice returns terms for a bond type
+     * @param _BID uint
+     * @return controlVariable_ uint
+     * @return vestingTerm_ uint
+     * @return minimumPrice_ uint
+     * @return maxPayout_ uint
+     * @return fee_ uint
+     * @return maxDebt_ uint
      */
-    function bondTerms( address _principal ) external view returns (
+    function bondTerms( uint _BID ) external view returns (
         uint controlVariable_,
         uint vestingTerm_,
         uint minimumPrice_,
@@ -343,189 +307,135 @@ contract OlympusBondDepository is Governable, Guardable {
         uint fee_,
         uint maxDebt_
     ) {
-        Terms memory terms = bonds[ _principal ].terms;
+        Terms memory terms = bonds[ _BID ].terms;
         controlVariable_ = terms.controlVariable;
         vestingTerm_ = terms.vestingTerm;
         minimumPrice_ = terms.minimumPrice;
         maxPayout_ = terms.maxPayout;
-        fee_ = terms.fee;
         maxDebt_ = terms.maxDebt;
     }
-    
-    /**
-     *  @notice returns pending BCV adjustment for a bond type
-     *  @param _principal address
-     *  @return controlVariable_ uint
-     *  @return add_ bool
-     *  @return delta_ uint
-     *  @return blocksToTarget_ uint
-     *  @return lastBlock_ uint
-     */
-    function bondAdjustments( address _principal ) external view returns (
-        uint controlVariable_,
-        bool add_,
-        uint delta_,
-        uint blocksToTarget_,
-        uint lastBlock_
-    ) {
-        controlVariable_ = bonds[ _principal ].terms.controlVariable;
-        Adjust memory adjustment = bonds[ _principal ].adjustment;
-        add_ = adjustment.add;
-        delta_ = adjustment.delta;
-        blocksToTarget_ = adjustment.blocksToTarget;
-        lastBlock_ = adjustment.lastBlock;
-    }
-
 
     // PAYOUT
 
     /**
-     *  @notice determine maximum bond size
-     *  @return uint
+     * @notice determine maximum bond size
+     * @param _BID uint
+     * @return uint
      */
-    function maxPayout( address _principal ) public view returns ( uint ) {
-        return OHM.totalSupply().mul( bonds[ _principal ].terms.maxPayout ).div( 100000 );
+    function maxPayout( uint _BID ) public view returns ( uint ) {
+        return OHM.totalSupply().mul( bonds[ _BID ].terms.maxPayout ).div( 100000 );
     }
 
     /**
-     *  @notice calculate interest due for new bond
-     *  @param _value uint
-     *  @return uint
+     * @notice payout due for amount of treasury value
+     * @param _value uint
+     * @param _BID uint
+     * @return uint
      */
-    function payoutFor( uint _value, address _principal ) public view returns ( uint ) {
-        return FixedPoint.fraction( _value, bondPrice( _principal ) ).decode112with18().div( 1e16 );
-    }
-
-
-    // BOND CONTROL VARIABLE
-
-    function BCV( address _principal ) public view returns ( uint BCV_ ) {
-        Adjust memory adjustment = bonds[ _principal ].adjustment;
-
-        uint change = changeBy( _principal );
-
-        if ( adjustment.add ) {
-            BCV_ = bonds[ _principal ].terms.controlVariable.add( change );
-        } else {
-            BCV_ = bonds[ _principal ].terms.controlVariable.sub( change );
-        }
+    function payoutFor( uint _value, uint _BID ) public view returns ( uint ) {
+        return FixedPoint.fraction( _value, bondPrice( _BID ) ).decode112with18().div( 1e16 );
     }
 
     /**
-     *  @notice amount to change BCV by
-     *  @param _principal address
-     *  @return changeBy_ uint
+     * @notice payout due for amount of token
+     * @param _amount uint
+     * @param _BID uint
      */
-    function changeBy( address _principal ) internal view returns ( uint changeBy_ ) {
-        Adjust memory adjustment = bonds[ _principal ].adjustment;
-
-        uint blocksSinceLast = block.number.sub( adjustment.lastBlock );
-
-        changeBy_ = adjustment.delta.mul( blocksSinceLast ).div( adjustment.blocksToTarget );
-
-        if ( changeBy_ > adjustment.delta ) {
-            changeBy_ = adjustment.delta;
-        }
+    function payoutForAmount( uint _amount, uint _BID ) public view returns ( uint ) {
+        address principal = address( bonds[ _BID ].principal );
+        return payoutFor( treasury.valueOf( principal, _amount), _BID );
     }
-
 
     // BOND PRICE
 
     /**
-     *  @notice calculate current bond premium
-     *  @return price_ uint
+     * @notice calculate current bond premium
+     * @param _BID uint
+     * @return price_ uint
      */
-    function bondPrice( address _principal ) public view returns ( uint price_ ) { 
-        price_ = BCV( _principal ).mul( debtRatio( _principal ) ).add( 1000000000 ).div( 1e7 );
-        if ( price_ < bonds[ _principal ].terms.minimumPrice ) {
-            price_ = bonds[ _principal ].terms.minimumPrice;
+    function bondPrice( uint _BID ) public view returns ( uint price_ ) { 
+        price_ = bonds[ _BID ].terms.controlVariable.mul( debtRatio( _BID ) ).add( 1000000000 ).div( 1e7 );
+        if ( price_ < bonds[ _BID ].terms.minimumPrice ) {
+            price_ = bonds[ _BID ].terms.minimumPrice;
         }
     }
 
     /**
-     *  @notice calculate current bond price and remove floor if above
-     *  @return price_ uint
+     * @notice calculate current bond price and remove floor if above
+     * @param _BID uint
+     * @return price_ uint
      */
-    function _bondPrice( address _principal ) internal returns ( uint price_ ) {
-        adjust( _principal );
-        price_ = bonds[ _principal ].terms.controlVariable.mul( debtRatio( _principal ) ).add( 1000000000 ).div( 1e7 );
-        if ( price_ < bonds[ _principal ].terms.minimumPrice ) {
-            price_ = bonds[ _principal ].terms.minimumPrice;        
-        } else if ( bonds[ _principal ].terms.minimumPrice != 0 ) {
-            bonds[ _principal ].terms.minimumPrice = 0;
+    function _bondPrice( uint _BID ) internal returns ( uint price_ ) {
+        Bond memory info = bonds[ _BID ];
+        price_ = info.terms.controlVariable.mul( debtRatio( _BID ) ).add( 1000000000 ).div( 1e7 );
+        if ( price_ < info.terms.minimumPrice ) {
+            price_ = info.terms.minimumPrice;        
+        } else if ( info.terms.minimumPrice != 0 ) {
+            bonds[ _BID ].terms.minimumPrice = 0;
         }
     }
 
     /**
-     *  @notice converts bond price to DAI value
-     *  @return price_ uint
+     * @notice converts bond price to DAI value
+     * @param _BID uint
+     * @return price_ uint
      */
-    function bondPriceInUSD( address _principal ) public view returns ( uint price_ ) {
-        BondType memory bond = bonds[ _principal ];
-        if( bond.isLiquidityBond ) {
-            price_ = bondPrice( _principal ).mul( bond.calculator.markdown( address( bond.principal ) ) ).div( 100 );
+    function bondPriceInUSD( uint _BID ) public view returns ( uint price_ ) {
+        Bond memory bond = bonds[ _BID ];
+        if( address(bond.calculator) != address(0) ) {
+            price_ = bondPrice( _BID ).mul( bond.calculator.markdown( address( bond.principal ) ) ).div( 100 );
         } else {
-            price_ = bondPrice( _principal ).mul( 10 ** IERC20Metadata(address(bond.principal)).decimals() ).div( 100 );
+            price_ = bondPrice( _BID ).mul( 10 ** IERC20Metadata( address(bond.principal) ).decimals() ).div( 100 );
         }
     }
-
 
     // DEBT
 
     /**
-     *  @notice calculate current ratio of debt to OHM supply
-     *  @return debtRatio_ uint
+     * @notice calculate current ratio of debt to OHM supply
+     * @param _BID uint
+     * @return debtRatio_ uint
      */
-    function debtRatio( address _principal ) public view returns ( uint debtRatio_ ) {   
+    function debtRatio( uint _BID ) public view returns ( uint debtRatio_ ) {   
         debtRatio_ = FixedPoint.fraction( 
-            currentDebt( _principal ).mul( 1e9 ), 
+            currentDebt( _BID ).mul( 1e9 ), 
             OHM.totalSupply()
         ).decode112with18().div( 1e18 );
     }
 
     /**
-     *  @notice debt ratio in same terms for reserve or liquidity bonds
-     *  @return uint
+     * @notice debt ratio in same terms for reserve or liquidity bonds
+     * @return uint
      */
-    function standardizedDebtRatio( address _principal ) public view returns ( uint ) {
-        BondType memory bond = bonds[ _principal ];
-        if ( bond.isLiquidityBond ) {
-            return debtRatio( _principal ).mul( bond.calculator.markdown( address( bond.principal ) ) ).div( 1e9 );
+    function standardizedDebtRatio( uint _BID ) public view returns ( uint ) {
+        Bond memory bond = bonds[ _BID ];
+        if ( address(bond.calculator) != address(0) ) {
+            return debtRatio( _BID ).mul( bond.calculator.markdown( address( bond.principal ) ) ).div( 1e9 );
         } else {
-            return debtRatio( _principal );
+            return debtRatio( _BID );
         }
     }
 
     /**
-     *  @notice calculate debt factoring in decay
-     *  @return uint
+     * @notice calculate debt factoring in decay
+     * @param _BID uint
+     * @return uint
      */
-    function currentDebt( address _principal ) public view returns ( uint ) {
-        return bonds[ _principal ].totalDebt.sub( debtDecay( _principal ) );
+    function currentDebt( uint _BID ) public view returns ( uint ) {
+        return bonds[ _BID ].totalDebt.sub( debtDecay( _BID ) );
     }
 
     /**
-     *  @notice amount to decay total debt by
-     *  @return decay_ uint
+     * @notice amount to decay total debt by
+     * @param _BID uint
+     * @return decay_ uint
      */
-    function debtDecay( address _principal ) public view returns ( uint decay_ ) {
-        BondType memory bond = bonds[ _principal ];
+    function debtDecay( uint _BID ) public view returns ( uint decay_ ) {
+        Bond memory bond = bonds[ _BID ];
         uint blocksSinceLast = block.number.sub( bond.lastDecay );
         decay_ = bond.totalDebt.mul( blocksSinceLast ).div( bond.terms.vestingTerm );
         if ( decay_ > bond.totalDebt ) {
             decay_ = bond.totalDebt;
         }
-    }
-
-
-
-    /* ======= AUXILLIARY ======= */
-
-    /**
-     *  @notice allow anyone to send lost tokens (except OHM) to the DAO
-     */
-    function recoverLostToken( address _token ) external {
-        require( _token != address( OHM ) );
-        IERC20( _token ).safeTransfer( DAO, IERC20( _token ).balanceOf( address(this) ) );
     }
 }

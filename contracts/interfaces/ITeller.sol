@@ -2,5 +2,12 @@
 pragma solidity 0.7.5;
 
 interface ITeller {
-    function newBond( address _bonder, uint _payout, uint _end ) external;
+    function newBond( 
+        address _bonder, 
+        address _principal,
+        uint _principalPaid,
+        uint _payout, 
+        uint _expires,
+        address _feo
+    ) external;
 }
