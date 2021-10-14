@@ -5,25 +5,9 @@ import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
-
-// TODO(zx): These staking Interfaces are not consistent
-interface IStaking {
-    function stake( uint _amount, address _recipient, bool _rebasing, bool _claim ) external returns ( bool );
-}
-
-interface IgOHM {
-    function balanceTo( uint _amount ) external view returns ( uint );
-    function balanceFrom( uint _amount ) external view returns ( uint );
-}
-
-interface ITreasury {
-    function mintRewards( address _to, uint _amount ) external;
-}
-
-interface IwsOHM {
-    function getAgnosticAmount( uint _amount ) external view returns ( uint );
-    function fromAgnosticAmount( uint _amount ) external view returns ( uint );
-}
+import "./interfaces/ITreasury.sol";
+import "./interfaces/IgOHM.sol";
+import "./interfaces/IStaking.sol";
 
 contract BondTeller {
 
@@ -67,7 +51,7 @@ contract BondTeller {
     /* ========== STATE VARIABLES ========== */
 
     address depository; // contract where users deposit bonds
-    address immutable staking; // contract to stake payout
+    IStaking immutable staking; // contract to stake payout
     ITreasury immutable treasury; 
     IERC20 immutable OHM; 
     IERC20 immutable sOHM; // payment token
@@ -96,7 +80,7 @@ contract BondTeller {
         require( _depository != address(0) );
         depository = _depository;
         require( _staking != address(0) );
-        staking = _staking;
+        staking = IStaking( _staking );
         require( _treasury != address(0) );
         treasury = ITreasury( _treasury );
         require( _OHM != address(0) );
@@ -131,9 +115,9 @@ contract BondTeller {
     ) external onlyDepository() returns ( uint index_ ) {
         treasury.mintRewards( address(this), _payout.add( feReward ) );
 
-        OHM.approve( staking, _payout ); // approve staking payout
+        OHM.approve( address(staking), _payout ); // approve staking payout
 
-        IStaking( staking ).stake( _payout, address(this), true, true );
+        staking.stake( _payout, address(this), true, true );
 
         FERs[ _feo ] = FERs[ _feo ].add( feReward ); // FE operator takes fee
         
@@ -157,22 +141,9 @@ contract BondTeller {
      *  @param _bonder address
      *  @return uint
      */
-    function redeemAll( address _bonder, bool _update ) external returns ( uint ) {
-        if( _update ) {
-            updateIndexesFor( _bonder );
-        }
-        return redeem( _bonder, indexesFor[ _bonder ] );
-    }
-
-    /* ========== INTERACTABLE FUNCTIONS ========== */
-
-    /**
-     *  @notice redeems all redeemable bonds
-     *  @param _bonder address
-     *  @return uint
-     */
     function redeemAll( address _bonder ) external returns ( uint ) {
-        return redeem( _bonder, indexesFor( _bonder ) );
+        updateIndexesFor( _bonder );
+        return redeem( _bonder, indexesFor[ _bonder ] );
     }
 
     /** 
@@ -245,7 +216,7 @@ contract BondTeller {
      * @return uint
      */
     function pendingFor( address _bonder, uint _index ) public view returns ( uint ) {
-        if ( bonderInfo[ _bonder ][ _index ].redeemed == 0 && percentVestedFor( _bonder, _index ) >= 1e9 ) {
+        if ( bonderInfo[ _bonder ][ _index ].redeemed == 0 && bonderInfo[ _bonder ][ _index ].vested <= block.number ) {
             return bonderInfo[ _bonder ][ _index ].payout;
         }
         return 0;
@@ -255,36 +226,29 @@ contract BondTeller {
      * @notice calculate amount of OHM available for claim for array of bonds
      * @param _bonder address
      * @param _indexes uint[]
-     * @return pendingPayout_ uint
+     * @return pending_ uint
      */
     function pendingForIndexes( 
         address _bonder, 
         uint[] memory _indexes 
-    ) public view returns ( uint pendingPayout_ ) {
+    ) public view returns ( uint pending_ ) {
         for( uint i = 0; i < _indexes.length; i++ ) {
-            pendingPayout_ = pendingPayout_.add( pendingFor( _bonder, i ) );
+            pending_ = pending_.add( pendingFor( _bonder, i ) );
         }
-        pendingPayout_ = gOHM.balanceFrom( pendingPayout_ );
+        pending_ = gOHM.balanceFrom( pending_ );
     }
 
     /**
      *  @notice total pending on all bonds for bonder
      *  @param _bonder address
-     *  @return uint
+     *  @return pending_ uint
      */
-    function totalPendingFor( address _bonder ) public view returns ( uint ) {
-        return pendingForIndexes( _bonder, indexesFor[ _bonder ] );
-    }
-
-    /**
-     * @notice amount of each bond claimable as array
-     * @param _bonder address
-     * @return pending_ uint[]
-     */
-    function allPendingFor( address _bonder ) external view returns ( uint[] pending_ ) {
-        for( uint i = 0; i < _indexes.length; i++ ) {
-            pending_.push( wsOHM.fromAgnosticAmount( pendingFor( _bonder, i ) ) );
+    function totalPendingFor( address _bonder ) public view returns ( uint pending_ ) {
+        Bond[] memory info = bonderInfo[ _bonder ];
+        for( uint i = 0; i < info.length; i++ ) {
+            pending_ = pending_.add( pendingFor( _bonder, i ) );
         }
+        pending_ = gOHM.balanceFrom( pending_ );
     }
 
     // VESTING

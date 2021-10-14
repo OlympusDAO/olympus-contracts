@@ -127,7 +127,7 @@ contract gOHM is IERC20 {
 
     /**
         @notice burn gOHM
-        @param _to address
+        @param _from address
         @param _amount uint
      */
     function burn( address _from, uint _amount ) external onlyStaking() {
