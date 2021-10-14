@@ -101,7 +101,6 @@ interface IRouter {
 }
 
 
-
 contract OlympusTokenMigration {
 
     struct Token {
@@ -109,20 +108,46 @@ contract OlympusTokenMigration {
         bool reserveToken;
     }
 
-    address public DAI;
-    address public oldOHM;
-    address public newOHM;
-    
-    address public sushiRouter;
-    
-    address public oldOHMDAISLP;
-    address public newOHMDAISLP;
-    
-    address public oldTreasury;
-    address public newTreasury;
+    address immutable public DAI;
+    address immutable public oldOHM;
+    address immutable public newOHM;
+    address immutable public sushiRouter;
+    address immutable public oldOHMDAISLP;
+    address immutable public newOHMDAISLP;
+    address immutable public oldTreasury;
+    address immutable public newTreasury;
 
     Token[] public tokens;
 
+    constructor(address _DAI, address _oldOHM, address _newOHM, address _sushiRouter, address _oldOHMDAISLP, address _newOHMDAISLP, address _oldTreasury, address _newTreasury) {
+        require( _DAI != address(0) );
+        DAI = _DAI;
+
+        require( _oldOHM != address(0) );
+        oldOHM = _oldOHM;
+
+        require( _newOHM != address(0) );
+        newOHM = _newOHM;
+
+        require( _sushiRouter != address(0) );
+        sushiRouter = _sushiRouter;
+
+        require( _oldOHMDAISLP != address(0) );
+        oldOHMDAISLP = _oldOHMDAISLP;
+
+        require( _newOHMDAISLP != address(0) );
+        newOHMDAISLP = _newOHMDAISLP;
+
+        require( _oldTreasury != address(0) );
+        oldTreasury = _oldTreasury;
+
+        require( _newTreasury != address(0) );
+        newTreasury = _newTreasury;
+    }
+
+    /**
+    *   @notice Migrate OHM/DAI SLP and tokens to new treasury
+    */
     function migrate() external {
         _migrateLP();
         _migrateTokens();
@@ -131,6 +156,7 @@ contract OlympusTokenMigration {
     /**
     *   @notice adds tokens to tokens array
     *   @param _tokens address[]
+    *   @param _reserveToken bool[]
     */
     function addTokens( address[] memory _tokens, bool[] memory _reserveToken  ) external {
 
