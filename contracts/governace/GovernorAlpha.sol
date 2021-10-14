@@ -250,7 +250,7 @@ contract GovernorAlpha {
       */
       /// @notice change from original contract
     function getVotesFromPercentOfsOHMSupply(uint percent) public view returns (uint256 votes) {
-        return gOHM.balanceTo(div(mul256(sOHM.circulatingSupply(), percent), 1e6)); 
+        return gOHM.balanceTo(div256(mul256(sOHM.circulatingSupply(), percent), 1e6)); 
     }
 
     function getReceipt(uint proposalId, address voter) public view returns (Receipt memory) {
@@ -356,7 +356,7 @@ contract GovernorAlpha {
         return c;
     }
 
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    function div256(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b > 0,  "division by zero");
         uint256 c = a / b;
         // assert(a == b * c + a % b); // There is no case in which this doesn't hold
