@@ -158,7 +158,7 @@ contract OlympusBondDepository is Governable, Guardable {
      * @param _id uint
      * @param _price uint
      */
-    function initializeBond( uint _id, uint _price ) external {
+    function initializeBond( uint _id, uint _price ) external onlyGuardian() {
         require( bonds[ _id ].terms.minimumPrice == 1e27, "Already initialized" );
         require( _price != 1e27 );
         bonds[ _id ].terms.minimumPrice = _price;
@@ -168,7 +168,7 @@ contract OlympusBondDepository is Governable, Guardable {
      * @notice disable existing bond
      * @param _id uint
      */
-    function deprecateBond( uint _id ) external {
+    function deprecateBond( uint _id ) external onlyGuardian() {
         bonds[ _id ].capacity = 0;
     }
 
