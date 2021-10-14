@@ -80,7 +80,7 @@ contract OlympusTreasury is Ownable {
     uint public immutable blocksNeededForQueue;
 
     bool public onChainGoverned;
-    bool public onChainGovernanceTimelock;
+    uint public onChainGovernanceTimelock;
 
 
 
@@ -99,13 +99,12 @@ contract OlympusTreasury is Ownable {
 
     /**
         @notice allow approved address to deposit an asset for OHM
-        @param _from address
         @param _amount uint
         @param _token address
         @param _profit uint
         @return send_ uint
      */
-    function deposit( address _from, uint _amount, address _token, uint _profit ) external returns ( uint send_ ) {
+    function deposit( uint _amount, address _token, uint _profit ) external returns ( uint send_ ) {
         if ( permissions[ STATUS.RESERVETOKEN ][ _token ] ) {
             require( permissions[ STATUS.RESERVEDEPOSITOR ][ msg.sender ], "Not approved" );
         } else if ( permissions[ STATUS.LIQUIDITYTOKEN ][ _token ] ) {
@@ -114,7 +113,7 @@ contract OlympusTreasury is Ownable {
             require( 1 == 0 ); // guarantee revert
         }
 
-        IERC20( _token ).safeTransferFrom( _from, address(this), _amount );
+        IERC20( _token ).safeTransferFrom( msg.sender, address(this), _amount );
 
         uint value = valueOf( _token, _amount );
         // mint OHM needed and store amount of rewards for distribution
