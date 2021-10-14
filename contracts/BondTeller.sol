@@ -11,8 +11,14 @@ import "./types/PolicyOwnable.sol";
 
 // TODO(zx): These staking Interfaces are not consistent
 interface IStaking {
-    function stake( uint _amount, address _recipient ) external returns ( bool );
+    function stake( uint _amount, address _recipient, bool _rebasing, bool _claim ) external returns ( bool );
 }
+
+interface IgOHM {
+    function balanceTo( uint _amount ) external view returns ( uint );
+    function balanceFrom( uint _amount ) external view returns ( uint );
+}
+
 
 interface IwsOHM {
     function getAgnosticAmount( uint _amount ) external view returns ( uint );
@@ -63,16 +69,18 @@ contract BondTeller is PolicyOwnable {
 
     address depository; // contract where users deposit bonds
     address immutable staking; // contract to stake payout
+    ITreasury immutable treasury; 
     IERC20 immutable OHM; 
     IERC20 immutable sOHM; // payment token
-    ITreasury immutable treasury; 
-    IwsOHM immutable wsOHM;
+    IgOHM immutable gOHM;
 
     mapping( address => Bond[] ) public bonderInfo; // user data
+    mapping( address => uint[] ) public indexesFor; // user bond indexes
 
-    mapping( uint => address ) public FIDs; // front end operator ID and address
-
+    mapping( address => uint ) public FERs; // front end operator rewards
     uint public feReward;
+    
+    address public policy;
 
 
 
@@ -84,7 +92,7 @@ contract BondTeller is PolicyOwnable {
         address _treasury,
         address _OHM, 
         address _sOHM, 
-        address _wsOHM 
+        address _gOHM 
     ) {
         require( _depository != address(0) );
         depository = _depository;
@@ -95,9 +103,9 @@ contract BondTeller is PolicyOwnable {
         require( _OHM != address(0) );
         OHM = IERC20( _OHM );
         require( _sOHM != address(0) );
-        sOHM = _sOHM;
-        require( _wsOHM != address(0) );
-        wsOHM = IwsOHM( _wsOHM );
+        sOHM = IERC20( _sOHM );
+        require( _gOHM != address(0) );
+        gOHM = IgOHM( _gOHM );
     }
 
 
@@ -110,36 +118,51 @@ contract BondTeller is PolicyOwnable {
      * @param _principal address
      * @param _principalPaid uint
      * @param _payout uint
-     * @param _vesting uint
+     * @param _expires uint
+     * @param _feo address
+     * @return index_ uint
      */
     function newBond( 
         address _bonder, 
         address _principal,
         uint _principalPaid,
         uint _payout, 
-        uint _vesting,
-        uint _fid
-    ) external onlyDepository() {
+        uint _expires,
+        address _feo
+    ) external onlyDepository() returns ( uint index_ ) {
         treasury.mintRewards( address(this), _payout.add( feReward ) );
 
-        OHM.approve( staking, _payout.add( feReward ) ); // approve staking payout
+        OHM.approve( staking, _payout ); // approve staking payout
 
-        uint staked = IStaking( staking ).stake( _payout.add( feReward ), address(this), true );
+        IStaking( staking ).stake( _payout, address(this), true, true );
 
-        sOHM.safeTransfer( FIDs[ _fid ], feReward );
+        FERs[ _feo ] = FERs[ _feo ].add( feReward ); // FE operator takes fee
+        
+        index_ = bonderInfo[ _bonder ].length;
 
         // store bond & stake payout
         bonderInfo[ _bonder ].push( Bond({ 
             principal: _principal,
             principalPaid: _principalPaid,
-            payout: wsOHM.toAgnosticAmount( staked ),
-            vested: block.number.add( _vesting ),
+            payout: gOHM.balanceTo( _payout ),
+            vested: _expires,
             created: block.timestamp,
             redeemed: 0
         } ) );
+    }
 
-        // indexed events are emitted
-        emit BondCreated( _bonder, _payout, _vesting );
+    /* ========== INTERACTABLE FUNCTIONS ========== */
+
+    /**
+     *  @notice redeems all redeemable bonds
+     *  @param _bonder address
+     *  @return uint
+     */
+    function redeemAll( address _bonder, bool _update ) external returns ( uint ) {
+        if( _update ) {
+            updateIndexesFor( _bonder );
+        }
+        return redeem( _bonder, indexesFor[ _bonder ] );
     }
 
     /* ========== INTERACTABLE FUNCTIONS ========== */
@@ -156,10 +179,10 @@ contract BondTeller is PolicyOwnable {
     /** 
      *  @notice redeem bond for user
      *  @param _bonder address
-     *  @param _indexes uint[] 
+     *  @param _indexes calldata uint[]
      *  @return uint
      */ 
-    function redeem( address _bonder, uint[] calldata _indexes ) public returns ( uint ) {
+    function redeem( address _bonder, uint[] memory _indexes ) public returns ( uint ) {
         uint dues;
         for( uint i = 0; i < _indexes.length; i++ ) {
             Bond memory info = bonderInfo[ _bonder ][ _indexes[ i ] ];
@@ -171,17 +194,11 @@ contract BondTeller is PolicyOwnable {
             }
         }
 
-        dues = wsOHM.fromAgnosticAmount( dues );
+        dues = gOHM.balanceFrom( dues );
 
         emit Redeemed( _bonder, dues );
         pay( _bonder, dues );
         return dues;
-    }
-
-    // create ID as front end operator
-    function addFID( uint _fid, address _address ) external {
-        require( FIDs[ _fid ] == address(0), "FID already mapped" );
-        FIDs[ _fid ] = _address;
     }
 
 
@@ -203,20 +220,18 @@ contract BondTeller is PolicyOwnable {
         sOHM.transfer( _bonder, _amount );
     }
 
-
-
     /* ========== VIEW FUNCTIONS ========== */
 
     /**
      *  @notice returns indexes of live bonds
      *  @param _bonder address
-     *  @return indexes_ uint
      */
-    function indexesFor( address _bonder ) public view returns ( uint[] memory indexes_ ) {
+    function updateIndexesFor( address _bonder ) public {
         Bond[] memory info = bonderInfo[ _bonder ];
+        delete indexesFor[ _bonder ];
         for( uint i = 0; i < info.length; i++ ) {
             if( info[ i ].redeemed == 0 ) {
-                indexes_.push( i );
+                indexesFor[ _bonder ].push( i );
             }
         }
     }
@@ -239,17 +254,17 @@ contract BondTeller is PolicyOwnable {
     /**
      * @notice calculate amount of OHM available for claim for array of bonds
      * @param _bonder address
-     * @param _indexes uint[] calldata
+     * @param _indexes uint[]
      * @return pendingPayout_ uint
      */
     function pendingForIndexes( 
         address _bonder, 
-        uint[] calldata _indexes 
+        uint[] memory _indexes 
     ) public view returns ( uint pendingPayout_ ) {
         for( uint i = 0; i < _indexes.length; i++ ) {
             pendingPayout_ = pendingPayout_.add( pendingFor( _bonder, i ) );
         }
-        pendingPayout_ = wsOHM.fromAgnosticAmount( pendingPayout_ );
+        pendingPayout_ = gOHM.balanceFrom( pendingPayout_ );
     }
 
     /**
@@ -257,8 +272,8 @@ contract BondTeller is PolicyOwnable {
      *  @param _bonder address
      *  @return uint
      */
-    function totalPendingFor( address _bonder ) external view returns ( uint ) {
-        return pendingForIndexes( _bonder, indexesFor( _bonder ) );
+    function totalPendingFor( address _bonder ) public view returns ( uint ) {
+        return pendingForIndexes( _bonder, indexesFor[ _bonder ] );
     }
 
     /**
@@ -272,14 +287,13 @@ contract BondTeller is PolicyOwnable {
         }
     }
 
-
     // VESTING
 
     /**
-     *  @notice calculate how far into vesting a depositor is
-     *  @param _bonder address
-     *  @param _index uint
-     *  @return percentVested_ uint
+     * @notice calculate how far into vesting a depositor is
+     * @param _bonder address
+     * @param _index uint
+     * @return percentVested_ uint
      */
     function percentVestedFor( address _bonder, uint _index ) public view returns ( uint percentVested_ ) {
         Bond memory bond = bonderInfo[ _bonder ][ _index ];
@@ -288,18 +302,5 @@ contract BondTeller is PolicyOwnable {
         uint term = bond.vested.sub( bond.created );
 
         percentVested_ = timeSince.mul( 1e9 ).div( term );
-    }
-
-    /**
-     *  @notice vested percent for each outstanding bond
-     *  @param _bonder address
-     *  @return percents_ uint[]
-     */
-    function allPercentVestedFor( address _bonder ) external view returns ( uint[] memory percents_ ) {
-        uint[] memory indexes = indexesFor( _bonder );
-
-        for( uint i = 0; i < indexes.length; i++ ) {
-            percents_.push( percentVestedFor( _bonder, indexes[i] ) );
-        }
     }
 }
