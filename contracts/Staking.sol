@@ -55,8 +55,8 @@ contract OlympusStaking is Governable {
     address public distributor;
 
     mapping( address => Claim ) public warmupInfo;
-    uint public gonsInWarmup;
     uint public warmupPeriod;
+    uint gonsInWarmup;
 
     
 
@@ -273,8 +273,11 @@ contract OlympusStaking is Governable {
     }
 
     function totalStaked() public view returns ( uint ) {
-        return sOHM.circulatingSupply() // circulating sOHM plus
-            .add( sOHM.balanceForGons( gonsInWarmup ) ); // OHM in warmup
+        return sOHM.circulatingSupply().add( supplyInWarmup() );
+    }
+
+    function supplyInWarmup() public view returns ( uint ) {
+        return sOHM.balanceForGons( gonsInWarmup );
     }
 
 

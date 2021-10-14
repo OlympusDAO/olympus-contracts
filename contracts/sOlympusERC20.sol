@@ -8,7 +8,7 @@ import "./types/ERC20Permit.sol";
 
 import "./interfaces/IgOHM.sol";
 
-contract rOlympus is ERC20Permit {
+contract sOlympus is ERC20Permit {
 
     /* ========== DEPENDENCIES ========== */
 
