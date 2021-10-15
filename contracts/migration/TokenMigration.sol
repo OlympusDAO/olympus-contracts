@@ -121,7 +121,7 @@ contract OlympusTokenMigration {
 
     Token[] public tokens;
 
-    constructor(address _DAI, address _oldOHM, address _newOHM, address _sushiRouter, address _oldOHMDAISLP, address _newOHMDAISLP, address _oldTreasury, address _newTreasury) {
+    constructor(address _DAI, address _oldOHM, address _newOHM, address _sushiRouter, address _oldOHMDAISLP, address _oldTreasury, address _newTreasury) {
         require( _DAI != address(0) );
         DAI = _DAI;
 
@@ -136,9 +136,6 @@ contract OlympusTokenMigration {
 
         require( _oldOHMDAISLP != address(0) );
         oldOHMDAISLP = _oldOHMDAISLP;
-
-        require( _newOHMDAISLP != address(0) );
-        newOHMDAISLP = _newOHMDAISLP;
 
         require( _oldTreasury != address(0) );
         oldTreasury = _oldTreasury;
