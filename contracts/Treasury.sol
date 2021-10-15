@@ -28,7 +28,6 @@ contract OlympusTreasury is Ownable {
     event CreateDebt( address indexed debtor, address indexed token, uint amount, uint value );
     event RepayDebt( address indexed debtor, address indexed token, uint amount, uint value );
     event ReservesManaged( address indexed token, uint amount );
-    event ReservesUpdated( uint indexed totalReserves );
     event ReservesAudited( uint indexed totalReserves );
     event Minted( address indexed caller, address indexed recipient, uint amount );
     event PermissionQueued( STATUS indexed status, address queued );
@@ -121,7 +120,6 @@ contract OlympusTreasury is Ownable {
         OHM.mint( msg.sender, send_ );
 
         totalReserves = totalReserves.add( value );
-        emit ReservesUpdated( totalReserves );
 
         emit Deposit( _token, _amount, value );
     }
@@ -139,7 +137,6 @@ contract OlympusTreasury is Ownable {
         OHM.burnFrom( msg.sender, value );
 
         totalReserves = totalReserves.sub( value );
-        emit ReservesUpdated( totalReserves );
 
         IERC20( _token ).safeTransfer( msg.sender, _amount );
 
@@ -165,7 +162,6 @@ contract OlympusTreasury is Ownable {
         totalDebt = totalDebt.add( value );
 
         totalReserves = totalReserves.sub( value );
-        emit ReservesUpdated( totalReserves );
 
         IERC20( _token ).transfer( msg.sender, _amount );
         
@@ -188,7 +184,6 @@ contract OlympusTreasury is Ownable {
         totalDebt = totalDebt.sub( value );
 
         totalReserves = totalReserves.add( value );
-        emit ReservesUpdated( totalReserves );
 
         emit RepayDebt( msg.sender, _token, _amount, value );
     }
@@ -224,7 +219,6 @@ contract OlympusTreasury is Ownable {
         require( value <= excessReserves(), "Insufficient reserves" );
 
         totalReserves = totalReserves.sub( value );
-        emit ReservesUpdated( totalReserves );
 
         IERC20( _token ).safeTransfer( msg.sender, _amount );
 
@@ -266,7 +260,6 @@ contract OlympusTreasury is Ownable {
             );
         }
         totalReserves = reserves;
-        emit ReservesUpdated( reserves );
         emit ReservesAudited( reserves );
     }
 
@@ -328,7 +321,7 @@ contract OlympusTreasury is Ownable {
             nullify: false,
             executed: false
         } ) );
-        emit ChangeQueued( _status, _address );
+        emit PermissionQueued( _status, _address );
     }
 
     /**
