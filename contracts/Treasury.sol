@@ -30,9 +30,9 @@ contract OlympusTreasury is Ownable {
     event ReservesManaged( address indexed token, uint amount );
     event ReservesUpdated( uint indexed totalReserves );
     event ReservesAudited( uint indexed totalReserves );
-    event RewardsMinted( address indexed caller, address indexed recipient, uint amount );
-    event ChangeQueued( STATUS indexed status, address queued );
-    event ChangeActivated( STATUS indexed status, address activated, bool result );
+    event Minted( address indexed caller, address indexed recipient, uint amount );
+    event PermissionQueued( STATUS indexed status, address queued );
+    event Permissioned( address addr, STATUS indexed status, bool result );
 
 
 
@@ -240,7 +240,7 @@ contract OlympusTreasury is Ownable {
 
         OHM.mint( _recipient, _amount );
 
-        emit RewardsMinted( msg.sender, _recipient, _amount );
+        emit Minted( msg.sender, _recipient, _amount );
     } 
 
 
@@ -288,6 +288,7 @@ contract OlympusTreasury is Ownable {
                 bondCalculator[ _address ] = _calculator;
             }
         }
+        emit Permissioned( _address, _status, true );
     }
 
     /**
@@ -297,6 +298,7 @@ contract OlympusTreasury is Ownable {
      */
     function disable( STATUS _status, address _toDisable ) external onlyOwner() {
         permissions[ _status ][ _toDisable ] = false;
+        emit Permissioned( _toDisable, _status, false );
     }
 
 
@@ -353,6 +355,7 @@ contract OlympusTreasury is Ownable {
             }
         }
         permissionQueue[ _index ].executed = true;
+        emit Permissioned( info.toPermit, info.managing, true );
     }
 
     /**
