@@ -388,7 +388,7 @@ contract OlympusTreasury is Ownable {
         @param _amount uint
         @return value_ uint
      */
-    function valueOf( address _token, uint _amount ) public view returns ( uint value_ ) {
+    function tokenValue( address _token, uint _amount ) public view returns ( uint value_ ) {
         value_ = _amount.mul( 10 ** IERC20Metadata( address(OHM) ).decimals() )
                     .div( 10 ** IERC20Metadata( _token ).decimals() );
         
