@@ -7,6 +7,7 @@ import "./libraries/SafeMath.sol";
 import "./types/ERC20Permit.sol";
 
 import "./interfaces/IgOHM.sol";
+import "./interfaces/IStaking.sol";
 
 contract sOlympus is ERC20Permit {
 
@@ -229,7 +230,8 @@ contract sOlympus is ERC20Permit {
     function circulatingSupply() public view returns ( uint ) {
         return _totalSupply
                     .sub( balanceOf( stakingContract ) )
-                    .add( gOHM.balanceFrom( IERC20( address(gOHM) ).totalSupply() ) );
+                    .add( gOHM.balanceFrom( IERC20( address(gOHM) ).totalSupply() ) )
+                    .add( IStaking( stakingContract ).supplyInWarmup() );
     }
 
     function index() public view returns ( uint ) {

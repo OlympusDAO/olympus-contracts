@@ -273,7 +273,7 @@ contract OlympusStaking is Governable {
     }
 
     function totalStaked() public view returns ( uint ) {
-        return sOHM.circulatingSupply().add( supplyInWarmup() );
+        return sOHM.circulatingSupply();
     }
 
     function supplyInWarmup() public view returns ( uint ) {
