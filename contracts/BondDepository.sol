@@ -227,7 +227,7 @@ contract OlympusBondDepository is Governable, Guardable {
         require( info.totalDebt <= info.terms.maxDebt, "Max debt exceeded" );
         require( _maxPrice >= _bondPrice( _BID ), "Slippage limit: more than max price" ); // slippage protection
 
-        uint value = treasury.valueOf( address( info.principal ), _amount );
+        uint value = treasury.tokenValue( address( info.principal ), _amount );
         uint payout = payoutFor( value, _BID ); // payout to bonder is computed
 
         // ensure there is remaining capacity for bond
@@ -359,7 +359,7 @@ contract OlympusBondDepository is Governable, Guardable {
      */
     function payoutForAmount( uint _amount, uint _BID ) public view returns ( uint ) {
         address principal = address( bonds[ _BID ].principal );
-        return payoutFor( treasury.valueOf( principal, _amount), _BID );
+        return payoutFor( treasury.tokenValue( principal, _amount), _BID );
     }
 
     // BOND PRICE

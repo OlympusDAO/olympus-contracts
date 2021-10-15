@@ -87,7 +87,7 @@ interface IOldTreasury {
 interface INewTreasury {
     function deposit( address _from, uint _amount, address _token, uint _profit ) external returns ( uint send_ );
     
-    function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
+    function tokenValue( address _token, uint _amount ) external view returns ( uint value_ );
 }
 
 interface IRouter {
@@ -134,7 +134,7 @@ contract OlympusLPMigration {
         
         (,, uint _newLiquidity) = IRouter(sushiRouter).addLiquidity(DAI, newOHM, amountA, amountB, 0, 0, address(this), block.number + 15);
         
-        uint _newLPValue = INewTreasury(newTreasury).valueOf(newOHMDAISLP, _newLiquidity);
+        uint _newLPValue = INewTreasury(newTreasury).tokenValue(newOHMDAISLP, _newLiquidity);
         
         IERC20(newOHMDAISLP).approve(newTreasury, _newLPValue);
         
