@@ -5,6 +5,9 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/IwsOHM.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IStaking.sol";
+import "./interfaces/IOwnable.sol";
+
+import "./types/Ownable.sol";
 
 interface IStakingV1 {
     function unstake( uint _amount, bool _trigger ) external;
@@ -12,7 +15,7 @@ interface IStakingV1 {
     function index() external view returns ( uint );
 }
 
-contract Migrator {
+contract Migrator is Ownable {
 
     IERC20 public immutable oldOHM;
     IERC20 public immutable oldsOHM;
