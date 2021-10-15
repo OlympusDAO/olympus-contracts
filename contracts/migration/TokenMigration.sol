@@ -110,18 +110,21 @@ contract OlympusTokenMigration {
         bool reserveToken;
     }
 
+    address immutable public DAO;
     address immutable public DAI;
     address immutable public oldOHM;
     address immutable public newOHM;
     address immutable public sushiRouter;
     address immutable public oldOHMDAISLP;
-    address immutable public newOHMDAISLP;
     address immutable public oldTreasury;
     address immutable public newTreasury;
 
     Token[] public tokens;
 
-    constructor(address _DAI, address _oldOHM, address _newOHM, address _sushiRouter, address _oldOHMDAISLP, address _oldTreasury, address _newTreasury) {
+    constructor(address _DAO, address _DAI, address _oldOHM, address _newOHM, address _sushiRouter, address _oldOHMDAISLP, address _oldTreasury, address _newTreasury) {
+        require( _DAO != address(0) );
+        DAO = _DAO;
+        
         require( _DAI != address(0) );
         DAI = _DAI;
 
@@ -148,6 +151,8 @@ contract OlympusTokenMigration {
     *   @notice Migrate OHM/DAI SLP and tokens to new treasury
     */
     function migrate() external {
+        require(msg.sender == DAO);
+
         _migrateLP();
         _migrateTokens();
     }
@@ -158,6 +163,7 @@ contract OlympusTokenMigration {
     *   @param _reserveToken bool[]
     */
     function addTokens( address[] memory _tokens, bool[] memory _reserveToken  ) external {
+        require(msg.sender == DAO);
 
         for( uint i = 0; i < _tokens.length; i++ ) {
             tokens.push( Token({
