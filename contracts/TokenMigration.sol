@@ -66,7 +66,7 @@ contract Migrator is Ownable {
         require( _newTreasury != address(0) );
         newTreasury = _newTreasury;
         require( _newStaking != address(0) );
-        newStaking = IStakingV2( _newStaking );
+        newStaking = IStaking( _newStaking );
         require( _DAI != address(0) );
         DAI = IERC20( _DAI );
     }
@@ -78,22 +78,22 @@ contract Migrator is Ownable {
         require( migrationStarted, "Migration has not started" );
 
         uint amount = oldwsOHM.sOHMTowOHM( _amount );
-        if ( from == TYPE.UNSTAKED ) {
+        if ( _from == TYPE.UNSTAKED ) {
             oldOHM.safeTransferFrom( msg.sender, address(this), _amount );
-        } else if ( from == TYPE.STAKED ) {
+        } else if ( _from == TYPE.STAKED ) {
             oldsOHM.safeTransferFrom( msg.sender, address(this), _amount );
-        } else {
+        } else if ( _from == TYPE.WRAPPED ) {
             oldwsOHM.safeTransferFrom( msg.sender, address(this), amount );
             amount = _amount;
         }
 
         amount = amountToGive( amount );
 
-        if ( to == TYPE.WRAPPED ) {
+        if ( _to == TYPE.WRAPPED ) {
             gOHM.safeTransfer( msg.sender, amount );
-        } else if ( to == TYPE.STAKED ) {
+        } else if ( _to == TYPE.STAKED ) {
             newsOHM.safeTransfer( msg.sender, newStaking.unwrap( amount ) );
-        } else if ( to == TYPE.UNSTAKED ) {
+        } else if ( _to == TYPE.UNSTAKED ) {
             newOHM.safeTransfer( msg.sender, newStaking.unstake( amount, false, false ) );
         }
     }
