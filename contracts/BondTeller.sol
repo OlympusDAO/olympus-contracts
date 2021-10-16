@@ -128,7 +128,7 @@ contract BondTeller {
             redeemed: 0
         } ) );
 
-        FEO[ _feo ] = FEO[ _feo ].add( payout.mul( feReward ).div( 10000 ) );
+        FEO[ _feo ] = FEO[ _feo ].add( _payout.mul( feReward ).div( 10000 ) );
     }
 
     /* ========== INTERACTABLE FUNCTIONS ========== */
@@ -149,22 +149,19 @@ contract BondTeller {
      *  @param _bonds calldata uint[]
      *  @return uint
      */ 
-    function redeem( address _bonder, uint[] memory _bonds ) public returns ( uint ) {
-        uint dues;
+    function redeem( address _bonder, uint[] memory _bonds ) public returns ( uint due_ ) {
         for( uint i = 0; i < _bonds.length; i++ ) {
             Bond memory info = bonderInfo[ _bonder ][ _bonds[ i ] ];
 
             if ( pendingFor( _bonder, _bonds[ i ] ) != 0 ) {
                 bonderInfo[ _bonder ][ _bonds[ i ] ].redeemed = block.timestamp; // mark as redeemed
                 
-                due = due.add( info.payout );
+                due_ = due_.add( info.payout );
             }
         }
 
-        emit Redeemed( _bonder, due );
-        
-        gOHM.safeTransfer( _bonder, due );
-        return due;
+        emit Redeemed( _bonder, due_ );
+        gOHM.safeTransfer( _bonder, due_ );
     }
 
     /**
