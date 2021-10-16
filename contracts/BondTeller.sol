@@ -90,7 +90,7 @@ contract BondTeller {
         sOHM = IERC20( _sOHM );
         require( _gOHM != address(0) );
         gOHM = IgOHM( _gOHM );
-        IERC20( OHM ).approve( _staking, 1e27 ); // saves gas
+        IERC20( _OHM ).approve( _staking, 1e27 ); // saves gas
     }
 
 
