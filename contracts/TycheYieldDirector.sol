@@ -188,9 +188,8 @@ contract TycheYieldDirector {
         emit Withdrawal(msg.sender, _recipient, _amount);
     }
 
-    function updateRecipient() internal {
-        
-    }
+    //function updateRecipient() internal {
+    //}
 
     /**
         @notice Withdraw from all donor positions
@@ -266,11 +265,8 @@ contract TycheYieldDirector {
 
         uint redeemable = redeemableBalance(msg.sender);
 
-        // Pay off debts
-        //recipient.totalDebt = 0;
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt);
-
-        // Record index when recipient redeemed
+        recipient.carry = 0;
         recipient.indexAtLastChange = index;
 
         IERC20(sOHM).safeTransfer(msg.sender, redeemable);
