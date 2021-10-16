@@ -82,6 +82,7 @@ contract Migrator is Ownable {
     function migrate( uint _amount, TYPE _from ) external {
         uint sAmount = _amount;
         uint wAmount = oldwsOHM.sOHMTowOHM( _amount );
+        
         if ( _from == TYPE.UNSTAKED ) {
             oldOHM.safeTransferFrom( msg.sender, address(this), _amount );
         } else if ( _from == TYPE.STAKED ) {
