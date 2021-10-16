@@ -9,6 +9,9 @@ import "./interfaces/IOwnable.sol";
 
 import "./types/Ownable.sol";
 
+import "./libraries/SafeMath.sol";
+import "./libraries/SafeERC20.sol";
+
 interface IStakingV1 {
     function unstake( uint _amount, bool _trigger ) external;
 
@@ -17,22 +20,32 @@ interface IStakingV1 {
 
 contract Migrator is Ownable {
 
+    using SafeMath for uint;
+    using SafeERC20 for IERC20;
+
+    /* ========== MIGRATION ========== */
+
+    event TimelockStarted( uint block, uint end );
+    event Migrated( address newStaking, address newTreasury );
+    event Defunded( uint amount );
+
+    /* ========== STATE VARIABLES ========== */
+
     IERC20 public immutable oldOHM;
     IERC20 public immutable oldsOHM;
     IwsOHM public immutable oldwsOHM;
     ITreasury public immutable oldTreasury;
     IStakingV1 public immutable oldStaking;
 
-    IERC20 public immutable newOHM;
-    IERC20 public immutable newsOHM;
     IERC20 public immutable gOHM;
-    ITreasury public immutable newTreasury;
-    IStaking public immutable newStaking;
+    address public newTreasury;
+    IStaking public newStaking;
 
     IERC20 public immutable DAI;
 
-    uint public maxIndex;
-    bool public migrationStarted;
+    bool public ohmMigrated;
+    uint public immutable timelockLength;
+    uint public timelockEnd;
 
     constructor(
         address _oldOHM,
@@ -40,12 +53,9 @@ contract Migrator is Ownable {
         address _oldTreasury,
         address _oldStaking,
         address _oldwsOHM,
-        address _newOHM,
-        address _newsOHM,
         address _gOHM,
-        address _newTreasury,
-        address _newStaking,
-        address _DAI
+        address _DAI,
+        uint _timelock
     ) {
         require( _oldOHM != address(0) );
         oldOHM = IERC20( _oldOHM );
@@ -57,81 +67,82 @@ contract Migrator is Ownable {
         oldStaking = IStakingV1( _oldStaking );
         require( _oldwsOHM != address(0) );
         oldwsOHM = IwsOHM( _oldwsOHM );
-        require( _newOHM != address(0) );
-        newOHM = IERC20( _newOHM );
-        require( _newsOHM != address(0) );
-        newsOHM = IERC20( _newsOHM );
         require( _gOHM != address(0) );
         gOHM = IERC20( _gOHM );
-        require( _newTreasury != address(0) );
-        newTreasury = _newTreasury;
-        require( _newStaking != address(0) );
-        newStaking = IStaking( _newStaking );
         require( _DAI != address(0) );
         DAI = IERC20( _DAI );
+        timelockLength = _timelock;
     }
+
+    /* ========== MIGRATION ========== */
 
     enum TYPE { UNSTAKED, STAKED, WRAPPED }
 
-    // migrate OHM, sOHM, or wsOHM for OHM, sOHM, or gOHM
-    function migrate( uint _amount, TYPE _from, TYPE _to ) external {
-        require( migrationStarted, "Migration has not started" );
-
-        uint amount = oldwsOHM.sOHMTowOHM( _amount );
+    // migrate OHM, sOHM, or wsOHM for gOHM
+    function migrate( uint _amount, TYPE _from ) external {
+        uint sAmount = _amount;
+        uint wAmount = oldwsOHM.sOHMTowOHM( _amount );
         if ( _from == TYPE.UNSTAKED ) {
             oldOHM.safeTransferFrom( msg.sender, address(this), _amount );
         } else if ( _from == TYPE.STAKED ) {
             oldsOHM.safeTransferFrom( msg.sender, address(this), _amount );
         } else if ( _from == TYPE.WRAPPED ) {
-            oldwsOHM.safeTransferFrom( msg.sender, address(this), amount );
-            amount = _amount;
+            oldwsOHM.safeTransferFrom( msg.sender, address(this), _amount );
+            wAmount = _amount;
+            sAmount = oldwsOHM.wOHMTosOHM( _amount );
         }
 
-        amount = amountToGive( amount );
-
-        if ( _to == TYPE.WRAPPED ) {
-            gOHM.safeTransfer( msg.sender, amount );
-        } else if ( _to == TYPE.STAKED ) {
-            newsOHM.safeTransfer( msg.sender, newStaking.unwrap( amount ) );
-        } else if ( _to == TYPE.UNSTAKED ) {
-            newOHM.safeTransfer( msg.sender, newStaking.unstake( amount, false, false ) );
-        }
-    }
-
-    // rebases missed before migrating are honored until the final index
-    function amountToGive( uint amount ) public view returns ( uint ) {
-        if ( newStaking.index() > maxIndex ) {
-            return amount.mul( maxIndex ).div( newStaking.index() );
+        if( ohmMigrated ) {
+            newTreasury.mint( address(this), sAmount );
+            newStaking.stake( sAmount, msg.sender, false, true );
         } else {
-            return amount;
+            gOHM.mint( msg.sender, wAmount );
         }
     }
 
-    // allows migration and sets reference and final indexes
-    function startMigration() external {
-        require( !migrationStarted );
-        migrationStarted = true;
-        maxIndex = oldStaking.index().mul( 2 );
+    // bridge back to OHM, sOHM, or wsOHM
+    function return( uint _amount, TYPE _to ) external {
+        gOHM.burn( msg.sender, _amount );
+
+        // error throws if contract does not have enough of type to send
+        uint amount = oldwsOHM.wOHMTosOHM( _amount );
+        if ( _to == TYPE.UNSTAKED ) {
+            oldOHM.safeTransfer( msg.sender, amount );
+        } else if ( _to == TYPE.STAKED ) {
+            oldsOHM.safeTransfer( msg.sender, amount );
+        } else if ( _to == TYPE.WRAPPED ) {
+            oldwsOHM.safeTransfer( msg.sender, _amount );
+        }
     }
 
-    // fund contract with gOHM to allow migration
-    function fund( uint _amount ) external onlyOwner() {
-        newTreasury.mint( address(this), _amount );
-        newStaking.stake( _amount, address(this), false, true );
-    }
-
-    // unstake gOHM held by contract and burn OHM
-    function defund() external onlyOwner() {
-        require( newStaking.index() > maxIndex );
-        newStaking.unstake( gOHM.balanceOf( address(this) ), false, false );
-        newOHM.burn( newOHM.balanceOf( address(this) ) );
-    }
+    /* ========== OWNABLE ========== */
 
     // withdraw backing of migrated OHM
-    function clearOld() external onlyOwner() {
+    function defund() external onlyOwner() {
+        require( ohmMigrated && timelockEnd < block.number && timelockEnd != 0 );
         oldwsOHM.unwrap( oldwsOHM.balanceOf( address(this) ) );
         oldStaking.unstake( oldsOHM.balanceOf( address(this) ), false );
-        oldTreasury.withdraw( oldOHM.balanceOf( address(this) ).mul( 1e9 ), address(DAI) );
+
+        uint balance = oldOHM.balanceOf( address(this) );
+        oldTreasury.withdraw( balance.mul( 1e9 ), address(DAI) );
         DAI.safeTransfer( newTreasury, DAI.balanceOf( address(this) ) ); 
+
+        emit Defunded( balance );
+    }
+
+    // ohm token and treasury have been migrated
+    function ohmIsMigrated( address _newTreasury, address _newStaking ) external onlyOwner() {
+        ohmMigrated = true;
+        newTreasury = _newTreasury;
+        newStaking = IStaking( _newStaking );
+        
+        emit Migrated( _newStaking, _newTreasury );
+    }
+
+    // start timelock to send backing to new treasury
+    function startTimelock() external onlyOwner() {
+        timelockEnd = block.number.add( timelockLength );
+
+        emit TimelockStarted( block.number, timelockEnd );
     }
 }
