@@ -51,8 +51,9 @@ contract TycheYieldDirector {
     struct RecipientInfo {
         // TODO can be packed
         uint totalDebt; // Non-agnostic debt
-        uint agnosticAmount;
-        uint indexAtLastRedeem;
+        uint agnosticAmount; // Total agnostic value of carry + debt
+        uint carry; // Value carried at last change. Represents what recipient owns.
+        uint indexAtLastChange; // Index when agnostic value changed
     }
 
     mapping(address => DonationInfo[]) public donationInfo;
@@ -105,9 +106,22 @@ contract TycheYieldDirector {
             info[uint(recipientIndex)].amount += _amount;
         }
 
-        // Add to receivers balance as agnostic value and debt as flat value
-        recipientInfo[_recipient].agnosticAmount += _toAgnostic(_amount);
-        recipientInfo[_recipient].totalDebt += _amount;
+        RecipientInfo storage recipient = recipientInfo[_recipient];
+
+        // Calculate value carried over since last change
+        if(recipient.indexAtLastChange > 0) {
+            uint carry = _fromAgnostic(recipient.agnosticAmount)
+                - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange)
+                - recipient.totalDebt;
+
+            recipient.carry += carry;
+        }
+
+        // Update recipient's balance as agnostic value and debt as flat value
+        recipient.totalDebt += _amount;
+
+        recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
+        recipient.indexAtLastChange = IsOHM(sOHM).index();
 
         // TODO add `Deposited` event
         emit Deposited(msg.sender, _recipient, _amount);
@@ -139,7 +153,6 @@ contract TycheYieldDirector {
         require(recipientIndexSigned >= 0, "No donations to recipient");
 
         uint recipientIndex = uint(recipientIndexSigned);
-
         require(donations[recipientIndex].amount >= _amount, "Amount to withdraw is greater than deposited");
 
         donations[recipientIndex].amount -= _amount;
@@ -150,44 +163,34 @@ contract TycheYieldDirector {
 
         RecipientInfo storage recipient = recipientInfo[_recipient];
 
-        console.log("amount");
-        console.log(_amount);
-        console.log("before");
-        console.log(recipient.agnosticAmount);
-        console.log(recipient.totalDebt);
+        uint carry = _fromAgnostic(recipient.agnosticAmount)
+            - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange)
+            - recipient.totalDebt;
 
-        // Record how much is currently redeemable. Withdrawal should not change redeemable amount.
-        //uint redeemable = _fromAgnostic(recipient.agnosticAmount) - recipient.totalDebt;
-        //console.log("redeemable");
-        //console.log(redeemable);
-        //console.log(IsOHM(sOHM).index());
+        recipient.carry += carry;
+        recipient.indexAtLastChange = IsOHM(sOHM).index();
 
-        // TODO If recipient has redeemed, they have already paid their debt. If not, pay off now.
+        recipient.totalDebt -= _amount;
+        recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
+
         // If recipient hasn't paid debt, pay off now
-        if(recipient.totalDebt > 0) {
-            recipient.totalDebt = recipient.totalDebt - _amount;
+        //if(recipient.totalDebt > 0) {
+        //    recipient.totalDebt = recipient.totalDebt - _amount;
 
-            // NOTE: Agnostic value of _amount is different from when it was deposited. The remaining
-            // amount is left with the recipient so they can keep receiving rebases.
-            uint redeemable = _fromAgnostic(recipient.agnosticAmount) - _amount;
-            recipient.agnosticAmount = _toAgnostic(redeemable); // TODO this gives precision error sometimes
-        }
-
-        //recipient.agnosticAmount -= _toAgnostic(_amount); // TODO
-
-        console.log("after");
-        console.log(recipient.agnosticAmount);
-        console.log(_fromAgnostic(recipient.agnosticAmount));
-        console.log(_fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastRedeem));
-        console.log(recipient.totalDebt);
-
-        console.log(redeemableBalance(_recipient));
+        //    // NOTE: Agnostic value of _amount is different from when it was deposited. The remaining
+        //    // amount is left with the recipient so they can keep receiving rebases.
+        //    uint redeemable = _fromAgnostic(recipient.agnosticAmount) - _amount;
+        //    recipient.agnosticAmount = _toAgnostic(redeemable); // TODO this gives precision error sometimes
+        //}
 
         IERC20(sOHM).safeTransfer(msg.sender, _amount);
 
         emit Withdrawal(msg.sender, _recipient, _amount);
     }
 
+    function updateRecipient() internal {
+        
+    }
 
     /**
         @notice Withdraw from all donor positions
@@ -241,7 +244,8 @@ contract TycheYieldDirector {
         RecipientInfo memory recipient = recipientInfo[_who];
 
         uint redeemable = _fromAgnostic(recipient.agnosticAmount)
-            - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastRedeem)
+            - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange)
+            + recipient.carry
             - recipient.totalDebt;
 
         return redeemable;
@@ -258,16 +262,16 @@ contract TycheYieldDirector {
         require(recipient.agnosticAmount > 0, "No claimable balance");
 
         uint index = IsOHM(sOHM).index();
-        require(index != recipient.indexAtLastRedeem, "Already redeemed this epoch");
+        require(index != recipient.indexAtLastChange, "Already redeemed this epoch");
 
         uint redeemable = redeemableBalance(msg.sender);
 
         // Pay off debts
-        recipient.totalDebt = 0;
-        recipient.agnosticAmount -= _toAgnostic(redeemable);
+        //recipient.totalDebt = 0;
+        recipient.agnosticAmount = _toAgnostic(recipient.totalDebt);
 
         // Record index when recipient redeemed
-        recipient.indexAtLastRedeem = index;
+        recipient.indexAtLastChange = index;
 
         IERC20(sOHM).safeTransfer(msg.sender, redeemable);
 

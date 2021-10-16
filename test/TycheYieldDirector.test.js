@@ -345,6 +345,8 @@ describe('TycheYieldDirector', async () => {
         await expect(await sOhm.balanceOf(bob.address)).is.equal(prevBalance.add(redeemablePerRebase));
     });
 
+    // TODO test 2 redeems in same epoch
+
     // TODO test depositing to multiple addresses, then withdrawAll
     //it('should redeem proper amount after multiple deposit and withdrawals', async () => {
     //    // TODO
