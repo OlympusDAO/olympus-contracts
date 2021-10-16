@@ -58,9 +58,10 @@ contract BondTeller {
     IgOHM immutable gOHM;
 
     mapping( address => Bond[] ) public bonderInfo; // user data
-    mapping( address => uint[] ) public indexesFor; // user bond indexes
+    mapping( address => uint[] ) public bonds; // user bond indexes
+    mapping( address => mapping( uint => address ) ) public approvals; // approval to transfer bond
 
-    mapping( address => uint ) public FERs; // front end operator rewards
+    mapping( address => uint ) public FEO; // front end operator rewards
     uint public feReward;
     
     address public policy;
@@ -89,6 +90,7 @@ contract BondTeller {
         sOHM = IERC20( _sOHM );
         require( _gOHM != address(0) );
         gOHM = IgOHM( _gOHM );
+        OHM.approve( address(staking), 1e27 ); // saves gas
     }
 
 
@@ -113,25 +115,20 @@ contract BondTeller {
         uint _expires,
         address _feo
     ) external onlyDepository() returns ( uint index_ ) {
-        treasury.mint( address(this), _payout.add( feReward ) );
-
-        OHM.approve( address(staking), _payout ); // approve staking payout
-
-        staking.stake( _payout, address(this), true, true );
-
-        FERs[ _feo ] = FERs[ _feo ].add( feReward ); // FE operator takes fee
-        
         index_ = bonderInfo[ _bonder ].length;
+        treasury.mint( address(this), _payout );
 
         // store bond & stake payout
         bonderInfo[ _bonder ].push( Bond({ 
             principal: _principal,
             principalPaid: _principalPaid,
-            payout: gOHM.balanceTo( _payout ),
+            payout: staking.stake( _payout, address(this), false, true ),
             vested: _expires,
             created: block.timestamp,
             redeemed: 0
         } ) );
+
+        FEO[ _feo ] = FEO[ _feo ].add( payout.mul( feReward ).div( 10000 ) );
     }
 
     /* ========== INTERACTABLE FUNCTIONS ========== */
@@ -142,54 +139,88 @@ contract BondTeller {
      *  @return uint
      */
     function redeemAll( address _bonder ) external returns ( uint ) {
-        updateIndexesFor( _bonder );
-        return redeem( _bonder, indexesFor[ _bonder ] );
+        updateBonds( _bonder );
+        return redeem( _bonder, bonds[ _bonder ] );
     }
 
     /** 
      *  @notice redeem bond for user
      *  @param _bonder address
-     *  @param _indexes calldata uint[]
+     *  @param _bonds calldata uint[]
      *  @return uint
      */ 
-    function redeem( address _bonder, uint[] memory _indexes ) public returns ( uint ) {
+    function redeem( address _bonder, uint[] memory _bonds ) public returns ( uint ) {
         uint dues;
-        for( uint i = 0; i < _indexes.length; i++ ) {
-            Bond memory info = bonderInfo[ _bonder ][ _indexes[ i ] ];
+        for( uint i = 0; i < _bonds.length; i++ ) {
+            Bond memory info = bonderInfo[ _bonder ][ _bonds[ i ] ];
 
-            if ( pendingFor( _bonder, _indexes[ i ] ) != 0 ) {
-                bonderInfo[ _bonder ][ _indexes[ i ] ].redeemed = block.timestamp; // mark as redeemed
+            if ( pendingFor( _bonder, _bonds[ i ] ) != 0 ) {
+                bonderInfo[ _bonder ][ _bonds[ i ] ].redeemed = block.timestamp; // mark as redeemed
                 
-                dues = dues.add( info.payout );
+                due = due.add( info.payout );
             }
         }
 
-        dues = gOHM.balanceFrom( dues );
+        emit Redeemed( _bonder, due );
+        
+        gOHM.safeTransfer( _bonder, due );
+        return due;
+    }
 
-        emit Redeemed( _bonder, dues );
-        pay( _bonder, dues );
-        return dues;
+    /**
+     * @notice approve _to to transfer bond _index
+     * @dev call with _to = address(0) to revoke
+     * @param _bond uint
+     * @param _to address
+     */
+    function approve( uint _bond, address _to ) external {
+        approvals[ msg.sender ][ _bond ] = _to;
+    }
+
+    /**
+     * @notice transfer ownership of bond _index from _from to _to
+     * @dev returns index of bond for to_
+     * @param _bond address
+     * @param _from address
+     * @param _to address
+     * @return index_ uint 
+     */
+    function transfer( uint _bond, address _from, address _to ) external returns ( uint index_ ) {
+        require( approvals[ _from ][ _bond ] == _to, "Not approved" );
+        approvals[ _from ][ _bond ] = address(0);
+
+        index_ = bonderInfo[ _to ].length;
+
+        bonderInfo[ _to ].push( bonderInfo[ _from ][ _bond ] );
+        delete bonderInfo[ _from ][ _bond ];
+    }
+
+    /**
+     * @notice pay front end operator accrued rewards
+     * @param _operator address
+     * @return amount_ uint
+     */
+    function pay( address _operator ) external returns ( uint amount_ ) {
+        amount_ = FEO[ _operator ];
+        treasury.mint( _operator, amount_ );
+        FEO[ _operator ] = 0;
     }
 
 
 
     /* ========== OWNABLE FUNCTIONS ========== */
 
+    /**
+     * @notice set percentage of payout paid to front end operators (1% = 100)
+     * @param reward uint
+     */
     function setFEReward( uint reward ) external {
         require( msg.sender == policy, "Only policy" );
 
         feReward = reward;
     }
 
-    /* ========== INTERNAL FUNCTIONS ========== */
 
-    /**
-     *  @notice send payout
-     *  @param _amount uint
-     */
-    function pay( address _bonder, uint _amount ) internal {
-        sOHM.transfer( _bonder, _amount );
-    }
 
     /* ========== VIEW FUNCTIONS ========== */
 
@@ -197,12 +228,12 @@ contract BondTeller {
      *  @notice returns indexes of live bonds
      *  @param _bonder address
      */
-    function updateIndexesFor( address _bonder ) public {
+    function updateBonds( address _bonder ) public {
         Bond[] memory info = bonderInfo[ _bonder ];
-        delete indexesFor[ _bonder ];
+        delete bonds[ _bonder ];
         for( uint i = 0; i < info.length; i++ ) {
             if( info[ i ].redeemed == 0 ) {
-                indexesFor[ _bonder ].push( i );
+                bonds[ _bonder ].push( i );
             }
         }
     }
@@ -216,8 +247,9 @@ contract BondTeller {
      * @return uint
      */
     function pendingFor( address _bonder, uint _index ) public view returns ( uint ) {
-        if ( bonderInfo[ _bonder ][ _index ].redeemed == 0 && bonderInfo[ _bonder ][ _index ].vested <= block.number ) {
-            return bonderInfo[ _bonder ][ _index ].payout;
+        Bond memory info = bonderInfo[ _bonder ][ _index ];
+        if ( info.created != 0 && info.redeemed == 0 && info.vested <= block.number ) {
+            return info.payout;
         }
         return 0;
     }
@@ -225,14 +257,14 @@ contract BondTeller {
     /**
      * @notice calculate amount of OHM available for claim for array of bonds
      * @param _bonder address
-     * @param _indexes uint[]
+     * @param _bonds uint[]
      * @return pending_ uint
      */
     function pendingForIndexes( 
         address _bonder, 
-        uint[] memory _indexes 
+        uint[] memory _bonds 
     ) public view returns ( uint pending_ ) {
-        for( uint i = 0; i < _indexes.length; i++ ) {
+        for( uint i = 0; i < _bonds.length; i++ ) {
             pending_ = pending_.add( pendingFor( _bonder, i ) );
         }
         pending_ = gOHM.balanceFrom( pending_ );
