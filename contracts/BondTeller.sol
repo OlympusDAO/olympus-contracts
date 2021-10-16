@@ -147,7 +147,7 @@ contract BondTeller {
      *  @notice redeem bond for user
      *  @param _bonder address
      *  @param _bonds calldata uint[]
-     *  @return uint due_
+     *  @return due_ uint
      */ 
     function redeem( address _bonder, uint[] memory _bonds ) public returns ( uint due_ ) {
         for( uint i = 0; i < _bonds.length; i++ ) {
@@ -161,7 +161,7 @@ contract BondTeller {
         }
 
         emit Redeemed( _bonder, due_ );
-        gOHM.safeTransfer( _bonder, due_ );
+        gOHM.transfer( _bonder, due_ );
     }
 
     /**
