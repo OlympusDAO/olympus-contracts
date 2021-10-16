@@ -6,7 +6,7 @@ interface IwsOHM {
 
     function unwrap( uint _amount ) external returns ( uint );
 
-    function wOHMTosOHM( uint _amount ) public view returns ( uint );
+    function wOHMTosOHM( uint _amount ) external view returns ( uint );
 
-    function sOHMTowOHM( uint _amount ) public view returns ( uint );
+    function sOHMTowOHM( uint _amount ) external view returns ( uint );
 }

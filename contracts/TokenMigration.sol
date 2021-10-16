@@ -62,7 +62,7 @@ contract Migrator is Ownable {
         require( _oldsOHM != address(0) );
         oldsOHM = IERC20( _oldsOHM );
         require( _oldTreasury != address(0) );
-        oldTreasury = _oldTreasury;
+        oldTreasury = ITreasury( _oldTreasury );
         require( _oldStaking != address(0) );
         oldStaking = IStakingV1( _oldStaking );
         require( _oldwsOHM != address(0) );
@@ -88,7 +88,7 @@ contract Migrator is Ownable {
         } else if ( _from == TYPE.STAKED ) {
             oldsOHM.safeTransferFrom( msg.sender, address(this), _amount );
         } else if ( _from == TYPE.WRAPPED ) {
-            oldwsOHM.safeTransferFrom( msg.sender, address(this), _amount );
+            oldwsOHM.transferFrom( msg.sender, address(this), _amount );
             wAmount = _amount;
             sAmount = oldwsOHM.wOHMTosOHM( _amount );
         }
@@ -112,7 +112,7 @@ contract Migrator is Ownable {
         } else if ( _to == TYPE.STAKED ) {
             oldsOHM.safeTransfer( msg.sender, amount );
         } else if ( _to == TYPE.WRAPPED ) {
-            oldwsOHM.safeTransfer( msg.sender, _amount );
+            oldwsOHM.transfer( msg.sender, _amount );
         }
     }
 
