@@ -1,3 +1,7 @@
+/**
+ *Submitted for verification at Etherscan.io on 2021-10-16
+*/
+
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
@@ -89,7 +93,7 @@ interface IOldTreasury {
 interface INewTreasury {
     function deposit( uint _amount, address _token, uint _profit ) external returns ( uint send_ );
     
-    function valueOfToken( address _token, uint _amount ) external view returns ( uint value_ );
+    function tokenValue( address _token, uint _amount ) external view returns ( uint value_ );
 }
 
 interface IRouter {
@@ -184,7 +188,7 @@ contract OlympusTokenMigration {
             uint balance = IERC20(_token.token).balanceOf( oldTreasury );
 
             uint excessReserves = IOldTreasury(oldTreasury).excessReserves();
-            uint tokenValue = INewTreasury(newTreasury).valueOfToken(_token.token, balance);
+            uint tokenValue = INewTreasury(newTreasury).tokenValue(_token.token, balance);
 
             if ( tokenValue > excessReserves ) {
                 tokenValue = excessReserves;
