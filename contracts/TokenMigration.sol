@@ -94,7 +94,7 @@ contract Migrator is Ownable {
         }
 
         if( ohmMigrated ) {
-            newTreasury.mint( address(this), sAmount );
+            ITreasury( newTreasury ).mint( address(this), sAmount );
             newStaking.stake( sAmount, msg.sender, false, true );
         } else {
             gOHM.mint( msg.sender, wAmount );
