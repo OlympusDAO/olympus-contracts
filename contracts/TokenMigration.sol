@@ -82,7 +82,7 @@ contract Migrator is Ownable {
     function migrate( uint _amount, TYPE _from ) external {
         uint sAmount = _amount;
         uint wAmount = oldwsOHM.sOHMTowOHM( _amount );
-        
+
         if ( _from == TYPE.UNSTAKED ) {
             oldOHM.safeTransferFrom( msg.sender, address(this), _amount );
         } else if ( _from == TYPE.STAKED ) {
@@ -102,7 +102,7 @@ contract Migrator is Ownable {
     }
 
     // bridge back to OHM, sOHM, or wsOHM
-    function return( uint _amount, TYPE _to ) external {
+    function bridgeBack( uint _amount, TYPE _to ) external {
         gOHM.burn( msg.sender, _amount );
 
         // error throws if contract does not have enough of type to send
