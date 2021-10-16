@@ -69,7 +69,7 @@ contract Migrator is Ownable {
         require( _oldwsOHM != address(0) );
         oldwsOHM = IwsOHM( _oldwsOHM );
         require( _gOHM != address(0) );
-        gOHM = IERC20( _gOHM );
+        gOHM = IgOHM( _gOHM );
         require( _DAI != address(0) );
         DAI = IERC20( _DAI );
         timelockLength = _timelock;
