@@ -59,7 +59,7 @@ contract gOHM is IERC20 {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor( address _sOHM, address _staking ) {
+    constructor( address _sOHM, address _migrator ) {
         require( _sOHM != address(0) );
         sOHM = _sOHM;
         require( _migrator != address(0) );
