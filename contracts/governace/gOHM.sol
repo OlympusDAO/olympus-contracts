@@ -19,8 +19,8 @@ contract gOHM is IERC20 {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyStaking() {
-        require( msg.sender == staking, "Only staking" );
+    modifier onlyMinter() {
+        require( msg.sender == minter, "Only minter" );
         _;
     }
 
@@ -46,7 +46,10 @@ contract gOHM is IERC20 {
     uint256 public override totalSupply;
 
     address public immutable sOHM;
-    address public immutable staking;
+    address public minter;
+
+    address public DAO;
+    bool public migrated;
 
     mapping (address => mapping (uint => Checkpoint)) public checkpoints;
     mapping (address => uint) public numCheckpoints;
@@ -59,8 +62,8 @@ contract gOHM is IERC20 {
     constructor( address _sOHM, address _staking ) {
         require( _sOHM != address(0) );
         sOHM = _sOHM;
-        require( _staking != address(0) );
-        staking = _staking;
+        require( _migrator != address(0) );
+        minter = _migrator;
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -117,11 +120,24 @@ contract gOHM is IERC20 {
     }
 
     /**
+     * @notice transfer minter rights from migrator to staking
+     * @notice can only be done once, at the time of contract migration
+     * @param _staking address
+     */
+    function migrate( address _staking ) external {
+        require( msg.sender == DAO, "Only DAO" );
+        require( !migrated );
+        require( _staking != address(0) );
+        minter = _staking;
+        migrated = true;
+    }
+
+    /**
         @notice mint gOHM
         @param _to address
         @param _amount uint
      */
-    function mint( address _to, uint _amount ) external onlyStaking() {
+    function mint( address _to, uint _amount ) external onlyMinter() {
         _mint( _to, _amount );
     }
 
@@ -130,7 +146,7 @@ contract gOHM is IERC20 {
         @param _from address
         @param _amount uint
      */
-    function burn( address _from, uint _amount ) external onlyStaking() {
+    function burn( address _from, uint _amount ) external onlyMinter() {
         _burn( _from, _amount );
     }
 
