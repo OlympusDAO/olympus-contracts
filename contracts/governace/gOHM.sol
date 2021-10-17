@@ -150,6 +150,8 @@ contract gOHM is IERC20 {
         _burn( _from, _amount );
     }
 
+    /* ========== VIEW FUNCTIONS ========== */
+
     /**
         @notice converts gOHM amount to OHM
         @param _amount uint
@@ -167,8 +169,6 @@ contract gOHM is IERC20 {
     function balanceTo( uint _amount ) public view returns ( uint ) {
         return _amount.mul( 10 ** decimals ).div( IsOHM( sOHM ).index() );
     }
-
-    /* ========== VIEW FUNCTIONS ========== */
 
     /**
      * @dev See {IERC20-allowance}.

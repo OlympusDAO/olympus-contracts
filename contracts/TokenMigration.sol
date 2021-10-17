@@ -2,6 +2,8 @@
 pragma solidity 0.7.5;
 
 import "./interfaces/IERC20.sol";
+import "./interfaces/IOHMERC20.sol";
+import "./interfaces/IsOHM.sol";
 import "./interfaces/IwsOHM.sol";
 import "./interfaces/IgOHM.sol";
 import "./interfaces/ITreasury.sol";
@@ -23,6 +25,9 @@ contract Migrator is Ownable {
 
     using SafeMath for uint;
     using SafeERC20 for IERC20;
+    using SafeERC20 for IOHMERC20;
+    using SafeERC20 for IgOHM;
+    using SafeERC20 for IsOHM;
 
     /* ========== MIGRATION ========== */
 
@@ -32,8 +37,8 @@ contract Migrator is Ownable {
 
     /* ========== STATE VARIABLES ========== */
 
-    IERC20 public immutable oldOHM;
-    IERC20 public immutable oldsOHM;
+    IOHMERC20 public immutable oldOHM;
+    IsOHM public immutable oldsOHM;
     IwsOHM public immutable oldwsOHM;
     ITreasury public immutable oldTreasury;
     IStakingV1 public immutable oldStaking;
@@ -41,6 +46,7 @@ contract Migrator is Ownable {
     IgOHM public immutable gOHM;
     address public newTreasury;
     IStaking public newStaking;
+    IERC20 public newOHM;
 
     IERC20 public immutable DAI;
 
@@ -59,9 +65,9 @@ contract Migrator is Ownable {
         uint _timelock
     ) {
         require( _oldOHM != address(0) );
-        oldOHM = IERC20( _oldOHM );
+        oldOHM = IOHMERC20( _oldOHM );
         require( _oldsOHM != address(0) );
-        oldsOHM = IERC20( _oldsOHM );
+        oldsOHM = IsOHM( _oldsOHM );
         require( _oldTreasury != address(0) );
         oldTreasury = ITreasury( _oldTreasury );
         require( _oldStaking != address(0) );
@@ -81,6 +87,8 @@ contract Migrator is Ownable {
 
     // migrate OHM, sOHM, or wsOHM for gOHM
     function migrate( uint _amount, TYPE _from ) external {
+        require( oldOHM.vault() == address( oldTreasury ), "Minter changed" );
+
         uint sAmount = _amount;
         uint wAmount = oldwsOHM.sOHMTowOHM( _amount );
 
@@ -95,8 +103,7 @@ contract Migrator is Ownable {
         }
 
         if( ohmMigrated ) {
-            ITreasury( newTreasury ).mint( address(this), sAmount );
-            newStaking.stake( sAmount, msg.sender, false, true );
+            gOHM.safeTransfer( msg.sender, wAmount );
         } else {
             gOHM.mint( msg.sender, wAmount );
         }
@@ -119,6 +126,13 @@ contract Migrator is Ownable {
 
     /* ========== OWNABLE ========== */
 
+    // fund contract with gOHM 
+    function fund( uint _amount ) external onlyOwner() {
+        ITreasury( newTreasury ).mint( address(this), _amount );
+        newOHM.approve( address( newStaking ), _amount );
+        newStaking.stake( _amount, address(this), false, true );
+    }
+
     // withdraw backing of migrated OHM
     function defund() external onlyOwner() {
         require( ohmMigrated && timelockEnd < block.number && timelockEnd != 0 );
@@ -133,10 +147,14 @@ contract Migrator is Ownable {
     }
 
     // ohm token and treasury have been migrated
-    function ohmIsMigrated( address _newTreasury, address _newStaking ) external onlyOwner() {
+    function ohmIsMigrated( address _newTreasury, address _newStaking, address _newOHM ) external onlyOwner() {
         ohmMigrated = true;
+        require( _newTreasury != address(0) );
         newTreasury = _newTreasury;
+        require( _newStaking != address(0) );
         newStaking = IStaking( _newStaking );
+        require( _newOHM != address(0) );
+        newOHM = IERC20( _newOHM );
         
         emit Migrated( _newStaking, _newTreasury );
     }
