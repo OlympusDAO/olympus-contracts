@@ -342,6 +342,9 @@ describe('TycheYieldDirector', async () => {
     });
 
     // TODO test multiple deposits in same epoch
+    it('should deposit from multiple sources', async () => {
+    });
+
     // TODO test multiple withdraws in same epoch
     // TODO test multiple redeems in same epoch
 

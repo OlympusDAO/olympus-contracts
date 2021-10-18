@@ -51,7 +51,7 @@ contract TycheYieldDirector {
     struct RecipientInfo {
         // TODO can be packed
         uint totalDebt; // Non-agnostic debt
-        uint carry; // Non-agnostic value that recipient owns
+        uint carry; // Total non-agnostic value donating to recipient
         uint agnosticAmount; // Total agnostic value of carry + debt
         uint indexAtLastChange; // Index when agnostic value changed
     }
@@ -134,10 +134,10 @@ contract TycheYieldDirector {
 
     // TODO
     function _withdrawable(address _donor, address _recipient) internal view returns ( uint ) {
-        int recipientIndex = _getRecipientIndex(msg.sender, _recipient);
+        int recipientIndex = _getRecipientIndex(_donor, _recipient);
         require(recipientIndex >= 0, "No donations to recipient");
 
-        return donationInfo[msg.sender][uint(recipientIndex)].amount;
+        return donationInfo[_donor][uint(recipientIndex)].amount;
     }
 
     /**
@@ -228,11 +228,11 @@ contract TycheYieldDirector {
     function redeemableBalance(address _who) public view returns (uint) {
         RecipientInfo memory recipient = recipientInfo[_who];
 
-        console.log("REDEEMABLE");
-        console.log(_fromAgnostic(recipient.agnosticAmount));
-        console.log(_fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange));
-        console.log(recipient.carry);
-        console.log(recipient.totalDebt);
+        //console.log("REDEEMABLE");
+        //console.log(_fromAgnostic(recipient.agnosticAmount));
+        //console.log(_fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange));
+        //console.log(recipient.carry);
+        //console.log(recipient.totalDebt);
 
         uint redeemable = _fromAgnostic(recipient.agnosticAmount)
             - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange)
