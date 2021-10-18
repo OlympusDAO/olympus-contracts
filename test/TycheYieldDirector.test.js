@@ -312,8 +312,6 @@ describe('TycheYieldDirector', async () => {
         await expect(recipientInfo1.totalDebt).is.equal(principal);
 
         const redeemablePerRebase = await tyche.redeemableBalance(bob.address);
-        //console.log("REDEEMABLE")
-        //console.log(redeemablePerRebase.toString())
 
         await tyche.connect(bob).redeem();
 
