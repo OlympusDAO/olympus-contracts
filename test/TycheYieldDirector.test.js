@@ -226,9 +226,6 @@ describe('TycheYieldDirector', async () => {
         await expect(recipientInfo1.totalDebt).is.equal(principal);
         await expect(recipientInfo1.indexAtLastChange).is.equal("0");
 
-        console.log("AGNOSTIC SHOULD BE ")
-        console.log(originalAgnosticAmount.toString())
-
         const donatedAmount = "100000000"; // .1
         await expect(await tyche.redeemableBalance(bob.address)).is.equal(donatedAmount);
 
@@ -241,10 +238,9 @@ describe('TycheYieldDirector', async () => {
 
         const recipientInfo2 = await tyche.recipientInfo(bob.address);
         await expect(recipientInfo2.agnosticAmount).is.equal("9990009"); // .009~
-        await expect(recipientInfo2.carry).is.equal("100000000"); // .1
+        await expect(recipientInfo2.carry).is.equal(donatedAmount);
         await expect(recipientInfo2.totalDebt).is.equal("0");
-
-        await expect(await tyche.redeemableBalance(bob.address)).is.equal("100000000"); // TODO verify this
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal(donatedAmount);
     });
 
     // TODO
@@ -327,7 +323,6 @@ describe('TycheYieldDirector', async () => {
         await expect(recipientInfo2.agnosticAmount).is.equal("9990009990"); // 9.990~
         await expect(recipientInfo2.totalDebt).is.equal(principal);
 
-        // TODO breaks here. should be 0. should carry be cleared on redeem?
         await expect(await tyche.redeemableBalance(bob.address)).is.equal("0");
 
         // Second rebase
@@ -346,7 +341,9 @@ describe('TycheYieldDirector', async () => {
         await expect(await sOhm.balanceOf(bob.address)).is.equal(prevBalance.add(redeemablePerRebase));
     });
 
-    // TODO test 2 redeems in same epoch
+    // TODO test multiple deposits in same epoch
+    // TODO test multiple withdraws in same epoch
+    // TODO test multiple redeems in same epoch
 
     // TODO test depositing to multiple addresses, then withdrawAll
     //it('should redeem proper amount after multiple deposit and withdrawals', async () => {

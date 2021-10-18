@@ -114,12 +114,10 @@ contract TycheYieldDirector {
             recipient.indexAtLastChange = IsOHM(sOHM).index();
         }
 
-        // Update recipient's balance as agnostic value and debt as flat value
         recipient.totalDebt += _amount;
 
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
 
-        // TODO add `Deposited` event
         emit Deposited(msg.sender, _recipient, _amount);
     }
 
@@ -128,6 +126,14 @@ contract TycheYieldDirector {
         TODO should this allow choosing donor (not default to msg.sender)?
      */
     function withdrawableBalance(address _recipient) external view returns ( uint ) {
+        int recipientIndex = _getRecipientIndex(msg.sender, _recipient);
+        require(recipientIndex >= 0, "No donations to recipient");
+
+        return donationInfo[msg.sender][uint(recipientIndex)].amount;
+    }
+
+    // TODO
+    function _withdrawable(address _donor, address _recipient) internal view returns ( uint ) {
         int recipientIndex = _getRecipientIndex(msg.sender, _recipient);
         require(recipientIndex >= 0, "No donations to recipient");
 
@@ -165,28 +171,15 @@ contract TycheYieldDirector {
         recipient.totalDebt -= _amount;
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
 
-        // If recipient hasn't paid debt, pay off now
-        //if(recipient.totalDebt > 0) {
-        //    recipient.totalDebt = recipient.totalDebt - _amount;
-
-        //    // NOTE: Agnostic value of _amount is different from when it was deposited. The remaining
-        //    // amount is left with the recipient so they can keep receiving rebases.
-        //    uint redeemable = _fromAgnostic(recipient.agnosticAmount) - _amount;
-        //    recipient.agnosticAmount = _toAgnostic(redeemable); // TODO this gives precision error sometimes
-        //}
-
         IERC20(sOHM).safeTransfer(msg.sender, _amount);
 
         emit Withdrawal(msg.sender, _recipient, _amount);
     }
 
-    //function updateRecipient() internal {
-    //}
-
     /**
         @notice Withdraw from all donor positions
      */
-     // TODO
+     // TODO Update with new withdrawal logic
     function withdrawAll() external {
         DonationInfo[] storage donations = donationInfo[msg.sender];
         require(donations.length != 0, "User not donating to anything");
