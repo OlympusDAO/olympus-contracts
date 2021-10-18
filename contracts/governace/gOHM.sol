@@ -19,8 +19,8 @@ contract gOHM is IERC20 {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyMinter() {
-        require( msg.sender == minter, "Only minter" );
+    modifier onlyApproved() {
+        require( msg.sender == approved, "Only approved" );
         _;
     }
 
@@ -45,8 +45,8 @@ contract gOHM is IERC20 {
     uint8 public constant decimals = 18;
     uint256 public override totalSupply;
 
-    address public immutable sOHM;
-    address public minter;
+    IsOHM public sOHM;
+    address public approved; // minter
 
     address public DAO;
     bool public migrated;
@@ -59,11 +59,13 @@ contract gOHM is IERC20 {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor( address _sOHM, address _migrator ) {
+    constructor( address _sOHM, address _migrator, address _DAO ) {
         require( _sOHM != address(0) );
-        sOHM = _sOHM;
+        sOHM = IsOHM( _sOHM );
         require( _migrator != address(0) );
-        minter = _migrator;
+        approved = _migrator;
+        require( _DAO != address(0) );
+        DAO = _DAO;
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -120,15 +122,20 @@ contract gOHM is IERC20 {
     }
 
     /**
-     * @notice transfer minter rights from migrator to staking
+     * @notice transfer mint rights from migrator to staking
      * @notice can only be done once, at the time of contract migration
      * @param _staking address
+     * @param _sOHM
      */
-    function migrate( address _staking ) external {
+    function migrate( address _staking, address _sOHM ) external {
         require( msg.sender == DAO, "Only DAO" );
         require( !migrated );
+
         require( _staking != address(0) );
-        minter = _staking;
+        approved = _staking;
+        require( _sOHM != address(0) );
+        sOHM = IsOHM( _sOHM );
+
         migrated = true;
     }
 
@@ -137,7 +144,7 @@ contract gOHM is IERC20 {
         @param _to address
         @param _amount uint
      */
-    function mint( address _to, uint _amount ) external onlyMinter() {
+    function mint( address _to, uint _amount ) external onlyApproved() {
         _mint( _to, _amount );
     }
 
@@ -146,7 +153,7 @@ contract gOHM is IERC20 {
         @param _from address
         @param _amount uint
      */
-    function burn( address _from, uint _amount ) external onlyMinter() {
+    function burn( address _from, uint _amount ) external onlyApproved() {
         _burn( _from, _amount );
     }
 
@@ -158,7 +165,7 @@ contract gOHM is IERC20 {
         @return uint
      */
     function balanceFrom( uint _amount ) public view returns ( uint ) {
-        return _amount.mul( IsOHM( sOHM ).index() ).div( 10 ** decimals );
+        return _amount.mul( sOHM.index() ).div( 10 ** decimals );
     }
 
     /**
@@ -167,7 +174,7 @@ contract gOHM is IERC20 {
         @return uint
      */
     function balanceTo( uint _amount ) public view returns ( uint ) {
-        return _amount.mul( 10 ** decimals ).div( IsOHM( sOHM ).index() );
+        return _amount.mul( 10 ** decimals ).div( sOHM.index() );
     }
 
     /**
