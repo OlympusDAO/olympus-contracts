@@ -2,20 +2,19 @@
 pragma solidity 0.7.5;
 
 interface IStaking {
+    function stake( address _to, uint _amount, bool _rebasing, bool _claim ) external returns ( uint );
 
-    function stake( uint _amount, address _recipient, bool _rebasing, bool _claim ) external returns ( uint );
-
-    function claim ( address _recipient, bool _rebasing ) external returns ( uint );
+    function unstake( address _to, uint _amount, bool _rebasing ) external returns ( uint );
 
     function forfeit() external returns ( uint );
 
     function toggleLock() external;
 
-    function unstake( uint _amount, bool _trigger, bool _rebasing ) external returns ( uint );
+    function claim ( address _for, bool _rebasing ) public returns ( uint );
 
-    function wrap( uint _amount ) external returns ( uint gBalance_ );
+    function wrap( address _to, uint _amount ) external returns ( uint gBalance_ );
 
-    function unwrap( uint _amount ) external returns ( uint sBalance_ );
+    function unwrap( address _to, uint _amount ) external returns ( uint sBalance_ );
 
     function rebase() external;
 
