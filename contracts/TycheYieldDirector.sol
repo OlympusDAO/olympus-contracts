@@ -51,8 +51,8 @@ contract TycheYieldDirector {
     struct RecipientInfo {
         // TODO can be packed
         uint totalDebt; // Non-agnostic debt
+        uint carry; // Non-agnostic value that recipient owns
         uint agnosticAmount; // Total agnostic value of carry + debt
-        uint carry; // Value carried at last change. Represents what recipient owns.
         uint indexAtLastChange; // Index when agnostic value changed
     }
 
@@ -110,18 +110,14 @@ contract TycheYieldDirector {
 
         // Calculate value carried over since last change
         if(recipient.indexAtLastChange > 0) {
-            uint carry = _fromAgnostic(recipient.agnosticAmount)
-                - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange)
-                - recipient.totalDebt;
-
-            recipient.carry += carry;
+            recipient.carry += redeemableBalance(_recipient);
+            recipient.indexAtLastChange = IsOHM(sOHM).index();
         }
 
         // Update recipient's balance as agnostic value and debt as flat value
         recipient.totalDebt += _amount;
 
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
-        recipient.indexAtLastChange = IsOHM(sOHM).index();
 
         // TODO add `Deposited` event
         emit Deposited(msg.sender, _recipient, _amount);
@@ -163,11 +159,7 @@ contract TycheYieldDirector {
 
         RecipientInfo storage recipient = recipientInfo[_recipient];
 
-        uint carry = _fromAgnostic(recipient.agnosticAmount)
-            - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange)
-            - recipient.totalDebt;
-
-        recipient.carry += carry;
+        recipient.carry += redeemableBalance(_recipient);
         recipient.indexAtLastChange = IsOHM(sOHM).index();
 
         recipient.totalDebt -= _amount;
@@ -243,6 +235,7 @@ contract TycheYieldDirector {
     function redeemableBalance(address _who) public view returns (uint) {
         RecipientInfo memory recipient = recipientInfo[_who];
 
+        console.log("REDEEMABLE");
         console.log(_fromAgnostic(recipient.agnosticAmount));
         console.log(_fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange));
         console.log(recipient.carry);
