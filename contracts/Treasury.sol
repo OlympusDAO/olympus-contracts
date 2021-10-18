@@ -226,7 +226,7 @@ contract OlympusTreasury is Ownable {
     }
 
     /**
-        @notice send epoch reward to staking contract
+        @notice approved address can mint from excess reserves
      */
     function mint( address _recipient, uint _amount ) external {
         require( permissions[ STATUS.REWARDMANAGER ][ msg.sender ], "Not approved" );

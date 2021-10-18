@@ -113,8 +113,8 @@ contract Migrator is Ownable {
     function bridgeBack( uint _amount, TYPE _to ) external {
         gOHM.burn( msg.sender, _amount );
 
-        // error throws if contract does not have enough of type to send
         uint amount = oldwsOHM.wOHMTosOHM( _amount );
+        // error throws if contract does not have enough of type to send
         if ( _to == TYPE.UNSTAKED ) {
             oldOHM.safeTransfer( msg.sender, amount );
         } else if ( _to == TYPE.STAKED ) {
@@ -130,7 +130,7 @@ contract Migrator is Ownable {
     function fund( uint _amount ) external onlyOwner() {
         ITreasury( newTreasury ).mint( address(this), _amount );
         newOHM.approve( address( newStaking ), _amount );
-        newStaking.stake( _amount, address(this), false, true );
+        newStaking.stake( address(this), _amount, false, true );
     }
 
     // withdraw backing of migrated OHM

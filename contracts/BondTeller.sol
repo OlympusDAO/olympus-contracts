@@ -122,7 +122,7 @@ contract BondTeller {
         bonderInfo[ _bonder ].push( Bond({ 
             principal: _principal,
             principalPaid: _principalPaid,
-            payout: staking.stake( _payout, address(this), false, true ),
+            payout: staking.stake( address(this), _payout, false, true ),
             vested: _expires,
             created: block.timestamp,
             redeemed: 0
