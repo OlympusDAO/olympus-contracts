@@ -54,6 +54,7 @@ contract TycheYieldDirector {
         uint carry; // Total non-agnostic value donating to recipient
         uint agnosticAmount; // Total agnostic value of carry + debt
         uint indexAtLastChange; // Index when agnostic value changed
+        uint firstEpoch;
     }
 
     mapping(address => DonationInfo[]) public donationInfo;
@@ -109,14 +110,12 @@ contract TycheYieldDirector {
         RecipientInfo storage recipient = recipientInfo[_recipient];
 
         // Calculate value carried over since last change
-        if(recipient.indexAtLastChange > 0) {
-            recipient.carry = redeemableBalance(_recipient);
-            recipient.indexAtLastChange = IsOHM(sOHM).index();
-        }
+        uint index = IsOHM(sOHM).index();
 
+        recipient.carry = redeemableBalance(_recipient);
         recipient.totalDebt += _amount;
-
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
+        recipient.indexAtLastChange = index;
 
         emit Deposited(msg.sender, _recipient, _amount);
     }
@@ -166,10 +165,9 @@ contract TycheYieldDirector {
         RecipientInfo storage recipient = recipientInfo[_recipient];
 
         recipient.carry = redeemableBalance(_recipient);
-        recipient.indexAtLastChange = IsOHM(sOHM).index();
-
         recipient.totalDebt -= _amount;
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
+        recipient.indexAtLastChange = IsOHM(sOHM).index();
 
         IERC20(sOHM).safeTransfer(msg.sender, _amount);
 
@@ -228,16 +226,15 @@ contract TycheYieldDirector {
     function redeemableBalance(address _who) public view returns (uint) {
         RecipientInfo memory recipient = recipientInfo[_who];
 
-        //console.log("REDEEMABLE");
-        //console.log(_fromAgnostic(recipient.agnosticAmount));
-        //console.log(_fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange));
-        //console.log(recipient.carry);
-        //console.log(recipient.totalDebt);
+        console.log("REDEEMABLE");
+        console.log(_fromAgnostic(recipient.agnosticAmount));
+        console.log(_fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange));
+        console.log(recipient.carry);
+        console.log(recipient.totalDebt);
 
         uint redeemable = _fromAgnostic(recipient.agnosticAmount)
             - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange)
-            + recipient.carry
-            - recipient.totalDebt;
+            + recipient.carry;
 
         return redeemable;
     }
@@ -255,7 +252,8 @@ contract TycheYieldDirector {
         uint redeemable = redeemableBalance(msg.sender);
 
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt);
-        recipient.carry = recipient.totalDebt;
+        //recipient.carry = recipient.totalDebt;
+        recipient.carry = 0;
         recipient.indexAtLastChange = IsOHM(sOHM).index();
 
         IERC20(sOHM).safeTransfer(msg.sender, redeemable);
