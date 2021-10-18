@@ -194,6 +194,7 @@ contract TycheYieldDirector {
     /**
         @notice Withdraw from all donor positions
      */
+     // TODO
     function withdrawAll() external {
         DonationInfo[] storage donations = donationInfo[msg.sender];
         require(donations.length != 0, "User not donating to anything");
@@ -241,6 +242,11 @@ contract TycheYieldDirector {
      */
     function redeemableBalance(address _who) public view returns (uint) {
         RecipientInfo memory recipient = recipientInfo[_who];
+
+        console.log(_fromAgnostic(recipient.agnosticAmount));
+        console.log(_fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange));
+        console.log(recipient.carry);
+        console.log(recipient.totalDebt);
 
         uint redeemable = _fromAgnostic(recipient.agnosticAmount)
             - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange)
