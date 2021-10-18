@@ -283,13 +283,13 @@ describe('TycheYieldDirector', async () => {
         const recipientInfo2 = await tyche.recipientInfo(bob.address);
         //await expect(await recipientInfo2.agnosticAmount).is.equal("9990010"); // .009~
         await expect(await recipientInfo2.agnosticAmount).is.equal("9990009"); // .009~
-        const redeemable = "100100000";
-        await expect(await tyche.redeemableBalance(bob.address)).is.equal(redeemable); // .1001
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal("100100000"); // .1001
 
         // Trigger a few rebases
         await triggerRebase();
         await triggerRebase();
         await triggerRebase();
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal("100400600"); // .1004~
 
         await tyche.connect(bob).redeem();
 
@@ -323,12 +323,11 @@ describe('TycheYieldDirector', async () => {
 
         await expect(await sOhm.balanceOf(bob.address)).is.equal(redeemablePerRebase);
         
-        // Debt should be cleared and agnostic value should be slightly less
         const recipientInfo2 = await tyche.recipientInfo(bob.address);
-        //await expect(recipientInfo2.agnosticAmount).is.closeTo(originalAgnosticAmount);
         await expect(recipientInfo2.agnosticAmount).is.equal("9990009990"); // 9.990~
         await expect(recipientInfo2.totalDebt).is.equal(principal);
 
+        // TODO breaks here. should be 0. should carry be cleared on redeem?
         await expect(await tyche.redeemableBalance(bob.address)).is.equal("0");
 
         // Second rebase

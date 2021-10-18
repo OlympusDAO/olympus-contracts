@@ -110,7 +110,7 @@ contract TycheYieldDirector {
 
         // Calculate value carried over since last change
         if(recipient.indexAtLastChange > 0) {
-            recipient.carry += redeemableBalance(_recipient);
+            recipient.carry = redeemableBalance(_recipient);
             recipient.indexAtLastChange = IsOHM(sOHM).index();
         }
 
@@ -159,7 +159,7 @@ contract TycheYieldDirector {
 
         RecipientInfo storage recipient = recipientInfo[_recipient];
 
-        recipient.carry += redeemableBalance(_recipient);
+        recipient.carry = redeemableBalance(_recipient);
         recipient.indexAtLastChange = IsOHM(sOHM).index();
 
         recipient.totalDebt -= _amount;
@@ -259,14 +259,11 @@ contract TycheYieldDirector {
         RecipientInfo storage recipient = recipientInfo[msg.sender];
         require(recipient.agnosticAmount > 0, "No claimable balance");
 
-        uint index = IsOHM(sOHM).index();
-        require(index != recipient.indexAtLastChange, "Already redeemed this epoch");
-
         uint redeemable = redeemableBalance(msg.sender);
 
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt);
-        recipient.carry = 0;
-        recipient.indexAtLastChange = index;
+        recipient.carry = recipient.totalDebt;
+        recipient.indexAtLastChange = IsOHM(sOHM).index();
 
         IERC20(sOHM).safeTransfer(msg.sender, redeemable);
 
