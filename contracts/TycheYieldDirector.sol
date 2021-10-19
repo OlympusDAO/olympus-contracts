@@ -62,6 +62,7 @@ contract TycheYieldDirector {
 
     event Deposited(address _donor, address _recipient, uint _amount);
     event Withdrawal(address _donor, address _recipient, uint _amount);
+    event WithdrawAll(address _donor, uint _amount);
     event Redeemed(address _recipient, uint _amount);
 
     constructor (
@@ -163,7 +164,6 @@ contract TycheYieldDirector {
         }
 
         RecipientInfo storage recipient = recipientInfo[_recipient];
-
         recipient.carry = redeemableBalance(_recipient);
         recipient.totalDebt -= _amount;
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
@@ -177,7 +177,6 @@ contract TycheYieldDirector {
     /**
         @notice Withdraw from all donor positions
      */
-     // TODO Update with new withdrawal logic
     function withdrawAll() external {
         DonationInfo[] storage donations = donationInfo[msg.sender];
         require(donations.length != 0, "User not donating to anything");
@@ -187,19 +186,22 @@ contract TycheYieldDirector {
             DonationInfo memory donation = donations[index];
             total += donation.amount;
 
-            // Subtract from recipient debts if recipient has not redeemed
-            if(recipientInfo[donation.recipient].totalDebt > 0) {
-                recipientInfo[donation.recipient].totalDebt -= donation.amount;
-            }
-            recipientInfo[donation.recipient].agnosticAmount -= _toAgnostic(donation.amount);
+            RecipientInfo storage recipient = recipientInfo[donation.recipient];
+            recipient.carry = redeemableBalance(donation.recipient);
+            recipient.totalDebt -= donation.amount;
+            recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
+            recipient.indexAtLastChange = IsOHM(sOHM).index();
         }
 
         // Delete donor's entire donations array
         delete donationInfo[msg.sender];
 
         IERC20(sOHM).safeTransfer(msg.sender, total);
-        // TODO emit `WithdrawAll` event
+
+        emit WithdrawAll(msg.sender, total);
     }
+
+    //function _withdrawFromRecipient(address _recipient) internal {}
 
     /**
         @notice Return total amount of user's sOHM being donated

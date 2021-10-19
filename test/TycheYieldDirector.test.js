@@ -410,6 +410,30 @@ describe('TycheYieldDirector', async () => {
         await expect(await tyche.redeemableBalance(bob.address)).is.equal(donated);
     });
 
+
+    // TODO test depositing to multiple addresses, then withdrawAll
+    it('should withdrawAll after donating to multiple sources', async () => {
+        // Both deployer and alice deposit 100 sOHM and donate to Bob
+        const principal = "100000000000";
+
+        // Deposit from 2 accounts
+        await tyche.deposit(principal, bob.address);
+        await tyche.deposit(principal, alice.address);
+
+        // Wait for some rebases
+        await triggerRebase();
+
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal("100000000");
+        await expect(await tyche.redeemableBalance(alice.address)).is.equal("100000000");
+
+        // Verify withdrawal
+        const balanceBefore = await sOhm.balanceOf(deployer.address);
+        await expect(await tyche.withdrawAll());
+        const balanceAfter = await sOhm.balanceOf(deployer.address);
+
+        await expect(balanceAfter.sub(balanceBefore)).is.equal("200000000000");
+    });
+
     // TODO test multiple redeems in same epoch
     it('should allow redeem only once per epoch', async () => {
         const principal = "100000000000"; // 100
@@ -424,11 +448,4 @@ describe('TycheYieldDirector', async () => {
 
         //await expect(await tyche.connect(bob).redeem()).to.be.reverted(); // TODO revert check doesnt work
     });
-
-    // TODO test depositing to multiple addresses, then withdrawAll
-
-    //it('should redeem proper amount after multiple deposit and withdrawals', async () => {
-    //    // TODO
-    //});
-
 });
