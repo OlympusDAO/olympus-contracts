@@ -9,12 +9,20 @@ import "../interfaces/IERC20.sol";
 import "../interfaces/IsOHM.sol";
 import "../types/ERC20.sol";
 
-contract wOHM is IERC20 {
+contract gOHM is IERC20 {
     /* ========== DEPENDENCIES ========== */
 
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint;
+
+
+    /* ========== MODIFIERS ========== */
+
+    modifier onlyStaking() {
+        require( msg.sender == staking, "Only staking" );
+        _;
+    }
 
 
     /* ========== EVENTS ========== */
@@ -32,12 +40,13 @@ contract wOHM is IERC20 {
 
     /* ========== STATE VARIABLES ========== */    
 
-    string public constant name = "Wrapped sOHM";
-    string public constant symbol = "wsOHM";
+    string public constant name = "Governance OHM";
+    string public constant symbol = "gOHM";
     uint8 public constant decimals = 18;
     uint256 public override totalSupply;
 
     address public immutable sOHM;
+    address public immutable staking;
 
     mapping (address => mapping (uint => Checkpoint)) public checkpoints;
     mapping (address => uint) public numCheckpoints;
@@ -47,9 +56,11 @@ contract wOHM is IERC20 {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor( address _sOHM ) {
+    constructor( address _sOHM, address _staking ) {
         require( _sOHM != address(0) );
         sOHM = _sOHM;
+        require( _staking != address(0) );
+        staking = _staking;
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -106,46 +117,38 @@ contract wOHM is IERC20 {
     }
 
     /**
-        @notice wrap sOHM
+        @notice mint gOHM
+        @param _to address
         @param _amount uint
-        @return uint
      */
-    function wrap( uint _amount, address _recipient ) external returns ( uint ) {
-        IERC20( sOHM ).safeTransferFrom( msg.sender, address(this), _amount );
-        
-        uint value = sOHMTowOHM( _amount );
-        _mint( _recipient, value );
-        return value;
+    function mint( address _to, uint _amount ) external onlyStaking() {
+        _mint( _to, _amount );
     }
 
     /**
-        @notice unwrap sOHM
+        @notice burn gOHM
+        @param _from address
         @param _amount uint
-        @return uint
      */
-    function unwrap( uint _amount, address _recipient ) external returns ( uint ) {
-        _burn( msg.sender, _amount );
-
-        uint value = wOHMTosOHM( _amount );
-        IERC20( sOHM ).safeTransfer( _recipient, value );
-        return value;
+    function burn( address _from, uint _amount ) external onlyStaking() {
+        _burn( _from, _amount );
     }
 
     /**
-        @notice converts wOHM amount to sOHM
+        @notice converts gOHM amount to OHM
         @param _amount uint
         @return uint
      */
-    function wOHMTosOHM( uint _amount ) public view returns ( uint ) {
+    function balanceFrom( uint _amount ) public view returns ( uint ) {
         return _amount.mul( IsOHM( sOHM ).index() ).div( 10 ** decimals );
     }
 
     /**
-        @notice converts sOHM amount to wOHM
+        @notice converts OHM amount to gOHM
         @param _amount uint
         @return uint
      */
-    function sOHMTowOHM( uint _amount ) public view returns ( uint ) {
+    function balanceTo( uint _amount ) public view returns ( uint ) {
         return _amount.mul( 10 ** decimals ).div( IsOHM( sOHM ).index() );
     }
 
@@ -183,7 +186,7 @@ contract wOHM is IERC20 {
      * @return The number of votes the account had as of the given block
      */
     function getPriorVotes(address account, uint blockNumber) external view returns (uint) {
-        require(blockNumber < block.number, "wsOHM::getPriorVotes: not yet determined");
+        require(blockNumber < block.number, "gOHM::getPriorVotes: not yet determined");
 
         uint nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
@@ -334,7 +337,7 @@ contract wOHM is IERC20 {
     }
 
     function _writeCheckpoint(address delegatee, uint nCheckpoints, uint oldVotes, uint newVotes) internal {
-      uint blockNumber = safe32(block.number, "wsOHM::_writeCheckpoint: block number exceeds 32 bits");
+      uint blockNumber = safe32(block.number, "gOHM::_writeCheckpoint: block number exceeds 32 bits");
 
       if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
           checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;

@@ -24,6 +24,12 @@ contract OlympusStaking is Governable {
 
 
 
+    /* ========== EVENTS ========== */
+
+    event gOHMSet( address gOHM );
+    event DistributorSet( address distributor );
+    event WarmupSet( uint warmup );
+
     /* ========== DATA STRUCTURES ========== */
 
     struct Epoch {
@@ -55,8 +61,8 @@ contract OlympusStaking is Governable {
     address public distributor;
 
     mapping( address => Claim ) public warmupInfo;
-    uint public gonsInWarmup;
     uint public warmupPeriod;
+    uint gonsInWarmup;
 
     
 
@@ -273,8 +279,11 @@ contract OlympusStaking is Governable {
     }
 
     function totalStaked() public view returns ( uint ) {
-        return sOHM.circulatingSupply() // circulating sOHM plus
-            .add( sOHM.balanceForGons( gonsInWarmup ) ); // OHM in warmup
+        return sOHM.circulatingSupply();
+    }
+
+    function supplyInWarmup() public view returns ( uint ) {
+        return sOHM.balanceForGons( gonsInWarmup );
     }
 
 
@@ -288,9 +297,11 @@ contract OlympusStaking is Governable {
     function setContract( CONTRACTS _contract, address _address ) external onlyGovernor() {
         if( _contract == CONTRACTS.DISTRIBUTOR ) { // 0
             distributor = _address;
+            emit DistributorSet( _address );
         } else if ( _contract == CONTRACTS.gOHM ) { // 1
             require( address( gOHM ) == address( 0 ) ); // only set once
             gOHM = IgOHM( _address );
+            emit gOHMSet( _address );
         }
     }
     
@@ -300,5 +311,6 @@ contract OlympusStaking is Governable {
      */
     function setWarmup( uint _warmupPeriod ) external onlyGovernor() {
         warmupPeriod = _warmupPeriod;
+        emit WarmupSet( _warmupPeriod );
     }
 }

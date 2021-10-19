@@ -3,3 +3,4 @@ artifacts/
 cache/
 
 .vscode
+.DS_Store
