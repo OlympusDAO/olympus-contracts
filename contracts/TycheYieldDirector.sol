@@ -226,12 +226,6 @@ contract TycheYieldDirector {
     function redeemableBalance(address _who) public view returns (uint) {
         RecipientInfo memory recipient = recipientInfo[_who];
 
-        console.log("REDEEMABLE");
-        console.log(_fromAgnostic(recipient.agnosticAmount));
-        console.log(_fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange));
-        console.log(recipient.carry);
-        console.log(recipient.totalDebt);
-
         uint redeemable = _fromAgnostic(recipient.agnosticAmount)
             - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange)
             + recipient.carry;
@@ -246,13 +240,11 @@ contract TycheYieldDirector {
              be accounted for with a subsequent redeem or a withdrawal by the specific donor.
      */
     function redeem() external {
-        RecipientInfo storage recipient = recipientInfo[msg.sender];
-        require(recipient.agnosticAmount > 0, "No claimable balance");
-
         uint redeemable = redeemableBalance(msg.sender);
+        require(redeemable > 0, "No redeemable balance");
 
+        RecipientInfo storage recipient = recipientInfo[msg.sender];
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt);
-        //recipient.carry = recipient.totalDebt;
         recipient.carry = 0;
         recipient.indexAtLastChange = IsOHM(sOHM).index();
 

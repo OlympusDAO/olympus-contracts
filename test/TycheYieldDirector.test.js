@@ -377,7 +377,7 @@ describe('TycheYieldDirector', async () => {
         await expect(await tyche.redeemableBalance(bob.address)).is.equal("500400100");
     });
 
-    it.skip('should withdraw to multiple sources', async () => {
+    it('should withdraw to multiple sources', async () => {
         // Both deployer and alice deposit 100 sOHM and donate to Bob
         const principal = "100000000000";
 
@@ -387,13 +387,46 @@ describe('TycheYieldDirector', async () => {
 
         // Wait for some rebases
         await triggerRebase();
+
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal("200000000");
+
+        // Verify withdrawal
+        const balanceBefore = await sOhm.balanceOf(deployer.address);
+        await expect(await tyche.withdraw(principal, bob.address));
+        const balanceAfter = await sOhm.balanceOf(deployer.address);
+        await expect(balanceAfter.sub(balanceBefore)).is.equal(principal);
+
         await triggerRebase();
-        await triggerRebase();
+        
+        const donated = "300200000";
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal(donated);
+
+        // Verify withdrawal
+        const balanceBefore1 = await sOhm.balanceOf(alice.address);
+        await expect(await tyche.connect(alice).withdraw(principal, bob.address));
+        const balanceAfter1 = await sOhm.balanceOf(alice.address);
+        await expect(balanceAfter1.sub(balanceBefore1)).is.equal(principal);
+
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal(donated);
     });
 
     // TODO test multiple redeems in same epoch
+    it('should allow redeem only once per epoch', async () => {
+        const principal = "100000000000"; // 100
+        await tyche.deposit(principal, bob.address);
+
+        await triggerRebase();
+
+        const donated = "100000000";
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal(donated);
+        await tyche.connect(bob).redeem();
+        await expect(await sOhm.balanceOf(bob.address)).is.equal(donated);
+
+        //await expect(await tyche.connect(bob).redeem()).to.be.reverted(); // TODO revert check doesnt work
+    });
 
     // TODO test depositing to multiple addresses, then withdrawAll
+
     //it('should redeem proper amount after multiple deposit and withdrawals', async () => {
     //    // TODO
     //});
