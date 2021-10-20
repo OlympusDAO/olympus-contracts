@@ -186,7 +186,7 @@ contract Migrator is Ownable {
         ohmMigrated = true;
 
         require( _newTreasury != address(0) );
-        newTreasury = _newTreasury;
+        newTreasury = ITreasury( _newTreasury );
         require( _newStaking != address(0) );
         newStaking = IStaking( _newStaking );
         require( _newOHM != address(0) );
@@ -235,7 +235,7 @@ contract Migrator is Ownable {
         
         oldTreasury.withdraw(amountB, address(_token)); // withdraw backing from v1
         
-        IERC20(_token).approve(newTreasury, amountB * 10 ** 9);
+        IERC20(_token).approve(address(newTreasury), amountB * 10 ** 9);
         newTreasury.deposit(amountB * 10 ** 9, DAI, 0); // deposit backing to v2, minting ohmv2
         
         IERC20(_token).approve(uniRouter, amountA);
