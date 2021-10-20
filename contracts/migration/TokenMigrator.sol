@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-import "./interfaces/IERC20.sol";
-import "./interfaces/IsOHM.sol";
-import "./interfaces/IwsOHM.sol";
-import "./interfaces/IgOHM.sol";
-import "./interfaces/ITreasury.sol";
-import "./interfaces/IStaking.sol";
-import "./interfaces/IOwnable.sol";
+import "../interfaces/IERC20.sol";
+import "../interfaces/IsOHM.sol";
+import "../interfaces/IwsOHM.sol";
+import "../interfaces/IgOHM.sol";
+import "../interfaces/ITreasury.sol";
+import "../interfaces/IStaking.sol";
+import "../interfaces/IOwnable.sol";
 
-import "./types/Ownable.sol";
+import "../types/Ownable.sol";
 
-import "./libraries/SafeMath.sol";
-import "./libraries/SafeERC20.sol";
+import "../libraries/SafeMath.sol";
+import "../libraries/SafeERC20.sol";
 
 interface IRouter {
     function addLiquidity(
