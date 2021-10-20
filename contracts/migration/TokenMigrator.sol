@@ -8,6 +8,7 @@ import "../interfaces/IgOHM.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IStaking.sol";
 import "../interfaces/IOwnable.sol";
+import "../interfaces/IUniswapV2Router.sol";
 
 import "../types/Ownable.sol";
 
@@ -46,11 +47,29 @@ contract Migrator is Ownable {
 
     /* ========== STATE VARIABLES ========== */
 
+    struct Token {
+        address token;
+        bool reserveToken;
+    }
+
+    struct LPToken {
+        address token;
+        address tokenA;
+        address tokenB;
+        bool sushi;
+    }
+
+    Token[] public tokens;
+    LPToken[] public lpTokens;
+
     IERC20 public immutable oldOHM;
     IsOHM public immutable oldsOHM;
     IwsOHM public immutable oldwsOHM;
     ITreasury public immutable oldTreasury;
     IStakingV1 public immutable oldStaking;
+
+    IUniswapV2Router public immutable sushiRouter;
+    IUniswapV2Router public immutable uniRouter;
 
     IgOHM public gOHM;
     ITreasury public newTreasury;
@@ -65,8 +84,6 @@ contract Migrator is Ownable {
 
     uint public oldSupply;
     
-    address public sushiRouter;
-    address public uniRouter;
 
     constructor(
         address _oldOHM,
@@ -92,9 +109,9 @@ contract Migrator is Ownable {
         require( _DAI != address(0) );
         DAI = IERC20( _DAI );
         require( _sushi != address(0) );
-        sushiRouter = _sushi;
+        sushiRouter = IUniswapV2Router(_sushi);
         require( _uni != address(0) );
-        uniRouter = _uni;
+        uniRouter = IUniswapV2Router(_uni);
         timelockLength = _timelock;
     }
 
@@ -142,6 +159,42 @@ contract Migrator is Ownable {
 
     /* ========== OWNABLE ========== */
 
+    /**
+    *   @notice adds tokens to tokens array
+    *   @param _tokens address[]
+    *   @param _reserveToken bool[]
+    */
+    function addTokens( address[] memory _tokens, bool[] memory _reserveToken  ) external onlyOwner() {
+        require(_tokens.length == _reserveToken.length);
+
+        for( uint i = 0; i < _tokens.length; i++ ) {
+            tokens.push( Token({
+                token: _tokens[i],
+                reserveToken: _reserveToken[i]
+            }));
+        }
+    }
+
+    /**
+    *   @notice adds tokens to tokens array
+    *   @param _tokens address[]
+    *   @param _tokenA address[]
+    *   @param _tokenB address[]
+    *   @param _sushi bool[]
+    */
+    function addLPTokens( address[] memory _tokens, address[] memory _tokenA, address[] memory _tokenB, bool[] memory _sushi  ) external onlyOwner() {
+        require(_tokens.length == _sushi.length);
+
+        for( uint i = 0; i < _tokens.length; i++ ) {
+            lpTokens.push( LPToken({
+                token: _tokens[i],
+                tokenA: _tokenA[i],
+                tokenB: _tokenB[i],
+                sushi: _sushi[i]
+            }));
+        }
+    }
+
     // withdraw backing of migrated OHM
     function defund() external onlyOwner() {
         require( ohmMigrated && timelockEnd < block.number && timelockEnd != 0 );
@@ -178,10 +231,7 @@ contract Migrator is Ownable {
         address _newTreasury, 
         address _newStaking, 
         address _newOHM, 
-        address _newsOHM,
-        address[] calldata _daiPairs, // [LPv1, LPv2, DAI]
-        address[] calldata _lusdPairs, // [LPv1, LPv2, LUSD]
-        address[] calldata _fraxPairs // [LPv1, LPv2, FRAX]
+        address _newsOHM
     ) external onlyOwner() {
         ohmMigrated = true;
 
@@ -196,9 +246,8 @@ contract Migrator is Ownable {
 
         gOHM.migrate( _newStaking, _newsOHM ); // change gOHM minter
 
-        MigrateLP( _daiPairs[0], _daiPairs[1], _daiPairs[2], false ); // migrate liquidity
-        MigrateLP( _fraxPairs[0], _fraxPairs[1], _fraxPairs[2], true ); 
-        MigrateLP( _lusdPairs[0], _lusdPairs[1], _lusdPairs[2], false ); 
+        _migrateLP();
+        _migrateTokens();
 
         fund( oldsOHM.circulatingSupply() ); // fund with current staked supply for token migration
         
@@ -218,36 +267,75 @@ contract Migrator is Ownable {
         emit Funded( _amount );
     }
 
-    // move liquidity from v1 to v2
-    function MigrateLP( address _v1, address _v2, address _token, bool _uni ) internal {
-        uint oldLPAmount = IERC20(_v1).balanceOf( address(oldTreasury) );
+    /**
+    *   @notice Migrates tokens from old treasury to new treasury
+    */
+    function _migrateTokens() internal {
+        for( uint i = 0; i < tokens.length; i++ ) {
+            Token memory _token = tokens[i];
 
-        oldTreasury.manage(_v1, oldLPAmount); // withdraw LP from v1 treasury
+            uint balance = IERC20(_token.token).balanceOf( address(oldTreasury) );
 
-        address router = sushiRouter;
-        if( _uni ) {
-          router = uniRouter;
+            uint excessReserves = oldTreasury.excessReserves();
+            uint tokenValue = newTreasury.tokenValue(_token.token, balance);
+
+            if ( tokenValue > excessReserves ) {
+                tokenValue = excessReserves;
+                balance = excessReserves * 10 ** 9;
+            }
+
+            oldTreasury.manage( _token.token, balance );
+
+            if(_token.reserveToken) {
+
+                IERC20(_token.token).approve(address(newTreasury), balance);
+                newTreasury.deposit(balance, _token.token, tokenValue);
+            } else {
+                IERC20(_token.token).transfer( address(newTreasury), balance );
+            }
         }
+    }
+    
+    /**
+    *   @notice Migrates OHM/DAI SLP to new OHM contract
+    */
+    function _migrateLP() internal {
+        for( uint i = 0; i < lpTokens.length; i++ ) {
+            LPToken memory _token = lpTokens[i];
 
-        IERC20(_v1).approve(router, oldLPAmount);
-        (uint amountA, uint amountB) = IRouter(router) // remove liquidity for ohmv1
-                .removeLiquidity(_token, address(oldOHM), oldLPAmount, 0, 0, address(this), block.number + 15);
+            uint oldLPAmount = IERC20(_token.token).balanceOf(address(oldTreasury));
+            oldTreasury.manage(_token.token, oldLPAmount);
+
+            if(_token.sushi) {
+                IERC20(_token.token).approve(address(sushiRouter), oldLPAmount);
+                (uint amountA, uint amountB) = sushiRouter.removeLiquidity(_token.token, address(oldOHM), oldLPAmount, 0, 0, address(this), 1000000000000);
+                
+                oldOHM.approve(address(oldTreasury), amountB);
+                oldTreasury.withdraw(amountB * 10 ** 9, _token.token);
+                
+                IERC20(_token.token).approve(address(newTreasury), amountB * 10 ** 9);
+                newTreasury.deposit(amountB * 10 ** 9, _token.token, 0);
+                
+                IERC20(_token.token).approve(address(sushiRouter), amountA);
+                newOHM.approve(address(sushiRouter), amountB);
+
+                sushiRouter.addLiquidity(_token.token, address(newOHM), amountA, amountB, amountA, amountB, address(newTreasury), 100000000000);
+            } else {
+                IERC20(_token.token).approve(address(uniRouter), oldLPAmount);
+                (uint amountA, uint amountB) = uniRouter.removeLiquidity(_token.token, address(oldOHM), oldLPAmount, 0, 0, address(this), 1000000000000);
+                
+                oldOHM.approve(address(oldTreasury), amountB);
+                oldTreasury.withdraw(amountB * 10 ** 9, _token.token);
+                
+                IERC20(_token.token).approve(address(newTreasury), amountB * 10 ** 9);
+                newTreasury.deposit(amountB * 10 ** 9, _token.token, 0);
+                
+                IERC20(_token.token).approve(address(uniRouter), amountA);
+                newOHM.approve(address(uniRouter), amountB);
+
+                uniRouter.addLiquidity(_token.token, address(newOHM), amountA, amountB, amountA, amountB, address(newTreasury), 100000000000);
+            }
         
-        oldTreasury.withdraw(amountB, _token); // withdraw backing from v1
-        
-        IERC20(_token).approve(address(newTreasury), amountB * 10 ** 9);
-        newTreasury.deposit(amountB * 10 ** 9, _token, 0); // deposit backing to v2, minting ohmv2
-        
-        IERC20(_token).approve(uniRouter, amountA);
-        newOHM.approve(uniRouter, amountB);
-        
-        (,, uint newLiquidity) = IRouter(uniRouter) // add liquidity for ohmv2
-                .addLiquidity(_token, address(newOHM), amountA, amountB, 0, 0, address(this), block.number + 15);
-        
-        uint newLPValue = newTreasury.tokenValue(_v2, newLiquidity);
-        
-        IERC20(_v2).approve(address(newTreasury), newLPValue);
-        
-        newTreasury.deposit(newLiquidity, _v2, newLPValue); // deposit new LP into treasury
+        }
     }
 }

@@ -17,4 +17,6 @@ interface ITreasury {
     function incurDebt( uint amount_, address token_ ) external;
     
     function repayDebtWithReserve( uint amount_, address token_ ) external;
+
+    function excessReserves() external view returns ( uint );
 }
