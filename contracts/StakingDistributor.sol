@@ -24,9 +24,7 @@ contract Distributor is Governable, Guardable {
 
     IERC20 immutable OHM;
     ITreasury immutable treasury;
-    
-    uint public immutable epochLength;
-    uint public nextEpochBlock;
+    address immutable staking;
     
     mapping( uint => Adjust ) public adjustments;
     
@@ -50,13 +48,17 @@ contract Distributor is Governable, Guardable {
     
     /* ====== CONSTRUCTOR ====== */
 
-    constructor( address _treasury, address _ohm, uint _epochLength, uint _nextEpochBlock ) {        
+    constructor( 
+        address _treasury, 
+        address _ohm, 
+        address _staking
+    ) {        
         require( _treasury != address(0) );
         treasury = ITreasury( _treasury );
         require( _ohm != address(0) );
         OHM = IERC20( _ohm );
-        epochLength = _epochLength;
-        nextEpochBlock = _nextEpochBlock;
+        require( _staking != address(0) );
+        staking = _staking;
     }
     
     
@@ -67,18 +69,16 @@ contract Distributor is Governable, Guardable {
         @notice send epoch reward to staking contract
      */
     function distribute() external {
-        if ( nextEpochBlock <= block.number ) {
-            nextEpochBlock = nextEpochBlock.add( epochLength ); // set next epoch block
+        require( msg.sender == staking, "Only staking" );
             
-            // distribute rewards to each recipient
-            for ( uint i = 0; i < info.length; i++ ) {
-                if ( info[ i ].rate > 0 ) {
-                    treasury.mintRewards( // mint and send from treasury
-                        info[ i ].recipient, 
-                        nextRewardAt( info[ i ].rate ) 
-                    );
-                    adjust( i ); // check for adjustment
-                }
+        // distribute rewards to each recipient
+        for ( uint i = 0; i < info.length; i++ ) {
+            if ( info[ i ].rate > 0 ) {
+                treasury.mint( // mint and send from treasury
+                    info[ i ].recipient, 
+                    nextRewardAt( info[ i ].rate ) 
+                );
+                adjust( i ); // check for adjustment
             }
         }
     }
