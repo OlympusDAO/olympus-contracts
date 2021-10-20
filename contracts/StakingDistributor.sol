@@ -24,6 +24,7 @@ contract Distributor is Governable, Guardable {
 
     IERC20 immutable OHM;
     ITreasury immutable treasury;
+    address immutable staking;
     
     uint public immutable epochLength;
     uint public nextEpochBlock;
@@ -55,6 +56,8 @@ contract Distributor is Governable, Guardable {
         treasury = ITreasury( _treasury );
         require( _ohm != address(0) );
         OHM = IERC20( _ohm );
+        require( _staking != address(0) );
+        staking = _staking;
         epochLength = _epochLength;
         nextEpochBlock = _nextEpochBlock;
     }
@@ -67,13 +70,15 @@ contract Distributor is Governable, Guardable {
         @notice send epoch reward to staking contract
      */
     function distribute() external {
+        require( msg.sender == staking, "Only staking" );
+
         if ( nextEpochBlock <= block.number ) {
             nextEpochBlock = nextEpochBlock.add( epochLength ); // set next epoch block
             
             // distribute rewards to each recipient
             for ( uint i = 0; i < info.length; i++ ) {
                 if ( info[ i ].rate > 0 ) {
-                    treasury.mintRewards( // mint and send from treasury
+                    treasury.mint( // mint and send from treasury
                         info[ i ].recipient, 
                         nextRewardAt( info[ i ].rate ) 
                     );
