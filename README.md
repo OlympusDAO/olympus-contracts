@@ -66,6 +66,7 @@ Network: `Rinkeby` (4)
 - Distributor `0x0626D5aD2a230E05Fb94DF035Abbd97F2f839C3a` 
 - Staking Warmup `0x43B18Ad2624DBEf474aA8E0c8d8404a0A42b7aC4` 
 - Staking Helper `0xf73f23Bb0edCf4719b12ccEa8638355BF33604A1`
+- sOHM Faucet `0x800b3d87b77361f0d1d903246ca1f51b5acb43c9`
 
 
 ## Allocator Guide
