@@ -53,7 +53,7 @@ contract Migrator is Ownable {
     IStakingV1 public immutable oldStaking;
 
     IgOHM public immutable gOHM;
-    address public newTreasury;
+    ITreasury public newTreasury;
     IStaking public newStaking;
     IERC20 public newOHM;
 
@@ -153,7 +153,7 @@ contract Migrator is Ownable {
         oldSupply = oldSupply.sub( balance );
 
         oldTreasury.withdraw( balance.mul( 1e9 ), address(DAI) );
-        DAI.safeTransfer( newTreasury, DAI.balanceOf( address(this) ) ); 
+        DAI.safeTransfer( address(newTreasury), DAI.balanceOf( address(this) ) ); 
 
         emit Defunded( balance );
     }
@@ -211,7 +211,7 @@ contract Migrator is Ownable {
 
     // fund contract with gOHM 
     function fund( uint _amount ) internal {
-        ITreasury( newTreasury ).mint( address(this), _amount );
+        newTreasury.mint( address(this), _amount );
         newOHM.approve( address( newStaking ), _amount );
         newStaking.stake( _amount, address(this), false, true ); // stake and claim gOHM
 
