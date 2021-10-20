@@ -118,7 +118,7 @@ contract gOHM is IERC20 {
      * @notice transfer mint rights from migrator to staking
      * @notice can only be done once, at the time of contract migration
      * @param _staking address
-     * @param _sOHM
+     * @param _sOHM address
      */
     function migrate( address _staking, address _sOHM ) external onlyApproved() {
         require( _staking != approved );
