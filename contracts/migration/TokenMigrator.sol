@@ -68,8 +68,8 @@ contract Migrator is Ownable {
     ITreasury public immutable oldTreasury;
     IStakingV1 public immutable oldStaking;
 
-    IUniswapV2Router public immutable sushiRouter;
-    IUniswapV2Router public immutable uniRouter;
+    IRouter public immutable sushiRouter;
+    IRouter public immutable uniRouter;
 
     IgOHM public gOHM;
     ITreasury public newTreasury;
@@ -109,9 +109,9 @@ contract Migrator is Ownable {
         require( _DAI != address(0) );
         DAI = IERC20( _DAI );
         require( _sushi != address(0) );
-        sushiRouter = IUniswapV2Router(_sushi);
+        sushiRouter = IRouter(_sushi);
         require( _uni != address(0) );
-        uniRouter = IUniswapV2Router(_uni);
+        uniRouter = IRouter(_uni);
         timelockLength = _timelock;
     }
 
@@ -297,7 +297,7 @@ contract Migrator is Ownable {
     }
     
     /**
-    *   @notice Migrates OHM/DAI SLP to new OHM contract
+    *   @notice Migrates LPs to be paired with new OHM and is sent to new treasury
     */
     function _migrateLP() internal {
         for( uint i = 0; i < lpTokens.length; i++ ) {
