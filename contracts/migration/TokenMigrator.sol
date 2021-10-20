@@ -35,7 +35,7 @@ contract TokenMigrator is Ownable {
   event Defunded(uint256 amount);
 
   /* ========== STATE VARIABLES ========== */
-q
+
   IOHMERC20 public immutable oldOHM;
   IsOHM public immutable oldsOHM;
   IwsOHM public immutable oldwsOHM;
