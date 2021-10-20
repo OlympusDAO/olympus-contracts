@@ -1,14 +1,13 @@
 {
-    "tabWidth": 4,
-    "printWidth": 200,
-    "proseWrap": "preserve",
     "overrides": [
         {
           "files": "*.sol",
           "options": {
             "printWidth": 200,
+            "tabWidth": 4,
             "explicitTypes": "always"
           }
         }
       ]
+
 }
