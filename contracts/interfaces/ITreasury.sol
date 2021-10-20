@@ -5,9 +5,13 @@ pragma solidity 0.7.5;
 interface ITreasury {
 
     function deposit( address _from, uint _amount, address _token, uint _profit ) external returns ( uint );
-
-    function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
     
+    function withdraw( uint _amount, address _token ) external;
+
+    function tokenValue( address _token, uint _amount ) external view returns ( uint value_ );
+  
+    function mint( address _recipient, uint _amount ) external;
+
     function mintRewards( address _recipient, uint _amount ) external;
 
     function incurDebt( uint amount_, address token_ ) external;
