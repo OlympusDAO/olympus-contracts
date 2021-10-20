@@ -18,18 +18,8 @@ contract gOHM is IERC20 {
 
     /* ========== MODIFIERS ========== */
 
-<<<<<<< Updated upstream
-    modifier onlyMinter() {
-        require( msg.sender == minter, "Only minter" );
-=======
-<<<<<<< Updated upstream
-    modifier onlyStaking() {
-        require( msg.sender == staking, "Only staking" );
-=======
     modifier onlyMinter() {
         require(msg.sender == minter, "Only minter");
->>>>>>> Stashed changes
->>>>>>> Stashed changes
         _;
     }
 
@@ -67,27 +57,11 @@ contract gOHM is IERC20 {
 
     /* ========== CONSTRUCTOR ========== */
 
-<<<<<<< Updated upstream
-    constructor( address _sOHM, address _migrator ) {
-        require( _sOHM != address(0) );
-        sOHM = _sOHM;
-        require( _migrator != address(0) );
-        minter = _migrator;
-=======
-<<<<<<< Updated upstream
-    constructor( address _sOHM, address _staking ) {
-        require( _sOHM != address(0) );
-        sOHM = _sOHM;
-        require( _staking != address(0) );
-        staking = _staking;
-=======
     constructor(address _sOHM, address _migrator) {
         require(_sOHM != address(0));
         sOHM = _sOHM;
         require(_migrator != address(0));
         minter = _migrator;
->>>>>>> Stashed changes
->>>>>>> Stashed changes
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -148,50 +122,26 @@ contract gOHM is IERC20 {
     }
 
     /**
-<<<<<<< Updated upstream
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
+
      * @notice transfer minter rights from migrator to staking
      * @notice can only be done once, at the time of contract migration
      * @param _staking address
      */
-<<<<<<< Updated upstream
-    function migrate( address _staking ) external {
-        require( msg.sender == DAO, "Only DAO" );
-        require( !migrated );
-        require( _staking != address(0) );
-=======
     function migrate(address _staking) external {
         require(msg.sender == DAO, "Only DAO");
         require(!migrated);
         require(_staking != address(0));
->>>>>>> Stashed changes
         minter = _staking;
         migrated = true;
     }
 
     /**
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
         @notice mint gOHM
         @param _to address
         @param _amount uint
      */
-<<<<<<< Updated upstream
-    function mint( address _to, uint _amount ) external onlyMinter() {
-=======
-<<<<<<< Updated upstream
-    function mint( address _to, uint _amount ) external onlyStaking() {
->>>>>>> Stashed changes
-        _mint( _to, _amount );
-=======
     function mint(address _to, uint256 _amount) external onlyMinter {
         _mint(_to, _amount);
->>>>>>> Stashed changes
     }
 
     /**
@@ -199,17 +149,9 @@ contract gOHM is IERC20 {
         @param _from address
         @param _amount uint
      */
-<<<<<<< Updated upstream
-    function burn( address _from, uint _amount ) external onlyMinter() {
-=======
-<<<<<<< Updated upstream
-    function burn( address _from, uint _amount ) external onlyStaking() {
->>>>>>> Stashed changes
-        _burn( _from, _amount );
-=======
+
     function burn(address _from, uint256 _amount) external onlyMinter {
         _burn(_from, _amount);
->>>>>>> Stashed changes
     }
 
     /**
