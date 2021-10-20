@@ -4,16 +4,11 @@ pragma solidity ^0.8.4;
 //import "./types/ERC20.sol";
 //import "./types/Ownable.sol";
 //import "./libraries/SafeERC20.sol";
-//import "./libraries/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-//import "./interfaces/IsOHM.sol";
-
-import "hardhat/console.sol";
-
+// TODO replace with sOHM interface file
 interface IsOHM {
     function rebase( uint256 ohmProfit_, uint epoch_) external returns (uint256);
     function circulatingSupply() external view returns (uint256);
@@ -25,31 +20,27 @@ interface IsOHM {
 
 /**
     @title TycheYieldDirector 
-    @notice This contract allows users to stake their OHM and redirect their
-            rebases to an address (or NFT). Users will be able to withdraw their
-            principal stake at any time. Donation recipients can also withdraw at
-            any time.
-    @dev User's deposited stake is recorded as agnostic values (value / index) for the user,
-         but recipient debt is recorded as non-agnostic OHM value.
+    @notice This contract allows donors to deposit their sOHM and donate their rebases
+            to any address. Donors will be able to withdraw their principal
+            sOHM at any time. Donation recipients can also redeem accrued rebases at any time.
  */
-contract TycheYieldDirector {
+contract TycheYieldDirector is Ownable {
     using SafeERC20 for IERC20;
-    //using SafeMath for uint;
 
-    //address public immutable staking;
     address public immutable OHM;
     address public immutable sOHM;
-
     uint public immutable DECIMALS; // Decimals of OHM and sOHM
+
+    bool public disableDeposits;
+    bool public disableWithdaws;
+    bool public disableRedeems;
 
     struct DonationInfo {
         address recipient;
-        // TODO can be packed
         uint amount; // total non-agnostic amount deposited
     }
 
     struct RecipientInfo {
-        // TODO can be packed
         uint totalDebt; // Non-agnostic debt
         uint carry; // Total non-agnostic value donating to recipient
         uint agnosticAmount; // Total agnostic value of carry + debt
@@ -61,9 +52,10 @@ contract TycheYieldDirector {
     mapping(address => RecipientInfo) public recipientInfo;
 
     event Deposited(address _donor, address _recipient, uint _amount);
-    event Withdrawal(address _donor, address _recipient, uint _amount);
-    event WithdrawAll(address _donor, uint _amount);
+    event Withdrawn(address _donor, address _recipient, uint _amount);
+    event AllWithdrawn(address _donor, uint _amount);
     event Redeemed(address _recipient, uint _amount);
+    event EmergencyShutdown(bool active);
 
     constructor (
         address _OHM, 
@@ -88,6 +80,7 @@ contract TycheYieldDirector {
         @param _recipient Address to direct staking yield and vault shares to
     */
     function deposit(uint _amount, address _recipient) external {
+        require(disableDeposits == false, "Deposits currently disabled");
         require(_amount > 0, "Invalid deposit amount");
         require(_recipient != address(0), "Invalid recipient address");
         require(IERC20(sOHM).balanceOf(msg.sender) >= _amount, "Not enough sOHM");
@@ -132,23 +125,13 @@ contract TycheYieldDirector {
         return donationInfo[msg.sender][uint(recipientIndex)].amount;
     }
 
-    // TODO
-    function _withdrawable(address _donor, address _recipient) internal view returns ( uint ) {
-        int recipientIndex = _getRecipientIndex(_donor, _recipient);
-        require(recipientIndex >= 0, "No donations to recipient");
-
-        return donationInfo[_donor][uint(recipientIndex)].amount;
-    }
-
     /**
         @notice Withdraw donor's sOHM from vault and subtracts debt from recipient
-        @param _amount Non-agnostic sOHM amount to withdraw
-        @param _recipient Donee address
-        @dev note on withdrawal:
-            Agnostic value of _amount is different from when it was deposited. The remaining
-            amount is left with the recipient so they can keep receiving rebases on the remaining amount.
+        @param _amount sOHM amount to withdraw
+        @param _recipient Recipient address
      */
     function withdraw(uint _amount, address _recipient) external {
+        require(disableWithdaws == false, "Withdraws currently disabled");
         DonationInfo[] storage donations = donationInfo[msg.sender];
         int recipientIndexSigned = _getRecipientIndex(msg.sender, _recipient);
 
@@ -171,17 +154,21 @@ contract TycheYieldDirector {
 
         IERC20(sOHM).safeTransfer(msg.sender, _amount);
 
-        emit Withdrawal(msg.sender, _recipient, _amount);
+        emit Withdrawn(msg.sender, _recipient, _amount);
     }
 
     /**
         @notice Withdraw from all donor positions
      */
     function withdrawAll() external {
+        require(disableWithdaws == false, "Withdraws currently disabled");
+
         DonationInfo[] storage donations = donationInfo[msg.sender];
         require(donations.length != 0, "User not donating to anything");
 
+        uint sohmIndex = IsOHM(sOHM).index();
         uint total = 0;
+
         for (uint index = 0; index < donations.length; index++) {
             DonationInfo memory donation = donations[index];
             total += donation.amount;
@@ -190,7 +177,7 @@ contract TycheYieldDirector {
             recipient.carry = redeemableBalance(donation.recipient);
             recipient.totalDebt -= donation.amount;
             recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
-            recipient.indexAtLastChange = IsOHM(sOHM).index();
+            recipient.indexAtLastChange = sohmIndex;
         }
 
         // Delete donor's entire donations array
@@ -198,10 +185,8 @@ contract TycheYieldDirector {
 
         IERC20(sOHM).safeTransfer(msg.sender, total);
 
-        emit WithdrawAll(msg.sender, total);
+        emit AllWithdrawn(msg.sender, total);
     }
-
-    //function _withdrawFromRecipient(address _recipient) internal {}
 
     /**
         @notice Return total amount of user's sOHM being donated
@@ -242,6 +227,8 @@ contract TycheYieldDirector {
              be accounted for with a subsequent redeem or a withdrawal by the specific donor.
      */
     function redeem() external {
+        require(disableRedeems == false, "Redeems currently disabled");
+
         uint redeemable = redeemableBalance(msg.sender);
         require(redeemable > 0, "No redeemable balance");
 
@@ -305,5 +292,28 @@ contract TycheYieldDirector {
         return _amount
             * _index
             / DECIMALS;
+    }
+
+    /************************
+    * Restricted Functions
+    ************************/
+
+    function emergencyShutdown(bool _active) external onlyOwner {
+        disableDeposits = _active;
+        disableWithdaws = _active;
+        disableRedeems = _active;
+        emit EmergencyShutdown(_active);
+    }
+
+    function shutdownDeposits(bool _active) external onlyOwner {
+        disableDeposits = _active;
+    }
+
+    function shutdownWithdrawals(bool _active) external onlyOwner {
+        disableWithdaws = _active;
+    }
+
+    function shutdownRedeems(bool _active) external onlyOwner {
+        disableRedeems = _active;
     }
 }

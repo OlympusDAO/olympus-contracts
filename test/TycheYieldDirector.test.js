@@ -20,17 +20,6 @@ describe('TycheYieldDirector', async () => {
     // Reward rate of .1%
     const initialRewardRate = "1000";
 
-    // TODO remove
-    const mineBlocks = async (blockNumber_) => {
-        while (blockNumber_ > 0) {
-          blockNumber_--;
-          await hre.network.provider.request({
-            method: "evm_mine",
-            params: [],
-          });
-        }
-    }
-
     const mineBlock = async () => {
         await hre.network.provider.request({
           method: "evm_mine",
@@ -45,10 +34,6 @@ describe('TycheYieldDirector', async () => {
     // TODO needs cleanup. use Bignumber.
     // Mine block and rebase. Returns the new index.
     const triggerRebase = async () => {
-        //const currentIndex = await sOhm.index() / 10 ** 9;
-        //const rewardRate = initialRewardRate / 10 ** 6;
-        //const nextIndex = currentIndex + (currentIndex * rewardRate)
-
         mineBlock();
         await staking.rebase();
 
