@@ -59,8 +59,6 @@ contract Distributor is Governable, Guardable {
         OHM = IERC20( _ohm );
         require( _staking != address(0) );
         staking = _staking;
-        epochLength = _epochLength;
-        nextEpochBlock = _nextEpochBlock;
     }
     
     
