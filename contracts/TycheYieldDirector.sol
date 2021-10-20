@@ -63,11 +63,10 @@ contract TycheYieldDirector is Ownable {
     ) {
         require(_OHM != address(0));
         require(_sOHM != address(0));
-        // TODO add governance address
 
         OHM = _OHM;
         sOHM = _sOHM;
-        DECIMALS = 10 ** ERC20(_sOHM).decimals();
+        DECIMALS = ERC20(_sOHM).decimals();
     }
 
     /************************
@@ -270,7 +269,7 @@ contract TycheYieldDirector is Ownable {
      */
     function _toAgnostic(uint _amount) internal view returns ( uint ) {
         return _amount
-            * DECIMALS
+            * (10 ** DECIMALS)
             / (IsOHM(sOHM).index());
     }
 
@@ -281,7 +280,7 @@ contract TycheYieldDirector is Ownable {
     function _fromAgnostic(uint _amount) internal view returns ( uint ) {
         return _amount
             * (IsOHM(sOHM).index())
-            / DECIMALS;
+            / (10 ** DECIMALS);
     }
 
     /**
@@ -291,11 +290,11 @@ contract TycheYieldDirector is Ownable {
     function _fromAgnosticAtIndex(uint _amount, uint _index) internal view returns ( uint ) {
         return _amount
             * _index
-            / DECIMALS;
+            / (10 ** DECIMALS);
     }
 
     /************************
-    * Restricted Functions
+    * Emergency Functions
     ************************/
 
     function emergencyShutdown(bool _active) external onlyOwner {

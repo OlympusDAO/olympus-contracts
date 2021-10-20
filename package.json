@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.3.0",
+    "dotenv": "^10.0.0",
     "prb-math": "^2.3.0"
   },
   "devDependencies": {
