@@ -1,4 +1,5 @@
 require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-etherscan");
 require('dotenv').config();
 
 const chainIds = {
@@ -51,4 +52,7 @@ module.exports = {
       },
     ]
   },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY
+  }
 };
