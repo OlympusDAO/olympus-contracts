@@ -34,7 +34,6 @@ contract Migrator is Ownable {
 
     using SafeMath for uint;
     using SafeERC20 for IERC20;
-    using SafeERC20 for IOHMERC20;
     using SafeERC20 for IgOHM;
     using SafeERC20 for IsOHM;
 
