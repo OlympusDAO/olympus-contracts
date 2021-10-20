@@ -231,18 +231,18 @@ contract Migrator is Ownable {
 
         IERC20(_v1).approve(router, oldLPAmount);
         (uint amountA, uint amountB) = IRouter(router) // remove liquidity for ohmv1
-                .removeLiquidity(address(_token), address(oldOHM), oldLPAmount, 0, 0, address(this), block.number + 15);
+                .removeLiquidity(_token, address(oldOHM), oldLPAmount, 0, 0, address(this), block.number + 15);
         
-        oldTreasury.withdraw(amountB, address(_token)); // withdraw backing from v1
+        oldTreasury.withdraw(amountB, _token); // withdraw backing from v1
         
         IERC20(_token).approve(address(newTreasury), amountB * 10 ** 9);
-        newTreasury.deposit(amountB * 10 ** 9, DAI, 0); // deposit backing to v2, minting ohmv2
+        newTreasury.deposit(amountB * 10 ** 9, _token, 0); // deposit backing to v2, minting ohmv2
         
         IERC20(_token).approve(uniRouter, amountA);
         newOHM.approve(uniRouter, amountB);
         
         (,, uint newLiquidity) = IRouter(uniRouter) // add liquidity for ohmv2
-                .addLiquidity(address(_token), address(newOHM), amountA, amountB, 0, 0, address(this), block.number + 15);
+                .addLiquidity(_token, address(newOHM), amountA, amountB, 0, 0, address(this), block.number + 15);
         
         uint newLPValue = newTreasury.tokenValue(_v2, newLiquidity);
         
