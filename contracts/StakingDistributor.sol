@@ -26,9 +26,6 @@ contract Distributor is Governable, Guardable {
     ITreasury immutable treasury;
     address immutable staking;
     
-    uint public immutable epochLength;
-    uint public nextEpochBlock;
-    
     mapping( uint => Adjust ) public adjustments;
     
     
@@ -51,7 +48,11 @@ contract Distributor is Governable, Guardable {
     
     /* ====== CONSTRUCTOR ====== */
 
-    constructor( address _treasury, address _ohm, uint _epochLength, uint _nextEpochBlock ) {        
+    constructor( 
+        address _treasury, 
+        address _ohm, 
+        address _staking
+    ) {        
         require( _treasury != address(0) );
         treasury = ITreasury( _treasury );
         require( _ohm != address(0) );
@@ -71,19 +72,15 @@ contract Distributor is Governable, Guardable {
      */
     function distribute() external {
         require( msg.sender == staking, "Only staking" );
-
-        if ( nextEpochBlock <= block.number ) {
-            nextEpochBlock = nextEpochBlock.add( epochLength ); // set next epoch block
             
-            // distribute rewards to each recipient
-            for ( uint i = 0; i < info.length; i++ ) {
-                if ( info[ i ].rate > 0 ) {
-                    treasury.mint( // mint and send from treasury
-                        info[ i ].recipient, 
-                        nextRewardAt( info[ i ].rate ) 
-                    );
-                    adjust( i ); // check for adjustment
-                }
+        // distribute rewards to each recipient
+        for ( uint i = 0; i < info.length; i++ ) {
+            if ( info[ i ].rate > 0 ) {
+                treasury.mint( // mint and send from treasury
+                    info[ i ].recipient, 
+                    nextRewardAt( info[ i ].rate ) 
+                );
+                adjust( i ); // check for adjustment
             }
         }
     }
