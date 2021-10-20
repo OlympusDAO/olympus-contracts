@@ -52,7 +52,7 @@ contract Migrator is Ownable {
     ITreasury public immutable oldTreasury;
     IStakingV1 public immutable oldStaking;
 
-    IgOHM public immutable gOHM;
+    IgOHM public gOHM;
     ITreasury public newTreasury;
     IStaking public newStaking;
     IERC20 public newOHM;
