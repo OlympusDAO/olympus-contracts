@@ -94,55 +94,10 @@ describe('Treasury Token Migration', async () => {
 
     it("Should allow DAO migrate tokens", async () => {
         await olympus.connect(user0).setVault(newTreasury.address);
-        const old_treasury_dai_bal_before_tx = await dai.connect(user0).balanceOf(OLD_TREASURY_ADDRESS);
+        await fastTrack(2);
 
-        console.log('old_treasury_dai_bal_before_tx', old_treasury_dai_bal_before_tx.toString());
-        const new_treasury_dai_bal_beforer_tx = await dai.connect(user0).balanceOf(newTreasury.address);
-
-        console.log('new_treasury_dai_bal_beforer_tx', new_treasury_dai_bal_beforer_tx.toString());
-        const old_treasury_frax_bal_before_tx = await frax.connect(user0).balanceOf(OLD_TREASURY_ADDRESS);
-
-        console.log('old_treasury_frax_bal_before_tx', old_treasury_frax_bal_before_tx.toString());
-        const new_treasury_frax_bal_beforer_tx = await frax.connect(user0).balanceOf(newTreasury.address);
-
-        console.log('new_treasury_frax_bal_beforer_tx', new_treasury_frax_bal_beforer_tx.toString());
-        const old_treasury_weth_bal_before_tx = await weth.connect(user0).balanceOf(OLD_TREASURY_ADDRESS);
-
-        console.log('old_treasury_weth_bal_before_tx', old_treasury_weth_bal_before_tx.toString());
-        const new_treasury_weth_bal_beforer_tx = await weth.connect(user0).balanceOf(newTreasury.address);
-
-        console.log('new_treasury_weth_bal_beforer_tx', new_treasury_weth_bal_beforer_tx.toString());
-        const old_treasury_lusd_bal_before_tx = await lusd.connect(user0).balanceOf(OLD_TREASURY_ADDRESS);
-
-        console.log('old_treasury_lusd_bal_before_tx', old_treasury_lusd_bal_before_tx.toString());
-        const new_treasury_lusd_bal_beforer_tx = await lusd.connect(user0).balanceOf(newTreasury.address);
-
-        console.log('new_treasury_lusd_bal_beforer_tx', new_treasury_lusd_bal_beforer_tx.toString());
         await treasuryTokenMigrator.connect(user0).migrate();
-
-        const old_treasury_dai_bal_after_tx = await dai.connect(user0).balanceOf(OLD_TREASURY_ADDRESS);
-        console.log('old_treasury_dai_bal_after_tx', old_treasury_dai_bal_after_tx.toString());
-
-        const new_treasury_dai_bal_after_tx = await dai.connect(user0).balanceOf(newTreasury.address);
-        console.log('new_treasury_dai_bal_after_tx', new_treasury_dai_bal_after_tx.toString());
-
-        const old_treasury_frax_bal_after_tx = await frax.connect(user0).balanceOf(OLD_TREASURY_ADDRESS);
-        console.log('old_treasury_frax_bal_after_tx', old_treasury_frax_bal_after_tx.toString());
-
-        const new_treasury_frax_bal_after_tx = await frax.connect(user0).balanceOf(newTreasury.address);
-        console.log('new_treasury_frax_bal_after_tx', new_treasury_frax_bal_after_tx.toString());
-
-        const old_treasury_weth_bal_after_tx = await weth.connect(user0).balanceOf(OLD_TREASURY_ADDRESS);
-        console.log('old_treasury_weth_bal_after_tx', old_treasury_weth_bal_after_tx.toString());
-
-        const new_treasury_weth_bal_after_tx = await weth.connect(user0).balanceOf(newTreasury.address);
-        console.log('new_treasury_weth_bal_after_tx', new_treasury_weth_bal_after_tx.toString());
-
-        const old_treasury_lusd_bal_after_tx = await lusd.connect(user0).balanceOf(OLD_TREASURY_ADDRESS);
-        console.log('old_treasury_lusd_bal_after_tx', old_treasury_lusd_bal_after_tx.toString());
-
-        const new_treasury_lusd_bal_after_tx = await lusd.connect(user0).balanceOf(newTreasury.address);
-        console.log('new_treasury_lusd_bal_after_tx', new_treasury_lusd_bal_after_tx.toString());
+        await fastTrack(3);
     })
 })
 
@@ -163,6 +118,34 @@ async function fastTrack(loop, address = []) {
         }
 
         return tokens;
+    }
+    else if(loop === 2){
+        const count = loop + 2; 
+
+        const contract = [dai, frax, weth, lusd];
+        const contract_name = ['dai', 'frax', 'weth', 'lusd'];
+
+        for(let i = 0; i < count; i++){
+            const bal_before_tx = await contract[i].connect(user0).balanceOf(OLD_TREASURY_ADDRESS);
+            console.log(`old_treasury_${contract_name[i]}_bal_before_tx`, bal_before_tx.toString());
+
+            const bal_after_tx = await contract[i].connect(user0).balanceOf(newTreasury.address);
+            console.log(`new_treasury_${contract_name[i]}_bal_after_tx`, bal_after_tx.toString());
+        }
+    }
+    else if(loop === 3){
+        const count = loop + 1; 
+
+        const contract = [dai, frax, weth, lusd];
+        const contract_name = ['dai', 'frax', 'weth', 'lusd'];
+
+        for(let i = 0; i < count; i++){
+            const bal_before_tx = await contract[i].connect(user0).balanceOf(OLD_TREASURY_ADDRESS);
+            console.log(`old_treasury_${contract_name[i]}_bal_before_tx`, bal_before_tx.toString());
+
+            const bal_after_tx = await contract[i].connect(user0).balanceOf(newTreasury.address);
+            console.log(`new_treasury_${contract_name[i]}bal_after_tx`, bal_after_tx.toString());
+        }
     }
     else{
         for(let i = 0; i < loop; i++){
