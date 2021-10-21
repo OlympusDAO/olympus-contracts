@@ -1,12 +1,12 @@
-const dai_abi = require("../../ContractAbis/dai");
-const { expect } = require('../Utils/test_env.js');
-const frax_abi = require("../../ContractAbis/frax");
-const weth_abi = require("../../ContractAbis/weth");
-const lusd_abi = require("../../ContractAbis/lusd");
-const { advanceBlock } = require("../Utils/advancement");
-const { fork_network } = require('../Utils/network_fork');
-const impersonateAccount = require('../Utils/impersonate_account');
-const old_treasury_abi = require('../../ContractAbis/old_treasury_abi');
+const dai_abi = require("../../abis/dai");
+const { expect } = require('../utils/test_env.js');
+const frax_abi = require("../../abis/frax");
+const weth_abi = require("../../abis/weth");
+const lusd_abi = require("../../abis/lusd");
+const { advanceBlock } = require("../utils/advancement");
+const { fork_network } = require('../utils/network_fork');
+const impersonateAccount = require('../utils/impersonate_account');
+const old_treasury_abi = require('../../abis/old_treasury_abi');
 
 const DAI = process.env.DAI;
 const FRAX = process.env.FRAX
