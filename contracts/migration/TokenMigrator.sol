@@ -308,32 +308,32 @@ contract Migrator is Ownable {
 
             if(_token.sushi) {
                 IERC20(_token.token).approve(address(sushiRouter), oldLPAmount);
-                (uint amountA, uint amountB) = sushiRouter.removeLiquidity(_token.token, address(oldOHM), oldLPAmount, 0, 0, address(this), 1000000000000);
+                (uint amountA, uint amountB) = sushiRouter.removeLiquidity(_token.tokenA, _token.tokenB, oldLPAmount, 0, 0, address(this), 1000000000000);
                 
                 oldOHM.approve(address(oldTreasury), amountB);
-                oldTreasury.withdraw(amountB * 10 ** 9, _token.token);
+                oldTreasury.withdraw(amountB * 10 ** 9, _token.tokenA);
                 
-                IERC20(_token.token).approve(address(newTreasury), amountB * 10 ** 9);
-                newTreasury.deposit(amountB * 10 ** 9, _token.token, 0);
+                IERC20(_token.tokenA).approve(address(newTreasury), amountB * 10 ** 9);
+                newTreasury.deposit(amountB * 10 ** 9, _token.tokenA, 0);
                 
-                IERC20(_token.token).approve(address(sushiRouter), amountA);
+                IERC20(_token.tokenA).approve(address(sushiRouter), amountA);
                 newOHM.approve(address(sushiRouter), amountB);
 
-                sushiRouter.addLiquidity(_token.token, address(newOHM), amountA, amountB, amountA, amountB, address(newTreasury), 100000000000);
+                sushiRouter.addLiquidity(_token.tokenA, address(newOHM), amountA, amountB, amountA, amountB, address(newTreasury), 100000000000);
             } else {
                 IERC20(_token.token).approve(address(uniRouter), oldLPAmount);
-                (uint amountA, uint amountB) = uniRouter.removeLiquidity(_token.token, address(oldOHM), oldLPAmount, 0, 0, address(this), 1000000000000);
+                (uint amountA, uint amountB) = uniRouter.removeLiquidity(_token.tokenA, _token.tokenB, oldLPAmount, 0, 0, address(this), 1000000000000);
                 
                 oldOHM.approve(address(oldTreasury), amountB);
-                oldTreasury.withdraw(amountB * 10 ** 9, _token.token);
+                oldTreasury.withdraw(amountB * 10 ** 9, _token.tokenA);
                 
-                IERC20(_token.token).approve(address(newTreasury), amountB * 10 ** 9);
-                newTreasury.deposit(amountB * 10 ** 9, _token.token, 0);
+                IERC20(_token.tokenA).approve(address(newTreasury), amountB * 10 ** 9);
+                newTreasury.deposit(amountB * 10 ** 9, _token.tokenA, 0);
                 
-                IERC20(_token.token).approve(address(uniRouter), amountA);
+                IERC20(_token.tokenA).approve(address(uniRouter), amountA);
                 newOHM.approve(address(uniRouter), amountB);
 
-                uniRouter.addLiquidity(_token.token, address(newOHM), amountA, amountB, amountA, amountB, address(newTreasury), 100000000000);
+                uniRouter.addLiquidity(_token.tokenA, address(newOHM), amountA, amountB, amountA, amountB, address(newTreasury), 100000000000);
             }
         
         }
