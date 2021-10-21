@@ -27,6 +27,7 @@ contract OlympusERC20TokenTest is DSTest {
         }
     }
 
+    // Tester will pass it's own parameters, see https://fv.ethereum.org/2020/12/11/symbolic-execution-with-ds-test/
     function test_mint(uint256 amount) public {                      
         uint256 supplyBefore = ohmContract.totalSupply();
         ohmContract.setVault(address(this)); //TODO WTF msg.sender doesn't propigate from .dapprc $DAPP_TEST_CALLER config via mint() call, must use this value
@@ -34,6 +35,7 @@ contract OlympusERC20TokenTest is DSTest {
         assertEq(supplyBefore + amount, ohmContract.totalSupply());
     }
 
+    // Tester will pass it's own parameters, see https://fv.ethereum.org/2020/12/11/symbolic-execution-with-ds-test/
     function test_burn(uint256 mintAmount, uint256 burnAmount) public {                      
         uint256 supplyBefore = ohmContract.totalSupply();
         ohmContract.setVault(address(this));  //TODO WTF msg.sender doesn't propigate from .dapprc $DAPP_TEST_CALLER config via mint() call, must use this value
