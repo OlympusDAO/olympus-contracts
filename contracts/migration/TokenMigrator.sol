@@ -144,7 +144,11 @@ contract Migrator is Ownable {
 
     // bridge back to OHM, sOHM, or wsOHM
     function bridgeBack( uint _amount, TYPE _to ) external {
-        gOHM.burn( msg.sender, _amount );
+        if( !ohmMigrated ) {
+            gOHM.burn( msg.sender, _amount );
+        } else {
+            gOHM.safeTransferFrom(msg.sender, address(this), _amount);
+        }
 
         uint amount = oldwsOHM.wOHMTosOHM( _amount );
         // error throws if contract does not have enough of type to send
