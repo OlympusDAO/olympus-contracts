@@ -34,7 +34,7 @@ async function main() {
     const OlympusTreasury = await ethers.getContractFactory('OlympusTreasury');
     const olympusTreasury = await OlympusTreasury.deploy(ohm.address, '0');
 
-    await olympusTreasury.queueTimelock('1', migrator.address, migrator.address);
+    await olympusTreasury.queueTimelock('0', migrator.address, migrator.address);
     await olympusTreasury.queueTimelock('8', migrator.address, migrator.address);
     await olympusTreasury.queueTimelock('2', DAI, DAI);
     await olympusTreasury.queueTimelock('2', FRAX, FRAX);
