@@ -1,8 +1,7 @@
-# I have no clue if this works
 # Chats that led me here: https://dapphub.chat/channel/dev?msg=SjN9jmkiXFuKaFqWM and https://dapphub.chat/channel/dev?msg=HnZi8PHXquyzZ35cX 
 # So based it off of: https://github.com/centrifuge/tinlake-maker-lib/blob/c47b6e1b17e3e3d58036ad7356bec34370edccd4/.github/workflows/build.yml
 
-name: "Build"
+name: "Dapptools CI"
 on:
   pull_request:
   push:

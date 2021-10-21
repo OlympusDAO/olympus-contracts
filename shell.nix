@@ -1,4 +1,4 @@
-# WIP, copied from https://github.com/centrifuge/tinlake-maker-lib/blob/master/shell.nix
+# Copied from https://github.com/centrifuge/tinlake-maker-lib/blob/master/shell.nix
 
 let
   pkgs = import (builtins.fetchGit rec {
