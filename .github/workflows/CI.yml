@@ -7,7 +7,7 @@ on:
   push:
     branches: [ Version-1.1, Version-2]
   pull_request:
-    branches: [ Version-1.1, Version-2]
+    branches: [ "*" ]
 
 jobs:
   build:
