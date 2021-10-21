@@ -1,4 +1,8 @@
 require("@nomiclabs/hardhat-waffle");
+//require("@nomiclabs/hardhat-ethers");
+require('ethers');
+require('dotenv').config()
+
 module.exports = {
   solidity: {
       compilers: [
