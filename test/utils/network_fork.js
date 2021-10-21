@@ -6,7 +6,7 @@ async function fork_network(blockNumber = 13377190) {
         method: "hardhat_reset",
         params: [{
             forking: {
-                jsonRpcUrl: 'https://eth-mainnet.alchemyapi.io/v2/lTgdFV0ZI76eMdeIBr1x_MRzsR3rS2IR',
+                jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API}`,
                 blockNumber: blockNumber
             }
         }]
@@ -14,7 +14,7 @@ async function fork_network(blockNumber = 13377190) {
 }
 
 async function fork_reset() {
-    return network.provider.request({
+    return await network.provider.request({
         method: "hardhat_reset",
         params: [],
     });
