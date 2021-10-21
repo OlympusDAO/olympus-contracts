@@ -5,18 +5,15 @@ import "./libraries/Address.sol";
 import "./libraries/SafeMath.sol";
 
 import "./types/ERC20Permit.sol";
-import "./types/Ownable.sol";
-import "./types/ManagerOwnable.sol";
 
-import "./interfaces/IOracle.sol";
+import "./interfaces/IgOHM.sol";
+import "./interfaces/IStaking.sol";
 
-contract sOlympus is ERC20Permit, ManagerOwnable {
+contract sOlympus is ERC20Permit {
 
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
-
-
 
     /* ========== EVENTS ========== */
 
@@ -24,15 +21,12 @@ contract sOlympus is ERC20Permit, ManagerOwnable {
     event LogRebase( uint256 indexed epoch, uint256 rebase, uint256 index );
     event LogStakingContractUpdated( address stakingContract );
 
-
-
     /* ========== MODIFIERS ========== */
 
     modifier onlyStakingContract() {
         require( msg.sender == stakingContract );
         _;
     }
-
 
     /* ========== DATA STRUCTURES ========== */
 
@@ -43,11 +37,8 @@ contract sOlympus is ERC20Permit, ManagerOwnable {
         uint totalStakedAfter;
         uint amountRebased;
         uint index;
-        uint indexAdjustedPrice;
         uint blockNumberOccured;
     }
-
-
 
     /* ========== STATE VARIABLES ========== */
 
@@ -56,9 +47,7 @@ contract sOlympus is ERC20Permit, ManagerOwnable {
     uint INDEX; // Index Gons - tracks rebase growth
 
     address public stakingContract; // balance used to calc rebase
-
-    IOracle oracle; // pulls price from pool
-    address pool;
+    IgOHM public gOHM; // additional staked supply (governance token)
 
     Rebase[] public rebases; // past rebase data    
 
@@ -77,20 +66,30 @@ contract sOlympus is ERC20Permit, ManagerOwnable {
 
     mapping ( address => mapping ( address => uint256 ) ) private _allowedValue;
 
-
-
     /* ========== CONSTRUCTOR ========== */
 
-    constructor() ERC20("Staked Olympus", "sOHM", 9) ERC20Permit() {
+    constructor() ERC20("Staked OHM", "sOHM", 9) ERC20Permit() {
         initializer = msg.sender;
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
     }
 
-
-
     /* ========== INITIALIZATION ========== */
 
+    function setIndex( uint _INDEX ) external {
+        require( msg.sender == initializer );
+        require( INDEX == 0 );
+        INDEX = gonsForBalance( _INDEX );
+    }
+
+    function setgOHM( address _gOHM ) external {
+        require( msg.sender == initializer );
+        require( address( gOHM ) == address(0) );
+        require( _gOHM != address(0) );
+        gOHM = IgOHM( _gOHM );
+    }
+    
+    // do this last
     function initialize( address stakingContract_ ) external {
         require( msg.sender == initializer );
 
@@ -104,22 +103,10 @@ contract sOlympus is ERC20Permit, ManagerOwnable {
         initializer = address(0);
     }
 
-    function setIndex( uint _INDEX ) external onlyManager() {
-        require( INDEX == 0 );
-        INDEX = gonsForBalance( _INDEX );
-    }
-
-    function setPool( address _oracle, address _pool ) external onlyManager() {
-        oracle = IOracle( _oracle );
-        pool = _pool;
-    }
-
-
-
     /* ========== REBASE ========== */
 
     /**
-        @notice increases sOHM supply to increase staking balances relative to profit_
+        @notice increases rOHM supply to increase staking balances relative to profit_
         @param profit_ uint256
         @return uint256
      */
@@ -166,15 +153,12 @@ contract sOlympus is ERC20Permit, ManagerOwnable {
             totalStakedAfter: circulatingSupply(),
             amountRebased: profit_,
             index: index(),
-            indexAdjustedPrice: index().mul( oracle.getPrice( pool ) ).div( 1e9 ),
             blockNumberOccured: block.number
         }));
         
         emit LogSupply( epoch_, block.timestamp, _totalSupply );
         emit LogRebase( epoch_, rebasePercent, index() );
     }
-
-
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
@@ -220,8 +204,6 @@ contract sOlympus is ERC20Permit, ManagerOwnable {
         return true;
     }
 
-
-
     /* ========== INTERNAL FUNCTIONS ========== */
 
     // called in a permit
@@ -229,8 +211,6 @@ contract sOlympus is ERC20Permit, ManagerOwnable {
         _allowedValue[owner][spender] = value;
         emit Approval( owner, spender, value );
     }
-
-
 
     /* ========== VIEW FUNCTIONS ========== */
 
@@ -246,9 +226,12 @@ contract sOlympus is ERC20Permit, ManagerOwnable {
         return gons.div( _gonsPerFragment );
     }
 
-    // Staking contract holds excess sOHM
+    // Staking contract holds excess rOHM
     function circulatingSupply() public view returns ( uint ) {
-        return _totalSupply.sub( balanceOf( stakingContract ) );
+        return _totalSupply
+                    .sub( balanceOf( stakingContract ) )
+                    .add( gOHM.balanceFrom( IERC20( address(gOHM) ).totalSupply() ) )
+                    .add( IStaking( stakingContract ).supplyInWarmup() );
     }
 
     function index() public view returns ( uint ) {

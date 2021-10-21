@@ -5,15 +5,15 @@ module.exports = {
     compilers: [
       {
         version: "0.7.5",
-        metadata: {
-          bytecodeHash: "none",
-        },
+      },
+      {
+        version: "0.5.16"
+      }, 
+      {
+        version: "0.8.0"
       },
       {
         version: "0.8.4",
-        metadata: {
-          bytecodeHash: "none",
-        },
       }
     ],
     settings: {

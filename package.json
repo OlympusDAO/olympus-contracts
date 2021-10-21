@@ -6,7 +6,8 @@
     "test": "test"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.3.2"
+    "@openzeppelin/contracts": "^4.3.2",
+    "@uniswap/v3-periphery": "^1.2.0"
   },
   "devDependencies": {
     "@defi-wonderland/smock": "^2.0.4",

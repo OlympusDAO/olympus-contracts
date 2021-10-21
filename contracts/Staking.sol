@@ -7,7 +7,7 @@ import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/IsOHM.sol";
-import "./interfaces/IWarmup.sol";
+import "./interfaces/IgOHM.sol";
 import "./interfaces/IDistributor.sol";
 
 import "./types/Governable.sol";
@@ -19,8 +19,15 @@ contract OlympusStaking is Governable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IsOHM;
+    using SafeERC20 for IgOHM;
 
 
+
+    /* ========== EVENTS ========== */
+
+    event gOHMSet( address gOHM );
+    event DistributorSet( address distributor );
+    event WarmupSet( uint warmup );
 
     /* ========== DATA STRUCTURES ========== */
 
@@ -38,29 +45,25 @@ contract OlympusStaking is Governable {
         bool lock; // prevents malicious delays
     }
 
-    enum CONTRACTS { DISTRIBUTOR, WARMUP, LOCKER }
+    enum CONTRACTS { DISTRIBUTOR, gOHM }
 
 
 
     /* ========== STATE VARIABLES ========== */
 
-    IERC20 immutable OHM;
-    IsOHM immutable sOHM;
+    IERC20 public immutable OHM;
+    IsOHM public immutable sOHM;
+    IgOHM public gOHM;
 
     Epoch public epoch;
 
     address public distributor;
-    address public locker;
-    address public warmupContract;
-
-    uint public totalBonus;
-    uint public warmupPeriod;
 
     mapping( address => Claim ) public warmupInfo;
+    uint public warmupPeriod;
+    uint gonsInWarmup;
 
-    uint public rebate;
-
-
+    
 
     /* ========== CONSTRUCTOR ========== */
     
@@ -89,73 +92,129 @@ contract OlympusStaking is Governable {
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     /**
-        @notice stake OHM to enter warmup
-        @param _amount uint
-        @param _claim bool
+     * @notice stake OHM to enter warmup
+     * @param _amount uint
+     * @param _recipient address
+     * @param _claim bool
+     * @param _rebasing bool
      */
-    function stake( uint _amount, address _recipient, bool _claim ) external {
+    function stake( uint _amount, address _recipient, bool _rebasing, bool _claim ) external returns ( uint ) {
         rebase();
-        
+
         OHM.safeTransferFrom( msg.sender, address(this), _amount );
 
         if ( _claim && warmupPeriod == 0 ) {
-            sOHM.safeTransfer( _recipient, _amount );
+            return _send( _recipient, _amount, _rebasing );
+
         } else {
             Claim memory info = warmupInfo[ _recipient ];
-            require( !info.lock, "Deposits for account are locked" );
+
+            if ( !info.lock ) {
+                require( _recipient == msg.sender, "External deposits for account are locked" );
+            }
 
             warmupInfo[ _recipient ] = Claim ({
                 deposit: info.deposit.add( _amount ),
                 gons: info.gons.add( sOHM.gonsForBalance( _amount ) ),
                 expiry: epoch.number.add( warmupPeriod ),
-                lock: false
+                lock: info.lock
             });
-            
-            sOHM.safeTransfer( warmupContract, _amount );
+
+            gonsInWarmup = gonsInWarmup.add( sOHM.gonsForBalance( _amount ) );
+
+            return _amount;
         }
     }
 
     /**
-        @notice retrieve sOHM from warmup
-        @param _recipient address
+     * @notice retrieve stake from warmup
+     * @param _recipient address
+     * @param _rebasing bool
      */
-    function claim ( address _recipient ) public {
+    function claim ( address _recipient, bool _rebasing ) public returns ( uint ) {
         Claim memory info = warmupInfo[ _recipient ];
+
+        if ( !info.lock ) {
+            require( _recipient == msg.sender, "External claims for account are locked" );
+        }
+
         if ( epoch.number >= info.expiry && info.expiry != 0 ) {
             delete warmupInfo[ _recipient ];
-            IWarmup( warmupContract ).retrieve( _recipient, sOHM.balanceForGons( info.gons ) );
+
+            gonsInWarmup = gonsInWarmup.sub( info.gons );
+
+            return _send( _recipient, sOHM.balanceForGons( info.gons ), _rebasing );
         }
+        return 0;
     }
 
     /**
-        @notice forfeit sOHM in warmup and retrieve OHM
+     * @notice forfeit stake and retrieve OHM
      */
-    function forfeit() external {
+    function forfeit() external returns ( uint ) {
         Claim memory info = warmupInfo[ msg.sender ];
         delete warmupInfo[ msg.sender ];
 
-        IWarmup( warmupContract ).retrieve( address(this), sOHM.balanceForGons( info.gons ) );
+        gonsInWarmup = gonsInWarmup.sub( info.gons );
+
         OHM.safeTransfer( msg.sender, info.deposit );
+
+        return info.deposit;
     }
 
     /**
-        @notice prevent new deposits to address (protection from malicious activity)
+     * @notice prevent new deposits or claims from ext. address (protection from malicious activity)
      */
-    function toggleDepositLock() external {
+    function toggleLock() external {
         warmupInfo[ msg.sender ].lock = !warmupInfo[ msg.sender ].lock;
     }
 
     /**
-        @notice redeem sOHM for OHM
-        @param _amount uint
-        @param _trigger bool
+     * @notice redeem sOHM for OHM
+     * @param _amount uint
+     * @param _trigger bool
+     * @param _rebasing bool
      */
-    function unstake( uint _amount, bool _trigger ) external {
+    function unstake( uint _amount, bool _trigger, bool _rebasing ) external returns ( uint ) {
         if ( _trigger ) {
             rebase();
         }
+
+        uint amount = _amount;
+        if ( _rebasing ) {
+            sOHM.safeTransferFrom( msg.sender, address(this), _amount );
+        } else {
+            gOHM.burn( msg.sender, _amount ); // amount was given in gOHM terms
+            amount = gOHM.balanceFrom( _amount ); // convert amount to OHM terms
+        }
+        
+        OHM.safeTransfer( msg.sender, amount );
+
+        return amount;
+    }
+
+    /**
+     * @notice convert _amount sOHM into gBalance_ gOHM
+     * @param _amount uint
+     * @return gBalance_ uint
+     */
+    function wrap( uint _amount ) external returns ( uint gBalance_ ) {
         sOHM.safeTransferFrom( msg.sender, address(this), _amount );
-        OHM.safeTransfer( msg.sender, _amount );
+
+        gBalance_ = gOHM.balanceTo( _amount );
+        gOHM.mint( msg.sender, gBalance_ );
+    }
+
+    /**
+     * @notice convert _amount gOHM into sBalance_ sOHM
+     * @param _amount uint
+     * @return sBalance_ uint
+     */
+    function unwrap( uint _amount ) external returns ( uint sBalance_ ) {
+        gOHM.burn( msg.sender, _amount );
+
+        sBalance_ = gOHM.balanceFrom( _amount );
+        sOHM.safeTransfer( msg.sender, sBalance_ );
     }
 
     /**
@@ -163,8 +222,6 @@ contract OlympusStaking is Governable {
      */
     function rebase() public {
         if( epoch.endBlock <= block.number ) {
-            sOHM.safeTransfer( msg.sender, rebate );
-
             sOHM.rebase( epoch.distribute, epoch.number );
 
             epoch.endBlock = epoch.endBlock.add( epoch.length );
@@ -174,14 +231,29 @@ contract OlympusStaking is Governable {
                 IDistributor( distributor ).distribute();
             }
 
-            uint balance = contractBalance();
-            uint staked = IsOHM( sOHM ).circulatingSupply();
-
-            if( balance <= staked ) {
+            if( contractBalance() <= totalStaked() ) {
                 epoch.distribute = 0;
             } else {
-                epoch.distribute = balance.sub( staked );
+                epoch.distribute = contractBalance().sub( totalStaked() );
             }
+        }
+    }
+
+    /* ========== INTERNAL FUNCTIONS ========== */
+
+    /**
+     * @notice send staker their amount as sOHM or gOHM
+     * @param _recipient address
+     * @param _amount uint
+     * @param _rebasing bool
+     */
+    function _send( address _recipient, uint _amount, bool _rebasing ) internal returns ( uint ) {
+        if ( _rebasing ) {
+            sOHM.safeTransfer( _recipient, _amount ); // send as sOHM (equal unit as OHM)
+            return _amount;
+        } else {
+            gOHM.mint( _recipient, gOHM.balanceTo( _amount ) ); // send as gOHM (convert units from OHM)
+            return gOHM.balanceTo( _amount );
         }
     }
 
@@ -202,31 +274,15 @@ contract OlympusStaking is Governable {
         @return uint
      */
     function contractBalance() public view returns ( uint ) {
-        return OHM.balanceOf( address(this) ).add( totalBonus );
+        return OHM.balanceOf( address(this) );
     }
 
-
-
-    /* ========== LOCKED STAKING FUNCTIONS ========== */
-
-    /**
-        @notice provide bonus to locked staking contract
-        @param _amount uint
-     */
-    function giveLockBonus( uint _amount ) external {
-        require( msg.sender == locker );
-        totalBonus = totalBonus.add( _amount );
-        sOHM.safeTransfer( locker, _amount );
+    function totalStaked() public view returns ( uint ) {
+        return sOHM.circulatingSupply();
     }
 
-    /**
-        @notice reclaim bonus from locked staking contract
-        @param _amount uint
-     */
-    function returnLockBonus( uint _amount ) external {
-        require( msg.sender == locker );
-        totalBonus = totalBonus.sub( _amount );
-        sOHM.safeTransferFrom( locker, address(this), _amount );
+    function supplyInWarmup() public view returns ( uint ) {
+        return sOHM.balanceForGons( gonsInWarmup );
     }
 
 
@@ -240,12 +296,11 @@ contract OlympusStaking is Governable {
     function setContract( CONTRACTS _contract, address _address ) external onlyGovernor() {
         if( _contract == CONTRACTS.DISTRIBUTOR ) { // 0
             distributor = _address;
-        } else if ( _contract == CONTRACTS.WARMUP ) { // 1
-            require( warmupContract == address( 0 ), "Warmup cannot be set more than once" );
-            warmupContract = _address;
-        } else if ( _contract == CONTRACTS.LOCKER ) { // 2
-            require( locker == address(0), "Locker cannot be set more than once" );
-            locker = _address;
+            emit DistributorSet( _address );
+        } else if ( _contract == CONTRACTS.gOHM ) { // 1
+            require( address( gOHM ) == address( 0 ) ); // only set once
+            gOHM = IgOHM( _address );
+            emit gOHMSet( _address );
         }
     }
     
@@ -255,13 +310,6 @@ contract OlympusStaking is Governable {
      */
     function setWarmup( uint _warmupPeriod ) external onlyGovernor() {
         warmupPeriod = _warmupPeriod;
-    }
-
-    /**
-     *  @notice set rebate to send to address that triggers rebase. compensation for gas.
-     *  @param _amount uint
-     */
-    function setRebate( uint _amount ) external onlyGovernor() {
-        rebate = _amount;
+        emit WarmupSet( _warmupPeriod );
     }
 }
