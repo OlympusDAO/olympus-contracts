@@ -97,6 +97,7 @@ describe('Treasury Token Migration', async () => {
         await fastTrack(2);
 
         await treasuryTokenMigrator.connect(user0).migrate();
+        console.log('Migration done!');
         await fastTrack(3);
     })
 })
@@ -130,7 +131,7 @@ async function fastTrack(loop, address = []) {
             console.log(`old_treasury_${contract_name[i]}_bal_before_tx`, bal_before_tx.toString());
 
             const bal_after_tx = await contract[i].connect(user0).balanceOf(newTreasury.address);
-            console.log(`new_treasury_${contract_name[i]}_bal_after_tx`, bal_after_tx.toString());
+            console.log(`new_treasury_${contract_name[i]}_bal_before_tx`, bal_after_tx.toString());
         }
     }
     else if(loop === 3){
@@ -141,7 +142,7 @@ async function fastTrack(loop, address = []) {
 
         for(let i = 0; i < count; i++){
             const bal_before_tx = await contract[i].connect(user0).balanceOf(OLD_TREASURY_ADDRESS);
-            console.log(`old_treasury_${contract_name[i]}_bal_before_tx`, bal_before_tx.toString());
+            console.log(`old_treasury_${contract_name[i]}_bal_after_tx`, bal_before_tx.toString());
 
             const bal_after_tx = await contract[i].connect(user0).balanceOf(newTreasury.address);
             console.log(`new_treasury_${contract_name[i]}bal_after_tx`, bal_after_tx.toString());
