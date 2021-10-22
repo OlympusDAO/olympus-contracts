@@ -141,7 +141,7 @@ describe("Treasury Token Migration", async () => {
         await ohm.connect(deployer).setVault(newTreasury.address);
         await getTreasuryBalance(deployer, newTreasury.address, tokens);
 
-        olympusTokenMigrator
+        await olympusTokenMigrator
             .connect(deployer)
             .migrateContracts(newTreasury.address, newStaking.address, ohm.address, sOhm.address);
 
