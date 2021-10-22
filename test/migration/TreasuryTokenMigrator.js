@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
+const { expect } = require("../utils/test_env");
 const dai_abi = require("../../abis/dai");
-const { expect } = require("../utils/test_env.js");
 const frax_abi = require("../../abis/frax");
 const weth_abi = require("../../abis/weth");
 const lusd_abi = require("../../abis/lusd");
@@ -99,7 +99,6 @@ describe("Treasury Token Migration", async () => {
 
         await newTreasury.connect(deployer).enableOnChainGovernance();
 
-        console.log("fastTrack4");
         await fastTrack(4, tokenAddresses);
 
         await newTreasury
@@ -113,7 +112,7 @@ describe("Treasury Token Migration", async () => {
         ).to.revertedWith("Ownable: caller is not the owner");
         await expect(
             olympusTokenMigrator
-                .conntect(user1)
+                .connect(user1)
                 .migrateContracts("_newTreasury", "_newStaking", "_newOHM", "_newsOHM")
         ).to.be.revertedWith("Ownable: caller is not the owner");
         // TODO (zx:) APparently anyone can call this..
