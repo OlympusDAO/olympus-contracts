@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 const BN = require("bn.js");
 
 async function advanceBlock() {
-  return ethers.provider.send("evm_mine");
+  return await ethers.provider.send("evm_mine");
 }
 
 // Advance the block to the passed height
@@ -17,9 +17,7 @@ async function advanceBlockTo(target) {
   const start = Date.now();
   let notified;
   if (target.lt(currentBlock))
-    throw Error(
-      `Target block #(${target}) is lower than current block #(${currentBlock})`
-    );
+    throw Error(`Target block #(${target}) is lower than current block #(${currentBlock})`);
   // eslint-disable-next-line no-await-in-loop
   while ((await latestBlock()).lt(target)) {
     if (!notified && Date.now() - start >= 5000) {
@@ -47,8 +45,7 @@ async function increase(duration) {
     duration = new BN(duration);
   }
 
-  if (duration.isNeg())
-    throw Error(`Cannot increase time by a negative amount (${duration})`);
+  if (duration.isNeg()) throw Error(`Cannot increase time by a negative amount (${duration})`);
 
   await ethers.provider.send("evm_increaseTime", [duration.toNumber()]);
 
@@ -70,9 +67,7 @@ async function increaseTo(target) {
   const now = await latest();
 
   if (target.lt(now))
-    throw Error(
-      `Cannot increase current time (${now}) to a moment in the past (${target})`
-    );
+    throw Error(`Cannot increase current time (${now}) to a moment in the past (${target})`);
   const diff = target.sub(now);
   return increase(diff);
 }
