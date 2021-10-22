@@ -110,6 +110,7 @@ describe("Treasury Token Migration", async () => {
         await expect(
             olympusTokenMigrator.connect(user1).addTokens(tokenAddresses, reserveToken)
         ).to.revertedWith("Ownable: caller is not the owner");
+
         await expect(
             olympusTokenMigrator
                 .connect(user1)
@@ -127,7 +128,7 @@ describe("Treasury Token Migration", async () => {
     it("should fail if token is not equal to reserve token", async () => {
         await expect(
             olympusTokenMigrator.connect(deployer).addTokens(tokenAddresses, [true, true, true])
-        ).to.revertedWith("arrays length does not match");
+        ).to.revertedWith("token array lengths do not match");
     });
 
     it("Should allow DAO add tokens", async () => {
