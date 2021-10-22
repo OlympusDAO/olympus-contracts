@@ -4,3 +4,4 @@ cache/
 
 .vscode
 .DS_Store
+.env
