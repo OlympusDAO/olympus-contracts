@@ -97,6 +97,11 @@ describe("Treasury Token Migration", async () => {
         await newTreasury
             .connect(deployer)
             .enable(0, olympusTokenMigrator.address, olympusTokenMigrator.address);
+
+        // 8 = Rewards manager (allows minting)
+        await newTreasury
+            .connect(deployer)
+            .enable(8, olympusTokenMigrator.address, olympusTokenMigrator.address);
     });
 
     after(async () => {
@@ -144,6 +149,8 @@ describe("Treasury Token Migration", async () => {
         await ohm.connect(deployer).setVault(newTreasury.address);
         await getTreasuryBalance(deployer, newTreasury.address, tokens);
 
+        //TODO (zx): fix this shit
+        // Set up the staking contract properly
         await olympusTokenMigrator
             .connect(deployer)
             .migrateContracts(newTreasury.address, newStaking.address, ohm.address, sOhm.address);
