@@ -60,7 +60,7 @@ describe("Treasury Token Migration", async () => {
             DAI,
             SUSHI_ROUTER,
             UNISWAP_ROUTER,
-            0
+            0 // timelock
         );
 
         await deployer.sendTransaction({
@@ -87,7 +87,6 @@ describe("Treasury Token Migration", async () => {
 
         await old_treasury.connect(manager).queue(3, olympusTokenMigrator.address);
 
-        console.log("fastTrack 1300");
         await fastTrack(13000);
 
         await old_treasury
@@ -96,7 +95,6 @@ describe("Treasury Token Migration", async () => {
 
         await newTreasury.connect(deployer).enableOnChainGovernance();
 
-        console.log("fastTrack1000");
         await fastTrack(1000);
 
         await newTreasury.connect(deployer).enableOnChainGovernance();
