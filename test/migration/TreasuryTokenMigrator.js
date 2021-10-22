@@ -33,7 +33,7 @@ describe('Treasury Token Migration', async () => {
         NewTreasury = await ethers.getContractFactory('OlympusTreasury')
         newTreasury = await NewTreasury.deploy(olympus.address, 10);
 
-        TreasuryTokenMigrator = await ethers.getContractFactory('TreasuryTokenMigrator')
+        TreasuryTokenMigrator = await ethers.getContractFactory('OlympusTokenMigrator')
         treasuryTokenMigrator = await TreasuryTokenMigrator.deploy(user0.address, DAI, OLD_TREASURY_ADDRESS, newTreasury.address);
 
         await user0.sendTransaction({
