@@ -58,6 +58,9 @@ describe("Treasury Token Migration", async () => {
         let gOhmContract = await ethers.getContractFactory("gOHM");
         gOhm = await gOhmContract.deploy(olympusTokenMigrator.address);
 
+        // Set gOHM on migrator contract
+        olympusTokenMigrator.connect(deployer).setgOHM(gOhm.address);
+
         await deployer.sendTransaction({
             to: TREASURY_MANAGER,
             value: ethers.utils.parseEther("1"), // 1 ether
