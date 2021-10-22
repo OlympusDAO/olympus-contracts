@@ -136,9 +136,16 @@ describe("Treasury Token Migration", async () => {
     });
 
     it("Should fail if new treasury is not vault", async () => {
-        await expect(olympusTokenMigrator.connect(deployer).migrate()).to.revertedWith(
-            "VaultOwned: caller is not the Vault"
-        );
+        await expect(
+            olympusTokenMigrator
+                .connect(deployer)
+                .migrateContracts(
+                    newTreasury.address,
+                    newStaking.address,
+                    ohm.address,
+                    sOhm.address
+                )
+        ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("Should allow DAO migrate tokens", async () => {

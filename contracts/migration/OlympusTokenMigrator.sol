@@ -190,7 +190,7 @@ contract OlympusTokenMigrator is Ownable {
      *   @param _reserveToken bool[]
      */
     function addTokens(address[] memory _tokens, bool[] memory _reserveToken) external onlyOwner {
-        require(_tokens.length == _reserveToken.length);
+        require(_tokens.length == _reserveToken.length, "token array lengths do not match");
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             tokens.push(Token({token: _tokens[i], reserveToken: _reserveToken[i]}));
