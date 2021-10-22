@@ -1,36 +1,28 @@
 const { ethers } = require("hardhat");
 const { expect } = require("../utils/test_env");
-const dai_abi = require("../../abis/dai");
-const frax_abi = require("../../abis/frax");
-const weth_abi = require("../../abis/weth");
-const lusd_abi = require("../../abis/lusd");
 const { advanceBlock } = require("../utils/advancement");
-const { fork_network } = require("../utils/network_fork");
+const { fork_network, fork_reset } = require("../utils/network_fork");
 const impersonateAccount = require("../utils/impersonate_account");
 const old_treasury_abi = require("../../abis/old_treasury_abi");
+const { tokens } = require("./tokens");
 
-const DAI = process.env.DAI;
-const FRAX = process.env.FRAX;
-const WETH = process.env.WETH;
-const LUSD = process.env.LUSD;
 const TREASURY_MANAGER = process.env.TREASURY_MANAGER;
 const OLD_OHM_ADDRESS = process.env.OLD_OHM_ADDRESS;
 const OLD_SOHM_ADDRESS = process.env.OLD_SOHM_ADDRESS;
 const OLD_TREASURY_ADDRESS = process.env.OLD_TREASURY_ADDRESS;
 const OLD_STAKING_ADDRESS = process.env.OLD_STAKING_ADDRESS;
 const OLD_WSOHM_ADDRESS = process.env.OLD_WSOHM_ADDRESS;
+const DAI_ADDRESS = process.env.DAI;
 
 const SUSHI_ROUTER = process.env.SUSHI_ROUTER;
 const UNISWAP_ROUTER = process.env.UNISWAP_ROUTER;
 
-const tokenAddresses = [DAI, FRAX, WETH, LUSD];
-const reserveToken = [true, true, true, true];
 const EPOCH_LEGNTH = 2200;
 
 // Some of these need to be global for the fast_track method
 // TODO(zx): maybe refactor this
-let deployer, user1, user2, manager, old_treasury, dai, weth, frax, lusd;
-let olympusTokenMigrator, ohm, sOhm, newTreasury, newStaking;
+let deployer, user1, user2, manager, old_treasury;
+let olympusTokenMigrator, ohm, sOhm, gOhm, newTreasury, newStaking;
 
 describe("Treasury Token Migration", async () => {
     before(async () => {
@@ -57,11 +49,14 @@ describe("Treasury Token Migration", async () => {
             OLD_TREASURY_ADDRESS,
             OLD_STAKING_ADDRESS,
             OLD_WSOHM_ADDRESS,
-            DAI,
+            DAI_ADDRESS,
             SUSHI_ROUTER,
             UNISWAP_ROUTER,
             0 // timelock
         );
+
+        let gOhmContract = await ethers.getContractFactory("gOHM");
+        gOhm = await gOhmContract.deploy(olympusTokenMigrator.address);
 
         await deployer.sendTransaction({
             to: TREASURY_MANAGER,
@@ -77,36 +72,38 @@ describe("Treasury Token Migration", async () => {
             old_treasury_abi,
             ethers.provider
         );
+        buildContracts(tokens);
 
-        const tokens = await fastTrack(1, tokenAddresses);
-
-        dai = tokens[0];
-        frax = tokens[1];
-        weth = tokens[2];
-        lusd = tokens[3];
-
+        // 3 is the reserve manager
         await old_treasury.connect(manager).queue(3, olympusTokenMigrator.address);
 
-        await fastTrack(13000);
+        await advanceBlocks(13000);
 
         await old_treasury
             .connect(manager)
             .toggle(3, olympusTokenMigrator.address, olympusTokenMigrator.address);
 
+        // Enables onchain governance, needs two calls. :odd:
+        await newTreasury.connect(deployer).enableOnChainGovernance();
+        await advanceBlocks(1000);
         await newTreasury.connect(deployer).enableOnChainGovernance();
 
-        await fastTrack(1000);
+        await enableTokens(newTreasury, deployer, tokens);
 
-        await newTreasury.connect(deployer).enableOnChainGovernance();
-
-        await fastTrack(4, tokenAddresses);
-
+        // 0 = RESERVED DEPOSITOR
         await newTreasury
             .connect(deployer)
             .enable(0, olympusTokenMigrator.address, olympusTokenMigrator.address);
     });
 
-    it("Should fail if sender is not DAO", async () => {
+    after(async () => {
+        await fork_reset();
+    });
+
+    it("Should fail if sender is not Owner", async () => {
+        const tokenAddresses = tokens.map((token) => token.address);
+        const reserveToken = tokens.map((token) => token.isReserve);
+
         await expect(
             olympusTokenMigrator.connect(user1).addTokens(tokenAddresses, reserveToken)
         ).to.revertedWith("Ownable: caller is not the owner");
@@ -121,96 +118,75 @@ describe("Treasury Token Migration", async () => {
                     sOhm.address
                 )
         ).to.be.revertedWith("Ownable: caller is not the owner");
-        // TODO (zx:) APparently anyone can call this..
+        // TODO (zx:) This method is allowed to be called by anyone with ohms.
         // await expect(olympusTokenMigrator.connect(user1).migrate()).to.revertedWith("Only DAO can call this function");
     });
 
     it("should fail if token is not equal to reserve token", async () => {
+        const tokenAddresses = tokens.map((token) => token.address);
+
         await expect(
             olympusTokenMigrator.connect(deployer).addTokens(tokenAddresses, [true, true, true])
         ).to.revertedWith("token array lengths do not match");
     });
 
     it("Should allow DAO add tokens", async () => {
-        await olympusTokenMigrator.connect(deployer).addTokens(tokenAddresses, reserveToken);
-    });
+        const tokenAddresses = tokens.map((token) => token.address);
+        const reserveToken = tokens.map((token) => token.isReserve);
 
-    it("Should fail if new treasury is not vault", async () => {
-        await expect(
-            olympusTokenMigrator
-                .connect(deployer)
-                .migrateContracts(
-                    newTreasury.address,
-                    newStaking.address,
-                    ohm.address,
-                    sOhm.address
-                )
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+        await olympusTokenMigrator.connect(deployer).addTokens(tokenAddresses, reserveToken);
     });
 
     it("Should allow DAO migrate tokens", async () => {
         await ohm.connect(deployer).setVault(newTreasury.address);
-        await fastTrack(2);
+        await getTreasuryBalance(deployer, newTreasury.address, tokens);
 
-        await olympusTokenMigrator.connect(deployer).migrate();
-        console.log("Migration done!");
-        await fastTrack(3);
+        olympusTokenMigrator
+            .connect(deployer)
+            .migrateContracts(newTreasury.address, newStaking.address, ohm.address, sOhm.address);
+
+        console.log("===============Migration done!===============");
+
+        await getTreasuryBalance(deployer, newTreasury.address, tokens);
     });
 });
 
-async function fastTrack(loop, address = []) {
-    if (loop === 4) {
-        for (let i = 0; i < loop; i++) {
-            await newTreasury.connect(deployer).enable(2, address[i], address[i]);
-        }
-    } else if (loop === 1) {
-        const count = loop + 3;
-        const tokens = [];
-        const token_abi = [dai_abi, frax_abi, weth_abi, lusd_abi];
+async function enableTokens(treasury, deployer, tokens = []) {
+    const tokenAddresses = tokens.map((token) => token.address);
 
-        for (let i = 0; i < count; i++) {
-            const token_address = await new ethers.Contract(
-                address[i],
-                token_abi[i],
-                ethers.provider
-            );
-            tokens[i] = token_address;
-        }
+    let enablePromises = tokenAddresses.map(async (tokenAddress) => {
+        // 2 = RESERVETOKEN
+        return await treasury.connect(deployer).enable(2, tokenAddress, tokenAddress);
+    });
+    return Promise.all(enablePromises);
+}
 
-        return tokens;
-    } else if (loop === 2) {
-        const count = loop + 2;
+async function buildContracts(tokenList) {
+    tokenList.forEach((token) => {
+        token.contract = new ethers.Contract(token.address, token.abi, ethers.provider);
+    });
+}
 
-        const contract = [dai, frax, weth, lusd];
-        const contract_name = ["dai", "frax", "weth", "lusd"];
+async function getTreasuryBalance(deployer, newTreasuryAddress, tokens) {
+    let tokenContract, tokenName;
+    for (let i = 0; i < tokens.length; i++) {
+        tokenName = tokens[i].name;
+        tokenContract = tokens[i].contract;
 
-        for (let i = 0; i < count; i++) {
-            const bal_before_tx = await contract[i]
-                .connect(deployer)
-                .balanceOf(OLD_TREASURY_ADDRESS);
-            console.log(`old_treasury_${contract_name[i]}_bal_before_tx`, bal_before_tx.toString());
+        const oldTreasuryBalance = await tokenContract
+            .connect(deployer)
+            .balanceOf(OLD_TREASURY_ADDRESS);
+        console.log(`old_treasury_${tokenName}_balance`, oldTreasuryBalance.toString());
 
-            const bal_after_tx = await contract[i].connect(deployer).balanceOf(newTreasury.address);
-            console.log(`new_treasury_${contract_name[i]}_bal_before_tx`, bal_after_tx.toString());
-        }
-    } else if (loop === 3) {
-        const count = loop + 1;
+        const newTreasuryBalance = await tokenContract
+            .connect(deployer)
+            .balanceOf(newTreasuryAddress);
+        console.log(`new_treasury_${tokenName}_balance`, newTreasuryBalance.toString());
+    }
+}
 
-        const contract = [dai, frax, weth, lusd];
-        const contract_name = ["dai", "frax", "weth", "lusd"];
-
-        for (let i = 0; i < count; i++) {
-            const bal_before_tx = await contract[i]
-                .connect(deployer)
-                .balanceOf(OLD_TREASURY_ADDRESS);
-            console.log(`old_treasury_${contract_name[i]}_bal_after_tx`, bal_before_tx.toString());
-
-            const bal_after_tx = await contract[i].connect(deployer).balanceOf(newTreasury.address);
-            console.log(`new_treasury_${contract_name[i]}bal_after_tx`, bal_after_tx.toString());
-        }
-    } else {
-        for (let i = 0; i < loop; i++) {
-            await advanceBlock();
-        }
+async function advanceBlocks(numBlocks) {
+    for (let i = 0; i < numBlocks; i++) {
+        await advanceBlock();
     }
 }
