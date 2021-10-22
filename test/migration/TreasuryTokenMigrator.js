@@ -113,7 +113,12 @@ describe("Treasury Token Migration", async () => {
         await expect(
             olympusTokenMigrator
                 .connect(user1)
-                .migrateContracts("_newTreasury", "_newStaking", "_newOHM", "_newsOHM")
+                .migrateContracts(
+                    newTreasury.address,
+                    newStaking.address,
+                    ohm.address,
+                    sOhm.address
+                )
         ).to.be.revertedWith("Ownable: caller is not the owner");
         // TODO (zx:) APparently anyone can call this..
         // await expect(olympusTokenMigrator.connect(user1).migrate()).to.revertedWith("Only DAO can call this function");
