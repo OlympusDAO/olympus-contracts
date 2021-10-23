@@ -8,11 +8,12 @@ import "./interfaces/IOwnable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IERC20Metadata.sol";
 import "./interfaces/IOHMERC20.sol";
+import "./interfaces/ITreasury.sol";
 import "./interfaces/IBondingCalculator.sol";
 
 import "./types/Ownable.sol";
 
-contract OlympusTreasury is Ownable {
+contract OlympusTreasury is Ownable, ITreasury {
 
     /* ========== DEPENDENCIES ========== */
 

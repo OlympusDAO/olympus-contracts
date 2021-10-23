@@ -4,7 +4,7 @@ pragma solidity 0.7.5;
 import "./utils/test.sol";  //TODO should do thru `dapp install dapphub/ds-test` ?  not sure i like git submodules
 import "../contracts/OlympusERC20.sol";
 
-contract OlympusERC20TokenTest is DSTest {
+contract OlymppusERC20TokenTest is DSTest {
     OlympusERC20Token internal ohmContract;
 
     function setUp() public {
@@ -28,7 +28,7 @@ contract OlympusERC20TokenTest is DSTest {
     }
 
     // Tester will pass it's own parameters, see https://fv.ethereum.org/2020/12/11/symbolic-execution-with-ds-test/
-    function test_mint(uint256 amount) public {                      
+    function test_mint(uint256 amount) public {  
         uint256 supplyBefore = ohmContract.totalSupply();
         ohmContract.setVault(address(this)); //TODO WTF msg.sender doesn't propigate from .dapprc $DAPP_TEST_CALLER config via mint() call, must use this value
         ohmContract.mint(address(this), amount);
