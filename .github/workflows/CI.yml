@@ -31,4 +31,4 @@ jobs:
           ${{ matrix.os }}-yarn-
     - run: yarn --frozen-lockfile
     - run: yarn compile
-    - run : echo "We would run tests here if we had them :dafoe:"
+    - run: yarn test
