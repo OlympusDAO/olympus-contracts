@@ -113,7 +113,7 @@ contract BondTeller {
         uint _expires,
         address _feo
     ) external onlyDepository() returns ( uint index_ ) {
-        treasury.mintRewards( address(this), _payout.add( feReward ) );
+        treasury.mint( address(this), _payout.add( feReward ) );
 
         OHM.approve( address(staking), _payout ); // approve staking payout
 
