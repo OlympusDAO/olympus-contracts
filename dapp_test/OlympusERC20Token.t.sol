@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-import "./utils/test.sol";  //TODO should do thru `dapp install dapphub/ds-test` ?  not sure i like git submodules
+import "ds-test/test.sol"; // ds-test
 import "../contracts/OlympusERC20.sol";
 
 contract OlymppusERC20TokenTest is DSTest {

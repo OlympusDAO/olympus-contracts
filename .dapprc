@@ -2,7 +2,8 @@
 # export DAPP_REMAPPINGS="hardhat/=node_modules/hardhat/
 # @openzeppelin/=node_modules/@openzeppelin/
 # hardhat-deploy/=node_modules/hardhat-deploy/"
-export DAPP_REMAPPINGS=""
+export DAPP_REMAPPINGS="ds-test/=lib/ds-test/src/
+ds-token/=lib/ds-token/src/"
 export DAPP_SRC=dapp_test/
 export DAPP_OUT=.dapp/
 export DAPP_SOLC_VERSION=0.7.5

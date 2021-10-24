@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-import "./utils/test.sol";
+import "ds-test/test.sol"; // ds-test
+import "ds-token/token.sol"; // ds-token
+
 import "../contracts/BondDepository.sol";
 import "../contracts/Staking.sol";
 import "../contracts/OlympusERC20.sol";
 import "../contracts/sOlympusERC20.sol";
 import "../contracts/StandardBondingCalculator.sol";
-import "../contracts/mocks/Frax.sol";
+
+
 
 contract BondDepositoryTest is DSTest {
-    
+
     OlympusBondDepository internal bondDepository;
     OlympusStaking internal staking;
     OlympusBondingCalculator internal bondingCalculator;
@@ -20,7 +23,7 @@ contract BondDepositoryTest is DSTest {
 
 
     function setUp() public {
-    
+
         ohm = new OlympusERC20Token();
         sohm = new sOlympus();
 
@@ -31,11 +34,10 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_erc20() public {
-        FRAX fraxToken = new FRAX();
+        DSToken token = new DSToken();
         bondDepository.addBond(fraxToken, bondingCalculator, 999999, false);
 
     }
 
- 
 
 }
