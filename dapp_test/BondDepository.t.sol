@@ -9,7 +9,7 @@ import "../contracts/Staking.sol";
 import "../contracts/OlympusERC20.sol";
 import "../contracts/sOlympusERC20.sol";
 import "../contracts/StandardBondingCalculator.sol";
-import "@uniswap/v2-core/contracts/UniswapV2Pair.sol";
+import "../lib/v2-core/contracts/UniswapV2Pair.sol";
 
 contract BondDepositoryTest is DSTest {
     OlympusBondDepository internal bondDepository;
