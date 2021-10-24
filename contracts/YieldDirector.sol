@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 //import "./types/ERC20.sol";
 //import "./types/Ownable.sol";
 //import "./libraries/SafeERC20.sol";
+import "./interfaces/IYieldDirector.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -24,7 +25,7 @@ interface IsOHM {
             to any address. Donors will be able to withdraw their principal
             sOHM at any time. Donation recipients can also redeem accrued rebases at any time.
  */
-contract YieldDirector is Ownable {
+contract YieldDirector is Ownable, IYieldDirector {
     using SafeERC20 for IERC20;
 
     address public immutable OHM;
@@ -77,7 +78,7 @@ contract YieldDirector is Ownable {
         @param _amount Amount of sOHM debt issued from donor to recipient
         @param _recipient Address to direct staking yield and vault shares to
     */
-    function deposit(uint _amount, address _recipient) external {
+    function deposit(uint _amount, address _recipient) external override {
         require(disableDeposits == false, "Deposits currently disabled");
         require(_amount > 0, "Invalid deposit amount");
         require(_recipient != address(0), "Invalid recipient address");
@@ -112,23 +113,13 @@ contract YieldDirector is Ownable {
         emit Deposited(msg.sender, _recipient, _amount);
     }
 
-    /**
-        @notice Get withdrawable sOHM amount for specific recipient
-        TODO should this allow choosing donor (not default to msg.sender)?
-     */
-    function withdrawableBalance(address _recipient) external view returns ( uint ) {
-        int recipientIndex = _getRecipientIndex(msg.sender, _recipient);
-        require(recipientIndex >= 0, "No donations to recipient");
-
-        return donationInfo[msg.sender][uint(recipientIndex)].amount;
-    }
 
     /**
         @notice Withdraw donor's sOHM from vault and subtracts debt from recipient
         @param _amount sOHM amount to withdraw
         @param _recipient Recipient address
      */
-    function withdraw(uint _amount, address _recipient) external {
+    function withdraw(uint _amount, address _recipient) external override {
         require(disableWithdaws == false, "Withdraws currently disabled");
         DonationInfo[] storage donations = donationInfo[msg.sender];
         int recipientIndexSigned = _getRecipientIndex(msg.sender, _recipient);
@@ -158,7 +149,7 @@ contract YieldDirector is Ownable {
     /**
         @notice Withdraw from all donor positions
      */
-    function withdrawAll() external {
+    function withdrawAll() external override {
         require(disableWithdaws == false, "Withdraws currently disabled");
 
         DonationInfo[] storage donations = donationInfo[msg.sender];
@@ -187,9 +178,20 @@ contract YieldDirector is Ownable {
     }
 
     /**
+        @notice Get withdrawable sOHM amount for specific recipient
+        TODO should this allow choosing donor (not default to msg.sender)?
+     */
+    function donationsTo(address _recipient) external override view returns ( uint ) {
+        int recipientIndex = _getRecipientIndex(msg.sender, _recipient);
+        require(recipientIndex >= 0, "No donations to recipient");
+
+        return donationInfo[msg.sender][uint(recipientIndex)].amount;
+    }
+
+    /**
         @notice Return total amount of user's sOHM being donated
      */
-    function totalDonations() external view returns ( uint ) {
+    function totalDonations() external override view returns ( uint ) {
         DonationInfo[] memory donations = donationInfo[msg.sender];
         require(donations.length != 0, "User is not donating");
 
@@ -208,7 +210,7 @@ contract YieldDirector is Ownable {
     /**
         @notice Get redeemable sOHM balance of a recipient address
      */
-    function redeemableBalance(address _who) public view returns (uint) {
+    function redeemableBalance(address _who) public override view returns (uint) {
         RecipientInfo memory recipient = recipientInfo[_who];
 
         uint redeemable = _fromAgnostic(recipient.agnosticAmount)
@@ -224,7 +226,7 @@ contract YieldDirector is Ownable {
              sOHM debt to donors at the time of redeem. Any future incurred debt will
              be accounted for with a subsequent redeem or a withdrawal by the specific donor.
      */
-    function redeem() external {
+    function redeem() external override {
         require(disableRedeems == false, "Redeems currently disabled");
 
         uint redeemable = redeemableBalance(msg.sender);

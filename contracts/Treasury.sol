@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+ // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
 import "./libraries/SafeMath.sol";
@@ -109,12 +109,12 @@ contract OlympusTreasury is Ownable {
         } else if ( permissions[ STATUS.LIQUIDITYTOKEN ][ _token ] ) {
             require( permissions[ STATUS.LIQUIDITYDEPOSITOR ][ msg.sender ], "Not approved" );
         } else {
-            require( 1 == 0 ); // guarantee revert
+            revert("Not approved");
         }
 
         IERC20( _token ).safeTransferFrom( msg.sender, address(this), _amount );
 
-        uint value = valueOf( _token, _amount );
+        uint value = tokenValue( _token, _amount );
         // mint OHM needed and store amount of rewards for distribution
         send_ = value.sub( _profit );
         OHM.mint( msg.sender, send_ );
@@ -133,7 +133,7 @@ contract OlympusTreasury is Ownable {
         require( permissions[ STATUS.RESERVETOKEN ][ _token ], "Not accepted" ); // Only reserves can be used for redemptions
         require( permissions[ STATUS.RESERVESPENDER ][ msg.sender ] == true, "Not approved" );
 
-        uint value = valueOf( _token, _amount );
+        uint value = tokenValue( _token, _amount );
         OHM.burnFrom( msg.sender, value );
 
         totalReserves = totalReserves.sub( value );
@@ -152,7 +152,7 @@ contract OlympusTreasury is Ownable {
         require( permissions[ STATUS.DEBTOR ][ msg.sender ], "Not approved" );
         require( permissions[ STATUS.RESERVETOKEN ][ _token ], "Not accepted" );
 
-        uint value = valueOf( _token, _amount );
+        uint value = tokenValue( _token, _amount );
         require( value != 0 );
 
         uint availableDebt = sOHM.balanceOf( msg.sender ).sub( debtorBalance[ msg.sender ] );
@@ -179,7 +179,7 @@ contract OlympusTreasury is Ownable {
 
         IERC20( _token ).safeTransferFrom( msg.sender, address(this), _amount );
 
-        uint value = valueOf( _token, _amount );
+        uint value = tokenValue( _token, _amount );
         debtorBalance[ msg.sender ] = debtorBalance[ msg.sender ].sub( value );
         totalDebt = totalDebt.sub( value );
 
@@ -215,7 +215,7 @@ contract OlympusTreasury is Ownable {
             require( permissions[ STATUS.RESERVEMANAGER ][ msg.sender ], "Not approved" );
         }
 
-        uint value = valueOf( _token, _amount );
+        uint value = tokenValue( _token, _amount );
         require( value <= excessReserves(), "Insufficient reserves" );
 
         totalReserves = totalReserves.sub( value );
@@ -250,13 +250,13 @@ contract OlympusTreasury is Ownable {
         address[] memory reserveToken = registry[ STATUS.RESERVETOKEN ];
         for( uint i = 0; i < reserveToken.length; i++ ) {
             reserves = reserves.add ( 
-                valueOf( reserveToken[ i ], IERC20( reserveToken[ i ] ).balanceOf( address(this) ) )
+                tokenValue( reserveToken[ i ], IERC20( reserveToken[ i ] ).balanceOf( address(this) ) )
             );
         }
         address[] memory liquidityToken = registry[ STATUS.LIQUIDITYTOKEN ];
         for( uint i = 0; i < liquidityToken.length; i++ ) {
             reserves = reserves.add (
-                valueOf( liquidityToken[ i ], IERC20( liquidityToken[ i ] ).balanceOf( address(this) ) )
+                tokenValue( liquidityToken[ i ], IERC20( liquidityToken[ i ] ).balanceOf( address(this) ) )
             );
         }
         totalReserves = reserves;
@@ -388,7 +388,7 @@ contract OlympusTreasury is Ownable {
         @param _amount uint
         @return value_ uint
      */
-    function valueOf( address _token, uint _amount ) public view returns ( uint value_ ) {
+    function tokenValue( address _token, uint _amount ) public view returns ( uint value_ ) {
         value_ = _amount.mul( 10 ** IERC20Metadata( address(OHM) ).decimals() )
                     .div( 10 ** IERC20Metadata( _token ).decimals() );
         
