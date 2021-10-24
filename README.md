@@ -114,13 +114,3 @@ All together, returning funds should look something like this:
 ```
 treasury.deposit( address(this), amountToReturn, DAI, treasury.valueOf( DAI, amountToReturn ) );
 ```
-
-## Dapptools testing
-
-Install dapptools https://github.com/dapphub/dapptools
-
-Run the following:
-
-```
-dapp test
-```

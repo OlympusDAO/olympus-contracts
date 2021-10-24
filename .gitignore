@@ -1,7 +1,6 @@
 node_modules/
 artifacts/
 cache/
-.dapp/
 
 .vscode
 .DS_Store
