@@ -30,6 +30,7 @@ contract OlymppusERC20TokenTest is DSTest {
     // Tester will pass it's own parameters, see https://fv.ethereum.org/2020/12/11/symbolic-execution-with-ds-test/
     function test_mint(uint256 amount) public {  
         uint256 supplyBefore = ohmContract.totalSupply();
+         // TODO look into https://dapphub.chat/channel/dev?msg=HWrPJqxp8BHMiKTbo
         ohmContract.setVault(address(this)); //TODO WTF msg.sender doesn't propigate from .dapprc $DAPP_TEST_CALLER config via mint() call, must use this value
         ohmContract.mint(address(this), amount);
         assertEq(supplyBefore + amount, ohmContract.totalSupply());
