@@ -1,9 +1,9 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { deployMockContract } = require("@ethereum-waffle/mock-contract");
-const IStaking = require("../artifacts/contracts/interfaces/IStaking.sol/IStaking.json");
-const IERC20 = require("../artifacts/contracts/interfaces/IERC20.sol/IERC20.json");
-const IgOHM = require("../artifacts/contracts/interfaces/IgOHM.sol/IgOHM.json");
+const IStaking = require("../../artifacts/contracts/interfaces/IStaking.sol/IStaking.json");
+const IERC20 = require("../../artifacts/contracts/interfaces/IERC20.sol/IERC20.json");
+const IgOHM = require("../../artifacts/contracts/interfaces/IgOHM.sol/IgOHM.json");
 
 const TOTAL_GONS = 5000000000000000;
 
