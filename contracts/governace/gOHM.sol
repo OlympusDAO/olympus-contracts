@@ -7,9 +7,10 @@ import "../libraries/Address.sol";
 
 import "../interfaces/IERC20.sol";
 import "../interfaces/IsOHM.sol";
+import "../interfaces/IgOHM.sol";
 import "../types/ERC20.sol";
 
-contract gOHM is IERC20 {
+contract gOHM is IgOHM {
     /* ========== DEPENDENCIES ========== */
 
     using SafeERC20 for IERC20;
@@ -121,7 +122,7 @@ contract gOHM is IERC20 {
         @param _to address
         @param _amount uint
      */
-    function mint( address _to, uint _amount ) external onlyStaking() {
+    function mint( address _to, uint _amount ) external override onlyStaking() {
         _mint( _to, _amount );
     }
 
@@ -130,7 +131,7 @@ contract gOHM is IERC20 {
         @param _from address
         @param _amount uint
      */
-    function burn( address _from, uint _amount ) external onlyStaking() {
+    function burn( address _from, uint _amount ) external override onlyStaking() {
         _burn( _from, _amount );
     }
 
@@ -139,7 +140,7 @@ contract gOHM is IERC20 {
         @param _amount uint
         @return uint
      */
-    function balanceFrom( uint _amount ) public view returns ( uint ) {
+    function balanceFrom( uint _amount ) public override view returns ( uint ) {
         return _amount.mul( IsOHM( sOHM ).index() ).div( 10 ** decimals );
     }
 
@@ -148,7 +149,7 @@ contract gOHM is IERC20 {
         @param _amount uint
         @return uint
      */
-    function balanceTo( uint _amount ) public view returns ( uint ) {
+    function balanceTo( uint _amount ) public override view returns ( uint ) {
         return _amount.mul( 10 ** decimals ).div( IsOHM( sOHM ).index() );
     }
 

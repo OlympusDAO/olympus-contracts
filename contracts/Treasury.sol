@@ -9,10 +9,11 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/IERC20Metadata.sol";
 import "./interfaces/IOHMERC20.sol";
 import "./interfaces/IBondingCalculator.sol";
+import "./interfaces/ITreasury.sol";
 
 import "./types/Ownable.sol";
 
-contract OlympusTreasury is Ownable {
+contract OlympusTreasury is Ownable, ITreasury {
 
     /* ========== DEPENDENCIES ========== */
 
@@ -103,7 +104,7 @@ contract OlympusTreasury is Ownable {
         @param _profit uint
         @return send_ uint
      */
-    function deposit( uint _amount, address _token, uint _profit ) external returns ( uint send_ ) {
+    function deposit( uint _amount, address _token, uint _profit ) external override returns ( uint send_ ) {
         if ( permissions[ STATUS.RESERVETOKEN ][ _token ] ) {
             require( permissions[ STATUS.RESERVEDEPOSITOR ][ msg.sender ], "Not approved" );
         } else if ( permissions[ STATUS.LIQUIDITYTOKEN ][ _token ] ) {
@@ -114,7 +115,7 @@ contract OlympusTreasury is Ownable {
 
         IERC20( _token ).safeTransferFrom( msg.sender, address(this), _amount );
 
-        uint value = valueOf( _token, _amount );
+        uint value = tokenValue( _token, _amount );
         // mint OHM needed and store amount of rewards for distribution
         send_ = value.sub( _profit );
         OHM.mint( msg.sender, send_ );
@@ -129,11 +130,11 @@ contract OlympusTreasury is Ownable {
         @param _amount uint
         @param _token address
      */
-    function withdraw( uint _amount, address _token ) external {
+    function withdraw( uint _amount, address _token ) external override {
         require( permissions[ STATUS.RESERVETOKEN ][ _token ], "Not accepted" ); // Only reserves can be used for redemptions
         require( permissions[ STATUS.RESERVESPENDER ][ msg.sender ] == true, "Not approved" );
 
-        uint value = valueOf( _token, _amount );
+        uint value = tokenValue( _token, _amount );
         OHM.burnFrom( msg.sender, value );
 
         totalReserves = totalReserves.sub( value );
@@ -148,11 +149,11 @@ contract OlympusTreasury is Ownable {
         @param _amount uint
         @param _token address
      */
-    function incurDebt( uint _amount, address _token ) external {
+    function incurDebt( uint _amount, address _token ) external override {
         require( permissions[ STATUS.DEBTOR ][ msg.sender ], "Not approved" );
         require( permissions[ STATUS.RESERVETOKEN ][ _token ], "Not accepted" );
 
-        uint value = valueOf( _token, _amount );
+        uint value = tokenValue( _token, _amount );
         require( value != 0 );
 
         uint availableDebt = sOHM.balanceOf( msg.sender ).sub( debtorBalance[ msg.sender ] );
@@ -173,13 +174,13 @@ contract OlympusTreasury is Ownable {
         @param _amount uint
         @param _token address
      */
-    function repayDebtWithReserve( uint _amount, address _token ) external {
+    function repayDebtWithReserve( uint _amount, address _token ) external override {
         require( permissions[ STATUS.DEBTOR ][ msg.sender ], "Not approved" );
         require( permissions[ STATUS.RESERVETOKEN ][ _token ], "Not accepted" );
 
         IERC20( _token ).safeTransferFrom( msg.sender, address(this), _amount );
 
-        uint value = valueOf( _token, _amount );
+        uint value = tokenValue( _token, _amount );
         debtorBalance[ msg.sender ] = debtorBalance[ msg.sender ].sub( value );
         totalDebt = totalDebt.sub( value );
 
@@ -215,7 +216,7 @@ contract OlympusTreasury is Ownable {
             require( permissions[ STATUS.RESERVEMANAGER ][ msg.sender ], "Not approved" );
         }
 
-        uint value = valueOf( _token, _amount );
+        uint value = tokenValue( _token, _amount );
         require( value <= excessReserves(), "Insufficient reserves" );
 
         totalReserves = totalReserves.sub( value );
@@ -228,7 +229,7 @@ contract OlympusTreasury is Ownable {
     /**
         @notice send epoch reward to staking contract
      */
-    function mint( address _recipient, uint _amount ) external {
+    function mint( address _recipient, uint _amount ) external override {
         require( permissions[ STATUS.REWARDMANAGER ][ msg.sender ], "Not approved" );
         require( _amount <= excessReserves(), "Insufficient reserves" );
 
@@ -250,13 +251,13 @@ contract OlympusTreasury is Ownable {
         address[] memory reserveToken = registry[ STATUS.RESERVETOKEN ];
         for( uint i = 0; i < reserveToken.length; i++ ) {
             reserves = reserves.add ( 
-                valueOf( reserveToken[ i ], IERC20( reserveToken[ i ] ).balanceOf( address(this) ) )
+                tokenValue( reserveToken[ i ], IERC20( reserveToken[ i ] ).balanceOf( address(this) ) )
             );
         }
         address[] memory liquidityToken = registry[ STATUS.LIQUIDITYTOKEN ];
         for( uint i = 0; i < liquidityToken.length; i++ ) {
             reserves = reserves.add (
-                valueOf( liquidityToken[ i ], IERC20( liquidityToken[ i ] ).balanceOf( address(this) ) )
+                tokenValue( liquidityToken[ i ], IERC20( liquidityToken[ i ] ).balanceOf( address(this) ) )
             );
         }
         totalReserves = reserves;
@@ -388,7 +389,7 @@ contract OlympusTreasury is Ownable {
         @param _amount uint
         @return value_ uint
      */
-    function valueOf( address _token, uint _amount ) public view returns ( uint value_ ) {
+    function tokenValue( address _token, uint _amount ) public override view returns ( uint value_ ) {
         value_ = _amount.mul( 10 ** IERC20Metadata( address(OHM) ).decimals() )
                     .div( 10 ** IERC20Metadata( _token ).decimals() );
         
