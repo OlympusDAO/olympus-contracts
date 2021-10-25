@@ -9,7 +9,7 @@ import "../contracts/Staking.sol";
 import "../contracts/OlympusERC20.sol";
 import "../contracts/sOlympusERC20.sol";
 import "../contracts/StandardBondingCalculator.sol";
-import "../lib/v2-core/contracts/UniswapV2Pair.sol";
+import "./util/MockUniswapV2Pair.sol";
 
 contract BondDepositoryTest is DSTest {
     OlympusBondDepository internal bondDepository;
@@ -31,8 +31,7 @@ contract BondDepositoryTest is DSTest {
 
     function test_createBond_deposit() public {
 
-        UniswapV2Pair pair = new UniswapV2Pair();
-        pair.initialize(address(0x1), address(0x2));
+        MockUniswapV2Pair pair = new MockUniswapV2Pair(address(0x1), address(0x2));
 
         uint256 bondId = bondDepository.addBond(address(pair), address(bondingCalculator), 999999, false);
         bondDepository.setTerms(bondId, 2, false, 5, 6, 6, 10, 10, 10, 0);
