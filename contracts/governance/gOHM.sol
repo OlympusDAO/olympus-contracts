@@ -7,38 +7,37 @@ import "../libraries/Address.sol";
 
 import "../interfaces/IERC20.sol";
 import "../interfaces/IsOHM.sol";
+import "../interfaces/IgOHM.sol";
 import "../types/ERC20.sol";
 
-contract gOHM is IERC20 {
+contract gOHM is IgOHM {
     /* ========== DEPENDENCIES ========== */
 
     using SafeERC20 for IERC20;
     using Address for address;
-    using SafeMath for uint;
-
+    using SafeMath for uint256;
 
     /* ========== MODIFIERS ========== */
 
     modifier onlyApproved() {
-        require( msg.sender == approved, "Only approved" );
+        require(msg.sender == approved, "Only approved");
         _;
     }
-
 
     /* ========== EVENTS ========== */
 
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
-    event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
+    event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
 
     /* ========== DATA STRUCTURES ========== */
 
     /// @notice A checkpoint for marking number of votes from a given block
     struct Checkpoint {
-        uint fromBlock;
-        uint votes;
+        uint256 fromBlock;
+        uint256 votes;
     }
 
-    /* ========== STATE VARIABLES ========== */    
+    /* ========== STATE VARIABLES ========== */
 
     string public constant name = "Governance OHM";
     string public constant symbol = "gOHM";
@@ -48,16 +47,16 @@ contract gOHM is IERC20 {
     IsOHM public sOHM;
     address public approved; // minter
 
-    mapping (address => mapping (uint => Checkpoint)) public checkpoints;
-    mapping (address => uint) public numCheckpoints;
-    mapping (address => address) public delegates;
-    mapping (address => uint) private _balances;
-    mapping (address => mapping (address => uint)) private _allowances;
+    mapping(address => mapping(uint256 => Checkpoint)) public checkpoints;
+    mapping(address => uint256) public numCheckpoints;
+    mapping(address => address) public delegates;
+    mapping(address => uint256) private _balances;
+    mapping(address => mapping(address => uint256)) private _allowances;
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor( address _migrator ) {
-        require( _migrator != address(0) );
+    constructor(address _migrator) {
+        require(_migrator != address(0));
         approved = _migrator;
     }
 
@@ -100,7 +99,11 @@ contract gOHM is IERC20 {
      * - the caller must have allowance for ``sender``'s tokens of at least
      * `amount`.
      */
-    function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external override returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
@@ -120,14 +123,14 @@ contract gOHM is IERC20 {
      * @param _staking address
      * @param _sOHM address
      */
-    function migrate( address _staking, address _sOHM ) external onlyApproved() {
-        require( _staking != approved );
+    function migrate(address _staking, address _sOHM) external onlyApproved {
+        require(_staking != approved);
 
-        require( _staking != address(0) );
+        require(_staking != address(0));
         approved = _staking;
 
-        require( _sOHM != address(0) );
-        sOHM = IsOHM( _sOHM );
+        require(_sOHM != address(0));
+        sOHM = IsOHM(_sOHM);
     }
 
     /**
@@ -135,8 +138,8 @@ contract gOHM is IERC20 {
         @param _to address
         @param _amount uint
      */
-    function mint( address _to, uint _amount ) external onlyApproved() {
-        _mint( _to, _amount );
+    function mint(address _to, uint256 _amount) external override onlyStaking {
+        _mint(_to, _amount);
     }
 
     /**
@@ -144,8 +147,8 @@ contract gOHM is IERC20 {
         @param _from address
         @param _amount uint
      */
-    function burn( address _from, uint _amount ) external onlyApproved() {
-        _burn( _from, _amount );
+    function burn(address _from, uint256 _amount) external override onlyStaking {
+        _burn(_from, _amount);
     }
 
     /* ========== VIEW FUNCTIONS ========== */
@@ -155,8 +158,8 @@ contract gOHM is IERC20 {
         @param _amount uint
         @return uint
      */
-    function balanceFrom( uint _amount ) public view returns ( uint ) {
-        return _amount.mul( sOHM.index() ).div( 10 ** decimals );
+    function balanceFrom(uint256 _amount) public view override returns (uint256) {
+        return _amount.mul(IsOHM(sOHM).index()).div(10**decimals);
     }
 
     /**
@@ -164,8 +167,8 @@ contract gOHM is IERC20 {
         @param _amount uint
         @return uint
      */
-    function balanceTo( uint _amount ) public view returns ( uint ) {
-        return _amount.mul( 10 ** decimals ).div( sOHM.index() );
+    function balanceTo(uint256 _amount) public view override returns (uint256) {
+        return _amount.mul(10**decimals).div(IsOHM(sOHM).index());
     }
 
     /**
@@ -175,7 +178,7 @@ contract gOHM is IERC20 {
         return _allowances[owner][spender];
     }
 
-     /**
+    /**
      * @dev See {IERC20-balanceOf}.
      */
     function balanceOf(address account) external view override returns (uint256) {
@@ -187,8 +190,8 @@ contract gOHM is IERC20 {
      * @param account The address to get votes balance
      * @return The number of current votes for `account`
      */
-    function getCurrentVotes(address account) external view returns (uint) {
-        uint nCheckpoints = numCheckpoints[account];
+    function getCurrentVotes(address account) external view returns (uint256) {
+        uint256 nCheckpoints = numCheckpoints[account];
         return nCheckpoints > 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
     }
 
@@ -199,10 +202,10 @@ contract gOHM is IERC20 {
      * @param blockNumber The block number to get the vote balance at
      * @return The number of votes the account had as of the given block
      */
-    function getPriorVotes(address account, uint blockNumber) external view returns (uint) {
+    function getPriorVotes(address account, uint256 blockNumber) external view returns (uint256) {
         require(blockNumber < block.number, "gOHM::getPriorVotes: not yet determined");
 
-        uint nCheckpoints = numCheckpoints[account];
+        uint256 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
             return 0;
         }
@@ -217,10 +220,10 @@ contract gOHM is IERC20 {
             return 0;
         }
 
-        uint lower = 0;
-        uint upper = nCheckpoints - 1;
+        uint256 lower = 0;
+        uint256 upper = nCheckpoints - 1;
         while (upper > lower) {
-            uint center = upper - (upper - lower) / 2; // ceil, avoiding overflow
+            uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
             Checkpoint memory cp = checkpoints[account][center];
             if (cp.fromBlock == blockNumber) {
                 return cp.votes;
@@ -232,7 +235,6 @@ contract gOHM is IERC20 {
         }
         return checkpoints[account][lower].votes;
     }
-
 
     /* ========== INTERNAL FUNCTIONS ========== */
 
@@ -289,7 +291,11 @@ contract gOHM is IERC20 {
      * - `owner` cannot be the zero address.
      * - `spender` cannot be the zero address.
      */
-    function _approve(address owner, address spender, uint256 amount) internal {
+    function _approve(
+        address owner,
+        address spender,
+        uint256 amount
+    ) internal {
         require(owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
 
@@ -311,7 +317,11 @@ contract gOHM is IERC20 {
      * - `recipient` cannot be the zero address.
      * - `sender` must have a balance of at least `amount`.
      */
-    function _transfer(address sender, address recipient, uint256 amount) internal {
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
 
@@ -324,7 +334,7 @@ contract gOHM is IERC20 {
 
     function _delegate(address delegator, address delegatee) internal {
         address currentDelegate = delegates[delegator];
-        uint delegatorBalance = _balances[delegator];
+        uint256 delegatorBalance = _balances[delegator];
         delegates[delegator] = delegatee;
 
         emit DelegateChanged(delegator, currentDelegate, delegatee);
@@ -332,35 +342,44 @@ contract gOHM is IERC20 {
         _moveDelegates(currentDelegate, delegatee, delegatorBalance);
     }
 
-    function _moveDelegates(address srcRep, address dstRep, uint amount) internal {
+    function _moveDelegates(
+        address srcRep,
+        address dstRep,
+        uint256 amount
+    ) internal {
         if (srcRep != dstRep && amount > 0) {
             if (srcRep != address(0)) {
-                uint srcRepNum = numCheckpoints[srcRep];
-                uint srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-                uint srcRepNew = srcRepOld.sub(amount);
+                uint256 srcRepNum = numCheckpoints[srcRep];
+                uint256 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
+                uint256 srcRepNew = srcRepOld.sub(amount);
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
 
             if (dstRep != address(0)) {
-                uint dstRepNum = numCheckpoints[dstRep];
-                uint dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-                uint dstRepNew = dstRepOld.add(amount);
+                uint256 dstRepNum = numCheckpoints[dstRep];
+                uint256 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
+                uint256 dstRepNew = dstRepOld.add(amount);
                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
             }
         }
     }
 
-    function _writeCheckpoint(address delegatee, uint nCheckpoints, uint oldVotes, uint newVotes) internal {
-      uint blockNumber = safe32(block.number, "gOHM::_writeCheckpoint: block number exceeds 32 bits");
+    function _writeCheckpoint(
+        address delegatee,
+        uint256 nCheckpoints,
+        uint256 oldVotes,
+        uint256 newVotes
+    ) internal {
+        uint256 blockNumber = safe32(block.number, "gOHM::_writeCheckpoint: block number exceeds 32 bits");
 
-      if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
-          checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
-      } else {
-          checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
-          numCheckpoints[delegatee] = nCheckpoints + 1;
-      }
+        if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
+            checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
+        } else {
+            checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
+            numCheckpoints[delegatee] = nCheckpoints + 1;
+        }
 
-      emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
+        emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
     }
 
     /**
@@ -377,11 +396,15 @@ contract gOHM is IERC20 {
      *
      * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
      */
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal { 
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal {
         _moveDelegates(from, to, amount);
     }
 
-    function safe32(uint n, string memory errorMessage) internal pure returns (uint32) {
+    function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
         require(n < 2**32, errorMessage);
         return uint32(n);
     }
