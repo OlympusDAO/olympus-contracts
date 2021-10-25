@@ -4,6 +4,7 @@ const { advanceBlock } = require("../utils/advancement");
 const { fork_network, fork_reset } = require("../utils/network_fork");
 const impersonateAccount = require("../utils/impersonate_account");
 const old_treasury_abi = require("../../abis/old_treasury_abi");
+const old_sohm_abi = require("../../abis/old_sohm_abi");
 const { tokens } = require("./tokens");
 
 const TREASURY_MANAGER = process.env.TREASURY_MANAGER;
@@ -30,6 +31,9 @@ describe("Treasury Token Migration", async () => {
 
         [deployer, user1, user2] = await ethers.getSigners();
 
+        /**
+         * Initialize new contracts
+         */
         let ohmContract = await ethers.getContractFactory("OlympusERC20Token");
         ohm = await ohmContract.deploy();
 
@@ -40,7 +44,7 @@ describe("Treasury Token Migration", async () => {
         newTreasury = await newTreasuryContract.deploy(ohm.address, 10);
 
         let newStakingContract = await ethers.getContractFactory("OlympusStaking");
-        newStaking = await newStakingContract.deploy(ohm.address, sOhm.address, EPOCH_LEGNTH, 0, 0);
+        newStaking = await newStakingContract.deploy(ohm.address, sOhm.address, EPOCH_LEGNTH, 1, 0);
 
         let tokenMigratorContract = await ethers.getContractFactory("OlympusTokenMigrator");
         olympusTokenMigrator = await tokenMigratorContract.deploy(
@@ -58,16 +62,31 @@ describe("Treasury Token Migration", async () => {
         let gOhmContract = await ethers.getContractFactory("gOHM");
         gOhm = await gOhmContract.deploy(olympusTokenMigrator.address);
 
+        /**
+         * Connect the contracts once they have been deployed
+         * */
+
         // Set gOHM on migrator contract
         olympusTokenMigrator.connect(deployer).setgOHM(gOhm.address);
 
+        // Initialize staking
+        newStaking.connect(deployer).setContract(1, gOhm.address);
+        newStaking.connect(deployer).setWarmup(0);
+
+        // Initialize new sOHM
+        const oldSohm = await new ethers.Contract(OLD_SOHM_ADDRESS, old_sohm_abi, ethers.provider);
+        const index = await oldSohm.connect(deployer).index();
+        sOhm.connect(deployer).setIndex(index);
+        sOhm.connect(deployer).setgOHM(gOhm.address);
+        sOhm.connect(deployer).initialize(newStaking.address);
+
+        // Why do we do this?
         await deployer.sendTransaction({
             to: TREASURY_MANAGER,
             value: ethers.utils.parseEther("1"), // 1 ether
         });
 
-        await impersonateAccount(TREASURY_MANAGER);
-
+        await impersonateAccount(TREASURY_MANAGER); // Does this even work?
         manager = await ethers.getSigner(TREASURY_MANAGER);
 
         old_treasury = await new ethers.Contract(
@@ -75,13 +94,11 @@ describe("Treasury Token Migration", async () => {
             old_treasury_abi,
             ethers.provider
         );
-        buildContracts(tokens);
-
+        // Give migrator permissions for managing old treasury
         // 3 is the reserve manager
         await old_treasury.connect(manager).queue(3, olympusTokenMigrator.address);
-
         await advanceBlocks(13000);
-
+        // Toggle post queue.
         await old_treasury
             .connect(manager)
             .toggle(3, olympusTokenMigrator.address, olympusTokenMigrator.address);
@@ -91,17 +108,32 @@ describe("Treasury Token Migration", async () => {
         await advanceBlocks(1000);
         await newTreasury.connect(deployer).enableOnChainGovernance();
 
+        // Enable existing tokens in the new treasury
+        buildContracts(tokens);
         await enableTokens(newTreasury, deployer, tokens);
 
+        // Give migrator access to be the reserve depositor
         // 0 = RESERVED DEPOSITOR
         await newTreasury
             .connect(deployer)
             .enable(0, olympusTokenMigrator.address, olympusTokenMigrator.address);
 
+        // Give migrator access to mint rewards.
         // 8 = Rewards manager (allows minting)
         await newTreasury
             .connect(deployer)
             .enable(8, olympusTokenMigrator.address, olympusTokenMigrator.address);
+
+        console.log(
+            "DEBUG addresses: \n",
+            newTreasury.address,
+            "\n",
+            newStaking.address,
+            "\n",
+            ohm.address,
+            "\n",
+            sOhm.address
+        );
     });
 
     after(async () => {
@@ -148,9 +180,6 @@ describe("Treasury Token Migration", async () => {
     it("Should allow DAO migrate tokens", async () => {
         await ohm.connect(deployer).setVault(newTreasury.address);
         await getTreasuryBalance(deployer, newTreasury.address, tokens);
-
-        //TODO (zx): fix this shit
-        // Set up the staking contract properly
         await olympusTokenMigrator
             .connect(deployer)
             .migrateContracts(newTreasury.address, newStaking.address, ohm.address, sOhm.address);
