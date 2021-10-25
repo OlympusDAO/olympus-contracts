@@ -280,7 +280,7 @@ async function
         const addr = [new_ohm_frax_lp, new_ohm_lusd_lp, new_ohm_dai_lp];
 
         for(let i = 0; i < 3; i++){
-            const name = ['dai', 'frax', 'lusd'];
+            const name = ['frax', 'lusd', 'dai'];
             
             console.log("===============Treasury LP Migration Done!===============");
 
