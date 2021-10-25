@@ -5,7 +5,6 @@
 export DAPP_REMAPPINGS="ds-test/=lib/ds-test/src/
 ds-auth/=lib/ds-auth/src/
 ds-math/=lib/ds-math/src/
-v2-core/=lib/v2-core/contracts/
 ds-token/=lib/ds-token/src/"
 export DAPP_SRC=dapp_test/
 export DAPP_OUT=.dapp/
