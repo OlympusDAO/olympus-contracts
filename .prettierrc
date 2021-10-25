@@ -1,13 +1,12 @@
 {
-    "overrides": [
-        {
-          "files": "*.sol",
-          "options": {
-            "printWidth": 200,
-            "tabWidth": 4,
-            "explicitTypes": "always"
-          }
-        }
-      ]
-
+  "overrides": [
+    {
+      "files": "*.sol",
+      "options": {
+        "printWidth": 200,
+        "tabWidth": 4,
+        "explicitTypes": "always"
+      }
+    }
+  ]
 }
