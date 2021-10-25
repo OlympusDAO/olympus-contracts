@@ -245,7 +245,7 @@ describe("Treasury Token Migration", async () => {
     it("Should defund", async () => {
         //migrate users token again after brdige back so olympus token migrator contract has some balance
         let ohmToken = olympus_tokens.find((token) => token.name === "ohm");
-        await migrateToken(olympusTokenMigrator, gOhm, ohmToken, false);
+        await migrateToken(deployer, olympusTokenMigrator, gOhm, ohmToken, false);
 
         await olympusTokenMigrator.connect(deployer).startTimelock();
         await advance(1000);
@@ -338,7 +338,7 @@ async function migrateToken(deployer, migrator, gOhm, token, isBridgeBack = fals
     console.log("user_gohm_balance:", gOhmBalance.toString());
 }
 
-// TODO(zx): DEBUG reuuse this method at the end of migration to view full balances.
+// TODO(zx): DEBUG re-use this method at the end of migration to view full balances.
 async function getTreasuryBalanceOldAndNewAfterTx() {
     for (let i = 0; i < treasury_tokens.length; i++) {
         console.log("===============Treasury Token Migration Done!===============");
