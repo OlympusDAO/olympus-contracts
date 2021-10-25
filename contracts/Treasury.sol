@@ -202,7 +202,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         @param _token address
         @param _amount uint
      */
-    function manage(address _token, uint256 _amount) external {
+    function manage(address _token, uint256 _amount) external override {
         if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             require(permissions[STATUS.LIQUIDITYMANAGER][msg.sender], "Not approved");
         } else {
@@ -367,7 +367,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         @notice returns excess reserves not backing tokens
         @return uint
      */
-    function excessReserves() public view returns (uint256) {
+    function excessReserves() public view override returns (uint256) {
         return totalReserves.sub(OHM.totalSupply().sub(totalDebt));
     }
 

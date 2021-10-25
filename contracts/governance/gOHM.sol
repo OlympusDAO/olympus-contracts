@@ -123,7 +123,7 @@ contract gOHM is IgOHM {
      * @param _staking address
      * @param _sOHM address
      */
-    function migrate(address _staking, address _sOHM) external onlyApproved {
+    function migrate(address _staking, address _sOHM) external override onlyApproved {
         require(_staking != approved);
 
         require(_staking != address(0));
@@ -138,7 +138,7 @@ contract gOHM is IgOHM {
         @param _to address
         @param _amount uint
      */
-    function mint(address _to, uint256 _amount) external override onlyStaking {
+    function mint(address _to, uint256 _amount) external override onlyApproved {
         _mint(_to, _amount);
     }
 
@@ -147,7 +147,7 @@ contract gOHM is IgOHM {
         @param _from address
         @param _amount uint
      */
-    function burn(address _from, uint256 _amount) external override onlyStaking {
+    function burn(address _from, uint256 _amount) external override onlyApproved {
         _burn(_from, _amount);
     }
 
