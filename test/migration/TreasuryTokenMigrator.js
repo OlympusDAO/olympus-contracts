@@ -312,10 +312,10 @@ async function migrateToken(deployer, migrator, gOhm, token, isBridgeBack = fals
     const contract = token.contract;
     const name = token.name;
     const userAddress = token.wallet;
-    const type = token.type;
+    const type = token.migrationType;
 
-    const tokenBalance = await contract.balanceOf(userAddress);
-    const gOhmBalance = await gOhm.balanceOf(userAddress);
+    let tokenBalance = await contract.balanceOf(userAddress);
+    let gOhmBalance = await gOhm.balanceOf(userAddress);
 
     console.log(`user_${name}_balance:`, tokenBalance.toString());
     console.log("user_gohm_balance:", gOhmBalance.toString());
