@@ -20,12 +20,18 @@ const UNISWAP_ROUTER = process.env.UNISWAP_ROUTER;
 
 const EPOCH_LEGNTH = 2200;
 
-// Some of these need to be global for the fast_track method
-// TODO(zx): maybe refactor this
-let deployer, user1, user2, manager, old_treasury;
-let olympusTokenMigrator, ohm, sOhm, gOhm, newTreasury, newStaking;
-
 describe("Treasury Token Migration", async () => {
+    let deployer,
+        user1,
+        user2,
+        manager,
+        old_treasury,
+        olympusTokenMigrator,
+        ohm,
+        sOhm,
+        gOhm,
+        newTreasury,
+        newStaking;
     before(async () => {
         await fork_network();
 
@@ -158,7 +164,7 @@ describe("Treasury Token Migration", async () => {
                     sOhm.address
                 )
         ).to.be.revertedWith("Ownable: caller is not the owner");
-        // TODO (zx:) This method is allowed to be called by anyone with ohms.
+        // TODO (zx:) This method is allowed to be called by anyone with ohm used to migrate their ohm.
         // await expect(olympusTokenMigrator.connect(user1).migrate()).to.revertedWith("Only DAO can call this function");
     });
 
