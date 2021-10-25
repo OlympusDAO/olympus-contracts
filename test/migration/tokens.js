@@ -25,12 +25,7 @@ const uni = require("../../abis/uni_factor");
 const sushi = require("../../abis/sushi_factor_abi");
 
 const treasury_tokens = [
-    {
-        name: "dai",
-        address: DAI_ADDRESS,
-        abi: dai_abi,
-        isReserve: true,
-    },
+   
     {
         name: "frax",
         address: FRAX_ADDRESS,
@@ -48,7 +43,13 @@ const treasury_tokens = [
         address: LUSD_ADDRESS,
         abi: lusd_abi,
         isReserve: true,
-    }
+    },
+     {
+        name: "dai",
+        address: DAI_ADDRESS,
+        abi: dai_abi,
+        isReserve: true,
+    },
 ];
 
 const olympus_tokens = [
@@ -71,14 +72,6 @@ const olympus_tokens = [
 
 const olympus_lp_tokens = [
     {
-        name: "ohm_dai",
-        address: OHM_DAI_LP,
-        token0: DAI_ADDRESS,
-        token1: OLD_OHM_ADDRESS,
-        is_sushi: true,
-        abi: ohm_dai_lp_abi
-    },
-    {
         name: "ohm_frax",
         address: OHM_FRAX_LP,
         token0: FRAX_ADDRESS,
@@ -93,7 +86,15 @@ const olympus_lp_tokens = [
         token1: OLD_OHM_ADDRESS,
         is_sushi: true,
         abi: ohm_lusd_lp_abi
-    }
+    },
+    {
+        name: "ohm_dai",
+        address: OHM_DAI_LP,
+        token0: DAI_ADDRESS,
+        token1: OLD_OHM_ADDRESS,
+        is_sushi: true,
+        abi: ohm_dai_lp_abi
+    },
 ]
 
 const swaps = [

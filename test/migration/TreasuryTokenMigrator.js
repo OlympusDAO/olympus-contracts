@@ -33,7 +33,7 @@ const lp_token_addresses = olympus_lp_tokens.map((lp_token) => lp_token.address)
 describe('Treasury Token Migration', async () => {
 
     before(async () => {
-        await fork_network();
+        await fork_network(13487643);
         [deployer, user1] = await ethers.getSigners();
 
         let ohmContract = await ethers.getContractFactory("OlympusERC20Token");
@@ -270,14 +270,14 @@ async function
         const uni_factory_contract = swaps[0].contract;
         const sushi_factory_contract = swaps[1].contract;
 
-        const new_ohm_frax_lp_address = await uni_factory_contract.getPair(ohm.address, tokenAddresses[1]);
-        const new_ohm_dai_lp_address = await sushi_factory_contract.getPair(ohm.address, tokenAddresses[0]);
-        const new_ohm_lusd_lp_address = await sushi_factory_contract.getPair(ohm.address, tokenAddresses[3]);
+        const new_ohm_frax_lp_address = await uni_factory_contract.getPair(ohm.address, tokenAddresses[0]);
+        const new_ohm_dai_lp_address = await sushi_factory_contract.getPair(ohm.address, tokenAddresses[3]);
+        const new_ohm_lusd_lp_address = await sushi_factory_contract.getPair(ohm.address, tokenAddresses[2]);
 
         const new_ohm_frax_lp = new ethers.Contract(new_ohm_frax_lp_address, olympus_lp_tokens[0].abi, ethers.provider);
         const new_ohm_dai_lp = new ethers.Contract(new_ohm_dai_lp_address, olympus_lp_tokens[0].abi, ethers.provider);
         const new_ohm_lusd_lp = new ethers.Contract(new_ohm_lusd_lp_address, olympus_lp_tokens[0].abi, ethers.provider);
-        const addr = [new_ohm_dai_lp, new_ohm_frax_lp, new_ohm_lusd_lp]
+        const addr = [new_ohm_frax_lp, new_ohm_lusd_lp, new_ohm_dai_lp];
 
         for(let i = 0; i < 3; i++){
             const name = ['dai', 'frax', 'lusd'];
@@ -285,10 +285,10 @@ async function
             console.log("===============Treasury LP Migration Done!===============");
 
             const bal_before_tx = await addr[i].connect(deployer).balanceOf(OLD_TREASURY_ADDRESS);
-            console.log(`old_treasury_${name[i]}_bal_before_tx`, bal_before_tx.toString());
+            console.log(`old_treasury_${name[i]}_bal_after_tx`, bal_before_tx.toString());
 
             const bal_after_tx = await addr[i].connect(deployer).balanceOf(newTreasury.address);
-            console.log(`new_treasury_${name[i]}_bal_before_tx`, bal_after_tx.toString());
+            console.log(`new_treasury_${name[i]}_bal_after_tx`, bal_after_tx.toString());
         }
     }
     else if(message === 'enable address in new treasury'){

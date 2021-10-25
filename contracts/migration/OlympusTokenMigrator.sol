@@ -230,8 +230,8 @@ contract OlympusTokenMigrator is Ownable {
         oldSupply = oldSupply.sub(balance);
 
         oldOHM.approve(address(oldTreasury), balance);
-        // oldTreasury.withdraw(balance.mul(1e9), address(DAI));
-        // DAI.safeTransfer(address(newTreasury), DAI.balanceOf(address(this)));
+        oldTreasury.withdraw(balance.mul(1e9), address(DAI));
+        DAI.safeTransfer(address(newTreasury), DAI.balanceOf(address(this)));
 
         emit Defunded(balance);
     }
