@@ -80,10 +80,6 @@ describe('Treasury Token Migration', async () => {
             ethers.provider
         );
 
-        // await helper('set contracts', '', '',treasury_tokens);
-        // await helper('set contracts', '', '', olympus_tokens);
-        // await helper('set contracts', '', '', olympus_lp_tokens);
-        // await helper('set contracts', '', '', swaps);
         await setContracts(treasury_tokens);
         await setContracts(olympus_tokens);
         await setContracts(olympus_lp_tokens);
@@ -163,10 +159,6 @@ describe('Treasury Token Migration', async () => {
     })
 
     it("Should migrate user ohm, sohm, and wsohm to gohm when migration is false ", async () => {
-        // await helper('migrate tokens or bridge back', 0, OHM_USER, ['migrate'], 2);
-        // await helper('migrate tokens or bridge back', 1, SOHM_USER, ['migrate'], 1);
-        // await helper('migrate tokens or bridge back', 2, WSOHM_USER, ['migrate'], 0);
-
         await migrateOrBrigdeToken([ 'migrate'], 0, OHM_USER, 2);
         await migrateOrBrigdeToken([ 'migrate'], 1, SOHM_USER, 1);
         await migrateOrBrigdeToken([ 'migrate'], 2, WSOHM_USER, 0);
@@ -190,11 +182,6 @@ describe('Treasury Token Migration', async () => {
     })
 
     it("Should bridgeBack user ohm, sohm, and wsohm from gohm when migration is false ", async () => {
-        
-        // await helper('migrate tokens or bridge back', 0, OHM_USER,[ 'bridgeBack'], 2);
-        // await helper('migrate tokens or bridge back', 1, SOHM_USER, ['bridgeBack'], 1);
-        // await helper('migrate tokens or bridge back', 2, WSOHM_USER, ['bridgeBack'], 0);
-
         await migrateOrBrigdeToken([ 'bridgeBack'], 0, OHM_USER, 2);
         await migrateOrBrigdeToken([ 'bridgeBack'], 1, SOHM_USER, 1);
         await migrateOrBrigdeToken([ 'bridgeBack'], 2, WSOHM_USER, 0);
