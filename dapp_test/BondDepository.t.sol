@@ -3,7 +3,6 @@ pragma solidity 0.7.5;
 pragma abicoder v2;
 
 import "ds-test/test.sol"; // ds-test
-import "ds-token/token.sol"; // ds-token
 
 import "../contracts/libraries/SafeMath.sol";
 import "../contracts/libraries/FixedPoint.sol";
