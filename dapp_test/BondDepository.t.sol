@@ -44,7 +44,7 @@ contract BondDepositoryTest is DSTest {
         bondDepository = new OlympusBondDepository(address(ohm), address(treasury));
     }
 
-    function test_createBond_deposit() public {
+    function test_createBond_deposit(uint256 amount) public {
 
         ohm.mint(address(this), 10 * 10 ** 18);
 
@@ -74,6 +74,7 @@ contract BondDepositoryTest is DSTest {
 
         address depositor = address(0x1);
         address feo = address(0x2);
-        bondDepository.deposit(5 * 10 ** 16, 200, depositor, bondId, feo);
+//        uint256 amount = 5 * 10 ** 16 ;
+        bondDepository.deposit(amount, 200, depositor, bondId, feo);
     }
 }
