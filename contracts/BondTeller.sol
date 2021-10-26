@@ -17,7 +17,6 @@ contract BondTeller {
     using SafeERC20 for IERC20;
 
 
-
     /* ========== EVENTS ========== */
 
     event BondCreated( address indexed bonder, uint payout, uint expires );
