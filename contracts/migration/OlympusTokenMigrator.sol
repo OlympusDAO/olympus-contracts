@@ -190,7 +190,7 @@ contract OlympusTokenMigrator is Ownable {
      *   @param _reserveToken bool[]
      */
     function addTokens(address[] memory _tokens, bool[] memory _reserveToken) external onlyOwner {
-        require(_tokens.length == _reserveToken.length);
+        require(_tokens.length == _reserveToken.length, "token array lengths do not match");
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             tokens.push(Token({token: _tokens[i], reserveToken: _reserveToken[i]}));
@@ -210,7 +210,7 @@ contract OlympusTokenMigrator is Ownable {
         address[] memory _tokenB,
         bool[] memory _sushi
     ) external onlyOwner {
-        require(_tokens.length == _sushi.length);
+        require(_tokens.length == _sushi.length, "token array lengths do not match");
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             lpTokens.push(LPToken({token: _tokens[i], tokenA: _tokenA[i], tokenB: _tokenB[i], sushi: _sushi[i]}));
@@ -221,12 +221,15 @@ contract OlympusTokenMigrator is Ownable {
     function defund() external onlyOwner {
         require(ohmMigrated && timelockEnd < block.number && timelockEnd != 0);
         oldwsOHM.unwrap(oldwsOHM.balanceOf(address(this)));
+
+        oldsOHM.approve(address(oldStaking), oldsOHM.balanceOf(address(this)));
         oldStaking.unstake(oldsOHM.balanceOf(address(this)), false);
 
         uint256 balance = oldOHM.balanceOf(address(this));
 
         oldSupply = oldSupply.sub(balance);
 
+        oldOHM.approve(address(oldTreasury), balance);
         oldTreasury.withdraw(balance.mul(1e9), address(DAI));
         DAI.safeTransfer(address(newTreasury), DAI.balanceOf(address(this)));
 
@@ -327,7 +330,15 @@ contract OlympusTokenMigrator is Ownable {
 
             if (_token.sushi) {
                 IERC20(_token.token).approve(address(sushiRouter), oldLPAmount);
-                (uint256 amountA, uint256 amountB) = sushiRouter.removeLiquidity(_token.tokenA, _token.tokenB, oldLPAmount, 0, 0, address(this), 1000000000000);
+                (uint256 amountA, uint256 amountB) = sushiRouter.removeLiquidity(
+                    _token.tokenA,
+                    _token.tokenB,
+                    oldLPAmount,
+                    0,
+                    0,
+                    address(this),
+                    1000000000000
+                );
 
                 oldOHM.approve(address(oldTreasury), amountB);
                 oldTreasury.withdraw(amountB * 10**9, _token.tokenA);
@@ -341,7 +352,15 @@ contract OlympusTokenMigrator is Ownable {
                 sushiRouter.addLiquidity(_token.tokenA, address(newOHM), amountA, amountB, amountA, amountB, address(newTreasury), 100000000000);
             } else {
                 IERC20(_token.token).approve(address(uniRouter), oldLPAmount);
-                (uint256 amountA, uint256 amountB) = uniRouter.removeLiquidity(_token.tokenA, _token.tokenB, oldLPAmount, 0, 0, address(this), 1000000000000);
+                (uint256 amountA, uint256 amountB) = uniRouter.removeLiquidity(
+                    _token.tokenA,
+                    _token.tokenB,
+                    oldLPAmount,
+                    0,
+                    0,
+                    address(this),
+                    1000000000000
+                );
 
                 oldOHM.approve(address(oldTreasury), amountB);
                 oldTreasury.withdraw(amountB * 10**9, _token.tokenA);
