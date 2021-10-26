@@ -3,6 +3,7 @@ pragma solidity 0.7.5;
 import "../../contracts/interfaces/IUniswapV2Pair.sol";
 import "../../contracts/interfaces/IERC20Metadata.sol";
 
+// TODO explore using https://github.com/gnosis/mock-contract
 contract MockUniswapV2Pair{
 
 

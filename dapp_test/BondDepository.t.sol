@@ -16,9 +16,9 @@ import "../contracts/StandardBondingCalculator.sol";
 import "../contracts/interfaces/IUniswapV2Pair.sol";
 import "../contracts/interfaces/IERC20Metadata.sol";
 import "./util/MockUniswapV2Pair.sol";
-import "../lib/ds-token/src/token.sol";
 import "../contracts/Treasury.sol";
 import "../contracts/BondDepository.sol";
+import "./util/MockERC20Token.sol";
 
 
 contract BondDepositoryTest is DSTest {
@@ -159,7 +159,7 @@ contract BondDepositoryTest is DSTest {
 
         ohm.mint(address(this), ohmMintAmount);
 
-        DSToken token1 = new DSToken("ABC");
+        MockERC20Token token1 = new MockERC20Token("ABC DAO", "ABC", 18);
         MockUniswapV2Pair pair = new MockUniswapV2Pair(
             address(ohm), address(token1),
             uint112(5 * 10 ** 9), uint112(10 * 10 ** 9));
