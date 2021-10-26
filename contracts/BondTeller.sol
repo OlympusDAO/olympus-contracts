@@ -17,7 +17,6 @@ contract BondTeller {
     using SafeERC20 for IERC20;
 
 
-
     /* ========== EVENTS ========== */
 
     event BondCreated( address indexed bonder, uint payout, uint expires );
@@ -113,7 +112,7 @@ contract BondTeller {
         uint _expires,
         address _feo
     ) external onlyDepository() returns ( uint index_ ) {
-        treasury.mintRewards( address(this), _payout.add( feReward ) );
+        treasury.mint( address(this), _payout.add( feReward ) );
 
         OHM.approve( address(staking), _payout ); // approve staking payout
 
