@@ -4,9 +4,6 @@
 [submodule "lib/ds-auth"]
 	path = lib/ds-auth
 	url = https://github.com/dapphub/ds-auth
-[submodule "lib/ds-math"]
-	path = lib/ds-math
-	url = https://github.com/dapphub/ds-math
 [submodule "lib/mock-contract"]
 	path = lib/mock-contract
 	url = https://github.com/gnosis/mock-contract
