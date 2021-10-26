@@ -390,6 +390,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         @return value_ uint
      */
     function tokenValue( address _token, uint _amount ) public override view returns ( uint value_ ) {
+        //TODO should divide first, then multiply to prevent multiplicatino overflow?  or better yet, save gas and take the decimal spead, if > 0, multiply by that, else, divide
         value_ = _amount.mul( 10 ** IERC20Metadata( address(OHM) ).decimals() )
                     .div( 10 ** IERC20Metadata( _token ).decimals() );
         

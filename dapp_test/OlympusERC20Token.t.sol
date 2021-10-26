@@ -23,7 +23,7 @@ contract OlymppusERC20TokenTest is DSTest {
             fail();
         } catch Error(string memory error) {
             // Assert revert error matches expected message
-            assertEq(error, "VaultOwned: caller is not the Vault");
+            assertEq("VaultOwned: caller is not the Vault", error);
         }
     }
 
@@ -49,7 +49,7 @@ contract OlymppusERC20TokenTest is DSTest {
                 fail();
             } catch Error(string memory error) {
                 // Assert revert error matches expected message
-                assertEq(error, "ERC20: burn amount exceeds balance");
+                assertEq("ERC20: burn amount exceeds balance", error);
             }
         }
     }

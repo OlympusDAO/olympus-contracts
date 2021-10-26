@@ -53,9 +53,9 @@ contract BondDepositoryTest is DSTest {
             address(ohm), address(token1),
             uint112(5 * 10 ** 9), uint112(10 * 10 ** 9));
 
-//        uint utoken0 = IERC20Metadata(IUniswapV2Pair(address(pair)).token0()).decimals();
-//        uint utoken1 = IERC20Metadata(IUniswapV2Pair(address(pair)).token1()).decimals();
-//        uint decimals = utoken0.add(utoken1).sub(IERC20Metadata(address(pair)).decimals());
+        //        uint utoken0 = IERC20Metadata(IUniswapV2Pair(address(pair)).token0()).decimals();
+        //        uint utoken1 = IERC20Metadata(IUniswapV2Pair(address(pair)).token1()).decimals();
+        //        uint decimals = utoken0.add(utoken1).sub(IERC20Metadata(address(pair)).decimals());
 
         //        log_named_uint("token0:", utoken0);
         //        log_named_uint("token1:", utoken1);
@@ -68,13 +68,83 @@ contract BondDepositoryTest is DSTest {
         //        uint k_ = reserve0.mul(reserve1).div(10 ** decimals);
         //
         //        log_named_uint("k_:", k_);
-
-        uint256 bondId = bondDepository.addBond(address(pair), address(bondingCalculator), 9 * 10 ** 20, false);
+        bool capacityIsPayout = false;
+        uint256 capacity = 9 * 10 ** 20;
+        uint256 bondId = bondDepository.addBond(address(pair), address(bondingCalculator), capacity, capacityIsPayout);
         bondDepository.setTerms(bondId, 2, false, 5, 6, 6, 10, 10, 10, 0);
 
         address depositor = address(0x1);
         address feo = address(0x2);
-//        uint256 amount = 5 * 10 ** 16 ;
-        bondDepository.deposit(amount, 200, depositor, bondId, feo);
+        //                uint256 amount = 5 * 10 ** 16 ;
+        //        uint256 amount = 75002556493819725874826918455844256653204641352000021311689657671948594686325;  //SafeMath: multiplication overflow
+        // uint256 amount = 5136935571488474593545398400365374838660649282530; //FixedPoint::fraction: overflow
+
+        log_named_uint("amount: ", amount);
+        try bondDepository.deposit(amount, 200, depositor, bondId, feo) {
+            //            fail();
+        } catch Error(string memory error) {
+
+            //            uint decimals = (IERC20Metadata( address(ohm) ).decimals() - IERC20Metadata( address(pair) ).decimals());
+            //            log_named_uint("maxInt:", MAX_UINT256);
+            //            log_named_uint("decimals:", decimals);
+            //            log_named_uint("ohm dec:", IERC20Metadata( address(ohm) ).decimals());
+            //            log_named_uint("pair dec:", IERC20Metadata( address(pair) ).decimals());
+
+
+
+            if (uint256(-1).div(amount) < (10 ** IERC20Metadata(address(ohm)).decimals())) {//NOTE:  in Treasury::tokenValue(), we multiple, then divide.
+                //uint256 amount = 75002556493819725874826918455844256653204641352000021311689657671948594686325;
+                assertEq("SafeMath: multiplication overflow", error);
+                return;
+            }
+
+            uint256 tokenValue = treasury.tokenValue(address(pair), amount);
+
+            log_named_uint("tokenValue: ", tokenValue);
+            uint256 bondPrice = bondDepository.bondPrice(bondId);
+            log_named_uint("bondPrice: ", bondPrice);
+            log_named_uint("max uint144:", uint144(-1));
+            log_named_uint("max uint224:", uint224(-1));
+            uint256 numerator = tokenValue;
+            uint256 denominator = bondPrice;
+            uint8 RESOLUTION = 112;
+            if (numerator <= uint144(-1)) {
+                log_named_uint("numerator:",numerator);
+                log_named_uint("denominator:",denominator);
+                uint256 result = (numerator << RESOLUTION) / denominator;
+                log_named_uint("result:",result);
+//                require(result <= uint224(-1), 'FixedPoint::fraction: overflow');
+//                return uq112x112(uint224(result));
+            } else {
+                log_named_uint("result:",0);
+//                uint256 result = FullMath.mulDiv(numerator, Q112, denominator);
+//                require(result <= uint224(-1), 'FixedPoint::fraction: overflow');
+//                return uq112x112(uint224(result));
+            }
+
+            uint256 payout = bondDepository.payoutFor(tokenValue, bondId);
+
+            log_named_uint("payout: ", payout);
+
+
+            // payout to bonder is computed
+            if (capacityIsPayout) {
+
+            } else {
+                if (capacity < amount) {
+                    assertEq("Bond concluded", error);
+                    return;
+                }
+            }
+
+            log_named_uint("tokenValue:", tokenValue);
+            log_named_uint("payout:", payout);
+            if (payout < 10000000) {
+                assertEq("Bond too small", error);
+                return;
+            }
+            // TODO this was actually successful, need to mock out our call better
+            assertEq("SafeERC20: ERC20 operation did not succeed", error);
+        }
     }
 }
