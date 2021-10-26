@@ -1,15 +1,20 @@
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
+
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
+import { OlympusERC20Token } from '../../types'
+
 describe("OlympusERC20Token", () => {
-  let deployer;
-  let vault;
-  let user;
+  let deployer: SignerWithAddress;
+  let vault: SignerWithAddress;
+  let user: SignerWithAddress;
   let OHMContract;
-  let OHM;
+  let OHM: OlympusERC20Token;
 
   beforeEach(async () => {
     [deployer, vault, user] = await ethers.getSigners();
+
     OHMContract = await ethers.getContractFactory("OlympusERC20Token");
     OHM = await OHMContract.connect(deployer).deploy();
     await OHM.setVault(vault.address);
@@ -30,7 +35,7 @@ describe("OlympusERC20Token", () => {
     it("increases total supply", async () => {
       let supplyBefore = await OHM.totalSupply();
       await OHM.connect(vault).mint(user.address, 100);
-      expect(supplyBefore + 100).to.equal(await OHM.totalSupply());
+      expect(supplyBefore.add(100)).to.equal(await OHM.totalSupply());
     });
   });
 
@@ -42,12 +47,12 @@ describe("OlympusERC20Token", () => {
     it("reduces the total supply", async () => {
       let supplyBefore = await OHM.totalSupply();
       await OHM.connect(user).burn(10);
-      expect(supplyBefore - 10).to.equal(await OHM.totalSupply());
+      expect(supplyBefore.sub(10)).to.equal(await OHM.totalSupply());
     });
 
     it("cannot exceed total supply", async () => {
       let supply = await OHM.totalSupply();
-      await expect(OHM.connect(user).burn(supply + 1)).
+      await expect(OHM.connect(user).burn(supply.add(1))).
         to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
