@@ -1,4 +1,14 @@
 {
-    "tabWidth": 2,
-    "printWidth": 250
+  "printWidth": 100,
+  "tabWidth": 4,
+  "overrides": [
+    {
+      "files": "*.sol",
+      "options": {
+        "printWidth": 150,
+        "tabWidth": 4,
+        "explicitTypes": "always"
+      }
+    }
+  ]
 }

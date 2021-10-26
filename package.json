@@ -28,7 +28,8 @@
     "compile": "npx hardhat compile",
     "clean": "npx hardhat clean",
     "start": "npx hardhat run scripts/deployAll.js",
-    "lint:sol": "solhint -f table contracts/**/*.sol"
+    "lint:sol": "solhint -f table contracts/**/*.sol",
+    "migrate_test": "npx hardhat test test/Migration/TreasuryTokenMigrator.js"
   },
   "repository": {
     "type": "git",
