@@ -145,6 +145,8 @@ contract OlympusBondDepository is Governable, Guardable {
     require(_teller != address(0));
     teller = ITeller(_teller);
   }
+  event log_named_uint         (string key, uint val);
+  event log_named_bool         (string key, bool val);
 
   /* ======== MUTABLE FUNCTIONS ======== */
 
@@ -178,10 +180,18 @@ contract OlympusBondDepository is Governable, Guardable {
     require(info.totalDebt <= info.terms.maxDebt, "Max debt exceeded");
     require(_maxPrice >= _bondPrice(_BID), "Slippage limit: more than max price"); // slippage protection
 
+    log_named_uint("_amount: " , _amount);
     uint256 value = treasury.tokenValue(address(info.principal), _amount);
+    log_named_uint("value: " , value);
     uint256 payout = payoutFor(value, _BID); // payout to bonder is computed
-
+    log_named_uint("payout: " , payout);
     // ensure there is remaining capacity for bond
+    if (info.capacityIsPayout){
+      log_named_uint("info.capacityIsPayout: " , 1);
+    } else {
+      log_named_uint("info.capacityIsPayout: " , 0);
+    }
+    log_named_uint("info.capacity: " , info.capacity);
     if (info.capacityIsPayout) {
       // capacity in payout terms
       require(info.capacity >= payout, "Bond concluded");

@@ -35,7 +35,6 @@ contract BondDepositoryTest is DSTest {
     function setUp() public {
         ohm = new OlympusERC20Token();
         ohm.setVault(address(this));
-        ohm.mint(address(this), 10 * 10 ** 18);
         sohm = new sOlympus();
 
         bondingCalculator = new OlympusBondingCalculator(address(ohm));
@@ -47,16 +46,16 @@ contract BondDepositoryTest is DSTest {
 
     function test_createBond_deposit() public {
 
+        ohm.mint(address(this), 10 * 10 ** 18);
 
         DSToken token1 = new DSToken("MIM");
         MockUniswapV2Pair pair = new MockUniswapV2Pair(
             address(ohm), address(token1),
             uint112(5 * 10 ** 9), uint112(10 * 10 ** 9));
 
-        uint utoken0 = IERC20Metadata(IUniswapV2Pair(address(pair)).token0()).decimals();
-        uint utoken1 = IERC20Metadata(IUniswapV2Pair(address(pair)).token1()).decimals();
-        uint decimals = utoken0.add(utoken1).sub(IERC20Metadata(address(pair)).decimals());
-
+//        uint utoken0 = IERC20Metadata(IUniswapV2Pair(address(pair)).token0()).decimals();
+//        uint utoken1 = IERC20Metadata(IUniswapV2Pair(address(pair)).token1()).decimals();
+//        uint decimals = utoken0.add(utoken1).sub(IERC20Metadata(address(pair)).decimals());
 
         //        log_named_uint("token0:", utoken0);
         //        log_named_uint("token1:", utoken1);
@@ -70,11 +69,11 @@ contract BondDepositoryTest is DSTest {
         //
         //        log_named_uint("k_:", k_);
 
-        uint256 bondId = bondDepository.addBond(address(pair), address(bondingCalculator), 999999, false);
+        uint256 bondId = bondDepository.addBond(address(pair), address(bondingCalculator), 9 * 10 ** 9, false);
         bondDepository.setTerms(bondId, 2, false, 5, 6, 6, 10, 10, 10, 0);
 
         address depositor = address(0x1);
         address feo = address(0x2);
-        bondDepository.deposit(5, 200, depositor, bondId, feo);
+        bondDepository.deposit(5 * 10 ** 9, 200, depositor, bondId, feo);
     }
 }
