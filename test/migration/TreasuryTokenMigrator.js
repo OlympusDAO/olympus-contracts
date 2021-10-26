@@ -67,7 +67,7 @@ describe("Treasury Token Migration", async () => {
             DAI_ADDRESS,
             SUSHI_ROUTER,
             UNISWAP_ROUTER,
-            0 // timelock
+            1 // timelock for defunds
         );
 
         let gOhmContract = await ethers.getContractFactory("gOHM");
@@ -315,8 +315,8 @@ describe("Treasury Token Migration", async () => {
         });
     });
 
-    it("Should allow DAO migrate tokens ", async () => {
-        const allReserveandLP = [...treasury_tokens, ...olympus_lp_tokens];
+    it("Should allow DAO migrate reserves ", async () => {
+        const allReserveandLP = [...olympus_lp_tokens, ...treasury_tokens];
         const preMigrationBalances = await getTreasuryBalance(
             deployer,
             newTreasury.address,
@@ -327,8 +327,6 @@ describe("Treasury Token Migration", async () => {
             .connect(deployer)
             .migrateContracts(newTreasury.address, newStaking.address, ohm.address, sOhm.address);
 
-        // console.log("============== Contracts migrated! (LP & Tokens)===============");
-
         const postMigrationBalances = await getTreasuryBalance(
             deployer,
             newTreasury.address,
@@ -336,13 +334,23 @@ describe("Treasury Token Migration", async () => {
         );
 
         allReserveandLP.forEach((token) => {
-            const preBal = preMigrationBalances.oldTreasury[token.name];
-            const postBal = postMigrationBalances.newTreasury[token.name];
-            const postBalOld = postMigrationBalances.oldTreasury[token.name];
-            assert.equal(postBalOld, 0, `Old treasury balance for ${token.name} should be 0`);
+            if (token.name === "dai") {
+                // Dai will be left in treasury for defund.
+                // What is the actual expected value of dai left over?
+                return;
+            }
+
+            const v1BalancePreMigration = preMigrationBalances.v1Treasury[token.name];
+            const v2BalancePostMigration = postMigrationBalances.v2Treasury[token.name];
+            const v1BalancePostMigration = postMigrationBalances.v1Treasury[token.name];
             assert.equal(
-                postBal,
-                preBal,
+                v1BalancePostMigration,
+                0,
+                `v1BalancePostMigration for ${token.name} should be 0`
+            );
+            assert.equal(
+                v2BalancePostMigration.toString(),
+                v1BalancePreMigration.toString(),
                 `New Treasury Balance for ${token.name} should should be old balance`
             );
         });
@@ -350,12 +358,42 @@ describe("Treasury Token Migration", async () => {
 
     it("Should defund", async () => {
         //migrate users token again after brdige back so olympus token migrator contract has some balance
-        let ohmToken = olympus_tokens.find((token) => token.name === "ohm");
-        await migrateToken(deployer, olympusTokenMigrator, gOhm, ohmToken, false);
+        let dai = treasury_tokens.find((token) => token.name === "dai");
+
+        const v1TreasuryBalanceOld = await dai.contract
+            .connect(deployer)
+            .balanceOf(OLD_TREASURY_ADDRESS);
+        const v2TreasuryBalanceOld = await dai.contract
+            .connect(deployer)
+            .balanceOf(newTreasury.address);
+        const migratorBalanceOld = await dai.contract
+            .connect(deployer)
+            .balanceOf(olympusTokenMigrator.address);
+        console.log(
+            v1TreasuryBalanceOld.toString(),
+            v2TreasuryBalanceOld.toString(),
+            migratorBalanceOld.toString()
+        );
+
+        // await migrateToken(deployer, olympusTokenMigrator, gOhm, ohmToken, false);
 
         await olympusTokenMigrator.connect(deployer).startTimelock();
-        await advance(1000);
+        await advance(2);
         await olympusTokenMigrator.connect(deployer).defund();
+
+        const v1TreasuryBalanceNew = await dai.contract
+            .connect(deployer)
+            .balanceOf(OLD_TREASURY_ADDRESS);
+        const migratorBalanceNew = await dai.contract
+            .connect(deployer)
+            .balanceOf(olympusTokenMigrator.address);
+        const v2TreasuryBalanceNew = await dai.contract
+            .connect(deployer)
+            .balanceOf(newTreasury.address);
+
+        const expectedDai = v2TreasuryBalanceOld + v1TreasuryBalanceOld;
+        assert.equal(0, v1TreasuryBalanceNew.toString());
+        assert.equal(expectedDai.toString(), v2TreasuryBalanceNew.toString());
     });
 });
 
@@ -396,27 +434,35 @@ async function enableTokens(deployer, treasury, tokenList = []) {
     return await Promise.all(enableTokensPromises);
 }
 
+async function getTreasuryTokenBalance(deployer, newTreasuryAddress, token) {
+    const { contract, name } = token;
+
+    const v1Balance = await contract.connect(deployer).balanceOf(OLD_TREASURY_ADDRESS);
+    const v2Balance = await contract.connect(deployer).balanceOf(newTreasuryAddress);
+    return { v1Balance, v2Balance };
+}
+
 async function getTreasuryBalance(deployer, newTreasuryAddress, tokens) {
     let tokenContract, tokenName;
-    let newTreasury = {};
-    let oldTreasury = {};
+    let v2Treasury = {};
+    let v1Treasury = {};
     for (let i = 0; i < tokens.length; i++) {
         tokenName = tokens[i].name;
         tokenContract = tokens[i].contract;
 
-        const oldTreasuryBalance = await tokenContract
+        const v1TreasuryBalance = await tokenContract
             .connect(deployer)
             .balanceOf(OLD_TREASURY_ADDRESS);
-        // console.log(`old_treasury_${tokenName}_balance`, oldTreasuryBalance.toString());
-        oldTreasury[tokenName] = oldTreasuryBalance.toString();
+        console.log(`old_treasury_${tokenName}_balance`, v1TreasuryBalance.toString());
+        v1Treasury[tokenName] = v1TreasuryBalance.toString();
 
         const newTreasuryBalance = await tokenContract
             .connect(deployer)
             .balanceOf(newTreasuryAddress);
-        // console.log(`new_treasury_${tokenName}_balance`, newTreasuryBalance.toString());
-        newTreasury[tokenName] = newTreasuryBalance.toString();
+        console.log(`new_treasury_${tokenName}_balance`, newTreasuryBalance.toString());
+        v2Treasury[tokenName] = newTreasuryBalance.toString();
     }
-    return { oldTreasury, newTreasury };
+    return { v1Treasury, v2Treasury };
 }
 
 async function migrateToken(deployer, migrator, gOhm, token, isBridgeBack = false) {
@@ -448,37 +494,9 @@ async function migrateToken(deployer, migrator, gOhm, token, isBridgeBack = fals
     let newTokenBalance = await contract.balanceOf(userAddress);
     let newgOhmBalance = await gOhm.balanceOf(userAddress);
 
-    // if (isBridgeBack) {
-    //     assert.equal(
-    //         newTokenBalance.toString(),
-    //         oldgOhmBalance.toString(),
-    //         "New token balance does not equal oldGohmBalance on bridgeback"
-    //     );
-    // } else {
-    //     assert.equal(
-    //         newgOhmBalance.toString(),
-    //         oldTokenBalance.toString(),
-    //         "New gOhm balance does not equal tokenBalance on migrate"
-    //     );
-    // }
-
-    switch (name) {
-        case "ohm":
-            //Do the conversion of ohm-->gohm
-            return;
-        case "sohm":
-            // do the conversion of sohm-->gohm
-            return;
-        case "wsohm":
-            assert.equal(newgOhmBalance.toString(), oldTokenBalance.toString());
-            return;
-    }
-
     console.log(`(new) user_${name}_balance:`, newTokenBalance.toString());
     console.log("(new) user_gohm_balance:", newgOhmBalance.toString());
-    console.log(
-        `===========================================================================================`
-    );
+    console.log();
 }
 
 // TODO(zx): DEBUG re-use this method at the end of migration to view full balances.
