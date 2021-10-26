@@ -1,15 +1,17 @@
-const {network} = require("hardhat");
+const { network } = require("hardhat");
 
 async function fork_network(blockNumber = 13377190) {
     /// Use mainnet fork as provider
     return network.provider.request({
         method: "hardhat_reset",
-        params: [{
-            forking: {
-                jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API}`,
-                blockNumber: blockNumber
-            }
-        }]
+        params: [
+            {
+                forking: {
+                    jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API}`,
+                    blockNumber: blockNumber,
+                },
+            },
+        ],
     });
 }
 
@@ -21,7 +23,7 @@ async function fork_reset() {
 }
 
 async function mine_blocks(numberOfBlocks) {
-    for(let i =0 ;i< numberOfBlocks;i++ ){
+    for (let i = 0; i < numberOfBlocks; i++) {
         await network.provider.send("evm_mine");
     }
 }
@@ -29,5 +31,5 @@ async function mine_blocks(numberOfBlocks) {
 module.exports = {
     fork_network,
     fork_reset,
-    mine_blocks
-}
+    mine_blocks,
+};
