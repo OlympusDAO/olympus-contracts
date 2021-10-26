@@ -1,6 +1,3 @@
 [submodule "lib/ds-test"]
 	path = lib/ds-test
 	url = https://github.com/dapphub/ds-test
-[submodule "lib/mock-contract"]
-	path = lib/mock-contract
-	url = https://github.com/gnosis/mock-contract
