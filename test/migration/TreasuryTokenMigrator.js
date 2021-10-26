@@ -1,5 +1,5 @@
 const { ethers } = require("hardhat");
-const { expect } = require("../utils/test_env.js");
+const { assert, expect } = require("chai");
 const { advanceBlock } = require("../utils/advancement");
 const { fork_network, fork_reset } = require("../utils/network_fork");
 const impersonateAccount = require("../utils/impersonate_account");
@@ -34,6 +34,7 @@ describe("Treasury Token Migration", async () => {
         manager,
         old_treasury,
         olympusTokenMigrator,
+        index,
         ohm,
         sOhm,
         gOhm,
@@ -88,7 +89,7 @@ describe("Treasury Token Migration", async () => {
 
         // Initialize new sOHM
         const oldSohm = await new ethers.Contract(OLD_SOHM_ADDRESS, old_sohm_abi, ethers.provider);
-        const index = await oldSohm.connect(deployer).index();
+        index = await oldSohm.connect(deployer).index();
         sOhm.connect(deployer).setIndex(index);
         sOhm.connect(deployer).setgOHM(gOhm.address);
         sOhm.connect(deployer).initialize(newStaking.address);
@@ -192,14 +193,6 @@ describe("Treasury Token Migration", async () => {
         ).to.revertedWith("token array lengths do not match");
     });
 
-    it("Should migrate user ohm, sohm, and wsohm to gohm when migration is false ", async () => {
-        let token;
-        for (let i = 0; i < olympus_tokens.length; i++) {
-            token = olympus_tokens[i];
-            await migrateToken(deployer, olympusTokenMigrator, gOhm, token, false);
-        }
-    });
-
     it("Should allow DAO add tokens", async () => {
         await olympusTokenMigrator.connect(deployer).addTokens(tokenAddresses, reserveToken);
     });
@@ -218,28 +211,141 @@ describe("Treasury Token Migration", async () => {
         );
     });
 
-    it("Should bridgeBack user ohm, sohm, and wsohm from gohm when migration is false ", async () => {
-        let token;
-        for (let i = 0; i < olympus_tokens.length; i++) {
-            token = olympus_tokens[i];
-            await migrateToken(deployer, olympusTokenMigrator, gOhm, token, true);
+    describe("Olympus Token Migrations", async () => {
+        const DECIMALS = 18;
+        let sOHMindex = 1;
+
+        function toGohm(sohmAmount) {
+            return sohmAmount.mul(10 ** 9).div(sOHMindex);
         }
+
+        function fromGohm(gohmAmount) {
+            return gOhm * sOHMindex;
+        }
+
+        async function performMigration({ wallet, contract, migrationType }) {
+            let oldTokenBalance = await contract.balanceOf(wallet);
+
+            const user = await impersonate(wallet);
+
+            await contract.connect(user).approve(olympusTokenMigrator.address, oldTokenBalance);
+            await olympusTokenMigrator.connect(user).migrate(oldTokenBalance, migrationType);
+
+            let newgOhmBalance = await gOhm.balanceOf(wallet);
+            return { oldTokenBalance, newgOhmBalance };
+        }
+
+        async function performBridgeBack({ wallet, contract, migrationType }) {
+            let oldgOhmBalance = await gOhm.balanceOf(wallet);
+
+            const user = await impersonate(wallet);
+            await gOhm.connect(user).approve(olympusTokenMigrator.address, oldgOhmBalance);
+            await olympusTokenMigrator.connect(user).bridgeBack(oldgOhmBalance, migrationType);
+
+            let newTokenBalance = await contract.balanceOf(wallet);
+
+            return { oldgOhmBalance, newTokenBalance };
+        }
+
+        before(async () => {
+            sOHMindex = index;
+            for (let i = 0; i < olympus_tokens.length; i++) {
+                const { wallet } = olympus_tokens[i];
+                await sendETH(deployer, wallet);
+            }
+        });
+
+        it("should migrate ohm", async () => {
+            const token = olympus_tokens.find((token) => token.name === "ohm");
+            const { oldTokenBalance, newgOhmBalance } = await performMigration(token);
+
+            let gohmBalanceOld = toGohm(oldTokenBalance).toString();
+            let gohmBalanceNew = newgOhmBalance.toString().slice(0, 11); //Hacky shit bruh
+
+            assert.equal(gohmBalanceOld, gohmBalanceNew);
+        });
+
+        it("should migrate sohm", async () => {
+            const token = olympus_tokens.find((token) => token.name === "sohm");
+            const { oldTokenBalance, newgOhmBalance } = await performMigration(token);
+
+            let gohmBalanceOld = toGohm(oldTokenBalance).toString();
+            let gohmBalanceNew = newgOhmBalance.toString().slice(0, 11); //Hacky shit bruh
+
+            assert.equal(gohmBalanceOld, gohmBalanceNew);
+        });
+        it("should migrate wsOhm", async () => {
+            const token = olympus_tokens.find((token) => token.name === "wsohm");
+            const { oldTokenBalance, newgOhmBalance } = await performMigration(token);
+
+            assert.equal(
+                newgOhmBalance.toString(),
+                oldTokenBalance.toString(),
+                "New gOhm balance does not equal tokenBalance on migrate"
+            );
+        });
+
+        it("should bridgeBack ohm", async () => {
+            const token = olympus_tokens.find((token) => token.name === "ohm");
+            const { oldgOhmBalance, newTokenBalance } = await performBridgeBack(token);
+
+            let gohmBalanceOld = oldgOhmBalance.toString().slice(0, 11); //Hacky shit bruh
+            let gohmBalanceNew = toGohm(newTokenBalance).toString();
+
+            assert.equal(gohmBalanceOld, gohmBalanceNew);
+        });
+        it("should bridgeBack sOhm", async () => {
+            const token = olympus_tokens.find((token) => token.name === "sohm");
+            const { oldgOhmBalance, newTokenBalance } = await performBridgeBack(token);
+
+            let gohmBalanceOld = oldgOhmBalance.toString().slice(0, 11); //Hacky shit bruh
+            let gohmBalanceNew = toGohm(newTokenBalance).toString();
+
+            assert.equal(gohmBalanceOld, gohmBalanceNew);
+        });
+        it("should bridgeBack gOhm", async () => {
+            const token = olympus_tokens.find((token) => token.name === "wsohm");
+            const { oldgOhmBalance, newTokenBalance } = await performBridgeBack(token);
+
+            assert.equal(
+                oldgOhmBalance.toString(),
+                newTokenBalance.toString(),
+                "New gOhm balance does not equal tokenBalance on bridgeBack"
+            );
+        });
     });
 
     it("Should allow DAO migrate tokens ", async () => {
-        await getTreasuryBalance(deployer, newTreasury.address, [
-            ...treasury_tokens,
-            ...olympus_lp_tokens,
-        ]);
+        const allReserveandLP = [...treasury_tokens, ...olympus_lp_tokens];
+        const preMigrationBalances = await getTreasuryBalance(
+            deployer,
+            newTreasury.address,
+            allReserveandLP
+        );
 
         await olympusTokenMigrator
             .connect(deployer)
             .migrateContracts(newTreasury.address, newStaking.address, ohm.address, sOhm.address);
 
-        await getTreasuryBalance(deployer, newTreasury.address, [
-            ...treasury_tokens,
-            ...olympus_lp_tokens,
-        ]);
+        // console.log("============== Contracts migrated! (LP & Tokens)===============");
+
+        const postMigrationBalances = await getTreasuryBalance(
+            deployer,
+            newTreasury.address,
+            allReserveandLP
+        );
+
+        allReserveandLP.forEach((token) => {
+            const preBal = preMigrationBalances.oldTreasury[token.name];
+            const postBal = postMigrationBalances.newTreasury[token.name];
+            const postBalOld = postMigrationBalances.oldTreasury[token.name];
+            assert.equal(postBalOld, 0, `Old treasury balance for ${token.name} should be 0`);
+            assert.equal(
+                postBal,
+                preBal,
+                `New Treasury Balance for ${token.name} should should be old balance`
+            );
+        });
     });
 
     it("Should defund", async () => {
@@ -292,6 +398,8 @@ async function enableTokens(deployer, treasury, tokenList = []) {
 
 async function getTreasuryBalance(deployer, newTreasuryAddress, tokens) {
     let tokenContract, tokenName;
+    let newTreasury = {};
+    let oldTreasury = {};
     for (let i = 0; i < tokens.length; i++) {
         tokenName = tokens[i].name;
         tokenContract = tokens[i].contract;
@@ -299,13 +407,16 @@ async function getTreasuryBalance(deployer, newTreasuryAddress, tokens) {
         const oldTreasuryBalance = await tokenContract
             .connect(deployer)
             .balanceOf(OLD_TREASURY_ADDRESS);
-        console.log(`old_treasury_${tokenName}_balance`, oldTreasuryBalance.toString());
+        // console.log(`old_treasury_${tokenName}_balance`, oldTreasuryBalance.toString());
+        oldTreasury[tokenName] = oldTreasuryBalance.toString();
 
         const newTreasuryBalance = await tokenContract
             .connect(deployer)
             .balanceOf(newTreasuryAddress);
-        console.log(`new_treasury_${tokenName}_balance`, newTreasuryBalance.toString());
+        // console.log(`new_treasury_${tokenName}_balance`, newTreasuryBalance.toString());
+        newTreasury[tokenName] = newTreasuryBalance.toString();
     }
+    return { oldTreasury, newTreasury };
 }
 
 async function migrateToken(deployer, migrator, gOhm, token, isBridgeBack = false) {
@@ -314,28 +425,60 @@ async function migrateToken(deployer, migrator, gOhm, token, isBridgeBack = fals
     const userAddress = token.wallet;
     const type = token.migrationType;
 
-    let tokenBalance = await contract.balanceOf(userAddress);
-    let gOhmBalance = await gOhm.balanceOf(userAddress);
+    let oldTokenBalance = await contract.balanceOf(userAddress);
+    let oldgOhmBalance = await gOhm.balanceOf(userAddress);
 
-    console.log(`user_${name}_balance:`, tokenBalance.toString());
-    console.log("user_gohm_balance:", gOhmBalance.toString());
+    console.log(
+        `===============User Token (${name}) Migration: isBridgeBack:${isBridgeBack} ===============`
+    );
+
+    console.log(`(old) user_${name}_balance:`, oldTokenBalance.toString());
+    console.log("(old) user_gohm_balance:", oldgOhmBalance.toString());
 
     const user = await impersonate(userAddress);
     await sendETH(deployer, userAddress);
 
-    await contract.connect(user).approve(migrator.address, tokenBalance);
+    await contract.connect(user).approve(migrator.address, oldTokenBalance);
     if (isBridgeBack) {
-        await migrator.connect(user).bridgeBack(gOhmBalance, type);
+        await migrator.connect(user).bridgeBack(oldgOhmBalance, type);
     } else {
-        await migrator.connect(user).migrate(tokenBalance, type);
+        await migrator.connect(user).migrate(oldTokenBalance, type);
     }
 
-    console.log("===============User Token Migration/Bridge Done!===============");
+    let newTokenBalance = await contract.balanceOf(userAddress);
+    let newgOhmBalance = await gOhm.balanceOf(userAddress);
 
-    tokenBalance = await contract.balanceOf(userAddress);
-    gOhmBalance = await gOhm.balanceOf(userAddress);
-    console.log(`user_${name}_balance:`, tokenBalance.toString());
-    console.log("user_gohm_balance:", gOhmBalance.toString());
+    // if (isBridgeBack) {
+    //     assert.equal(
+    //         newTokenBalance.toString(),
+    //         oldgOhmBalance.toString(),
+    //         "New token balance does not equal oldGohmBalance on bridgeback"
+    //     );
+    // } else {
+    //     assert.equal(
+    //         newgOhmBalance.toString(),
+    //         oldTokenBalance.toString(),
+    //         "New gOhm balance does not equal tokenBalance on migrate"
+    //     );
+    // }
+
+    switch (name) {
+        case "ohm":
+            //Do the conversion of ohm-->gohm
+            return;
+        case "sohm":
+            // do the conversion of sohm-->gohm
+            return;
+        case "wsohm":
+            assert.equal(newgOhmBalance.toString(), oldTokenBalance.toString());
+            return;
+    }
+
+    console.log(`(new) user_${name}_balance:`, newTokenBalance.toString());
+    console.log("(new) user_gohm_balance:", newgOhmBalance.toString());
+    console.log(
+        `===========================================================================================`
+    );
 }
 
 // TODO(zx): DEBUG re-use this method at the end of migration to view full balances.
