@@ -144,13 +144,14 @@ describe("Treasury Token Migration", async () => {
         await advance(1000);
         await newTreasury.connect(deployer).enableOnChainGovernance();
 
-        // Give migrator access to be the reserve depositor
-        // Give migrator access to mint rewards.
-        // 0 = RESERVED DEPOSITOR
-        // 8 = Rewards manager (allows minting)
+        // Give migrator access  to the new treasury
+        // 0 = RESERVEDEPOSITOR
+        // 4 = LIQUIDITYDEPOSITOR
+        // 8 = REWARDMANAGER (allows minting)
         await enableAddress(deployer, newTreasury, 0, olympusTokenMigrator.address);
+        await enableAddress(deployer, newTreasury, 4, olympusTokenMigrator.address);
         await enableAddress(deployer, newTreasury, 8, olympusTokenMigrator.address);
-        await enableTokens(deployer, newTreasury, treasury_tokens);
+        await enableTokens(deployer, newTreasury, [...treasury_tokens, ...olympus_lp_tokens]);
     });
 
     after(async () => {
@@ -212,7 +213,6 @@ describe("Treasury Token Migration", async () => {
     });
 
     describe("Olympus Token Migrations", async () => {
-        const DECIMALS = 18;
         let sOHMindex = 1;
 
         function toGohm(sohmAmount) {
@@ -428,12 +428,18 @@ async function enableAddress(deployer, treasury, enum_number, address = 0x0) {
 
 async function enableTokens(deployer, treasury, tokenList = []) {
     let enableTokensPromises = tokenList.map(async (token) => {
-        await treasury.connect(deployer).enable(2, token.address, token.address);
+        let status = 2; //2=RESERVETOKEN
+
+        if (token.isLP) {
+            status = 5; //5=LIQUIDITYTOKEN
+        }
+        await treasury.connect(deployer).enable(status, token.address, token.address);
     });
 
     return await Promise.all(enableTokensPromises);
 }
 
+// Single token balance function.
 async function getTreasuryTokenBalance(deployer, newTreasuryAddress, token) {
     const { contract, name } = token;
 
@@ -453,14 +459,16 @@ async function getTreasuryBalance(deployer, newTreasuryAddress, tokens) {
         const v1TreasuryBalance = await tokenContract
             .connect(deployer)
             .balanceOf(OLD_TREASURY_ADDRESS);
-        console.log(`old_treasury_${tokenName}_balance`, v1TreasuryBalance.toString());
         v1Treasury[tokenName] = v1TreasuryBalance.toString();
+        // DEBUG
+        console.log(`v1Treasury_${tokenName}_balance`, v1TreasuryBalance.toString());
 
         const newTreasuryBalance = await tokenContract
             .connect(deployer)
             .balanceOf(newTreasuryAddress);
-        console.log(`new_treasury_${tokenName}_balance`, newTreasuryBalance.toString());
         v2Treasury[tokenName] = newTreasuryBalance.toString();
+        // DEBUG
+        console.log(`v2treasury_${tokenName}_balance`, newTreasuryBalance.toString());
     }
     return { v1Treasury, v2Treasury };
 }

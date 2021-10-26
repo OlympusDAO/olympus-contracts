@@ -89,6 +89,7 @@ const olympus_lp_tokens = [
         token1: OLD_OHM_ADDRESS,
         is_sushi: false,
         abi: ohm_frax_lp_abi,
+        isLP: true,
     },
     {
         name: "ohm_lusd",
@@ -97,6 +98,7 @@ const olympus_lp_tokens = [
         token1: OLD_OHM_ADDRESS,
         is_sushi: true,
         abi: ohm_lusd_lp_abi,
+        isLP: true,
     },
     {
         name: "ohm_dai",
@@ -105,6 +107,7 @@ const olympus_lp_tokens = [
         token1: OLD_OHM_ADDRESS,
         is_sushi: true,
         abi: ohm_dai_lp_abi,
+        isLP: true,
     },
 ];
 
