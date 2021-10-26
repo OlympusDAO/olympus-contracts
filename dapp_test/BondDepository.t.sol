@@ -69,11 +69,11 @@ contract BondDepositoryTest is DSTest {
         //
         //        log_named_uint("k_:", k_);
 
-        uint256 bondId = bondDepository.addBond(address(pair), address(bondingCalculator), 9 * 10 ** 9, false);
+        uint256 bondId = bondDepository.addBond(address(pair), address(bondingCalculator), 9 * 10 ** 20, false);
         bondDepository.setTerms(bondId, 2, false, 5, 6, 6, 10, 10, 10, 0);
 
         address depositor = address(0x1);
         address feo = address(0x2);
-        bondDepository.deposit(5 * 10 ** 9, 200, depositor, bondId, feo);
+        bondDepository.deposit(5 * 10 ** 16, 200, depositor, bondId, feo);
     }
 }
