@@ -16,6 +16,9 @@ describe("OlympusStaking", () => {
   let gOHM;
   let StakingContract;
   let staking;
+  const epochLength = 2200;
+  const epochNumber = 1;
+  const epochEndBlock = 102201; // an arbitrary future block number
 
   beforeEach(async () => {
     [owner, alice, bob, charles] = await ethers.getSigners();
@@ -28,27 +31,27 @@ describe("OlympusStaking", () => {
   describe("constructor", () => {
     it("can be constructed", async () => {
       let StakingContract = await ethers.getContractFactory("OlympusStaking");
-      let staking = await StakingContract.connect(owner).deploy(OHM.address, sOHM.address, 2200, 1, 102201);
+      let staking = await StakingContract.connect(owner).deploy(OHM.address, sOHM.address, epochLength, epochNumber, epochEndBlock);
 
       expect(await staking.OHM()).to.equal(OHM.address);
       expect(await staking.sOHM()).to.equal(sOHM.address);
       epoch = await staking.epoch();
-      expect(epoch._length).to.equal(BigNumber.from(2200));
-      expect(epoch.number).to.equal(BigNumber.from(1));
-      expect(epoch.endBlock).to.equal(BigNumber.from(102201));
+      expect(epoch._length).to.equal(BigNumber.from(epochLength));
+      expect(epoch.number).to.equal(BigNumber.from(epochNumber));
+      expect(epoch.endBlock).to.equal(BigNumber.from(epochEndBlock));
 
       expect(await staking.governor()).to.equal(owner.address);
     });
 
     it("will not allow a 0x0 OHM address", async () => {
       let StakingContract = await ethers.getContractFactory("OlympusStaking");
-      await expect(StakingContract.connect(owner).deploy(blackhole, sOHM.address, 2200, 1, 102201)).
+      await expect(StakingContract.connect(owner).deploy(blackhole, sOHM.address, epochLength, epochNumber, epochEndBlock)).
         to.be.reverted;
     });
 
     it("will not allow a 0x0 sOHM address", async () => {
       let StakingContract = await ethers.getContractFactory("OlympusStaking");
-      await expect(StakingContract.connect(owner).deploy(OHM.address, blackhole, 2200, 1, 102201)).
+      await expect(StakingContract.connect(owner).deploy(OHM.address, blackhole, epochLength, epochNumber, epochEndBlock)).
         to.be.reverted;
     });
   });
@@ -60,7 +63,7 @@ describe("OlympusStaking", () => {
       let currentBlock = await ethers.provider.send("eth_blockNumber");
       currentEpoch = 1;
       let nextRebase = BigNumber.from(currentBlock).add(10000); // set the rebase far enough in the future to not hit it
-      staking = await StakingContract.connect(owner).deploy(OHM.address, sOHM.address, 2200, currentEpoch, nextRebase);
+      staking = await StakingContract.connect(owner).deploy(OHM.address, sOHM.address, epochLength, currentEpoch, nextRebase);
       await staking.setContract(1, gOHM.address);
     });
 
@@ -83,14 +86,17 @@ describe("OlympusStaking", () => {
     });
 
     describe("stake", () => {
-      it("adds amount to the warmup when claim is false", async () => {
+      it("adds amount to the warmup when claim is false, regardless of rebasing", async () => {
+        // when _claim is false, the _rebasing flag is taken into account on the claim method
         let amount = 1000;
         let gons = 10;
+        let rebasing = true;
+        let claim = false;
         await OHM.mock.transferFrom.withArgs(alice.address, staking.address, amount).returns(true);
         await sOHM.mock.gonsForBalance.withArgs(amount).returns(gons);
         await sOHM.mock.balanceForGons.withArgs(gons).returns(amount);
 
-        await staking.connect(alice).stake(amount, alice.address, true, false);
+        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
 
         expect(await staking.supplyInWarmup()).to.equal(amount);
         expect(await staking.warmupPeriod()).to.equal(0);
@@ -101,7 +107,7 @@ describe("OlympusStaking", () => {
         expect(warmupInfo.lock).to.equal(false);
       });
 
-      it("transfers sOHM when claim is true and rebasing is true", async () => {
+      it("exchanges OHM for sOHM when claim is true and rebasing is true", async () => {
         let amount = 1000;
         let rebasing = true;
         let claim = true;
@@ -113,7 +119,7 @@ describe("OlympusStaking", () => {
         expect(await staking.supplyInWarmup()).to.equal(0);
       });
 
-      it("mints gOHM when claim is true and rebasing is true", async () => {
+      it("exchanges OHM for newly minted gOHM when claim is true and rebasing is true", async () => {
         let amount = 1000;
         let indexedAmount = 10000;
         let rebasing = false;
@@ -127,9 +133,12 @@ describe("OlympusStaking", () => {
         await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
       });
 
-      it("adds amount to warmup when claim is true and warmup period > 0", async () => {
+      it("adds amount to warmup when claim is true and warmup period > 0, regardless of rebasing", async () => {
+        // the rebasing flag is taken into account in the claim method
         let amount = 1000;
         let gons = 10;
+        let rebasing = true;
+        let claim = true;
         await OHM.mock.transferFrom.withArgs(alice.address, staking.address, amount).returns(true);
         await sOHM.mock.gonsForBalance.withArgs(amount).returns(gons);
         await sOHM.mock.balanceForGons.withArgs(gons).returns(amount);
@@ -342,7 +351,6 @@ describe("OlympusStaking", () => {
       });
 
       it("increments epoch number and calls rebase ", async () => {
-        let epochLength = 2200;
         let currentBlock = await ethers.provider.send("eth_blockNumber");
         staking = await StakingContract.connect(owner).deploy(OHM.address, sOHM.address, epochLength, currentEpoch, BigNumber.from(currentBlock));
         let epoch = await staking.epoch();
@@ -355,12 +363,25 @@ describe("OlympusStaking", () => {
 
         let nextEpoch = await staking.epoch();
         expect(BigNumber.from(nextEpoch.number)).to.equal(BigNumber.from(epoch.number).add(1));
-        expect(BigNumber.from(nextEpoch.distribute)).to.equal(0);
         expect(BigNumber.from(nextEpoch.endBlock)).to.equal(BigNumber.from(currentBlock).add(epochLength));
       });
 
+      it("when the OHM balance of the staking contract equals sOHM supply, distribute zero", async () => {
+        let currentBlock = await ethers.provider.send("eth_blockNumber");
+        staking = await StakingContract.connect(owner).deploy(OHM.address, sOHM.address, epochLength, currentEpoch, BigNumber.from(currentBlock));
+        let epoch = await staking.epoch();
+        expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.endBlock));
+
+        await sOHM.mock.rebase.withArgs(BigNumber.from(epoch.distribute), BigNumber.from(epoch.number)).returns(0);
+        await OHM.mock.balanceOf.withArgs(staking.address).returns(10);
+        await sOHM.mock.circulatingSupply.returns(10);
+        await staking.connect(alice).rebase();
+
+        let nextEpoch = await staking.epoch();
+        expect(BigNumber.from(nextEpoch.distribute)).to.equal(0);
+      });
+
       it("will plan to distribute the difference between staked and total supply", async () => {
-        let epochLength = 2200;
         let currentBlock = await ethers.provider.send("eth_blockNumber");
         staking = await StakingContract.connect(owner).deploy(OHM.address, sOHM.address, epochLength, currentEpoch, BigNumber.from(currentBlock));
         let epoch = await staking.epoch();
@@ -376,7 +397,6 @@ describe("OlympusStaking", () => {
       });
 
       it("will call the distributor, if set", async () => {
-        let epochLength = 2200;
         let currentBlock = await ethers.provider.send("eth_blockNumber");
         staking = await StakingContract.connect(owner).deploy(OHM.address, sOHM.address, epochLength, currentEpoch, BigNumber.from(currentBlock));
         let distributor = await deployMockContract(owner, IDistributor.abi);
