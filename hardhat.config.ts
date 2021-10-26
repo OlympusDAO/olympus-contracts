@@ -101,7 +101,14 @@ const config: HardhatUserConfig = {
       {
         version: "0.5.16",
       },
-    ]
+    ],
+    settings: {
+      outputSelection: {
+        "*": {
+          "*": ["storageLayout"]
+        }
+      }
+    }
   },
   typechain: {
     outDir: "types",
