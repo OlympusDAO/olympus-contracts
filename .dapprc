@@ -1,7 +1,4 @@
 # Make dependencies available
-# export DAPP_REMAPPINGS="hardhat/=node_modules/hardhat/
-# @openzeppelin/=node_modules/@openzeppelin/
-# hardhat-deploy/=node_modules/hardhat-deploy/"
 export DAPP_REMAPPINGS="ds-test/=lib/ds-test/src/
 mock-contract/=lib/mock-contract/contracts/"
 export DAPP_SRC=dapp_test/

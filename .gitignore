@@ -1,8 +1,8 @@
+.DS_Store
 node_modules/
 artifacts/
 cache/
 .dapp/
 
 .vscode
-.DS_Store
 .env
