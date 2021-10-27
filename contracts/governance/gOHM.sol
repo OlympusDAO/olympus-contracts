@@ -400,6 +400,6 @@ contract gOHM is IgOHM {
         address to,
         uint256 amount
     ) internal {
-        _moveDelegates(from, to, amount);
+        _moveDelegates(delegates[from], delegates[to], amount);
     }
 }
