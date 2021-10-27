@@ -3,9 +3,7 @@
 # @openzeppelin/=node_modules/@openzeppelin/
 # hardhat-deploy/=node_modules/hardhat-deploy/"
 export DAPP_REMAPPINGS="ds-test/=lib/ds-test/src/
-ds-auth/=lib/ds-auth/src/
-ds-math/=lib/ds-math/src/
-ds-token/=lib/ds-token/src/"
+mock-contract/=lib/mock-contract/contracts/"
 export DAPP_SRC=dapp_test/
 export DAPP_OUT=.dapp/
 export DAPP_SOLC_VERSION=0.7.5

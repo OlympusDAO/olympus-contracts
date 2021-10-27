@@ -3,6 +3,7 @@ pragma solidity 0.7.5;
 pragma abicoder v2;
 
 import "ds-test/test.sol"; // ds-test
+import "mock-contract/MockContract.sol"; // gnosis/mock-contract
 
 import "../contracts/libraries/SafeMath.sol";
 import "../contracts/libraries/FixedPoint.sol";
@@ -14,10 +15,9 @@ import "../contracts/sOlympusERC20.sol";
 import "../contracts/StandardBondingCalculator.sol";
 import "../contracts/interfaces/IUniswapV2Pair.sol";
 import "../contracts/interfaces/IERC20Metadata.sol";
-import "./util/MockUniswapV2Pair.sol";
 import "../contracts/Treasury.sol";
 import "../contracts/BondDepository.sol";
-import "./util/MockERC20Token.sol";
+import "../lib/mock-contract/contracts/MockContract.sol";
 
 
 contract BondDepositoryTest is DSTest {
@@ -53,7 +53,7 @@ contract BondDepositoryTest is DSTest {
     //        uint256 capacity)
     //    public {
     //        uint256 amount = 5 * 10 ** 16;
-//    uint256 ohmMintAmount = 10 * 10 ** 18;
+    //    uint256 ohmMintAmount = 10 * 10 ** 18;
     //        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
     //        uint256 initialDebt = 0;
     //
@@ -158,10 +158,31 @@ contract BondDepositoryTest is DSTest {
 
         ohm.mint(address(this), ohmMintAmount);
 
-        MockERC20Token token1 = new MockERC20Token("ABC DAO", "ABC", 18);
-        MockUniswapV2Pair pair = new MockUniswapV2Pair(
-            address(ohm), address(token1),
-            uint112(5 * 10 ** 9), uint112(10 * 10 ** 9));
+        MockContract token1 = new MockContract();
+        // See https://docs.soliditylang.org/en/latest/units-and-global-variables.html?highlight=abi.encode
+        token1.givenMethodReturn(abi.encodeWithSignature("name()"), abi.encode("ABC DAO"));
+        token1.givenMethodReturn(abi.encodeWithSignature("symbol()"), abi.encode("ABC"));
+        token1.givenMethodReturnUint(abi.encodeWithSignature("decimals()"), 18);
+        token1.givenMethodReturn(abi.encodeWithSignature("symbol()"), abi.encode("ABC"));
+
+        //TODO cannot mock the SafeERC20's usage of address(token).functionCall
+        //        bytes memory returndata = bytes(true)
+//                        token1.givenMethodReturn(abi.encodeWithSignature("transfer(address,uint256)"), abi.encode(true));
+//                        token1.givenCalldataReturn(abi.encodeWithSignature("transfer(address,uint256)", address(treasury), uint256(50000000000000000)), abi.encode(true));
+//        token1.givenMethodReturnBool(abi.encodeWithSignature("transfer(address,uint256)"), true);
+//        token1.givenCalldataReturnBool(abi.encodeWithSignature("transfer(address,uint256)", address(treasury), uint256(50000000000000000)), true);
+        //        log_named_bytes("mock transfer encoded: ", abi.encodeWithSignature("transfer(address,uint256)"));
+        //        log_named_bytes("mock transfer encoded: ", abi.encodeWithSignature("transfer(address,uint256)", address(treasury), uint256(50000000000000000)));
+        //        log_named_uint("mock returndata.length: ", returndata.length);
+
+        MockContract pair = new MockContract();
+        pair.givenMethodReturn(abi.encodeWithSignature("name()"), abi.encode("MockUniswapPair"));
+        pair.givenMethodReturn(abi.encodeWithSignature("symbol()"), abi.encode("MOCK"));
+        pair.givenMethodReturnUint(abi.encodeWithSignature("decimals()"), 18);
+        pair.givenMethodReturnAddress(abi.encodeWithSignature("token0()"), address(ohm));
+        pair.givenMethodReturnAddress(abi.encodeWithSignature("token1()"), address(token1));
+        pair.givenMethodReturn(abi.encodeWithSignature("getReserves()"),
+            abi.encode(uint112(5 * 10 ** 9), uint112(10 * 10 ** 9), uint32(0)));
 
         uint256 bondId = bondDepository.addBond(address(pair), address(bondingCalculator), capacity, capacityIsPayout);
         bondDepository.setTerms(bondId, terms.controlVariable, terms.fixedTerm, terms.vestingTerm, terms.expiration, terms.conclusion, terms.minimumPrice, terms.maxPayout, terms.maxDebt, initialDebt);
