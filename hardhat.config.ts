@@ -22,15 +22,15 @@ const chainIds = {
 };
 
 // Ensure that we have all the environment variables we need.
-const mnemonic: string | undefined = process.env.MNEMONIC;
-if (!mnemonic) {
-  throw new Error("Please set your MNEMONIC in a .env file");
-}
+const mnemonic: string | undefined = process.env.MNEMONIC ? process.env.MNEMONIC : "NO_MNEMONIC";
+//if (!mnemonic) {
+//  throw new Error("Please set your MNEMONIC in a .env file");
+//}
 
-const infuraApiKey: string | undefined = process.env.INFURA_API_KEY;
-if (!infuraApiKey) {
-  throw new Error("Please set your INFURA_API_KEY in a .env file");
-}
+const infuraApiKey: string | undefined = process.env.INFURA_API_KEY ? process.env.INFURA_API_KEY : "NO_INFURA_API_KEY";
+//if (!infuraApiKey) {
+//  throw new Error("Please set your INFURA_API_KEY in a .env file");
+//}
 
 function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
   const url: string = "https://" + network + ".infura.io/v3/" + infuraApiKey;
