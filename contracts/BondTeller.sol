@@ -107,6 +107,7 @@ contract BondTeller {
      * @param _principalPaid uint
      * @param _payout uint
      * @param _vesting uint
+     * @return uint
      */
     function newBond( 
         address _bonder, 
@@ -115,7 +116,7 @@ contract BondTeller {
         uint _payout, 
         uint _vesting,
         uint _fid
-    ) external onlyDepository() {
+    ) external onlyDepository() returns ( uint ) {
         treasury.mintRewards( address(this), _payout.add( feReward ) );
 
         OHM.approve( staking, _payout.add( feReward ) ); // approve staking payout
@@ -136,6 +137,9 @@ contract BondTeller {
 
         // indexed events are emitted
         emit BondCreated( _bonder, _payout, newVesting );
+
+        // return the index number relevent to the bond
+        return bonderInfo[ _bonder ].length.sub( 1 );
     }
 
     /* ========== INTERACTABLE FUNCTIONS ========== */

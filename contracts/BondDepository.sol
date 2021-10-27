@@ -216,7 +216,7 @@ contract OlympusBondDepository is Governable, Guardable {
         address _depositor,
         uint _BID,
         uint _FID
-    ) external returns ( uint ) {
+    ) external returns ( uint, uint ) {
         require( _depositor != address(0), "Invalid address" );
 
         BondType memory info = bonds[ _BID ];
@@ -250,9 +250,9 @@ contract OlympusBondDepository is Governable, Guardable {
         emit afterBond( _BID, bondPriceInUSD( principal ), bondPrice( principal ), debtRatio( principal ) );
         
         // user info stored with teller
-        teller.newBond( _depositor, payout, info.terms.vestingTerm, _FID );
+        uint index = teller.newBond( _depositor, payout, info.terms.vestingTerm, _FID );
 
-        return payout; 
+        return ( payout, index ); 
     }
 
 
