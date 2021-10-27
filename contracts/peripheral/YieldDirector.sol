@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 //import "./types/ERC20.sol";
 //import "./types/Ownable.sol";
 //import "./libraries/SafeERC20.sol";
-import "./interfaces/IYieldDirector.sol";
+import "../interfaces/IYieldDirector.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -17,6 +17,16 @@ interface IsOHM {
     function gonsForBalance( uint amount ) external view returns ( uint );
     function balanceForGons( uint gons ) external view returns ( uint );
     function index() external view returns ( uint );
+}
+
+interface IgOHM {
+  function mint(address _to, uint256 _amount) external;
+
+  function burn(address _from, uint256 _amount) external;
+
+  function balanceFrom(uint256 _amount) external view returns (uint256);
+
+  function balanceTo(uint256 _amount) external view returns (uint256);
 }
 
 /**

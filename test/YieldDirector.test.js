@@ -66,12 +66,6 @@ describe('YieldDirector', async () => {
         sOhm = await sOhmFactory.deploy();
         staking = await stakingFactory.deploy(ohm.address, sOhm.address, "10", "1", "9");
         treasury = await treasuryFactory.deploy(ohm.address, "0");
-        //treasury = await treasuryFactory.deploy(
-        //  ohm.address,
-        //  dai.address,
-        //  lpToken.address,
-        //  "0"
-        //);
         distributor = await distributorFactory.deploy(treasury.address, ohm.address, "10", "1");
         warmup = await warmupFactory.deploy(staking.address, sOhm.address);
         tyche = await tycheFactory.deploy(ohm.address, sOhm.address);
