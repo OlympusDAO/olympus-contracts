@@ -332,20 +332,22 @@ describe("Treasury Token Migration", async () => {
             ...treasury_tokens,
         ]);
 
-        allReserveandLP.forEach(async(token) => {
+        const assertPromises = allReserveandLP.map(async (token) => {
             if (token.name === "dai") {
                 const old_ohm_total_supply = await olympus_tokens[2].contract.totalSupply();
-                const dai_balance_left_to_back_circulating_ohm_1_for_1 = await treasury_tokens[3].contract.balanceOf(OLD_TREASURY_ADDRESS);
+                const dai_balance_left_to_back_circulating_ohm_1_for_1 =
+                    await treasury_tokens[3].contract.balanceOf(OLD_TREASURY_ADDRESS);
 
-                const old_ohm_balance_in_18_decimal = (old_ohm_total_supply * 10**18) / 10**9;
+                const old_ohm_balance_in_18_decimal = (old_ohm_total_supply * 10 ** 18) / 10 ** 9;
 
-                expect(Number(dai_balance_left_to_back_circulating_ohm_1_for_1))
-                    .to.above(Number(old_ohm_balance_in_18_decimal));
+                expect(Number(dai_balance_left_to_back_circulating_ohm_1_for_1)).to.above(
+                    Number(old_ohm_balance_in_18_decimal)
+                );
 
                 // Dai will be left in treasury for defund.
                 // What is the actual expected value of dai left over?
 
-                // Don't think we can acertain that, I just ensured that 
+                // Don't think we can acertain that, I just ensured that
                 // the DAI left is enough to back the old ohm circulating supply 1 for 1.
 
                 return;
@@ -354,7 +356,7 @@ describe("Treasury Token Migration", async () => {
             const v2BalancePretMigration = preMigrationBalances.v2Treasury[token.name];
             const v2BalancePostMigration = postMigrationBalances.v2Treasury[token.name];
             const v1BalancePostMigration = postMigrationBalances.v1Treasury[token.name];
-            
+
             assert.equal(
                 v2BalancePretMigration,
                 0,
@@ -373,9 +375,10 @@ describe("Treasury Token Migration", async () => {
             // since we're creating a new lp pool I just ensure that old lp balance of old treasury tokens
             // are above 0 and new lp balance of new treasury tokens are above 0
         });
+
+        await Promise.all(assertPromises);
     });
 
-    
     describe("Defund", async () => {
         it("Should defund", async () => {
             let dai = treasury_tokens.find((token) => token.name === "dai");
@@ -392,19 +395,29 @@ describe("Treasury Token Migration", async () => {
 
             const token2 = olympus_tokens.find((token) => token.name === "ohm");
             await performMigration(token2);
-            
-            const olympus_token_migrator_wsohm_balance = await olympus_tokens[0]
-                .contract.balanceOf(olympusTokenMigrator.address);
 
-            const wsohm_balance_in_ohm = await olympus_tokens[0].contract.wOHMTosOHM(olympus_token_migrator_wsohm_balance);
+            const olympus_token_migrator_wsohm_balance = await olympus_tokens[0].contract.balanceOf(
+                olympusTokenMigrator.address
+            );
 
-            const olympus_token_migrator_ohm_balance = await olympus_tokens[2].contract.balanceOf(olympusTokenMigrator.address);
-            const olympus_token_migrator_sohm_balance = await olympus_tokens[1].contract.balanceOf(olympusTokenMigrator.address);
+            const wsohm_balance_in_ohm = await olympus_tokens[0].contract.wOHMTosOHM(
+                olympus_token_migrator_wsohm_balance
+            );
 
-            const olympus_token_migrator_total_ohm = Number(wsohm_balance_in_ohm) + Number(olympus_token_migrator_ohm_balance)
-                 + Number(olympus_token_migrator_sohm_balance)
+            const olympus_token_migrator_ohm_balance = await olympus_tokens[2].contract.balanceOf(
+                olympusTokenMigrator.address
+            );
+            const olympus_token_migrator_sohm_balance = await olympus_tokens[1].contract.balanceOf(
+                olympusTokenMigrator.address
+            );
 
-            const convert_ohm_to_dai_decimal = (olympus_token_migrator_total_ohm * 10**18) / 10**9
+            const olympus_token_migrator_total_ohm =
+                Number(wsohm_balance_in_ohm) +
+                Number(olympus_token_migrator_ohm_balance) +
+                Number(olympus_token_migrator_sohm_balance);
+
+            const convert_ohm_to_dai_decimal =
+                (olympus_token_migrator_total_ohm * 10 ** 18) / 10 ** 9;
 
             await olympusTokenMigrator.connect(deployer).startTimelock();
             await advance(2);
@@ -414,15 +427,15 @@ describe("Treasury Token Migration", async () => {
                 .connect(deployer)
                 .balanceOf(newTreasury.address);
 
-            const new_dai_from_ohm_in_migrator_contract_in_new_treasury = 
-                Number(v2TreasuryBalanceNew) - Number(v2TreasuryBalanceOld)
+            const new_dai_from_ohm_in_migrator_contract_in_new_treasury =
+                Number(v2TreasuryBalanceNew) - Number(v2TreasuryBalanceOld);
 
             assert.equal(
                 new_dai_from_ohm_in_migrator_contract_in_new_treasury.toString().slice(0, 10),
                 convert_ohm_to_dai_decimal.toString().slice(0, 10)
             );
         });
-    })
+    });
 
     async function performMigration({ wallet, contract, migrationType }) {
         let oldTokenBalance = await contract.balanceOf(wallet);
