@@ -13,6 +13,7 @@
     "./scripts",
     "./deploy",
     "./test",
-    "typechain/**/*"
+    "typechain/**/*",
+    "constants.ts"
   ]
 }
