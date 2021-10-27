@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { Contracts } from "../constants";
-import { DAI, FRAX } from "../types";
+import { DAI, FRAX, OlympusERC20Token } from "../types";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments } = hre;
@@ -24,13 +24,22 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         deployer
     );
     await fraxContract.mint(deployer.address, initialMint);
+    const ohmContract = await hre.ethers.getContractAt<OlympusERC20Token>(
+        Contracts.OHM,
+        ohm.address,
+        deployer
+    );
 
     // TODO: TIMELOCK SET TO 0 FOR NOW
     // CHANGE FOR ACTUAL DEPLOYMENT
-    await deploy(Contracts.TREASURY, {
+    // Deploy treasury
+    const treasury = await deploy(Contracts.TREASURY, {
         from: deployer.address,
         args: [ohm.address, 0],
     });
+
+    // Set treasury for OHM token
+    await ohmContract.setVault(treasury.address);
 };
 
 export default func;

@@ -7,15 +7,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const [deployer] = await hre.ethers.getSigners();
     const { deploy } = deployments;
 
-    const ohm = await deployments.get(Contracts.OHM);
-
-    // Deploy bonding calc
-    await deploy(Contracts.OHM_BONDING_CALCULATOR, {
+    // Deploy sOHM
+    await deploy(Contracts.SOHM, {
         from: deployer.address,
-        args: [ohm.address],
+        args: [],
     });
 };
 
 export default func;
-func.tags = [Contracts.OHM_BONDING_CALCULATOR];
-func.dependencies = [Contracts.OHM];
+func.tags = [Contracts.SOHM];
