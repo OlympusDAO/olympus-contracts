@@ -1,18 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-
 interface ITreasury {
+    function deposit(
+        uint256 _amount,
+        address _token,
+        uint256 _profit
+    ) external returns (uint256);
 
-    function deposit( uint _amount, address _token, uint _profit ) external returns ( uint );
-    
-    function withdraw( uint _amount, address _token ) external;
+    function withdraw(uint256 _amount, address _token) external;
 
-    function tokenValue( address _token, uint _amount ) external view returns ( uint value_ );
-  
-    function mint( address _recipient, uint _amount ) external;
+    function tokenValue(address _token, uint256 _amount) external view returns (uint256 value_);
 
-    function incurDebt( uint amount_, address token_ ) external;
-    
-    function repayDebtWithReserve( uint amount_, address token_ ) external;
+    function mint(address _recipient, uint256 _amount) external;
+
+    function manage(address _token, uint256 _amount) external;
+
+    function incurDebt(uint256 amount_, address token_) external;
+
+    function repayDebtWithReserve(uint256 amount_, address token_) external;
+
+    function excessReserves() external view returns (uint256);
 }

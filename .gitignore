@@ -1,8 +1,23 @@
 .DS_Store
-node_modules/
-artifacts/
 cache/
-.dapp/
+artifacts/
 
-.vscode
+coverage*
+types/
+
+.vscode/*
+!.vscode/settings.json.default
+!.vscode/launch.json.default
+!.vscode/extensions.json.default
+
+node_modules/
 .env
+
+.yalc
+yalc.lock
+
+contractsInfo.json
+deployments/hardhat
+deployments/localhost
+
+/.dapp
