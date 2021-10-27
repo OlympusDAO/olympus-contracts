@@ -9,14 +9,12 @@ describe("OlympusTest", () => {
   let vault: SignerWithAddress;
   let bob: SignerWithAddress;
   let alice: SignerWithAddress;
-  let ohmFactory: OlympusERC20Token__factory;
   let ohm: OlympusERC20Token;
 
   beforeEach(async () => {
     [deployer, vault, bob, alice] = await ethers.getSigners();
 
-    ohmFactory = new OlympusERC20Token__factory(deployer);
-    ohm = await ohmFactory.deploy();
+    ohm = await (new OlympusERC20Token__factory(deployer)).deploy();
     await ohm.setVault(vault.address);
   });
 
