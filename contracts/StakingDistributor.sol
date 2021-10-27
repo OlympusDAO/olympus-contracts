@@ -74,7 +74,7 @@ contract Distributor is Governable, Guardable {
             // distribute rewards to each recipient
             for ( uint i = 0; i < info.length; i++ ) {
                 if ( info[ i ].rate > 0 ) {
-                    treasury.mintRewards( // mint and send from treasury
+                    treasury.mint( // mint and send from treasury
                         info[ i ].recipient, 
                         nextRewardAt( info[ i ].rate ) 
                     );
