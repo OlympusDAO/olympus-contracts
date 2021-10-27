@@ -28,7 +28,8 @@ const lp_token_1 = olympus_lp_tokens.map((lp_token) => lp_token.token1);
 const is_sushi_lp = olympus_lp_tokens.map((lp_token) => lp_token.is_sushi);
 const lp_token_addresses = olympus_lp_tokens.map((lp_token) => lp_token.address);
 
-describe("Treasury Token Migration", async () => {
+// TODO currently skipped
+describe.skip("Treasury Token Migration", async () => {
     let deployer,
         user1,
         manager,
