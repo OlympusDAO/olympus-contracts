@@ -370,12 +370,11 @@ contract gOHM is IgOHM {
         uint256 oldVotes,
         uint256 newVotes
     ) internal {
-        uint256 blockNumber = safe32(block.number, "gOHM::_writeCheckpoint: block number exceeds 32 bits");
 
-        if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
+        if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == block.number) {
             checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
         } else {
-            checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
+            checkpoints[delegatee][nCheckpoints] = Checkpoint(block.number, newVotes);
             numCheckpoints[delegatee] = nCheckpoints + 1;
         }
 
@@ -401,11 +400,6 @@ contract gOHM is IgOHM {
         address to,
         uint256 amount
     ) internal {
-        _moveDelegates(from, to, amount);
-    }
-
-    function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
-        require(n < 2**32, errorMessage);
-        return uint32(n);
+        _moveDelegates(delegates[from], delegates[to], amount);
     }
 }
