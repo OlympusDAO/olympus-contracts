@@ -6,22 +6,12 @@
     "test": "test"
   },
   "dependencies": {
-<<<<<<< HEAD
-    "@openzeppelin/contracts": "^4.3.2",
-    "@uniswap/v3-periphery": "^1.2.0"
-  },
-  "devDependencies": {
-    "@defi-wonderland/smock": "^2.0.4",
-    "@nomiclabs/ethereumjs-vm": "^4.2.2",
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
-=======
     "@uniswap/v3-periphery": "^1.2.0"
   },
   "devDependencies": {
     "@defi-wonderland/smock": "^2.0.7",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@0.3.0-beta.11",
     "@nomiclabs/hardhat-etherscan": "^2.1.7",
->>>>>>> v2-revamp-repo
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.3.2",
     "@typechain/ethers-v5": "^7.1.2",
@@ -53,14 +43,6 @@
     "typescript": "^4.4.3"
   },
   "scripts": {
-<<<<<<< HEAD
-    "test": "npx hardhat test",
-    "compile": "npx hardhat compile",
-    "clean": "npx hardhat clean",
-    "start": "npx hardhat run scripts/deployAll.js",
-    "lint:sol": "solhint -f table contracts/**/*.sol",
-    "fork": "hardhat node"
-=======
     "lint": "eslint \"**/*.{js,ts}\" && solhint src/**/*.sol",
     "lint:fix": "eslint --fix \"**/*.{js,ts}\" && solhint --fix src/**/*.sol",
     "lint:sol": "solhint -f table contracts/**/*.sol",
@@ -72,7 +54,6 @@
     "gas": "REPORT_GAS=true hardhat test",
     "coverage": "HARDHAT_DEPLOY_FIXTURE=true hardhat coverage",
     "typechain": "TS_NODE_TRANSPILE_ONLY=true hardhat typechain"
->>>>>>> v2-revamp-repo
   },
   "repository": {
     "type": "git",
