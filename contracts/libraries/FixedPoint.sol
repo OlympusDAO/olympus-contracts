@@ -107,9 +107,9 @@ library FixedPoint {
         return uint112(self._x >> RESOLUTION);
     }
 
-    function decode112with18(uq112x112 memory self) internal pure returns (uint) {
+    function decode112with18(uq112x112 memory self) internal pure returns (uint256) {
 
-        return uint(self._x) / 5192296858534827;
+        return uint256(self._x) / 5192296858534827;
     }
 
     function fraction(uint256 numerator, uint256 denominator) internal pure returns (uq112x112 memory) {

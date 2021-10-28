@@ -2,23 +2,22 @@
 pragma solidity 0.7.5;
 
 interface ITeller {
-    function newBond( 
-        address _bonder, 
+    function newBond(
+        address _bonder,
         address _principal,
-        uint _principalPaid,
-        uint _payout, 
-        uint _vesting,
-        uint _fid 
-    ) external returns ( uint );
+        uint256 _principalPaid,
+        uint256 _payout,
+        uint256 _expires,
+        address _feo
+    ) external onlyDepository returns (uint256 index_);
 
     function redeem( 
-        address _bonder, 
-        address _recipient, 
-        uint[] calldata indexes 
-    ) public returns ( uint );
+        address _bonder,
+        uint256[] calldata indexes 
+    ) public returns ( uint256 );
 
     function pendingFor( 
         address _bonder,
-        uint _index
-    ) public view returns ( uint );
+        uint256 _index
+    ) public view returns ( uint256 );
 }
