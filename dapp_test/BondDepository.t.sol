@@ -64,6 +64,18 @@ contract BondDepositoryTest is DSTest {
     //        }
     //    }
 
+    function test_vaultOwned() public {
+        ohm.setVault(address(0x0));
+        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        uint256 initialDebt = 0;
+        uint256 ohmMintAmount = 10 * 10 ** 18;
+        try this.createBond_deposit(2763957476737854671246564045522737104576123858413359401, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+            fail();
+        } catch Error(string memory error) {
+            assertEq("VaultOwned: caller is not the Vault", error);
+        }
+    }
+
     function test_createBond_mulDiv() public {
         OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
