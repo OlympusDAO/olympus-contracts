@@ -160,10 +160,9 @@ contract BondDepositoryTest is DSTest {
 
         MockContract token1 = new MockContract();
         // See https://docs.soliditylang.org/en/latest/units-and-global-variables.html?highlight=abi.encode
-        token1.givenMethodReturn(abi.encodeWithSignature("name()"), abi.encode("ABC DAO"));
-        token1.givenMethodReturn(abi.encodeWithSignature("symbol()"), abi.encode("ABC"));
-        token1.givenMethodReturnUint(abi.encodeWithSignature("decimals()"), 18);
-        token1.givenMethodReturn(abi.encodeWithSignature("symbol()"), abi.encode("ABC"));
+        token1.givenMethodReturn(abi.encodeWithSelector(ERC20.name.selector), abi.encode("ABC DAO"));
+        token1.givenMethodReturn(abi.encodeWithSelector(ERC20.symbol.selector), abi.encode("ABC"));
+        token1.givenMethodReturnUint(abi.encodeWithSelector(ERC20.decimals.selector), 18);
 
         //TODO cannot mock the SafeERC20's usage of address(token).functionCall
         //        bytes memory returndata = bytes(true)
@@ -176,12 +175,12 @@ contract BondDepositoryTest is DSTest {
         //        log_named_uint("mock returndata.length: ", returndata.length);
 
         MockContract pair = new MockContract();
-        pair.givenMethodReturn(abi.encodeWithSignature("name()"), abi.encode("MockUniswapPair"));
-        pair.givenMethodReturn(abi.encodeWithSignature("symbol()"), abi.encode("MOCK"));
-        pair.givenMethodReturnUint(abi.encodeWithSignature("decimals()"), 18);
-        pair.givenMethodReturnAddress(abi.encodeWithSignature("token0()"), address(ohm));
-        pair.givenMethodReturnAddress(abi.encodeWithSignature("token1()"), address(token1));
-        pair.givenMethodReturn(abi.encodeWithSignature("getReserves()"),
+        pair.givenMethodReturn(abi.encodeWithSelector(ERC20.name.selector), abi.encode("MockUniswapPair"));
+        pair.givenMethodReturn(abi.encodeWithSelector(ERC20.symbol.selector), abi.encode("MOCK"));
+        pair.givenMethodReturnUint(abi.encodeWithSelector(ERC20.decimals.selector), 18);
+        pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token0.selector), address(ohm));
+        pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token1.selector), address(token1));
+        pair.givenMethodReturn(abi.encodeWithSelector(IUniswapV2Pair.getReserves.selector),
             abi.encode(uint112(5 * 10 ** 9), uint112(10 * 10 ** 9), uint32(0)));
 
         uint256 bondId = bondDepository.addBond(address(pair), address(bondingCalculator), capacity, capacityIsPayout);
