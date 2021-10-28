@@ -113,10 +113,10 @@ library SafeMath {
     }
 
     // Only used in the  BondingCalculator.sol
-    function sqrrt(uint256 a) internal pure returns (uint c) {
+    function sqrrt(uint256 a) internal pure returns (uint256 c) {
         if (a > 3) {
             c = a;
-            uint b = add( div( a, 2), 1 );
+            uint256 b = add( div( a, 2), 1 );
             while (b < c) {
                 c = b;
                 b = div( add( div( a, b ), b), 2 );

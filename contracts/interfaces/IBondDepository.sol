@@ -3,19 +3,19 @@ pragma solidity 0.7.5;
 
 interface IBondDepository {
 
-    function deposit( 
-        uint _amount, 
-        uint _maxPrice,
+    function deposit(
+        uint256 _amount,
+        uint256 _maxPrice,
         address _depositor,
-        uint _BID,
-        uint _FID
-    ) external returns ( uint, uint );
+        uint256 _BID,
+        address _feo
+    ) external returns (uint256, uint256);
 
-    function bondTypeInfo( uint _BID ) external view returns (
+    function bondTypeInfo( uint256 _BID ) external view returns (
         address principal_,
         address calculator_,
         bool isLiquidityBond_,
-        uint totalDebt_,
-        uint lastBondCreatedAt_
+        uint256 totalDebt_,
+        uint256 lastBondCreatedAt_
     );
 }

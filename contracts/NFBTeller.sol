@@ -9,7 +9,7 @@ import "./libraries/NonFungibleToken.sol";
 import "./libraries/SafeERC20.sol";
 
 // @author Dionysus
-contract NonFungibleBondTeller is NonFungibleToken("Olympus Bond", "BOND") {
+contract NonFungibleBondTeller is NonFungibleToken("Olympus Bond", "NFB") {
 
     using SafeERC20 for IERC20;
 
@@ -25,17 +25,17 @@ contract NonFungibleBondTeller is NonFungibleToken("Olympus Bond", "BOND") {
     IBondDepository public depository;
 
     // Total amount of NFB's minted cumulativly
-    uint public totalNFBs;
+    uint256 public totalNFBs;
 
     // NFB ID => Bond Index ID
-    mapping ( uint => uint ) public NFBToIndex;
+    mapping ( uint256 => uint256 ) public NFBToIndex;
 
 
     /////////////// events ///////////////
 
-    event BondMinted ( uint amount, uint maxPrice, address depositor, uint tokenId, uint index );
+    event BondMinted ( uint256 amount, uint256 maxPrice, address depositor, uint256 tokenId, uint256 index );
 
-    event BondReemed ( address owner, uint dues );
+    event BondReemed ( address owner, uint256 dues );
     
     
     /////////////// construction ///////////////
@@ -55,20 +55,20 @@ contract NonFungibleBondTeller is NonFungibleToken("Olympus Bond", "BOND") {
 
     /**
      * @notice deposit bond
-     * @param _amount uint
-     * @param _maxPrice uint
+     * @param _amount uint256
+     * @param _maxPrice uint256
      * @param _depositor address
-     * @param _BID uint
-     * @param _FID uint
-     * @return uint
+     * @param _BID uint256
+     * @param _FID uint256
+     * @return uint256
      */
     function deposit(
-        uint _amount, 
-        uint _maxPrice,
+        uint256 _amount, 
+        uint256 _maxPrice,
         address _depositor,
-        uint _BID,
-        uint _FID
-    ) external returns ( uint payout, uint tokenId, uint index ) {
+        uint256 _BID,
+        uint256 _FID
+    ) external returns ( uint256 payout, uint256 tokenId, uint256 index ) {
         // fetch what principal is being used
         ( address principal, ) = depository.bondTypeInfo( _BID );
         // transfer users principal to this contract
@@ -88,13 +88,13 @@ contract NonFungibleBondTeller is NonFungibleToken("Olympus Bond", "BOND") {
 
     /** 
      *  @notice redeem bond
-     *  @param tokenIds uint[]
+     *  @param tokenIds uint256[]
      *  @return total dues
      */
     function redeem( 
-        uint[] calldata tokenIds
-    ) external returns ( uint dues ) {
-        for (uint i; i < tokenIds.length; i++) {
+        uint256[] calldata tokenIds
+    ) external returns ( uint256 dues ) {
+        for (uint256 i; i < tokenIds.length; i++) {
             // make sure the tokens exist, and caller is the owner
             require( _exists( i ) &&  msg.sender == ownerOf[ i ], "You're not the owner" );
             // if remaining payout is 0 burn the bond
