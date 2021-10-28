@@ -94,7 +94,6 @@ contract YieldDirector is Ownable, IYieldDirector {
         require(_recipient != address(0), "Invalid recipient address");
         require(IERC20(sOHM).balanceOf(msg.sender) >= _amount, "Not enough sOHM");
 
-        // Transfer sOHM to this contract
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), _amount);
 
         // Record donors's issued debt to recipient address

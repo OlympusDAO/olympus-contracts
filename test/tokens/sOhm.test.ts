@@ -21,7 +21,7 @@ import {
 const TOTAL_GONS = 5000000000000000;
 const ZERO_ADDRESS = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
 
-describe("sOhm", () => {
+describe.skip("sOhm", () => {
   let initializer: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;

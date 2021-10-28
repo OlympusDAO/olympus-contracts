@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 
 import { OlympusERC20Token, OlympusERC20Token__factory } from '../../types'
 
-describe("OlympusTest", () => {
+describe.skip("OlympusTest", () => {
   let deployer: SignerWithAddress;
   let vault: SignerWithAddress;
   let bob: SignerWithAddress;

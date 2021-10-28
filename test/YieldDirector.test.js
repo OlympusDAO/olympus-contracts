@@ -47,7 +47,7 @@ describe('YieldDirector', async () => {
         stakingFactory = await ethers.getContractFactory('OlympusStaking');
         ohmFactory = await ethers.getContractFactory('OlympusERC20Token');
         sOhmFactory = await ethers.getContractFactory('sOlympus');
-        //stakingHelperFactory = await ethers.getContractFactory('StakingHelper');
+        gOhmFactory = await ethers.getContractFactory('gOHM');
         warmupFactory = await ethers.getContractFactory('StakingWarmup');
         treasuryFactory = await ethers.getContractFactory('OlympusTreasury');
         distributorFactory = await ethers.getContractFactory('Distributor');
@@ -65,6 +65,7 @@ describe('YieldDirector', async () => {
         ohm = await ohmFactory.deploy();
         sOhm = await sOhmFactory.deploy();
         staking = await stakingFactory.deploy(ohm.address, sOhm.address, "10", "1", "9");
+        gOhm = await gOhmFactory.deploy(sOhm.address, staking.address);
         treasury = await treasuryFactory.deploy(ohm.address, "0");
         distributor = await distributorFactory.deploy(treasury.address, ohm.address, "10", "1");
         warmup = await warmupFactory.deploy(staking.address, sOhm.address);
@@ -75,6 +76,7 @@ describe('YieldDirector', async () => {
         // Needed for treasury deposit
         await dai.mint(deployer.address, initialMint);
         await dai.approve(treasury.address, LARGE_APPROVAL);
+        await sOhm.setgOHM(gOhm.address);
 
         // Needed to spend deployer's OHM
         await ohm.approve(staking.address, LARGE_APPROVAL);
@@ -100,18 +102,20 @@ describe('YieldDirector', async () => {
         // queue and toggle liquidity depositor
         await treasury.queueTimelock('4', deployer.address, ZERO_ADDRESS);
         await treasury.execute('2');
+        // queue and toggle DAI as reserve token
+        await treasury.queueTimelock('2', dai.address, ZERO_ADDRESS);
+        await treasury.execute('3');
 
         // Deposit 10,000 DAI to treasury, 1,000 OHM gets minted to deployer with 9000 as excess reserves (ready to be minted)
-        await treasury.deposit('10000000000000000000000', dai.address, '9000000000000');
+        await treasury.connect(deployer).deposit('10000000000000000000000', dai.address, '9000000000000');
 
         // Add staking as recipient of distributor with a test reward rate
         await distributor.addRecipient(staking.address, initialRewardRate);
 
         // Get sOHM in deployer wallet
         const sohmAmount = "1000000000000"
-        await ohm.approve(stakingHelper.address, sohmAmount);
-        await stakingHelper.stake(sohmAmount);
-        //await staking.stake(sohmAmount, deployer.address, true);
+        await ohm.approve(staking.address, sohmAmount);
+        await staking.stake(sohmAmount, deployer.address, true, true);
 
         // Transfer 100 sOHM to alice for testing
         await sOhm.transfer(alice.address, "100000000000");
