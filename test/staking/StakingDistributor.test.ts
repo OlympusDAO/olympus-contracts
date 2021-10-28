@@ -1,8 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import chai, { expect } from "chai";
 import { ethers } from "hardhat";
-const { BigNumber } = ethers;
-import { deployMockContract } from "ethereum-waffle";
 import { FakeContract, smock } from '@defi-wonderland/smock'
 import {
   IStaking,
