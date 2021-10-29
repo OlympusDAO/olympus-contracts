@@ -7,7 +7,7 @@ async function fork_network(blockNumber = 13377190) {
         params: [
             {
                 forking: {
-                    jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API}`,
+                    jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
                     blockNumber: blockNumber,
                 },
             },
