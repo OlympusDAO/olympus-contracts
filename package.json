@@ -53,7 +53,8 @@
     "test": "hardhat test",
     "gas": "REPORT_GAS=true hardhat test",
     "coverage": "HARDHAT_DEPLOY_FIXTURE=true hardhat coverage",
-    "typechain": "TS_NODE_TRANSPILE_ONLY=true hardhat typechain"
+    "typechain": "TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
+    "fork": "hardhat node"
   },
   "repository": {
     "type": "git",
