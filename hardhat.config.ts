@@ -22,18 +22,12 @@ const chainIds = {
 };
 
 // Ensure that we have all the environment variables we need.
-const mnemonic: string | undefined = process.env.MNEMONIC ? process.env.MNEMONIC : "NO_MNEMONIC";
-//if (!mnemonic) {
-//  throw new Error("Please set your MNEMONIC in a .env file");
-//}
-
-const infuraApiKey: string | undefined = process.env.INFURA_API_KEY ? process.env.INFURA_API_KEY : "NO_INFURA_API_KEY";
-//if (!infuraApiKey) {
-//  throw new Error("Please set your INFURA_API_KEY in a .env file");
-//}
+const mnemonic: string | undefined = process.env.MNEMONIC ?? "NO_MNEMONIC";
+// Make sure node is setup on Alchemy website
+const alchemyApiKey: string | undefined = process.env.ALCHEMY_API_KEY ?? "NO_ALCHEMY_API_KEY";
 
 function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
-  const url: string = "https://" + network + ".infura.io/v3/" + infuraApiKey;
+  const url: string = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
   return {
     accounts: {
       count: 10,
@@ -55,6 +49,9 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      forking: {
+        url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`
+      },
       accounts: {
         mnemonic,
       },
