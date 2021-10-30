@@ -17,48 +17,48 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     const ohm = await deployments.get(Contracts.OHM);
     const sohm = await deployments.get(Contracts.SOHM);
-    const distributor = await deployments.get(Contracts.DISTRIBUTOR);
-
-    // Deploy bonding calc
-    const staking = await deploy(Contracts.OHM_STAKING, {
-        from: deployer.address,
-        args: [ohm.address, sohm.address, epochLengthInBlocks, firstEpochNumber, firstEpochBlock],
-    });
-
     const ohmContract = await hre.ethers.getContractAt<OlympusERC20Token>(
         Contracts.OHM,
         ohm.address,
         deployer
     );
-
+    const distributor = await deployments.get(Contracts.DISTRIBUTOR);
+    const distributorContract = await hre.ethers.getContractAt<Distributor>(
+        Contracts.DISTRIBUTOR,
+        distributor.address,
+        deployer
+    );
     const sohmContract = await hre.ethers.getContractAt<SOlympus>(
         Contracts.SOHM,
         sohm.address,
         deployer
     );
 
+    // Deploy staking contract
+    const staking = await deploy(Contracts.OHM_STAKING, {
+        from: deployer.address,
+        args: [ohm.address, sohm.address, epochLengthInBlocks, firstEpochNumber, firstEpochBlock],
+    });
     const stakingContract = await hre.ethers.getContractAt<OlympusStaking>(
         Contracts.OHM_STAKING,
         staking.address,
         deployer
     );
-
-    const distributorContract = await hre.ethers.getContractAt<Distributor>(
-        Contracts.DISTRIBUTOR,
-        distributor.address,
-        deployer
-    );
-    // // Initialize sOHM and set the index
+    // Initialize sOHM and set the index
     await sohmContract.initialize(staking.address);
-    await sohmContract.setIndex(0);
 
-    // // set distributor contract and (warmup contract doesn't exist anymore)
+    // TODO: different than deployAll.js (uses initialIndex instead of 0)
+    // doing this because the sohm contract has a require(index == 0)
+    // TODO: this is leading to a revert
+    // await sohmContract.setIndex(0);
+
+    // TODO: set distributor contract and warmup (doesn't exist) contract
     await stakingContract.setContract("0", distributor.address);
 
     // Add staking contract as distributor recipient
     await distributorContract.addRecipient(staking.address, initialRewardRate);
 
-    // Approve staking to spend deployer's OHM (TODO: staking helper contact doesn't exist anymore)
+    // TODO: Approve staking and staking helper (doesn't exist anymore) contact to spend deployer's OHM
     await ohmContract.approve(staking.address, largeApproval);
 };
 

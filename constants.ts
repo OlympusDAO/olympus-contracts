@@ -10,6 +10,9 @@ export const enum Contracts {
     BOND_DEPOSITORY = "OlympusBondDepository",
 }
 
+// Initial mint for Frax and DAI (10,000,000)
+export const initialMint = "10000000000000000000000000";
+
 // Initial staking index
 export const initialIndex = "7675210820";
 
