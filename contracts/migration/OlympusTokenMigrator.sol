@@ -78,8 +78,6 @@ contract OlympusTokenMigrator is Ownable {
     IStaking public newStaking;
     IERC20 public newOHM;
 
-    IERC20 public immutable DAI;
-
     bool public ohmMigrated;
     uint256 public immutable timelockLength;
     uint256 public timelockEnd;
@@ -92,7 +90,6 @@ contract OlympusTokenMigrator is Ownable {
         address _oldTreasury,
         address _oldStaking,
         address _oldwsOHM,
-        address _DAI,
         address _sushi,
         address _uni,
         uint256 _timelock
@@ -107,8 +104,6 @@ contract OlympusTokenMigrator is Ownable {
         oldStaking = IStakingV1(_oldStaking);
         require(_oldwsOHM != address(0));
         oldwsOHM = IwsOHM(_oldwsOHM);
-        require(_DAI != address(0));
-        DAI = IERC20(_DAI);
         require(_sushi != address(0));
         sushiRouter = IUniswapV2Router(_sushi);
         require(_uni != address(0));
@@ -169,7 +164,7 @@ contract OlympusTokenMigrator is Ownable {
     /* ========== OWNABLE ========== */
 
     // withdraw backing of migrated OHM
-    function defund() external onlyOwner {
+    function defund(address reserve) external onlyOwner {
         require(ohmMigrated && timelockEnd < block.number && timelockEnd != 0);
         oldwsOHM.unwrap(oldwsOHM.balanceOf(address(this)));
         oldStaking.unstake(oldsOHM.balanceOf(address(this)), false);
@@ -178,8 +173,8 @@ contract OlympusTokenMigrator is Ownable {
 
         oldSupply = oldSupply.sub(balance);
 
-        oldTreasury.withdraw(balance.mul(1e9), address(DAI));
-        DAI.safeTransfer(address(newTreasury), DAI.balanceOf(address(this)));
+        oldTreasury.withdraw(balance.mul(1e9), reserve);
+        IERC20(reserve).safeTransfer(address(newTreasury), IERC20(reserve).balanceOf(address(this)));
 
         emit Defunded(balance);
     }
@@ -201,7 +196,7 @@ contract OlympusTokenMigrator is Ownable {
 
     // call internal migrate token function
     function migrateToken( address token ) external onlyOwner() {
-        _migrateToken(token);
+        _migrateToken(token, false);
     }
 
     /**
@@ -248,7 +243,7 @@ contract OlympusTokenMigrator is Ownable {
 
         gOHM.migrate(_newStaking, _newsOHM); // change gOHM minter
 
-        _migrateToken( _reserve );
+        _migrateToken( _reserve, true );  // will deposit tokens into new treasury so reserves can be accounted for
 
         fund(oldsOHM.circulatingSupply()); // fund with current staked supply for token migration
 
@@ -269,7 +264,7 @@ contract OlympusTokenMigrator is Ownable {
     /**
      *   @notice Migrate token from old treasury to new treasury
      */
-    function _migrateToken( address token ) internal {
+    function _migrateToken( address token, bool deposit ) internal {
         uint256 balance = IERC20(token).balanceOf(address(oldTreasury));
 
         uint256 excessReserves = oldTreasury.excessReserves();
@@ -281,6 +276,11 @@ contract OlympusTokenMigrator is Ownable {
         }
 
         oldTreasury.manage(token, balance);
-        IERC20(token).transfer(address(newTreasury), balance);
+
+        if(deposit) {
+            newTreasury.deposit(balance, token, tokenValue);
+        } else {
+            IERC20(token).transfer(address(newTreasury), balance);
+        }
     }
 }
