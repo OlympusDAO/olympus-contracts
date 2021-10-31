@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-import "./interfaces/ICauldron.sol";
-import "./interfaces/IfToken.sol";
-import "./interfaces/IOwnable.sol";
-import "./interfaces/IStaking.sol";
-import "./interfaces/ITreasury.sol";
-import "./interfaces/IwsOHM.sol";
-import "./interfaces/IERC20.sol";
+import "../interfaces/ICauldron.sol";
+import "../interfaces/IfToken.sol";
+import "../interfaces/IOwnable.sol";
+import "../interfaces/IStaking.sol";
+import "../interfaces/ITreasury.sol";
+import "../interfaces/IwsOHM.sol";
+import "../interfaces/IERC20.sol";
 
-import "./types/Ownable.sol";
-import "./types/SafeERC20.sol";
-import "./types/SafeMath.sol";
-import "./types/Address.sol";
+import "../types/Ownable.sol";
+import "../types/SafeERC20.sol";
+import "../types/SafeMath.sol";
+import "../types/Address.sol";
 
 
 
