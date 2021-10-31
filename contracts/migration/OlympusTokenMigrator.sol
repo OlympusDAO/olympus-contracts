@@ -278,6 +278,7 @@ contract OlympusTokenMigrator is Ownable {
         oldTreasury.manage(token, balance);
 
         if(deposit) {
+            IERC20(token).safeApprove(address(newTreasury), balance);
             newTreasury.deposit(balance, token, tokenValue);
         } else {
             IERC20(token).transfer(address(newTreasury), balance);
