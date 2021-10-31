@@ -69,7 +69,7 @@ describe('YieldDirector', async () => {
         treasury = await treasuryFactory.deploy(ohm.address, "0");
         distributor = await distributorFactory.deploy(treasury.address, ohm.address, "10", "1");
         warmup = await warmupFactory.deploy(staking.address, sOhm.address);
-        tyche = await tycheFactory.deploy(ohm.address, sOhm.address);
+        tyche = await tycheFactory.deploy(sOhm.address);
 
         // Setup for each component
 
@@ -141,7 +141,6 @@ describe('YieldDirector', async () => {
     it('should set token addresses correctly', async () => {
         await tyche.deployed();
 
-        expect(await tyche.OHM()).to.equal(ohm.address);
         expect(await tyche.sOHM()).to.equal(sOhm.address);
     });
 

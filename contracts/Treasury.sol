@@ -13,8 +13,6 @@ import "./interfaces/ITreasury.sol";
 
 import "./types/Ownable.sol";
 
-import "hardhat/console.sol";
-
 contract OlympusTreasury is Ownable, ITreasury {
 
     /* ========== DEPENDENCIES ========== */
@@ -340,9 +338,6 @@ contract OlympusTreasury is Ownable, ITreasury {
         require( !info.nullify, "Action has been nullified" );
         require( !info.executed, "Action has already been executed" );
         require( block.number >= info.timelockEnd, "Timelock not complete" );
-
-        console.log(_index);
-        console.log(info.toPermit);
 
         if ( info.managing == STATUS.SOHM ) { // 9
             sOHM = IERC20( info.toPermit );

@@ -33,7 +33,6 @@ interface IgOHM {
 contract YieldDirector is Ownable, IYieldDirector {
     using SafeERC20 for IERC20;
 
-    address public immutable OHM;
     address public immutable sOHM;
     uint256 public immutable DECIMALS; // Decimals of OHM and sOHM
 
@@ -63,13 +62,10 @@ contract YieldDirector is Ownable, IYieldDirector {
     event EmergencyShutdown(bool active);
 
     constructor (
-        address _OHM, 
         address _sOHM
     ) {
-        require(_OHM != address(0));
         require(_sOHM != address(0));
 
-        OHM = _OHM;
         sOHM = _sOHM;
         DECIMALS = ERC20(_sOHM).decimals();
 
