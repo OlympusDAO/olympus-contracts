@@ -125,9 +125,15 @@ treasury.deposit( address(this), amountToReturn, DAI, treasury.valueOf( DAI, amo
 git submodule update --init --recursive
 ```
 
-3.  Run the following:
+3.  Run the following for all tests:
 
 ```
 dapp test
+```
+
+Can run individual test:
+
+```
+dapp test --match 'BondDepositoryTest'
 ```
 

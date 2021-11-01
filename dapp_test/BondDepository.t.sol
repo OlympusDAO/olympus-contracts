@@ -18,6 +18,7 @@ import "../contracts/interfaces/IERC20Metadata.sol";
 import "../contracts/Treasury.sol";
 import "../contracts/BondDepository.sol";
 import "../lib/mock-contract/contracts/MockContract.sol";
+import "./util/Hevm.sol";
 
 
 contract BondDepositoryTest is DSTest {
@@ -34,7 +35,13 @@ contract BondDepositoryTest is DSTest {
     OlympusERC20Token internal ohm;
     sOlympus internal sohm;
 
+    /// @dev Hevm setup
+    Hevm constant internal hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+
     function setUp() public {
+        // Start at timestamp
+        hevm.warp(0);
+
         ohm = new OlympusERC20Token();
         ohm.setVault(address(this));
         sohm = new sOlympus();
@@ -119,6 +126,9 @@ contract BondDepositoryTest is DSTest {
             assertEq("SafeERC20: ERC20 operation did not succeed", error);
             //TODO use gnosis MockContract, this isn't a real error
         }
+        hevm.warp(10);
+
+
     }
 
     function test_createBond_bondTooLarge() public {
@@ -178,10 +188,10 @@ contract BondDepositoryTest is DSTest {
 
         //TODO cannot mock the SafeERC20's usage of address(token).functionCall
         //        bytes memory returndata = bytes(true)
-//                        token1.givenMethodReturn(abi.encodeWithSignature("transfer(address,uint256)"), abi.encode(true));
-//                        token1.givenCalldataReturn(abi.encodeWithSignature("transfer(address,uint256)", address(treasury), uint256(50000000000000000)), abi.encode(true));
-//        token1.givenMethodReturnBool(abi.encodeWithSignature("transfer(address,uint256)"), true);
-//        token1.givenCalldataReturnBool(abi.encodeWithSignature("transfer(address,uint256)", address(treasury), uint256(50000000000000000)), true);
+        //                        token1.givenMethodReturn(abi.encodeWithSignature("transfer(address,uint256)"), abi.encode(true));
+        //                        token1.givenCalldataReturn(abi.encodeWithSignature("transfer(address,uint256)", address(treasury), uint256(50000000000000000)), abi.encode(true));
+        //        token1.givenMethodReturnBool(abi.encodeWithSignature("transfer(address,uint256)"), true);
+        //        token1.givenCalldataReturnBool(abi.encodeWithSignature("transfer(address,uint256)", address(treasury), uint256(50000000000000000)), true);
         //        log_named_bytes("mock transfer encoded: ", abi.encodeWithSignature("transfer(address,uint256)"));
         //        log_named_bytes("mock transfer encoded: ", abi.encodeWithSignature("transfer(address,uint256)", address(treasury), uint256(50000000000000000)));
         //        log_named_uint("mock returndata.length: ", returndata.length);
