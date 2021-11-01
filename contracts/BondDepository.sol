@@ -145,7 +145,14 @@ contract OlympusBondDepository is Governable, Guardable {
     require(_teller != address(0));
     teller = ITeller(_teller);
   }
-
+    event log_named_address      (string key, address val);
+    event log_named_bytes32      (string key, bytes32 val);
+    event log_named_decimal_int  (string key, int val, uint decimals);
+    event log_named_decimal_uint (string key, uint val, uint decimals);
+    event log_named_int          (string key, int val);
+    event log_named_uint         (string key, uint val);
+    event log_named_bytes        (string key, bytes val);
+    event log_named_string       (string key, string val);
   /* ======== MUTABLE FUNCTIONS ======== */
 
   /**
@@ -191,7 +198,8 @@ contract OlympusBondDepository is Governable, Guardable {
       require(info.capacity >= _amount, "Bond concluded");
       info.capacity = info.capacity.sub(_amount);
     }
-
+      emit log_named_uint("   payout", payout);
+      emit log_named_uint("maxPayout", maxPayout(_BID));
     require(payout >= 10000000, "Bond too small"); // must be > 0.01 OHM ( underflow protection )
     require(payout <= maxPayout(_BID), "Bond too large"); // size protection because there is no slippage
 

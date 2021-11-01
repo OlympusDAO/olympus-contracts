@@ -158,7 +158,7 @@ contract gOHM is IgOHM {
         @param _amount uint
         @return uint
      */
-    function balanceFrom(uint256 _amount) public view override returns (uint256) {
+    function balanceFrom(uint256 _amount) external view override returns (uint256) {
         return _amount.mul(IsOHM(sOHM).index()).div(10**decimals);
     }
 
@@ -167,7 +167,7 @@ contract gOHM is IgOHM {
         @param _amount uint
         @return uint
      */
-    function balanceTo(uint256 _amount) public view override returns (uint256) {
+    function balanceTo(uint256 _amount) external view override returns (uint256) {
         return _amount.mul(10**decimals).div(IsOHM(sOHM).index());
     }
 

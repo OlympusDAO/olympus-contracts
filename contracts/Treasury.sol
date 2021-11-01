@@ -99,9 +99,9 @@ contract OlympusTreasury is Ownable, ITreasury {
         uint256 _profit
     ) external override returns (uint256 send_) {
         if (permissions[STATUS.RESERVETOKEN][_token]) {
-            require(permissions[STATUS.RESERVEDEPOSITOR][msg.sender], "Not approved");
+            require(permissions[STATUS.RESERVEDEPOSITOR][msg.sender], "Not approved A");
         } else if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
-            require(permissions[STATUS.LIQUIDITYDEPOSITOR][msg.sender], "Not approved");
+            require(permissions[STATUS.LIQUIDITYDEPOSITOR][msg.sender], "Not approved B");
         } else {
             require(1 == 0, "neither reserve nor liquidity token"); // guarantee revert
         }
@@ -109,6 +109,11 @@ contract OlympusTreasury is Ownable, ITreasury {
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 value = tokenValue(_token, _amount);
+        emit log_named_uint("value", value);
+        emit log_named_uint("_profit", _profit);
+        emit log_named_address("  treasury", address(this));
+        emit log_named_address("msg.sender", msg.sender);
+        emit log_named_address(" OHM.vault", OHM.vault());
         // mint OHM needed and store amount of rewards for distribution
         send_ = value.sub(_profit);
         OHM.mint(msg.sender, send_);
@@ -276,16 +281,12 @@ contract OlympusTreasury is Ownable, ITreasury {
         address _calculator
     ) external onlyOwner {
         require(onChainGoverned, "OCG Not Enabled: Use queueTimelock");
-        emit log_named_string("enable", "1");
         if (_status == STATUS.SOHM) {
             // 9
-            emit log_named_string("enable", "2");
             sOHM = IERC20(_address);
         } else {
-            emit log_named_string("enable", "3");
             registry[_status].push(_address);
             permissions[_status][_address] = true;
-            emit log_named_address("enabled for address", _address);
 
             if (_status == STATUS.LIQUIDITYTOKEN) {
                 // 5

@@ -64,13 +64,13 @@ contract OlympusStaking is Governable {
     uint public warmupPeriod;
     uint gonsInWarmup;
 
-    
+
 
     /* ========== CONSTRUCTOR ========== */
-    
-    constructor ( 
-        address _OHM, 
-        address _sOHM, 
+
+    constructor (
+        address _OHM,
+        address _sOHM,
         uint _epochLength,
         uint _firstEpochNumber,
         uint _firstEpochBlock
@@ -79,7 +79,7 @@ contract OlympusStaking is Governable {
         OHM = IERC20( _OHM );
         require( _sOHM != address(0) );
         sOHM = IsOHM( _sOHM );
-        
+
         epoch = Epoch({
             length: _epochLength,
             number: _firstEpochNumber,
@@ -88,7 +88,7 @@ contract OlympusStaking is Governable {
         });
     }
 
-    
+
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
@@ -188,7 +188,7 @@ contract OlympusStaking is Governable {
             gOHM.burn( msg.sender, _amount ); // amount was given in gOHM terms
             amount = gOHM.balanceFrom( _amount ); // convert amount to OHM terms
         }
-        
+
         OHM.safeTransfer( msg.sender, amount );
 
         return amount;
@@ -218,16 +218,30 @@ contract OlympusStaking is Governable {
         sOHM.safeTransfer( msg.sender, sBalance_ );
     }
 
+
+    event log_named_address      (string key, address val);
+    event log_named_bytes32      (string key, bytes32 val);
+    event log_named_decimal_int  (string key, int val, uint decimals);
+    event log_named_decimal_uint (string key, uint val, uint decimals);
+    event log_named_int          (string key, int val);
+    event log_named_uint         (string key, uint val);
+    event log_named_bytes        (string key, bytes val);
+    event log_named_string       (string key, string val);
+
     /**
         @notice trigger rebase if epoch over
      */
     function rebase() public {
         if( epoch.endBlock <= block.number ) {
+            log_named_string("staking rebase", "1");
+            log_named_address("sOHM", address(sOHM));
+            log_named_uint("epoch.distribute", epoch.distribute);
+            log_named_uint("epoch.number", epoch.number);
             sOHM.rebase( epoch.distribute, epoch.number );
 
             epoch.endBlock = epoch.endBlock.add( epoch.length );
             epoch.number++;
-            
+
             if ( distributor != address(0) ) {
                 IDistributor( distributor ).distribute();
             }
@@ -304,7 +318,7 @@ contract OlympusStaking is Governable {
             emit gOHMSet( _address );
         }
     }
-    
+
     /**
      * @notice set warmup period for new stakers
      * @param _warmupPeriod uint
