@@ -99,9 +99,9 @@ contract OlympusTreasury is Ownable, ITreasury {
         uint256 _profit
     ) external override returns (uint256 send_) {
         if (permissions[STATUS.RESERVETOKEN][_token]) {
-            require(permissions[STATUS.RESERVEDEPOSITOR][msg.sender], "Not approved A");
+            require(permissions[STATUS.RESERVEDEPOSITOR][msg.sender], "Not approved");
         } else if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
-            require(permissions[STATUS.LIQUIDITYDEPOSITOR][msg.sender], "Not approved B");
+            require(permissions[STATUS.LIQUIDITYDEPOSITOR][msg.sender], "Not approved");
         } else {
             require(1 == 0, "neither reserve nor liquidity token"); // guarantee revert
         }
@@ -109,11 +109,6 @@ contract OlympusTreasury is Ownable, ITreasury {
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 value = tokenValue(_token, _amount);
-        emit log_named_uint("value", value);
-        emit log_named_uint("_profit", _profit);
-        emit log_named_address("  treasury", address(this));
-        emit log_named_address("msg.sender", msg.sender);
-        emit log_named_address(" OHM.vault", OHM.vault());
         // mint OHM needed and store amount of rewards for distribution
         send_ = value.sub(_profit);
         OHM.mint(msg.sender, send_);
@@ -228,16 +223,10 @@ contract OlympusTreasury is Ownable, ITreasury {
         @notice send epoch reward to staking contract
      */
     function mint(address _recipient, uint256 _amount) external override {
-        emit log_named_address("checking perms on msg.sender=", msg.sender);
-        emit log_named_uint("totalReserves:", totalReserves);
-        emit log_named_uint("OHM.totalSupply:", OHM.totalSupply());
-        emit log_named_uint("totalDebt:", totalDebt);
-
         require(permissions[STATUS.REWARDMANAGER][msg.sender], "Not approved");
         require(_amount <= excessReserves(), "Insufficient reserves");
 
         OHM.mint(_recipient, _amount);
-        emit log_named_uint("minted=", _amount);
 
         emit Minted(msg.sender, _recipient, _amount);
     }
@@ -261,14 +250,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         totalReserves = reserves;
         emit ReservesAudited(reserves);
     }
-    event log_named_address      (string key, address val);
-    event log_named_bytes32      (string key, bytes32 val);
-    event log_named_decimal_int  (string key, int val, uint decimals);
-    event log_named_decimal_uint (string key, uint val, uint decimals);
-    event log_named_int          (string key, int val);
-    event log_named_uint         (string key, uint val);
-    event log_named_bytes        (string key, bytes val);
-    event log_named_string       (string key, string val);
+
     /**
      * @notice enable permission from queue
      * @param _status STATUS
