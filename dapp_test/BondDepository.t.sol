@@ -19,6 +19,8 @@ import "../contracts/Treasury.sol";
 import "../contracts/BondDepository.sol";
 import "../lib/mock-contract/contracts/MockContract.sol";
 import "./util/Hevm.sol";
+import "../contracts/BondTeller.sol";
+import "../contracts/governance/gOHM.sol";
 
 
 contract BondDepositoryTest is DSTest {
@@ -31,9 +33,11 @@ contract BondDepositoryTest is DSTest {
     OlympusStaking internal staking;
     OlympusBondingCalculator internal bondingCalculator;
     OlympusTreasury internal treasury;
+    BondTeller internal teller;
 
     OlympusERC20Token internal ohm;
     sOlympus internal sohm;
+    gOHM internal gohm;
 
     /// @dev Hevm setup
     Hevm constant internal hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
@@ -41,16 +45,21 @@ contract BondDepositoryTest is DSTest {
     function setUp() public {
         // Start at timestamp
         hevm.warp(0);
+        hevm.roll(0);
 
         ohm = new OlympusERC20Token();
         ohm.setVault(address(this));
         sohm = new sOlympus();
+        gohm = new gOHM(address(this));
 
         bondingCalculator = new OlympusBondingCalculator(address(ohm));
-        treasury = new OlympusTreasury(address(ohm), 0);
+        treasury = new OlympusTreasury(address(ohm), 1);
 
         staking = new OlympusStaking(address(ohm), address(sohm), 8, 0, 0);
         bondDepository = new OlympusBondDepository(address(ohm), address(treasury));
+
+        teller = new BondTeller(address(bondDepository), address(staking), address(treasury), address(ohm), address(sohm), address(gohm));
+        bondDepository.setTeller(address(teller));
     }
 
     // @dev Do not delete this!  Test driver generates paramters, so used to create our 'normal' tests
@@ -117,16 +126,20 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_bondCreateERC20() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
-        try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
-            fail();
-        } catch Error(string memory error) {
-            assertEq("SafeERC20: ERC20 operation did not succeed", error);
-            //TODO use gnosis MockContract, this isn't a real error
-        }
-        hevm.warp(10);
+
+        treasury.enableOnChainGovernance();
+        hevm.roll(8);
+        //7 day timelock TODO add test where it's not long enough
+        treasury.enableOnChainGovernance();
+        treasury.enable(OlympusTreasury.STATUS.REWARDMANAGER, address(teller), address(bondingCalculator));
+
+//treasury.deposit(10 )
+
+
+        this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt);
 
 
     }
@@ -186,20 +199,14 @@ contract BondDepositoryTest is DSTest {
         token1.givenMethodReturn(abi.encodeWithSelector(ERC20.symbol.selector), abi.encode("ABC"));
         token1.givenMethodReturnUint(abi.encodeWithSelector(ERC20.decimals.selector), 18);
 
-        //TODO cannot mock the SafeERC20's usage of address(token).functionCall
-        //        bytes memory returndata = bytes(true)
-        //                        token1.givenMethodReturn(abi.encodeWithSignature("transfer(address,uint256)"), abi.encode(true));
-        //                        token1.givenCalldataReturn(abi.encodeWithSignature("transfer(address,uint256)", address(treasury), uint256(50000000000000000)), abi.encode(true));
-        //        token1.givenMethodReturnBool(abi.encodeWithSignature("transfer(address,uint256)"), true);
-        //        token1.givenCalldataReturnBool(abi.encodeWithSignature("transfer(address,uint256)", address(treasury), uint256(50000000000000000)), true);
-        //        log_named_bytes("mock transfer encoded: ", abi.encodeWithSignature("transfer(address,uint256)"));
-        //        log_named_bytes("mock transfer encoded: ", abi.encodeWithSignature("transfer(address,uint256)", address(treasury), uint256(50000000000000000)));
-        //        log_named_uint("mock returndata.length: ", returndata.length);
-
         MockContract pair = new MockContract();
+        //this one is wild:  error StateChangeWhileStatic unless we comment out MockContract's call to abi.encodeWithSignature("updateInvocationCount(bytes4,bytes)"
+        pair.givenMethodReturnBool(abi.encodeWithSelector(IERC20.transfer.selector), true);
+
         pair.givenMethodReturn(abi.encodeWithSelector(ERC20.name.selector), abi.encode("MockUniswapPair"));
         pair.givenMethodReturn(abi.encodeWithSelector(ERC20.symbol.selector), abi.encode("MOCK"));
         pair.givenMethodReturnUint(abi.encodeWithSelector(ERC20.decimals.selector), 18);
+
         pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token0.selector), address(ohm));
         pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token1.selector), address(token1));
         pair.givenMethodReturn(abi.encodeWithSelector(IUniswapV2Pair.getReserves.selector),
@@ -210,7 +217,6 @@ contract BondDepositoryTest is DSTest {
 
         address depositor = address(0x1);
         address feo = address(0x2);
-
 
         bondDepository.deposit(amount, 200, depositor, bondId, feo);
     }
