@@ -10,7 +10,7 @@ import "./interfaces/IgOHM.sol";
 import "./interfaces/IsOHM.sol";
 import "./interfaces/IStaking.sol";
 
-contract sOlympus is IsOHM {
+contract sOlympus is IsOHM, ERC20Permit {
 
     /* ========== DEPENDENCIES ========== */
 
@@ -161,7 +161,7 @@ contract sOlympus is IsOHM {
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function transfer( address to, uint256 value ) public override returns (bool) {
+    function transfer( address to, uint256 value ) public override(IERC20, ERC20) returns (bool) {
         uint256 gonValue = value.mul( _gonsPerFragment );
         _gonBalances[ msg.sender ] = _gonBalances[ msg.sender ].sub( gonValue );
         _gonBalances[ to ] = _gonBalances[ to ].add( gonValue );
@@ -169,7 +169,7 @@ contract sOlympus is IsOHM {
         return true;
     }
 
-    function transferFrom( address from, address to, uint256 value ) public override returns (bool) {
+    function transferFrom( address from, address to, uint256 value ) public override(IERC20, ERC20) returns (bool) {
        _allowedValue[ from ][ msg.sender ] = _allowedValue[ from ][ msg.sender ].sub( value );
        emit Approval( from, msg.sender,  _allowedValue[ from ][ msg.sender ] );
 
@@ -180,7 +180,7 @@ contract sOlympus is IsOHM {
         return true;
     }
 
-    function approve( address spender, uint256 value ) public override returns (bool) {
+    function approve( address spender, uint256 value ) public override(IERC20, ERC20) returns (bool) {
          _allowedValue[ msg.sender ][ spender ] = value;
          emit Approval( msg.sender, spender, value );
          return true;
@@ -213,7 +213,7 @@ contract sOlympus is IsOHM {
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    function balanceOf( address who ) public view override returns ( uint256 ) {
+    function balanceOf( address who ) public view override(IERC20, ERC20) returns ( uint256 ) {
         return _gonBalances[ who ].div( _gonsPerFragment );
     }
 
@@ -237,7 +237,7 @@ contract sOlympus is IsOHM {
         return balanceForGons( INDEX );
     }
 
-    function allowance( address owner_, address spender ) public view override returns ( uint256 ) {
+    function allowance( address owner_, address spender ) public view override(IERC20, ERC20) returns ( uint256 ) {
         return _allowedValue[ owner_ ][ spender ];
     }
 }
