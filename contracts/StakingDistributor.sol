@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
-
-import "./libraries/SafeERC20.sol";
-import "./libraries/SafeMath.sol";
+pragma solidity ^0.8.9;
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
@@ -13,14 +10,13 @@ import "./types/Guardable.sol";
 contract Distributor is Governable, Guardable {
     /* ========== DEPENDENCIES ========== */
 
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     /* ====== VARIABLES ====== */
 
-    IERC20 immutable OHM;
-    ITreasury immutable treasury;
-    address immutable staking;
+    IERC20 public immutable OHM;
+    ITreasury public immutable treasury;
+    address public immutable staking;
 
     mapping(uint256 => Adjust) public adjustments;
 
@@ -45,11 +41,12 @@ contract Distributor is Governable, Guardable {
         address _ohm,
         address _staking
     ) {
-        require(_treasury != address(0));
+        require(_treasury != address(0), "Invalid treasury address");
+        require(_ohm != address(0), "Invalid OHM address");
+        require(_staking != address(0), "Invalid staking address");
+
         treasury = ITreasury(_treasury);
-        require(_ohm != address(0));
         OHM = IERC20(_ohm);
-        require(_staking != address(0));
         staking = _staking;
     }
 
@@ -80,14 +77,14 @@ contract Distributor is Governable, Guardable {
         if (adjustment.rate != 0) {
             if (adjustment.add) {
                 // if rate should increase
-                info[_index].rate = info[_index].rate.add(adjustment.rate); // raise rate
+                info[_index].rate = info[_index].rate + adjustment.rate; // raise rate
                 if (info[_index].rate >= adjustment.target) {
                     // if target met
                     adjustments[_index].rate = 0; // turn off adjustment
                 }
             } else {
                 // if rate should decrease
-                info[_index].rate = info[_index].rate.sub(adjustment.rate); // lower rate
+                info[_index].rate = info[_index].rate - adjustment.rate; // lower rate
                 if (info[_index].rate <= adjustment.target) {
                     // if target met
                     adjustments[_index].rate = 0; // turn off adjustment
@@ -104,7 +101,7 @@ contract Distributor is Governable, Guardable {
         @return uint
      */
     function nextRewardAt(uint256 _rate) public view returns (uint256) {
-        return OHM.totalSupply().mul(_rate).div(1000000);
+        return (OHM.totalSupply() * _rate) / 1000000;
     }
 
     /**
@@ -162,9 +159,13 @@ contract Distributor is Governable, Guardable {
         require(msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian");
 
         if (msg.sender == guardian()) {
-            require(_rate <= info[_index].rate.mul(25).div(1000), "Limiter: cannot adjust by >2.5%");
+            require(_rate <= ((info[_index].rate * 25) / 1000), "Limiter: cannot adjust by >2.5%");
         }
 
-        adjustments[_index] = Adjust({add: _add, rate: _rate, target: _target});
+        adjustments[_index] = Adjust({
+            add: _add,
+            rate: _rate,
+            target: _target
+        });
     }
 }
