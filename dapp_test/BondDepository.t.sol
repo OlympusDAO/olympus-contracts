@@ -49,7 +49,7 @@ contract BondDepositoryTest is DSTest {
         hevm.roll(0);
 
         ohm = new OlympusERC20Token();
-//        ohm.setVault(address(this));
+        //        ohm.setVault(address(this));
 
         gohm = new gOHM(address(this));
         sohm = new sOlympus();
@@ -93,110 +93,110 @@ contract BondDepositoryTest is DSTest {
     //        }
     //    }
 
-//    function test_vaultOwned() public {
-//        ohm.setVault(address(0x0));
-//        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
-//        uint256 initialDebt = 0;
-//        uint256 ohmMintAmount = 10 * 10 ** 18;
-//        try this.createBond_deposit(2763957476737854671246564045522737104576123858413359401, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
-//            fail();
-//        } catch Error(string memory error) {
-//            assertEq("VaultOwned: caller is not the Vault", error);
-//        }
-//    }
-//
-//    function test_createBond_mulDiv() public {
-//        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
-//        uint256 initialDebt = 0;
-//        uint256 ohmMintAmount = 10 * 10 ** 18;
-//        try this.createBond_deposit(2763957476737854671246564045522737104576123858413359401, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
-//            fail();
-//        } catch Error(string memory error) {
-//            assertEq("FullMath::mulDiv: overflow", error);
-//        }
-//    }
-//
-//    function test_createBond_mulOverflow() public {
-//        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
-//        uint256 initialDebt = 0;
-//        uint256 ohmMintAmount = 10 * 10 ** 18;
-//        try this.createBond_deposit(75002556493819725874826918455844256653204641352000021311689657671948594686325, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
-//            fail();
-//        } catch Error(string memory error) {
-//            assertEq("SafeMath: multiplication overflow", error);
-//        }
-//    }
-//
-//    function test_createBond_fixedPointFractionOverflow() public {
-//        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
-//        uint256 initialDebt = 0;
-//        uint256 ohmMintAmount = 10 * 10 ** 18;
-//        try this.createBond_deposit(5136935571488474593545398400365374838660649282530, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
-//            fail();
-//        } catch Error(string memory error) {
-//            assertEq("FixedPoint::fraction: overflow", error);
-//        }
-//    }
+    //    function test_vaultOwned() public {
+    //        ohm.setVault(address(0x0));
+    //        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+    //        uint256 initialDebt = 0;
+    //        uint256 ohmMintAmount = 10 * 10 ** 18;
+    //        try this.createBond_deposit(2763957476737854671246564045522737104576123858413359401, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+    //            fail();
+    //        } catch Error(string memory error) {
+    //            assertEq("VaultOwned: caller is not the Vault", error);
+    //        }
+    //    }
+    //
+    //    function test_createBond_mulDiv() public {
+    //        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+    //        uint256 initialDebt = 0;
+    //        uint256 ohmMintAmount = 10 * 10 ** 18;
+    //        try this.createBond_deposit(2763957476737854671246564045522737104576123858413359401, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+    //            fail();
+    //        } catch Error(string memory error) {
+    //            assertEq("FullMath::mulDiv: overflow", error);
+    //        }
+    //    }
+    //
+    //    function test_createBond_mulOverflow() public {
+    //        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+    //        uint256 initialDebt = 0;
+    //        uint256 ohmMintAmount = 10 * 10 ** 18;
+    //        try this.createBond_deposit(75002556493819725874826918455844256653204641352000021311689657671948594686325, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+    //            fail();
+    //        } catch Error(string memory error) {
+    //            assertEq("SafeMath: multiplication overflow", error);
+    //        }
+    //    }
+    //
+    //    function test_createBond_fixedPointFractionOverflow() public {
+    //        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+    //        uint256 initialDebt = 0;
+    //        uint256 ohmMintAmount = 10 * 10 ** 18;
+    //        try this.createBond_deposit(5136935571488474593545398400365374838660649282530, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+    //            fail();
+    //        } catch Error(string memory error) {
+    //            assertEq("FixedPoint::fraction: overflow", error);
+    //        }
+    //    }
 
     function test_createBond_happyPath() public {
         OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 10000, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 11 * 10 ** 18;
 
-//        treasury.enableOnChainGovernance();
-//        hevm.roll(8);
-//        //7 day timelock TODO add test where it's not long enough
-//        treasury.enableOnChainGovernance();
-//        treasury.enable(OlympusTreasury.STATUS.REWARDMANAGER, address(teller), address(bondingCalculator));
-//
-//        treasury.enable(OlympusTreasury.STATUS.RESERVETOKEN, address(abcToken), address(bondingCalculator));
-//        treasury.enable(OlympusTreasury.STATUS.RESERVEDEPOSITOR, address(this), address(bondingCalculator));
-//
-//        ohm.setVault(address(treasury));
-//
-//        abcToken.givenMethodReturnBool(abi.encodeWithSelector(IERC20.transferFrom.selector), true);
-//
-//        treasury.deposit(11 * 10 ** 18, address(abcToken), 1 * 10 ** 9);
+        //        treasury.enableOnChainGovernance();
+        //        hevm.roll(8);
+        //        //7 day timelock TODO add test where it's not long enough
+        //        treasury.enableOnChainGovernance();
+        //        treasury.enable(OlympusTreasury.STATUS.REWARDMANAGER, address(teller), address(bondingCalculator));
+        //
+        //        treasury.enable(OlympusTreasury.STATUS.RESERVETOKEN, address(abcToken), address(bondingCalculator));
+        //        treasury.enable(OlympusTreasury.STATUS.RESERVEDEPOSITOR, address(this), address(bondingCalculator));
+        //
+        //        ohm.setVault(address(treasury));
+        //
+        //        abcToken.givenMethodReturnBool(abi.encodeWithSelector(IERC20.transferFrom.selector), true);
+        //
+        //        treasury.deposit(11 * 10 ** 18, address(abcToken), 1 * 10 ** 9);
 
 
         this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt);
 
 
     }
-//
-//    function test_createBond_bondTooLarge() public {
-//        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
-//        uint256 initialDebt = 0;
-//        uint256 ohmMintAmount = 10 * 10 ** 9;
-//        try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
-//            fail();
-//        } catch Error(string memory error) {
-//            assertEq("Bond too large", error);
-//        }
-//    }
-//
-//    function test_createBond_zeroAmount() public {
-//        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
-//        uint256 initialDebt = 0;
-//        uint256 ohmMintAmount = 10 * 10 ** 18;
-//
-//        try this.createBond_deposit(0, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
-//            fail();
-//        } catch Error(string memory error) {
-//            assertEq("Bond too small", error);
-//        }
-//    }
-//
-//    function test_createBond_bondConcluded() public {
-//        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
-//        uint256 initialDebt = 0;
-//        uint256 ohmMintAmount = 10 * 10 ** 18;
-//        try this.createBond_deposit(5 * 10 ** 25, ohmMintAmount, false, 1 * 10 ** 20, terms, initialDebt){
-//            fail();
-//        } catch Error(string memory error) {
-//            assertEq("Bond concluded", error);
-//        }
-//    }
+    //
+    //    function test_createBond_bondTooLarge() public {
+    //        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+    //        uint256 initialDebt = 0;
+    //        uint256 ohmMintAmount = 10 * 10 ** 9;
+    //        try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+    //            fail();
+    //        } catch Error(string memory error) {
+    //            assertEq("Bond too large", error);
+    //        }
+    //    }
+    //
+    //    function test_createBond_zeroAmount() public {
+    //        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+    //        uint256 initialDebt = 0;
+    //        uint256 ohmMintAmount = 10 * 10 ** 18;
+    //
+    //        try this.createBond_deposit(0, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+    //            fail();
+    //        } catch Error(string memory error) {
+    //            assertEq("Bond too small", error);
+    //        }
+    //    }
+    //
+    //    function test_createBond_bondConcluded() public {
+    //        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+    //        uint256 initialDebt = 0;
+    //        uint256 ohmMintAmount = 10 * 10 ** 18;
+    //        try this.createBond_deposit(5 * 10 ** 25, ohmMintAmount, false, 1 * 10 ** 20, terms, initialDebt){
+    //            fail();
+    //        } catch Error(string memory error) {
+    //            assertEq("Bond concluded", error);
+    //        }
+    //    }
 
     function createBond_deposit(
         uint256 amount,
@@ -211,9 +211,10 @@ contract BondDepositoryTest is DSTest {
         log_named_uint("capacityIsPayout", capacityIsPayout ? 1 : 0);
         log_named_uint("capacity", capacity);
 
-//        ohm.mint(address(this), ohmMintAmount);
+        //        ohm.mint(address(this), ohmMintAmount);
         treasury.enableOnChainGovernance();
-        hevm.roll(8);
+        uint currentBlock = 8;
+        hevm.roll(currentBlock);
         //7 day timelock TODO add test where it's not long enough
         treasury.enableOnChainGovernance();
         treasury.enable(OlympusTreasury.STATUS.REWARDMANAGER, address(teller), address(bondingCalculator));
@@ -247,10 +248,34 @@ contract BondDepositoryTest is DSTest {
         address feo = address(0x2);
 
         (uint256 payout, uint256 index) = bondDepository.deposit(amount, 200, depositor, bondId, feo);
-        log_named_uint("payout", payout);
-        log_named_uint("index", index);
-
         assertEq(5 * 10 ** 7, payout);
         assertEq(0, index);
+
+        (address principal, address calculator, uint256 totalDebt, uint256 lastBondCreatedAt) = bondDepository.bondInfo(bondId);
+        assertEq(address(pair), principal);
+        assertEq(address(bondingCalculator), calculator);
+        assertEq(5 * 10 ** 7, totalDebt);
+        assertEq(currentBlock, lastBondCreatedAt);
+
+        uint256 maxPayout = bondDepository.maxPayout(bondId);
+        assertEq(1005000000, maxPayout);
+
+        uint256 payoutFor = bondDepository.payoutFor(1 * 10 ** 20, bondId);
+        assertEq(100000000000000012105, payoutFor);
+
+        uint256 payoutForAmount = bondDepository.payoutForAmount(1 * 10 ** 20, bondId);
+        assertEq(100000000000, payoutForAmount);
+
+//        uint256 bondPrice = bondDepository.bondPrice(bondId);
+//        uint256 bondPriceUSD = bondDepository.bondPriceInUSD(bondId);
+//        uint256 debtRatio = bondDepository.debtRatio(bondId);
+//        uint256 standardizedDebtRatio = bondDepository.standardizedDebtRatio(bondId);
+//        uint256 currentDebt = bondDepository.currentDebt(bondId);
+//        log_named_uint("bondPrice", bondPrice);
+//        log_named_uint("bondPriceUSD", bondPriceUSD);
+//        log_named_uint("debtRatio", debtRatio);
+//        log_named_uint("standardizedDebtRatio", standardizedDebtRatio);
+//        log_named_uint("currentDebt", currentDebt);
+
     }
 }
