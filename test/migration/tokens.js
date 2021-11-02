@@ -55,6 +55,90 @@ const treasury_tokens = [
         abi: dai_abi,
         isReserve: true,
     },
+    // TODO: xSUSHI
+    // {
+    //     name: "xsushi",
+    //     address: "0x8798249c2e607446efb7ad49ec89dd1865ff4272",
+    //     abi: xsushi_abi,
+    //     isReserve: false,
+    // }
+    // TODO: SPELL
+    // {
+    //     name: "spell",
+    //     address: "0x090185f2135308bad17527004364ebcc2d37e5f6",
+    //     abi: spell_abi,
+    //     isReserve: false,
+    // }
+    // TODO: CVX
+    // {
+    //     name: "cvx",
+    //     address: "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b",
+    //     abi: cvx_abi,
+    //     isReserve: false,
+    // }
+    // TODO: ALCX
+    // {
+    //     name: "alcx",
+    //     address: "0xdbdb4d16eda451d0503b854cf79d55697f90c8df",
+    //     abi: alcx_abi,
+    //     isReserve: false,
+    // }
+    // TODO: FXS
+    // {
+    //     name: "fxs",
+    //     address: "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0",
+    //     abi: fxs_abi,
+    //     isReserve: false,
+    // }
+    // TODO: CRV
+    // {
+    //     name: "crv",
+    //     address: "0xd533a949740bb3306d119cc777fa900ba034cd52",
+    //     abi: crv_abi,
+    //     isReserve: false,
+    // }
+    // TODO: PENDLE
+    // {
+    //     name: "pendle",
+    //     address: "0x808507121b80c02388fad14726482e061b8da827",
+    //     abi: pendle_abi,
+    //     isReserve: false,
+    // }
+    // TODO: BANK
+    // {
+    //     name: "bank",
+    //     address: "0x24a6a37576377f63f194caa5f518a60f45b42921",
+    //     abi: bank_abi,
+    //     isReserve: false,
+    // }
+    // TODO: XRUNE
+    // {
+    //     name: "xrune",
+    //     address: "0x69fa0fee221ad11012bab0fdb45d444d3d2ce71c",
+    //     abi: xrune_abi,
+    //     isReserve: false,
+    // }
+    // TODO: FOX
+    // {
+    //     name: "fox",
+    //     address: "0xc770eefad204b5180df6a14ee197d99d808ee52d",
+    //     abi: fox_abi,
+    //     isReserve: false,
+    // }
+    // TODO: SYN
+    // {
+    //     name: "syn",
+    //     address: "0x0f2d719407fdbeff09d87557abb7232601fd9f29",
+    //     abi: syn_abi,
+    //     isReserve: false,
+    // }
+    // TODO: INV
+    // {
+    //     name: "inv",
+    //     address: "0x41d5d79431a913c4ae7d69a668ecdfe5ff9dfb68",
+    //     abi: inv_abi,
+    //     isReserve: false,
+    // }
 ];
 
 const olympus_tokens = [

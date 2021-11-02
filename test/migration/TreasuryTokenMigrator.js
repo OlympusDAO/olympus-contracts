@@ -29,7 +29,7 @@ const is_sushi_lp = olympus_lp_tokens.map((lp_token) => lp_token.is_sushi);
 const lp_token_addresses = olympus_lp_tokens.map((lp_token) => lp_token.address);
 
 // TODO currently skipped
-describe.skip("Treasury Token Migration", async () => {
+describe("Treasury Token Migration", async () => {
     let deployer,
         user1,
         manager,
@@ -42,7 +42,8 @@ describe.skip("Treasury Token Migration", async () => {
         newTreasury,
         newStaking;
 
-    before(async () => {
+    before(async function () {
+        this.timeout(0); // disable timeout
         await fork_network(13487643);
         [deployer, user1] = await ethers.getSigners();
 
@@ -65,7 +66,6 @@ describe.skip("Treasury Token Migration", async () => {
             OLD_TREASURY_ADDRESS,
             OLD_STAKING_ADDRESS,
             OLD_WSOHM_ADDRESS,
-            DAI_ADDRESS,
             SUSHI_ROUTER,
             UNISWAP_ROUTER,
             1 // timelock for defunds
@@ -153,18 +153,17 @@ describe.skip("Treasury Token Migration", async () => {
     });
 
     it("Should fail if sender is not DAO", async () => {
+        let token = treasury_tokens[0];
         await expect(
-            olympusTokenMigrator.connect(user1).addTokens(tokenAddresses, reserveToken)
+            olympusTokenMigrator.connect(user1).migrateToken(token.address)
         ).to.revertedWith("Ownable: caller is not the owner");
+
+        let lpToken = olympus_lp_tokens[0];
 
         await expect(
             olympusTokenMigrator
                 .connect(user1)
-                .addLPTokens(lp_token_addresses, lp_token_0, lp_token_1, is_sushi_lp)
-        ).to.revertedWith("Ownable: caller is not the owner");
-
-        await expect(
-            olympusTokenMigrator.connect(user1).addTokens(tokenAddresses, reserveToken)
+                .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0)
         ).to.revertedWith("Ownable: caller is not the owner");
     });
 
@@ -174,28 +173,6 @@ describe.skip("Treasury Token Migration", async () => {
         await expect(olympusTokenMigrator.connect(user).migrate(1000000, 0)).to.revertedWith(
             "ERC20: transfer amount exceeds balance"
         );
-    });
-
-    it("should fail if token is not equal to reserve token", async () => {
-        await expect(
-            olympusTokenMigrator.connect(deployer).addTokens(tokenAddresses, [true, true, true])
-        ).to.revertedWith("token array lengths do not match");
-
-        await expect(
-            olympusTokenMigrator
-                .connect(deployer)
-                .addLPTokens(lp_token_addresses, lp_token_0, lp_token_1, [true, true])
-        ).to.revertedWith("token array lengths do not match");
-    });
-
-    it("Should allow DAO add tokens", async () => {
-        await olympusTokenMigrator.connect(deployer).addTokens(tokenAddresses, reserveToken);
-    });
-
-    it("Should allow DAO add lp tokens", async () => {
-        await olympusTokenMigrator
-            .connect(deployer)
-            .addLPTokens(lp_token_addresses, lp_token_0, lp_token_1, is_sushi_lp);
     });
 
     it("Should fail if user does not have any of the ohm tokens to bridge back ", async () => {
@@ -304,17 +281,41 @@ describe.skip("Treasury Token Migration", async () => {
             allReserveandLP
         );
 
+        const lusd = treasury_tokens.find(t => t.name === "lusd");
+
         await olympusTokenMigrator
             .connect(deployer)
-            .migrateContracts(newTreasury.address, newStaking.address, ohm.address, sOhm.address);
+            .migrateContracts(newTreasury.address, newStaking.address, ohm.address, sOhm.address, lusd.address);
+
+        await olympus_lp_tokens.forEach(async lpToken => {
+          // console.log("migrating", lpToken.name);
+          await olympusTokenMigrator
+            .connect(deployer)
+            .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0);
+        });
+
+        await treasury_tokens.forEach(async token => {
+          if (token.name !== "lusd" || token.name !== "dai") {
+            // console.log("migrating", token.name);
+            await olympusTokenMigrator
+                .connect(deployer)
+                .migrateToken(token.address);
+          }
+        });
 
         const newLPTokensPromises = [...olympus_lp_tokens].map(async (lpToken) => {
             const asset0Address = lpToken.token0;
             let newLPAddress;
             if (lpToken.is_sushi) {
                 newLPAddress = await sushi_factory_contract.getPair(ohm.address, asset0Address);
+                if (newLPAddress === "0x0000000000000000000000000000000000000000") {
+                  newLPAddress = await sushi_factory_contract.getPair(asset0Address, ohm.address);
+                }
             } else {
                 newLPAddress = await uni_factory_contract.getPair(ohm.address, asset0Address);
+                if (newLPAddress === "0x0000000000000000000000000000000000000000") {
+                  newLPAddress = await uni_factory_contract.getPair(ohm.address, asset0Address);
+                }
             }
             const contract = new ethers.Contract(newLPAddress, lpToken.abi, ethers.provider);
             return {
@@ -422,7 +423,7 @@ describe.skip("Treasury Token Migration", async () => {
 
             await olympusTokenMigrator.connect(deployer).startTimelock();
             await advance(2);
-            await olympusTokenMigrator.connect(deployer).defund();
+            await olympusTokenMigrator.connect(deployer).defund(DAI_ADDRESS);
 
             const v2TreasuryBalanceNew = await dai.contract
                 .connect(deployer)
@@ -515,14 +516,14 @@ async function getTreasuryBalance(deployer, newTreasuryAddress, tokens) {
             .balanceOf(OLD_TREASURY_ADDRESS);
         v1Treasury[tokenName] = v1TreasuryBalance.toString();
         //DEBUG
-        //console.log(`v1Treasury_${tokenName}_balance`, v1TreasuryBalance.toString());
+        // console.log(`v1Treasury_${tokenName}_balance`, v1TreasuryBalance.toString());
 
         const newTreasuryBalance = await tokenContract
             .connect(deployer)
             .balanceOf(newTreasuryAddress);
         v2Treasury[tokenName] = newTreasuryBalance.toString();
         // DEBUG
-        //console.log(`v2treasury_${tokenName}_balance`, newTreasuryBalance.toString());
+        // console.log(`v2treasury_${tokenName}_balance`, newTreasuryBalance.toString());
     }
     return { v1Treasury, v2Treasury };
 }
