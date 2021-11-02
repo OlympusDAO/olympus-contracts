@@ -2,14 +2,14 @@
 
 
 ##  🔧 Setting up Local Development
-Required:
-- [Node v14](https://nodejs.org/download/release/latest-v14.x/)
+Required: 
+- [Node v14](https://nodejs.org/download/release/latest-v14.x/)  
 - [Git](https://git-scm.com/downloads)
 
 
 Local Setup Steps:
-1. git clone https://github.com/OlympusDAO/olympus-contracts.git
-1. Install dependencies: `npm install`
+1. git clone https://github.com/OlympusDAO/olympus-contracts.git 
+1. Install dependencies: `npm install` 
     - Installs [Hardhat](https://hardhat.org/getting-started/) & [OpenZepplin](https://docs.openzeppelin.com/contracts/4.x/) dependencies
 1. Compile Solidity: `npm run compile`
 1. **_TODO_**: How to do local deployments of the contracts.
@@ -34,7 +34,7 @@ Local Setup Steps:
 
 **Bonds**
 - **_TODO_**: What are the requirements for creating a Bond Contract?
-All LP bonds use the Bonding Calculator contract which is used to compute RFV.
+All LP bonds use the Bonding Calculator contract which is used to compute RFV. 
 
 |Contract       | Addresss                                                                                                            | Notes   |
 |:-------------:|:-------------------------------------------------------------------------------------------------------------------:|-------|
@@ -46,8 +46,8 @@ All LP bonds use the Bonding Calculator contract which is used to compute RFV.
 
 **OLD Contracts**:
 
-sOHM: 0x31932e6e45012476ba3a3a4953cba62aee77fbbe
-Vault: 0x886ce997aa9ee4f8c2282e182ab72a705762399d
+sOHM: 0x31932e6e45012476ba3a3a4953cba62aee77fbbe 
+Vault: 0x886ce997aa9ee4f8c2282e182ab72a705762399d 
 Staking (v1): 0x0822f3c03dcc24d200aff33493dc08d0e1f274a2
 
 
@@ -55,16 +55,16 @@ Staking (v1): 0x0822f3c03dcc24d200aff33493dc08d0e1f274a2
 
 Network: `Rinkeby` (4)
 - OHM: `0xC0b491daBf3709Ee5Eb79E603D73289Ca6060932`
-- DAI: `0xB2180448f8945C8Cc8AE9809E67D6bd27d8B2f2C`
+- DAI: `0xB2180448f8945C8Cc8AE9809E67D6bd27d8B2f2C` 
 - Frax: `0x2F7249cb599139e560f0c81c269Ab9b04799E453`
 - Treasury: `0x0d722D813601E48b7DAcb2DF9bae282cFd98c6E7`
 - OHM/DAI Pair: `0x8D5a22Fb6A1840da602E56D1a260E56770e0bCE2`
 - OHM/Frax Pair: `0x11BE404d7853BDE29A3e73237c952EcDCbBA031E`
-- Calc: `0xaDBE4FA3c2fcf36412D618AfCfC519C869400CEB`
-- Staking: `0xC5d3318C0d74a72cD7C55bdf844e24516796BaB2`
-- sOHM: `0x1Fecda1dE7b6951B248C0B62CaeBD5BAbedc2084`
-- Distributor `0x0626D5aD2a230E05Fb94DF035Abbd97F2f839C3a`
-- Staking Warmup `0x43B18Ad2624DBEf474aA8E0c8d8404a0A42b7aC4`
+- Calc: `0xaDBE4FA3c2fcf36412D618AfCfC519C869400CEB` 
+- Staking: `0xC5d3318C0d74a72cD7C55bdf844e24516796BaB2` 
+- sOHM: `0x1Fecda1dE7b6951B248C0B62CaeBD5BAbedc2084` 
+- Distributor `0x0626D5aD2a230E05Fb94DF035Abbd97F2f839C3a` 
+- Staking Warmup `0x43B18Ad2624DBEf474aA8E0c8d8404a0A42b7aC4` 
 - Staking Helper `0xf73f23Bb0edCf4719b12ccEa8638355BF33604A1`
 
 
@@ -117,23 +117,10 @@ treasury.deposit( address(this), amountToReturn, DAI, treasury.valueOf( DAI, amo
 
 ## Dapptools testing
 
-1. Install dapptools https://github.com/dapphub/dapptools
+Install dapptools https://github.com/dapphub/dapptools
 
-2. Perform this git command to ensure the submodules are updated correctly:
-
-```
-git submodule update --init --recursive
-```
-
-3.  Run the following for all tests:
+Run the following:
 
 ```
 dapp test
 ```
-
-Can run individual test:
-
-```
-dapp test --match 'BondDepositoryTest'
-```
-
