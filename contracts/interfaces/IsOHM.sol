@@ -8,11 +8,9 @@ interface IsOHM is IERC20 {
 
     function circulatingSupply() external view returns (uint256);
 
-    function balanceOf(address who) external override view returns (uint256);
-
     function gonsForBalance( uint amount ) external view returns ( uint );
 
     function balanceForGons( uint gons ) external view returns ( uint );
-    
+
     function index() external view returns ( uint );
 }
