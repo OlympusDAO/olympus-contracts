@@ -74,7 +74,7 @@ contract OnsenAllocator is Ownable {
      * @notice harvest Onsen rewards from all pools
      * @param _stake bool
      */
-    function harvest(bool _stake) external override {
+    function harvest(bool _stake) external {
         for (uint256 i = 0; i < pids.length; i++) {
             uint256 pid = pids[i];
             if (pid != 0) {

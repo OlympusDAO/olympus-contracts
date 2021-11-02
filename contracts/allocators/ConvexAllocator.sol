@@ -133,7 +133,7 @@ contract ConvexAllocator is Ownable {
     /**
      *  @notice claims accrued CVX rewards for all tracked crvTokens
      */
-    function harvest() public override {
+    function harvest() public {
         rewardPool.getReward();
 
         for (uint256 i = 0; i < rewardTokens.length; i++) {

@@ -115,7 +115,7 @@ contract AaveAllocator is Ownable {
     /**
      *  @notice claims accrued stkAave rewards for all tracked aTokens
      */
-    function harvest() public override {
+    function harvest() public {
         address _treasury = address(treasury);
         if (depositToTreasury) {
             // claims rewards accrued to treasury
