@@ -4,12 +4,12 @@ pragma solidity ^0.8.9;
 import "./interfaces/IERC20.sol";
 import "./interfaces/IERC2612Permit.sol";
 
-import "./types/ERC20Permit.sol";
+import "./types/ERC20.sol";
 import "./types/Ownable.sol";
 import "./types/VaultOwned.sol";
 
 
-contract OlympusERC20Token is ERC20Permit, VaultOwned {
+contract OlympusERC20Token is ERC20, VaultOwned {
 
     constructor() ERC20("Olympus", "OHM", 9) {}
 

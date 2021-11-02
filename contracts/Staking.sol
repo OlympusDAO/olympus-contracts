@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.8.9;
 
-
-import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
@@ -17,7 +15,6 @@ contract OlympusStaking is Governable {
 
     /* ========== DEPENDENCIES ========== */
 
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IsOHM;
     using SafeERC20 for IgOHM;
@@ -76,8 +73,9 @@ contract OlympusStaking is Governable {
         uint _firstEpochBlock
     ) {
         require( _OHM != address(0) );
-        OHM = IERC20( _OHM );
         require( _sOHM != address(0) );
+
+        OHM = IERC20( _OHM );
         sOHM = IsOHM( _sOHM );
         
         epoch = Epoch({
@@ -115,13 +113,13 @@ contract OlympusStaking is Governable {
             }
 
             warmupInfo[ _recipient ] = Claim ({
-                deposit: info.deposit.add( _amount ),
-                gons: info.gons.add( sOHM.gonsForBalance( _amount ) ),
-                expiry: epoch.number.add( warmupPeriod ),
+                deposit: info.deposit + _amount,
+                gons: info.gons + sOHM.gonsForBalance( _amount ),
+                expiry: epoch.number + warmupPeriod,
                 lock: info.lock
             });
 
-            gonsInWarmup = gonsInWarmup.add( sOHM.gonsForBalance( _amount ) );
+            gonsInWarmup = gonsInWarmup + sOHM.gonsForBalance( _amount );
 
             return _amount;
         }
@@ -142,7 +140,7 @@ contract OlympusStaking is Governable {
         if ( epoch.number >= info.expiry && info.expiry != 0 ) {
             delete warmupInfo[ _recipient ];
 
-            gonsInWarmup = gonsInWarmup.sub( info.gons );
+            gonsInWarmup = gonsInWarmup - info.gons;
 
             return _send( _recipient, sOHM.balanceForGons( info.gons ), _rebasing );
         }
@@ -156,7 +154,7 @@ contract OlympusStaking is Governable {
         Claim memory info = warmupInfo[ msg.sender ];
         delete warmupInfo[ msg.sender ];
 
-        gonsInWarmup = gonsInWarmup.sub( info.gons );
+        gonsInWarmup = gonsInWarmup - info.gons;
 
         OHM.safeTransfer( msg.sender, info.deposit );
 
@@ -225,17 +223,20 @@ contract OlympusStaking is Governable {
         if( epoch.endBlock <= block.number ) {
             sOHM.rebase( epoch.distribute, epoch.number );
 
-            epoch.endBlock = epoch.endBlock.add( epoch.length );
+            epoch.endBlock = epoch.endBlock + epoch.length;
             epoch.number++;
             
             if ( distributor != address(0) ) {
                 IDistributor( distributor ).distribute();
             }
 
-            if( contractBalance() <= totalStaked() ) {
+            uint256 memory balance = contractBalance();
+            uint256 memory staked = totalStaked();
+
+            if( balance <= staked ) {
                 epoch.distribute = 0;
             } else {
-                epoch.distribute = contractBalance().sub( totalStaked() );
+                epoch.distribute = balance - staked;
             }
         }
     }

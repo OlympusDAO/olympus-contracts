@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.7.5;
+pragma solidity ^0.8.9;
 
 import "../libraries/SafeERC20.sol";
-import "../libraries/SafeMath.sol";
 import "../libraries/Address.sol";
 
 import "../interfaces/IERC20.sol";
@@ -15,7 +14,6 @@ contract gOHM is IgOHM {
 
     using SafeERC20 for IERC20;
     using Address for address;
-    using SafeMath for uint256;
 
     /* ========== MODIFIERS ========== */
 
