@@ -196,7 +196,7 @@ contract LUSDAllocator is Ownable {
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
-     *  @notice claims accrued stkAave rewards for all tracked aTokens
+     *  @notice claims LQTY & ETH Rewards
      */
     function harvest() public returns (bool) {
         // TODO need to harvest ETH rewards from LQTY stability pools that are sent to address(this)
@@ -207,7 +207,7 @@ contract LUSDAllocator is Ownable {
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     *  @notice withdraws asset from treasury, deposits asset into lending pool, then deposits aToken into treasury
+     *  @notice withdraws asset from treasury, deposits asset into stability pool
      *  @param token address
      *  @param amount uint
      */
@@ -267,6 +267,12 @@ contract LUSDAllocator is Ownable {
             totalValueDeployed = totalValueDeployed.add(value); // track total value allocated into pools
         } else {
             // track total value allocated into pools
+            if (amount < totalAmountDeployed) {
+                totalAmountDeployed = totalAmountDeployed.sub(amount);
+            } else {
+                totalAmountDeployed = 0;
+            }
+
             if (value < totalValueDeployed) {
                 totalValueDeployed = totalValueDeployed.sub(value);
             } else {
