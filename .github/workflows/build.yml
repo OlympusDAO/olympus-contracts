@@ -30,6 +30,6 @@ jobs:
       - name: install
         run: nix-env -f https://github.com/dapphub/dapptools/archive/master.tar.gz -iA solc-static-versions.solc_0_7_5
       - name: test
-      # They used 'make test' instead which referenced a Makefile https://github.com/centrifuge/tinlake-maker-lib/blob/master/Makefile
-      # I'm not sure if we need that so just doing this instead
-        run: nix-shell --pure --command "dapp test"
+      # 1.  They used 'make test' instead which referenced a Makefile https://github.com/centrifuge/tinlake-maker-lib/blob/master/Makefile   I'm not sure if we need that so just doing this instead
+      # 2.  Had to add 'export LANG=C.UTF-8' as per recommendation from https://stackoverflow.com/questions/63746826/what-might-cause-commitandreleasebuffer-invalid-argument-invalid-character
+        run: nix-shell --pure --command "export LANG=C.UTF-8 ; dapp test"
