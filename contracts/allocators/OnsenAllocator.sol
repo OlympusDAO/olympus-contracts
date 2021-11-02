@@ -30,8 +30,7 @@ interface ISushiBar {
  *  Contract deploys liquidity from treasury into the Onsen program,
  *  earning $SUSHI that can be staked and/or deposited into the treasury.
  */
-
-contract OnsenAllocator is Ownable, IAllocator {
+contract OnsenAllocator is Ownable {
     /* ========== DEPENDENCIES ========== */
 
     using SafeERC20 for IERC20;

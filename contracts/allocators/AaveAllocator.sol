@@ -50,7 +50,7 @@ interface IStakedTokenIncentivesController {
  *  earning interest and $stkAAVE.
  */
 
-contract AaveAllocator is Ownable, IAllocator {
+contract AaveAllocator is Ownable {
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;

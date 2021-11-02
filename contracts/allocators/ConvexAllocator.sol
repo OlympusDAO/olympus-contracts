@@ -70,7 +70,7 @@ interface IConvexRewards {
  *  earning interest and $CVX.
  */
 
-contract ConvexAllocator is Ownable, IAllocator {
+contract ConvexAllocator is Ownable {
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;
