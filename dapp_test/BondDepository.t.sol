@@ -101,7 +101,7 @@ contract BondDepositoryTest is DSTest {
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 11 * 10 ** 18;
 
-        try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+        try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
             fail();
         } catch Error(string memory error) {
             assertEq("VaultOwned: caller is not the Vault", error);
@@ -112,7 +112,7 @@ contract BondDepositoryTest is DSTest {
         OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
-        try this.createBond_deposit(2763957476737854671246564045522737104576123858413359401, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+        try this.createBond_deposit(2763957476737854671246564045522737104576123858413359401, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
             fail();
         } catch Error(string memory error) {
             assertEq("FullMath::mulDiv: overflow", error);
@@ -123,7 +123,7 @@ contract BondDepositoryTest is DSTest {
         OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
-        try this.createBond_deposit(75002556493819725874826918455844256653204641352000021311689657671948594686325, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+        try this.createBond_deposit(75002556493819725874826918455844256653204641352000021311689657671948594686325, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
             fail();
         } catch Error(string memory error) {
             assertEq("SafeMath: multiplication overflow", error);
@@ -134,7 +134,7 @@ contract BondDepositoryTest is DSTest {
         OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
-        try this.createBond_deposit(5136935571488474593545398400365374838660649282530, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+        try this.createBond_deposit(5136935571488474593545398400365374838660649282530, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
             fail();
         } catch Error(string memory error) {
             assertEq("FixedPoint::fraction: overflow", error);
@@ -146,28 +146,37 @@ contract BondDepositoryTest is DSTest {
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 11 * 10 ** 18;
 
-        this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt);
-
-
+        this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9);
     }
 
-    //        function test_createBond_bondTooLarge() public {
-    //            OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
-    //            uint256 initialDebt = 0;
-    //            uint256 ohmMintAmount = 10 * 10 ** 9;
-    //            try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
-    //                fail();
-    //            } catch Error(string memory error) {
-    //                assertEq("Bond too large", error);
-    //            }
-    //        }
+    function test_createBond_insufficientReserves() public {
+        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1 * 10 ** 18, maxDebt : 10});
+        uint256 initialDebt = 0;
+        uint256 ohmMintAmount = 10 * 10 ** 9;
+        try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1){
+            fail();
+        } catch Error(string memory error) {
+            assertEq("Insufficient reserves", error);
+        }
+    }
+
+    function test_createBond_bondTooLarge() public {
+        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1 * 10 ** 9, maxDebt : 10});
+        uint256 initialDebt = 0;
+        uint256 ohmMintAmount = 10 * 10 ** 9;
+        try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1){
+            fail();
+        } catch Error(string memory error) {
+            assertEq("Bond too large", error);
+        }
+    }
 
     function test_createBond_zeroAmount() public {
         OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
 
-        try this.createBond_deposit(0, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt){
+        try this.createBond_deposit(0, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
             fail();
         } catch Error(string memory error) {
             assertEq("Bond too small", error);
@@ -178,7 +187,7 @@ contract BondDepositoryTest is DSTest {
         OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 2, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
-        try this.createBond_deposit(5 * 10 ** 25, ohmMintAmount, false, 1 * 10 ** 20, terms, initialDebt){
+        try this.createBond_deposit(5 * 10 ** 25, ohmMintAmount, false, 1 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
             fail();
         } catch Error(string memory error) {
             assertEq("Bond concluded", error);
@@ -191,7 +200,8 @@ contract BondDepositoryTest is DSTest {
         bool capacityIsPayout,
         uint256 capacity,
         OlympusBondDepository.Terms memory terms,
-        uint256 initialDebt
+        uint256 initialDebt,
+        uint256 profit
     ) external {
         //        log_named_uint("amount", amount);
         //        log_named_uint("ohmMintAmount", treasuryDeposit);
@@ -211,7 +221,7 @@ contract BondDepositoryTest is DSTest {
 
         abcToken.givenMethodReturnBool(abi.encodeWithSelector(IERC20.transferFrom.selector), true);
 
-        treasury.deposit(treasuryDeposit, address(abcToken), 1 * 10 ** 9);
+        treasury.deposit(treasuryDeposit, address(abcToken), profit);
 
         MockContract pair = new MockContract();
         //TODO this one is wild:  error StateChangeWhileStatic unless we comment out MockContract's call to abi.encodeWithSignature("updateInvocationCount(bytes4,bytes)"
