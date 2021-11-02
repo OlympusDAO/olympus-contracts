@@ -206,10 +206,10 @@ contract BondDepositoryTest is DSTest {
         OlympusBondDepository.Terms memory terms,
         uint256 initialDebt
     ) external {
-        log_named_uint("amount", amount);
-        log_named_uint("ohmMintAmount", treasuryDeposit);
-        log_named_uint("capacityIsPayout", capacityIsPayout ? 1 : 0);
-        log_named_uint("capacity", capacity);
+//        log_named_uint("amount", amount);
+//        log_named_uint("ohmMintAmount", treasuryDeposit);
+//        log_named_uint("capacityIsPayout", capacityIsPayout ? 1 : 0);
+//        log_named_uint("capacity", capacity);
 
         //        ohm.mint(address(this), ohmMintAmount);
         treasury.enableOnChainGovernance();
@@ -254,28 +254,18 @@ contract BondDepositoryTest is DSTest {
         (address principal, address calculator, uint256 totalDebt, uint256 lastBondCreatedAt) = bondDepository.bondInfo(bondId);
         assertEq(address(pair), principal);
         assertEq(address(bondingCalculator), calculator);
-        assertEq(5 * 10 ** 7, totalDebt);
+        assertEq(payout, totalDebt);
         assertEq(currentBlock, lastBondCreatedAt);
 
-        uint256 maxPayout = bondDepository.maxPayout(bondId);
-        assertEq(1005000000, maxPayout);
+        assertEq(1005000000, bondDepository.maxPayout(bondId));
+        assertEq(100000000000000012105, bondDepository.payoutFor(1 * 10 ** 20, bondId));
+        assertEq(1 * 10 ** 11, bondDepository.payoutForAmount(1 * 10 ** 20, bondId));
 
-        uint256 payoutFor = bondDepository.payoutFor(1 * 10 ** 20, bondId);
-        assertEq(100000000000000012105, payoutFor);
-
-        uint256 payoutForAmount = bondDepository.payoutForAmount(1 * 10 ** 20, bondId);
-        assertEq(100000000000, payoutForAmount);
-
-//        uint256 bondPrice = bondDepository.bondPrice(bondId);
-//        uint256 bondPriceUSD = bondDepository.bondPriceInUSD(bondId);
-//        uint256 debtRatio = bondDepository.debtRatio(bondId);
-//        uint256 standardizedDebtRatio = bondDepository.standardizedDebtRatio(bondId);
-//        uint256 currentDebt = bondDepository.currentDebt(bondId);
-//        log_named_uint("bondPrice", bondPrice);
-//        log_named_uint("bondPriceUSD", bondPriceUSD);
-//        log_named_uint("debtRatio", debtRatio);
-//        log_named_uint("standardizedDebtRatio", standardizedDebtRatio);
-//        log_named_uint("currentDebt", currentDebt);
+        assertEq(100, bondDepository.bondPrice(bondId));
+        assertEq(44721519100560, bondDepository.bondPriceInUSD(bondId));
+        assertEq(4975124, bondDepository.debtRatio(bondId));
+        assertEq(222495102993, bondDepository.standardizedDebtRatio(bondId));
+        assertEq(payout, bondDepository.currentDebt(bondId));
 
     }
 }
