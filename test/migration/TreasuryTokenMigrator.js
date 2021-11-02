@@ -281,26 +281,30 @@ describe("Treasury Token Migration", async () => {
             allReserveandLP
         );
 
-        const lusd = treasury_tokens.find(t => t.name === "lusd");
+        const lusd = treasury_tokens.find((t) => t.name === "lusd");
 
         await olympusTokenMigrator
             .connect(deployer)
-            .migrateContracts(newTreasury.address, newStaking.address, ohm.address, sOhm.address, lusd.address);
+            .migrateContracts(
+                newTreasury.address,
+                newStaking.address,
+                ohm.address,
+                sOhm.address,
+                lusd.address
+            );
 
-        await olympus_lp_tokens.forEach(async lpToken => {
-          // console.log("migrating", lpToken.name);
-          await olympusTokenMigrator
-            .connect(deployer)
-            .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0);
-        });
-
-        await treasury_tokens.forEach(async token => {
-          if (token.name !== "lusd" || token.name !== "dai") {
-            // console.log("migrating", token.name);
+        await olympus_lp_tokens.forEach(async (lpToken) => {
+            // console.log("migrating", lpToken.name);
             await olympusTokenMigrator
                 .connect(deployer)
-                .migrateToken(token.address);
-          }
+                .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0);
+        });
+
+        await treasury_tokens.forEach(async (token) => {
+            if (token.name !== "lusd" || token.name !== "dai") {
+                // console.log("migrating", token.name);
+                await olympusTokenMigrator.connect(deployer).migrateToken(token.address);
+            }
         });
 
         const newLPTokensPromises = [...olympus_lp_tokens].map(async (lpToken) => {
@@ -309,12 +313,12 @@ describe("Treasury Token Migration", async () => {
             if (lpToken.is_sushi) {
                 newLPAddress = await sushi_factory_contract.getPair(ohm.address, asset0Address);
                 if (newLPAddress === "0x0000000000000000000000000000000000000000") {
-                  newLPAddress = await sushi_factory_contract.getPair(asset0Address, ohm.address);
+                    newLPAddress = await sushi_factory_contract.getPair(asset0Address, ohm.address);
                 }
             } else {
                 newLPAddress = await uni_factory_contract.getPair(ohm.address, asset0Address);
                 if (newLPAddress === "0x0000000000000000000000000000000000000000") {
-                  newLPAddress = await uni_factory_contract.getPair(ohm.address, asset0Address);
+                    newLPAddress = await uni_factory_contract.getPair(ohm.address, asset0Address);
                 }
             }
             const contract = new ethers.Contract(newLPAddress, lpToken.abi, ethers.provider);
