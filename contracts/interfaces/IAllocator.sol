@@ -2,14 +2,6 @@
 pragma solidity 0.7.5;
 
 interface IAllocator {
-    function manage(address _token, uint256 _amount) external;
-
-    function deposit(
-        address _from,
-        uint256 _amount,
-        address _token,
-        uint256 _profit
-    ) external returns (uint256 send_);
-
+    // Should have deposit/withdraw methods (interfaces aren't standardized)
     function harvest() external;
 }

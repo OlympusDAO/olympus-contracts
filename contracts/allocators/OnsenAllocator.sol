@@ -31,7 +31,7 @@ interface ISushiBar {
  *  earning $SUSHI that can be staked and/or deposited into the treasury.
  */
 
-contract OnsenAllocator is Ownable {
+contract OnsenAllocator is Ownable, IAllocator {
     /* ========== DEPENDENCIES ========== */
 
     using SafeERC20 for IERC20;
@@ -75,7 +75,7 @@ contract OnsenAllocator is Ownable {
      * @notice harvest Onsen rewards from all pools
      * @param _stake bool
      */
-    function harvest(bool _stake) external {
+    function harvest(bool _stake) external override {
         for (uint256 i = 0; i < pids.length; i++) {
             uint256 pid = pids[i];
             if (pid != 0) {

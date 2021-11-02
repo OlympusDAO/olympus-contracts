@@ -50,7 +50,7 @@ interface IStakedTokenIncentivesController {
  *  earning interest and $stkAAVE.
  */
 
-contract AaveAllocator is Ownable {
+contract AaveAllocator is Ownable, IAllocator {
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;
@@ -115,7 +115,7 @@ contract AaveAllocator is Ownable {
     /**
      *  @notice claims accrued stkAave rewards for all tracked aTokens
      */
-    function harvest() public {
+    function harvest() public override {
         address _treasury = address(treasury);
         if (depositToTreasury) {
             // claims rewards accrued to treasury

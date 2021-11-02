@@ -70,7 +70,7 @@ interface IConvexRewards {
  *  earning interest and $CVX.
  */
 
-contract ConvexAllocator is Ownable {
+contract ConvexAllocator is Ownable, IAllocator {
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;
@@ -133,7 +133,7 @@ contract ConvexAllocator is Ownable {
     /**
      *  @notice claims accrued CVX rewards for all tracked crvTokens
      */
-    function harvest() public {
+    function harvest() public override {
         rewardPool.getReward();
 
         for (uint256 i = 0; i < rewardTokens.length; i++) {
