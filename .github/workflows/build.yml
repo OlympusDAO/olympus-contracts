@@ -3,8 +3,10 @@
 
 name: "Dapptools CI"
 on:
-    pull_request:
     push:
+        branches: [Version-1.1, Version-2]
+    pull_request:
+        branches: ["*"]
 jobs:
     build:
         strategy:
