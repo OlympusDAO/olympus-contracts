@@ -167,13 +167,18 @@ contract OlympusTokenMigrator is Ownable {
     function defund(address reserve) external onlyOwner {
         require(ohmMigrated && timelockEnd < block.number && timelockEnd != 0);
         oldwsOHM.unwrap(oldwsOHM.balanceOf(address(this)));
-        oldStaking.unstake(oldsOHM.balanceOf(address(this)), false);
+
+        uint256 amountToUnstake = oldsOHM.balanceOf(address(this));
+        oldsOHM.approve(address(oldStaking), amountToUnstake);
+        oldStaking.unstake(amountToUnstake, false);
 
         uint256 balance = oldOHM.balanceOf(address(this));
 
         oldSupply = oldSupply.sub(balance);
 
-        oldTreasury.withdraw(balance.mul(1e9), reserve);
+        uint256 amountToWithdraw = balance.mul(1e9);
+        oldOHM.approve(address(oldTreasury), amountToWithdraw);
+        oldTreasury.withdraw(amountToWithdraw, reserve);
         IERC20(reserve).safeTransfer(address(newTreasury), IERC20(reserve).balanceOf(address(this)));
 
         emit Defunded(balance);

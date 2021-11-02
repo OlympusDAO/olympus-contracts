@@ -318,7 +318,6 @@ describe("Treasury Token Migration", async () => {
                 }
             }
             const contract = new ethers.Contract(newLPAddress, lpToken.abi, ethers.provider);
-            let balance = await contract.connect(deployer).balanceOf(OLD_TREASURY_ADDRESS);
             return {
                 name: lpToken.name,
                 isLP: true,
@@ -382,7 +381,7 @@ describe("Treasury Token Migration", async () => {
         await Promise.all(assertPromises);
     });
 
-    describe.skip("Defund", async () => {
+    describe("Defund", async () => {
         it("Should defund", async () => {
             let dai = treasury_tokens.find((token) => token.name === "dai");
 
