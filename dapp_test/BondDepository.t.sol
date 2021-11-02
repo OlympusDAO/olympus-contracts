@@ -257,14 +257,14 @@ contract BondDepositoryTest is DSTest {
         assertEq(payout, totalDebt);
         assertEq(currentBlock, lastBondCreatedAt);
 
-        assertEq(1005000000, bondDepository.maxPayout(bondId));
-        assertEq(100000000000000012105, bondDepository.payoutFor(1 * 10 ** 20, bondId));
+        assertEq(1_005_000_000, bondDepository.maxPayout(bondId));
+        assertEq(100_000_000_000_000_012_105, bondDepository.payoutFor(1 * 10 ** 20, bondId));
         assertEq(1 * 10 ** 11, bondDepository.payoutForAmount(1 * 10 ** 20, bondId));
 
         assertEq(100, bondDepository.bondPrice(bondId));
-        assertEq(44721519100560, bondDepository.bondPriceInUSD(bondId));
-        assertEq(4975124, bondDepository.debtRatio(bondId));
-        assertEq(222495102993, bondDepository.standardizedDebtRatio(bondId));
+        assertEq(44_721_519_100_560, bondDepository.bondPriceInUSD(bondId));
+        assertEq(4_975_124, bondDepository.debtRatio(bondId));
+        assertEq(222_495_102_993, bondDepository.standardizedDebtRatio(bondId));
         assertEq(payout, bondDepository.currentDebt(bondId));
 
     }
