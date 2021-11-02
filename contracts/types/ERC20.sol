@@ -1,192 +1,122 @@
-// SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity >=0.8.0;
+// SPDX-License-Identifier: AGPL-3.0-or-later
+pragma solidity 0.7.5;
 
-/// @notice Modern and gas efficient ERC20 + EIP-2612 implementation.
-/// @author Modified from Uniswap (https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2ERC20.sol)
-abstract contract ERC20 {
-    /*///////////////////////////////////////////////////////////////
-                                  EVENTS
-    //////////////////////////////////////////////////////////////*/
+import "../libraries/SafeMath.sol";
 
-    event Transfer(address indexed from, address indexed to, uint256 amount);
+import "../interfaces/IERC20.sol";
 
-    event Approval(address indexed owner, address indexed spender, uint256 amount);
 
-    /*///////////////////////////////////////////////////////////////
-                             METADATA STORAGE
-    //////////////////////////////////////////////////////////////*/
+abstract contract ERC20 is IERC20 {
 
-    string public name;
+    using SafeMath for uint256;
 
-    string public symbol;
+    // TODO comment actual hash value.
+    bytes32 constant private ERC20TOKEN_ERC1820_INTERFACE_ID = keccak256( "ERC20Token" );
+    
+    mapping (address => uint256) internal _balances;
 
-    uint8 public immutable decimals;
+    mapping (address => mapping (address => uint256)) internal _allowances;
 
-    /*///////////////////////////////////////////////////////////////
-                              ERC20 STORAGE
-    //////////////////////////////////////////////////////////////*/
+    uint256 internal _totalSupply;
 
-    uint256 public totalSupply;
+    string internal _name;
+    
+    string internal _symbol;
+    
+    uint8 internal _decimals;
 
-    mapping(address => uint256) public balanceOf;
-
-    mapping(address => mapping(address => uint256)) public allowance;
-
-    /*///////////////////////////////////////////////////////////////
-                           EIP-2612 STORAGE
-    //////////////////////////////////////////////////////////////*/
-
-    bytes32 public constant PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-
-    uint256 internal immutable INITIAL_CHAIN_ID;
-
-    bytes32 internal immutable INITIAL_DOMAIN_SEPARATOR;
-
-    mapping(address => uint256) public nonces;
-
-    /*///////////////////////////////////////////////////////////////
-                               CONSTRUCTOR
-    //////////////////////////////////////////////////////////////*/
-
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals
-    ) {
-        name = _name;
-        symbol = _symbol;
-        decimals = _decimals;
-
-        INITIAL_CHAIN_ID = block.chainid;
-        INITIAL_DOMAIN_SEPARATOR = computeDomainSeparator();
+    constructor (string memory name_, string memory symbol_, uint8 decimals_) {
+        _name = name_;
+        _symbol = symbol_;
+        _decimals = decimals_;
     }
 
-    /*///////////////////////////////////////////////////////////////
-                              ERC20 LOGIC
-    //////////////////////////////////////////////////////////////*/
+    function name() public view returns (string memory) {
+        return _name;
+    }
 
-    function approve(address spender, uint256 amount) public virtual returns (bool) {
-        allowance[msg.sender][spender] = amount;
+    function symbol() public view returns (string memory) {
+        return _symbol;
+    }
 
-        emit Approval(msg.sender, spender, amount);
+    function decimals() public view virtual returns (uint8) {
+        return _decimals;
+    }
 
+    function totalSupply() public view override returns (uint256) {
+        return _totalSupply;
+    }
+
+    function balanceOf(address account) public view virtual override returns (uint256) {
+        return _balances[account];
+    }
+
+    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+        _transfer(msg.sender, recipient, amount);
         return true;
     }
 
-    function transfer(address to, uint256 amount) public virtual returns (bool) {
-        balanceOf[msg.sender] -= amount;
+    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+        return _allowances[owner][spender];
+    }
 
-        // This is safe because the sum of all user
-        // balances can't exceed type(uint256).max!
-        unchecked {
-            balanceOf[to] += amount;
-        }
-
-        emit Transfer(msg.sender, to, amount);
-
+    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+        _approve(msg.sender, spender, amount);
         return true;
     }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public virtual returns (bool) {
-        if (allowance[from][msg.sender] != type(uint256).max) {
-            allowance[from][msg.sender] -= amount;
-        }
-
-        balanceOf[from] -= amount;
-
-        // This is safe because the sum of all user
-        // balances can't exceed type(uint256).max!
-        unchecked {
-            balanceOf[to] += amount;
-        }
-
-        emit Transfer(from, to, amount);
-
+    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+        _transfer(sender, recipient, amount);
+        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
     }
 
-    /*///////////////////////////////////////////////////////////////
-                              EIP-2612 LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public virtual {
-        require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
-
-        // This is safe because the only math done is incrementing
-        // the owner's nonce which cannot realistically overflow.
-        unchecked {
-            bytes32 digest = keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR(),
-                    keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner]++, deadline))
-                )
-            );
-
-            address recoveredAddress = ecrecover(digest, v, r, s);
-            require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_PERMIT_SIGNATURE");
-
-            allowance[recoveredAddress][spender] = value;
-        }
-
-        emit Approval(owner, spender, value);
+    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+        _approve(msg.sender, spender, _allowances[msg.sender][spender].add(addedValue));
+        return true;
     }
 
-    function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
-        return block.chainid == INITIAL_CHAIN_ID ? INITIAL_DOMAIN_SEPARATOR : computeDomainSeparator();
+    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+        _approve(msg.sender, spender, _allowances[msg.sender][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
+        return true;
     }
 
-    function computeDomainSeparator() internal view virtual returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                    keccak256(bytes(name)),
-                    keccak256(bytes("1")),
-                    block.chainid,
-                    address(this)
-                )
-            );
+    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");
+
+        _beforeTokenTransfer(sender, recipient, amount);
+
+        _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
+        _balances[recipient] = _balances[recipient].add(amount);
+        emit Transfer(sender, recipient, amount);
     }
 
-    /*///////////////////////////////////////////////////////////////
-                       INTERNAL MINT/BURN LOGIC
-    //////////////////////////////////////////////////////////////*/
-
-    function _mint(address to, uint256 amount) internal virtual {
-        totalSupply += amount;
-
-        // This is safe because the sum of all user
-        // balances can't exceed type(uint256).max!
-        unchecked {
-            balanceOf[to] += amount;
-        }
-
-        emit Transfer(address(0), to, amount);
+    function _mint(address account_, uint256 ammount_) internal virtual {
+        require(account_ != address(0), "ERC20: mint to the zero address");
+        _beforeTokenTransfer(address( this ), account_, ammount_);
+        _totalSupply = _totalSupply.add(ammount_);
+        _balances[account_] = _balances[account_].add(ammount_);
+        emit Transfer(address( this ), account_, ammount_);
     }
 
-    function _burn(address from, uint256 amount) internal virtual {
-        balanceOf[from] -= amount;
+    function _burn(address account, uint256 amount) internal virtual {
+        require(account != address(0), "ERC20: burn from the zero address");
 
-        // This is safe because a user won't ever
-        // have a balance larger than totalSupply!
-        unchecked {
-            totalSupply -= amount;
-        }
+        _beforeTokenTransfer(account, address(0), amount);
 
-        emit Transfer(from, address(0), amount);
+        _balances[account] = _balances[account].sub(amount, "ERC20: burn amount exceeds balance");
+        _totalSupply = _totalSupply.sub(amount);
+        emit Transfer(account, address(0), amount);
     }
+
+    function _approve(address owner, address spender, uint256 amount) internal virtual {
+        require(owner != address(0), "ERC20: approve from the zero address");
+        require(spender != address(0), "ERC20: approve to the zero address");
+
+        _allowances[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
+    }
+
+  function _beforeTokenTransfer( address from_, address to_, uint256 amount_ ) internal virtual { }
 }

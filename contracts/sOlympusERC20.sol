@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.9;
+pragma solidity 0.7.5;
 
 import "./libraries/Address.sol";
+import "./libraries/SafeMath.sol";
 
-import "./types/ERC20.sol";
+import "./types/ERC20Permit.sol";
 
 import "./interfaces/IgOHM.sol";
 import "./interfaces/IStaking.sol";
 
-contract sOlympus is ERC20 {
+contract sOlympus is ERC20Permit {
+
+    /* ========== DEPENDENCIES ========== */
+
+    using SafeMath for uint256;
 
     /* ========== EVENTS ========== */
 

@@ -6,7 +6,6 @@
     "test": "test"
   },
   "dependencies": {
-    "@rari-capital/solmate": "^5.0.2",
     "@uniswap/v3-periphery": "^1.2.0"
   },
   "devDependencies": {

@@ -71,21 +71,23 @@ contract Distributor is Governable, Guardable {
 
     /**
         @notice increment reward rate for collector
-        @param _index uint256
      */
     function adjust(uint256 _index) internal {
         Adjust memory adjustment = adjustments[_index];
         if (adjustment.rate != 0) {
-            // Check if adjustment should increase or decrease. If target is reached, turn off.
             if (adjustment.add) {
-                info[_index].rate += adjustment.rate;
+                // if rate should increase
+                info[_index].rate = info[_index].rate + adjustment.rate; // raise rate
                 if (info[_index].rate >= adjustment.target) {
-                    adjustments[_index].rate = 0;
+                    // if target met
+                    adjustments[_index].rate = 0; // turn off adjustment
                 }
             } else {
-                info[_index].rate -= adjustment.rate;
+                // if rate should decrease
+                info[_index].rate = info[_index].rate - adjustment.rate; // lower rate
                 if (info[_index].rate <= adjustment.target) {
-                    adjustments[_index].rate = 0;
+                    // if target met
+                    adjustments[_index].rate = 0; // turn off adjustment
                 }
             }
         }
@@ -126,10 +128,7 @@ contract Distributor is Governable, Guardable {
      */
     function addRecipient(address _recipient, uint256 _rewardRate) external onlyGovernor {
         require(_recipient != address(0));
-        info.push(Info({
-            recipient: _recipient,
-            rate: _rewardRate
-        }));
+        info.push(Info({recipient: _recipient, rate: _rewardRate}));
     }
 
     /**
