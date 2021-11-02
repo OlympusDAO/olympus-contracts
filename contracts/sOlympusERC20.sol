@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.8.9;
 
 import "./libraries/Address.sol";
-import "./libraries/SafeMath.sol";
 
 import "./types/ERC20Permit.sol";
 
@@ -10,10 +9,6 @@ import "./interfaces/IgOHM.sol";
 import "./interfaces/IStaking.sol";
 
 contract sOlympus is ERC20Permit {
-
-    /* ========== DEPENDENCIES ========== */
-
-    using SafeMath for uint256;
 
     /* ========== EVENTS ========== */
 
@@ -24,7 +19,7 @@ contract sOlympus is ERC20Permit {
     /* ========== MODIFIERS ========== */
 
     modifier onlyStakingContract() {
-        require( msg.sender == stakingContract );
+        require( msg.sender == stakingContract, "Caller is not staking contract");
         _;
     }
 
@@ -42,9 +37,9 @@ contract sOlympus is ERC20Permit {
 
     /* ========== STATE VARIABLES ========== */
 
-    address initializer;
+    address public initializer;
 
-    uint INDEX; // Index Gons - tracks rebase growth
+    uint public INDEX; // Index Gons - tracks rebase growth
 
     address public stakingContract; // balance used to calc rebase
     IgOHM public gOHM; // additional staked supply (governance token)
@@ -71,14 +66,14 @@ contract sOlympus is ERC20Permit {
     constructor() ERC20("Staked OHM", "sOHM", 9) ERC20Permit() {
         initializer = msg.sender;
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
-        _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
+        _gonsPerFragment = TOTAL_GONS / _totalSupply;
     }
 
     /* ========== INITIALIZATION ========== */
 
     function setIndex( uint _INDEX ) external {
-        require( msg.sender == initializer );
-        require( INDEX == 0 );
+        require( msg.sender == initializer, "Caller must be initializer");
+        require( INDEX == 0, "Index cannot be 0");
         INDEX = gonsForBalance( _INDEX );
     }
 
@@ -119,18 +114,18 @@ contract sOlympus is ERC20Permit {
             emit LogRebase( epoch_, 0, index() );
             return _totalSupply;
         } else if ( circulatingSupply_ > 0 ){
-            rebaseAmount = profit_.mul( _totalSupply ).div( circulatingSupply_ );
+            rebaseAmount = (profit_ * _totalSupply ) / circulatingSupply_;
         } else {
             rebaseAmount = profit_;
         }
 
-        _totalSupply = _totalSupply.add( rebaseAmount );
+        _totalSupply = _totalSupply + rebaseAmount;
 
         if ( _totalSupply > MAX_SUPPLY ) {
             _totalSupply = MAX_SUPPLY;
         }
 
-        _gonsPerFragment = TOTAL_GONS.div( _totalSupply );
+        _gonsPerFragment = TOTAL_GONS / _totalSupply;
 
         _storeRebase( circulatingSupply_, profit_, epoch_ );
 
@@ -144,7 +139,7 @@ contract sOlympus is ERC20Permit {
         @param epoch_ uint
      */
     function _storeRebase( uint previousCirculating_, uint profit_, uint epoch_ ) internal {
-        uint rebasePercent = profit_.mul( 1e18 ).div( previousCirculating_ );
+        uint rebasePercent = (profit_ * 1e18) /  previousCirculating_;
 
         rebases.push( Rebase ( {
             epoch: epoch_,
@@ -164,21 +159,22 @@ contract sOlympus is ERC20Permit {
 
     function transfer( address to, uint256 value ) public override returns (bool) {
         uint256 gonValue = value.mul( _gonsPerFragment );
-        _gonBalances[ msg.sender ] = _gonBalances[ msg.sender ].sub( gonValue );
-        _gonBalances[ to ] = _gonBalances[ to ].add( gonValue );
+        _gonBalances[ msg.sender ] -= gonValue;
+        _gonBalances[ to ] += gonValue;
         emit Transfer( msg.sender, to, value );
         return true;
     }
 
     function transferFrom( address from, address to, uint256 value ) public override returns (bool) {
-       _allowedValue[ from ][ msg.sender ] = _allowedValue[ from ][ msg.sender ].sub( value );
+       _allowedValue[ from ][ msg.sender ] -= value;
        emit Approval( from, msg.sender,  _allowedValue[ from ][ msg.sender ] );
 
-        uint256 gonValue = gonsForBalance( value );
-        _gonBalances[ from ] = _gonBalances[from].sub( gonValue );
-        _gonBalances[ to ] = _gonBalances[to].add( gonValue );
-        emit Transfer( from, to, value );
-        return true;
+       uint256 gonValue = gonsForBalance( value );
+       _gonBalances[ from ] -= gonValue;
+       _gonBalances[ to ] += gonValue;
+       emit Transfer( from, to, value );
+
+       return true;
     }
 
     function approve( address spender, uint256 value ) public override returns (bool) {
@@ -188,7 +184,7 @@ contract sOlympus is ERC20Permit {
     }
 
     function increaseAllowance( address spender, uint256 addedValue ) public override returns (bool) {
-        _allowedValue[ msg.sender ][ spender ] = _allowedValue[ msg.sender ][ spender ].add( addedValue );
+        _allowedValue[ msg.sender ][ spender ] += addedValue;
         emit Approval( msg.sender, spender, _allowedValue[ msg.sender ][ spender ] );
         return true;
     }
@@ -198,7 +194,7 @@ contract sOlympus is ERC20Permit {
         if (subtractedValue >= oldValue) {
             _allowedValue[ msg.sender ][ spender ] = 0;
         } else {
-            _allowedValue[ msg.sender ][ spender ] = oldValue.sub( subtractedValue );
+            _allowedValue[ msg.sender ][ spender ] = oldValue - subtractedValue;
         }
         emit Approval( msg.sender, spender, _allowedValue[ msg.sender ][ spender ] );
         return true;
@@ -229,9 +225,9 @@ contract sOlympus is ERC20Permit {
     // Staking contract holds excess rOHM
     function circulatingSupply() public view returns ( uint ) {
         return _totalSupply
-                    .sub( balanceOf( stakingContract ) )
-                    .add( gOHM.balanceFrom( IERC20( address(gOHM) ).totalSupply() ) )
-                    .add( IStaking( stakingContract ).supplyInWarmup() );
+                    - balanceOf( stakingContract )
+                    + gOHM.balanceFrom( IERC20( address(gOHM) ).totalSupply() )
+                    + IStaking( stakingContract ).supplyInWarmup();
     }
 
     function index() public view returns ( uint ) {

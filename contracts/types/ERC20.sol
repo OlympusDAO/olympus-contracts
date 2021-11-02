@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
-
-import "../libraries/SafeMath.sol";
+pragma solidity >=0.8.0;
 
 import "../interfaces/IERC20.sol";
 
-
+// TODO replace with modified Solmate ERC20
 abstract contract ERC20 is IERC20 {
-
-    using SafeMath for uint256;
 
     // TODO comment actual hash value.
     bytes32 constant private ERC20TOKEN_ERC1820_INTERFACE_ID = keccak256( "ERC20Token" );
@@ -67,17 +63,17 @@ abstract contract ERC20 is IERC20 {
 
     function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
         return true;
     }
 
     function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender].add(addedValue));
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] + addedValue);
         return true;
     }
 
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] - subtractedValue);
         return true;
     }
 
@@ -87,17 +83,17 @@ abstract contract ERC20 is IERC20 {
 
         _beforeTokenTransfer(sender, recipient, amount);
 
-        _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
-        _balances[recipient] = _balances[recipient].add(amount);
+        _balances[sender] -= amount;
+        _balances[recipient] += amount;
         emit Transfer(sender, recipient, amount);
     }
 
-    function _mint(address account_, uint256 ammount_) internal virtual {
+    function _mint(address account_, uint256 amount_) internal virtual {
         require(account_ != address(0), "ERC20: mint to the zero address");
-        _beforeTokenTransfer(address( this ), account_, ammount_);
-        _totalSupply = _totalSupply.add(ammount_);
-        _balances[account_] = _balances[account_].add(ammount_);
-        emit Transfer(address( this ), account_, ammount_);
+        _beforeTokenTransfer(address( this ), account_, amount_);
+        _totalSupply += amount_;
+        _balances[account_] += amount_;
+        emit Transfer(address( this ), account_, amount_);
     }
 
     function _burn(address account, uint256 amount) internal virtual {
@@ -105,8 +101,8 @@ abstract contract ERC20 is IERC20 {
 
         _beforeTokenTransfer(account, address(0), amount);
 
-        _balances[account] = _balances[account].sub(amount, "ERC20: burn amount exceeds balance");
-        _totalSupply = _totalSupply.sub(amount);
+        _balances[account] -= amount;
+        _totalSupply -= amount;
         emit Transfer(account, address(0), amount);
     }
 

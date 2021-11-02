@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity >=0.8.0;
 
 
-import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
@@ -17,7 +16,6 @@ contract OlympusStaking is Governable {
 
     /* ========== DEPENDENCIES ========== */
 
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IsOHM;
     using SafeERC20 for IgOHM;
@@ -62,7 +60,7 @@ contract OlympusStaking is Governable {
 
     mapping( address => Claim ) public warmupInfo;
     uint public warmupPeriod;
-    uint gonsInWarmup;
+    uint public gonsInWarmup;
 
     
 
@@ -76,8 +74,9 @@ contract OlympusStaking is Governable {
         uint _firstEpochBlock
     ) {
         require( _OHM != address(0) );
-        OHM = IERC20( _OHM );
         require( _sOHM != address(0) );
+
+        OHM = IERC20( _OHM );
         sOHM = IsOHM( _sOHM );
         
         epoch = Epoch({
