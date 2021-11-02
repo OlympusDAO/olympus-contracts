@@ -3,33 +3,33 @@
 
 name: "Dapptools CI"
 on:
-  pull_request:
-  push:
+    pull_request:
+    push:
 jobs:
-  build:
-    strategy:
-      matrix:
-        os: [ ubuntu-latest,]
-        # we need this to map platform names as used by github to
-        # the attribute names defined in release.nix
-        include:
-          - os: ubuntu-latest
-            os_attr: linux
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v2
-      - name: Checkout submodules
-        run: git submodule update --init --recursive
-      - uses: cachix/install-nix-action@v14
-      - uses: cachix/cachix-action@v10
-        with:
-          name: dapp
-          skipPush: true
-          signingKey: ''
-      - name: install
-        run: nix-env -f https://github.com/dapphub/dapptools/archive/master.tar.gz -iA solc-static-versions.solc_0_7_5
-      - name: test
-      # They used 'make test' instead which referenced a Makefile https://github.com/centrifuge/tinlake-maker-lib/blob/master/Makefile
-      # I'm not sure if we need that so just doing this instead
-        run: nix-shell --pure --command "dapp test"
+    build:
+        strategy:
+            matrix:
+                os: [ubuntu-latest]
+                # we need this to map platform names as used by github to
+                # the attribute names defined in release.nix
+                include:
+                    - os: ubuntu-latest
+                      os_attr: linux
+            fail-fast: false
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v2
+            - name: Checkout submodules
+              run: git submodule update --init --recursive
+            - uses: cachix/install-nix-action@v14
+            - uses: cachix/cachix-action@v10
+              with:
+                  name: dapp
+                  skipPush: true
+                  signingKey: ""
+            - name: install
+              run: nix-env -f https://github.com/dapphub/dapptools/archive/master.tar.gz -iA solc-static-versions.solc_0_7_5
+            - name: test
+              # 1.  They used 'make test' instead which referenced a Makefile https://github.com/centrifuge/tinlake-maker-lib/blob/master/Makefile   I'm not sure if we need that so just doing this instead
+              # 2.  Had to add 'export LANG=C.UTF-8' as per recommendation from https://stackoverflow.com/questions/63746826/what-might-cause-commitandreleasebuffer-invalid-argument-invalid-character
+              run: nix-shell --pure --command "export LANG=C.UTF-8 ; dapp test"
