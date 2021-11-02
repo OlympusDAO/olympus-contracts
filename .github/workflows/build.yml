@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Checkout submodules
         run: git submodule update --init --recursive
-      - uses: cachix/install-nix-action@ef4324316b96b50b4671cecef9ecc6fd286f224a
+      - uses: cachix/install-nix-action@2.3.16
       - uses: cachix/cachix-action@6e4751ed42b22f60165d3f266cfa4cce66ae406d
         with:
           name: dapp
