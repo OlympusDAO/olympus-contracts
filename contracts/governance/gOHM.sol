@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.7.5;
+pragma solidity ^0.8.9;
 
 import "../libraries/SafeERC20.sol";
-import "../libraries/SafeMath.sol";
 import "../libraries/Address.sol";
 
 import "../interfaces/IERC20.sol";
@@ -15,7 +14,6 @@ contract gOHM is IgOHM {
 
     using SafeERC20 for IERC20;
     using Address for address;
-    using SafeMath for uint256;
 
     /* ========== MODIFIERS ========== */
 
@@ -105,7 +103,7 @@ contract gOHM is IgOHM {
         uint256 amount
     ) external override returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
         return true;
     }
 
@@ -125,11 +123,10 @@ contract gOHM is IgOHM {
      */
     function migrate(address _staking, address _sOHM) external override onlyApproved {
         require(_staking != approved);
-
         require(_staking != address(0));
-        approved = _staking;
-
         require(_sOHM != address(0));
+
+        approved = _staking;
         sOHM = IsOHM(_sOHM);
     }
 
@@ -159,7 +156,9 @@ contract gOHM is IgOHM {
         @return uint
      */
     function balanceFrom(uint256 _amount) public view override returns (uint256) {
-        return _amount.mul(IsOHM(sOHM).index()).div(10**decimals);
+        return _amount
+            * (IsOHM(sOHM).index())
+            / (10 ** decimals);
     }
 
     /**
@@ -168,7 +167,9 @@ contract gOHM is IgOHM {
         @return uint
      */
     function balanceTo(uint256 _amount) public view override returns (uint256) {
-        return _amount.mul(10**decimals).div(IsOHM(sOHM).index());
+        return _amount
+            * (10 ** decimals)
+            / (IsOHM(sOHM).index());
     }
 
     /**
@@ -252,8 +253,8 @@ contract gOHM is IgOHM {
 
         _beforeTokenTransfer(address(0), account, amount);
 
-        totalSupply = totalSupply.add(amount);
-        _balances[account] = _balances[account].add(amount);
+        totalSupply += amount;
+        _balances[account] += amount;
         emit Transfer(address(0), account, amount);
     }
 
@@ -273,8 +274,9 @@ contract gOHM is IgOHM {
 
         _beforeTokenTransfer(account, address(0), amount);
 
-        _balances[account] = _balances[account].sub(amount, "ERC20: burn amount exceeds balance");
-        totalSupply = totalSupply.sub(amount);
+        _balances[account] -= amount;
+        totalSupply -= amount;
+
         emit Transfer(account, address(0), amount);
     }
 
@@ -327,8 +329,9 @@ contract gOHM is IgOHM {
 
         _beforeTokenTransfer(sender, recipient, amount);
 
-        _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
-        _balances[recipient] = _balances[recipient].add(amount);
+        _balances[sender] -= amount;
+        _balances[recipient] += amount;
+
         emit Transfer(sender, recipient, amount);
     }
 
@@ -350,15 +353,21 @@ contract gOHM is IgOHM {
         if (srcRep != dstRep && amount > 0) {
             if (srcRep != address(0)) {
                 uint256 srcRepNum = numCheckpoints[srcRep];
-                uint256 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-                uint256 srcRepNew = srcRepOld.sub(amount);
+                uint256 srcRepOld = srcRepNum > 0
+                    ? checkpoints[srcRep][srcRepNum - 1].votes
+                    : 0;
+                uint256 srcRepNew = srcRepOld - amount;
+
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
 
             if (dstRep != address(0)) {
                 uint256 dstRepNum = numCheckpoints[dstRep];
-                uint256 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-                uint256 dstRepNew = dstRepOld.add(amount);
+                uint256 dstRepOld = dstRepNum > 0
+                    ? checkpoints[dstRep][dstRepNum - 1].votes
+                    : 0;
+                uint256 dstRepNew = dstRepOld + amount;
+
                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
             }
         }

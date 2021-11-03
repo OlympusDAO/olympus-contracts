@@ -74,20 +74,20 @@ contract Distributor is Governable, Guardable {
      */
     function adjust(uint256 _index) internal {
         Adjust memory adjustment = adjustments[_index];
+
+        // If adjustment needed, adjust until target is reached
         if (adjustment.rate != 0) {
             if (adjustment.add) {
-                // if rate should increase
-                info[_index].rate = info[_index].rate + adjustment.rate; // raise rate
+                info[_index].rate += adjustment.rate;
+
                 if (info[_index].rate >= adjustment.target) {
-                    // if target met
-                    adjustments[_index].rate = 0; // turn off adjustment
+                    adjustments[_index].rate = 0;
                 }
             } else {
-                // if rate should decrease
-                info[_index].rate = info[_index].rate - adjustment.rate; // lower rate
+                info[_index].rate -= adjustment.rate;
+
                 if (info[_index].rate <= adjustment.target) {
-                    // if target met
-                    adjustments[_index].rate = 0; // turn off adjustment
+                    adjustments[_index].rate = 0;
                 }
             }
         }
@@ -139,6 +139,7 @@ contract Distributor is Governable, Guardable {
     function removeRecipient(uint256 _index, address _recipient) external {
         require(msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian");
         require(_recipient == info[_index].recipient);
+
         info[_index].recipient = address(0);
         info[_index].rate = 0;
     }

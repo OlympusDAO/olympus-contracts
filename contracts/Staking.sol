@@ -66,7 +66,7 @@ contract OlympusStaking is Governable {
 
     /* ========== CONSTRUCTOR ========== */
     
-    constructor ( 
+    constructor (
         address _OHM, 
         address _sOHM, 
         uint _epochLength,
@@ -114,13 +114,13 @@ contract OlympusStaking is Governable {
             }
 
             warmupInfo[ _recipient ] = Claim ({
-                deposit: info.deposit.add( _amount ),
-                gons: info.gons.add( sOHM.gonsForBalance( _amount ) ),
-                expiry: epoch.number.add( warmupPeriod ),
+                deposit: info.deposit + _amount,
+                gons: info.gons + sOHM.gonsForBalance( _amount ),
+                expiry: epoch.number + warmupPeriod,
                 lock: info.lock
             });
 
-            gonsInWarmup = gonsInWarmup.add( sOHM.gonsForBalance( _amount ) );
+            gonsInWarmup = gonsInWarmup + sOHM.gonsForBalance( _amount );
 
             return _amount;
         }
@@ -141,7 +141,7 @@ contract OlympusStaking is Governable {
         if ( epoch.number >= info.expiry && info.expiry != 0 ) {
             delete warmupInfo[ _recipient ];
 
-            gonsInWarmup = gonsInWarmup.sub( info.gons );
+            gonsInWarmup -= info.gons;
 
             return _send( _recipient, sOHM.balanceForGons( info.gons ), _rebasing );
         }
@@ -155,7 +155,7 @@ contract OlympusStaking is Governable {
         Claim memory info = warmupInfo[ msg.sender ];
         delete warmupInfo[ msg.sender ];
 
-        gonsInWarmup = gonsInWarmup.sub( info.gons );
+        gonsInWarmup -= info.gons;
 
         OHM.safeTransfer( msg.sender, info.deposit );
 
@@ -224,17 +224,18 @@ contract OlympusStaking is Governable {
         if( epoch.endBlock <= block.number ) {
             sOHM.rebase( epoch.distribute, epoch.number );
 
-            epoch.endBlock = epoch.endBlock.add( epoch.length );
+            epoch.endBlock += epoch.length;
             epoch.number++;
             
             if ( distributor != address(0) ) {
                 IDistributor( distributor ).distribute();
             }
 
-            if( contractBalance() <= totalStaked() ) {
+            int256 diff = contractBalance() - totalStaked();
+            if( diff <= 0 ) {
                 epoch.distribute = 0;
             } else {
-                epoch.distribute = contractBalance().sub( totalStaked() );
+                epoch.distribute = uint256(diff);
             }
         }
     }

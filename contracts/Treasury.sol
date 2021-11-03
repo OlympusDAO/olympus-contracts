@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity >=0.8.9;
 
-import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IOwnable.sol";
@@ -14,12 +13,7 @@ import "./interfaces/ITreasury.sol";
 import "./types/Ownable.sol";
 
 contract OlympusTreasury is Ownable, ITreasury {
-    /* ========== DEPENDENCIES ========== */
-
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
-
-    /* ========== EVENTS ========== */
 
     event Deposit(address indexed token, uint256 amount, uint256 value);
     event Withdrawal(address indexed token, uint256 amount, uint256 value);
@@ -30,8 +24,6 @@ contract OlympusTreasury is Ownable, ITreasury {
     event Minted(address indexed caller, address indexed recipient, uint256 amount);
     event PermissionQueued(STATUS indexed status, address queued);
     event Permissioned(address addr, STATUS indexed status, bool result);
-
-    /* ========== DATA STRUCTURES ========== */
 
     enum STATUS {
         RESERVEDEPOSITOR,
@@ -55,9 +47,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         bool executed;
     }
 
-    /* ========== STATE VARIABLES ========== */
-
-    IOHMERC20 immutable OHM;
+    IOHMERC20 public immutable OHM;
     IERC20 public sOHM;
 
     mapping(STATUS => address[]) public registry;
@@ -70,12 +60,10 @@ contract OlympusTreasury is Ownable, ITreasury {
     uint256 public totalDebt;
 
     Queue[] public permissionQueue;
-    uint256 public immutable blocksNeededForQueue;
+    uint256 public immutable blocksNeededForQueue; // TODO should be renamed?
 
     bool public onChainGoverned;
     uint256 public onChainGovernanceTimelock;
-
-    /* ========== CONSTRUCTOR ========== */
 
     constructor(address _OHM, uint256 _timelock) {
         require(_OHM != address(0));
@@ -109,11 +97,12 @@ contract OlympusTreasury is Ownable, ITreasury {
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 value = tokenValue(_token, _amount);
+
         // mint OHM needed and store amount of rewards for distribution
-        send_ = value.sub(_profit);
+        send_ = value - _profit;
         OHM.mint(msg.sender, send_);
 
-        totalReserves = totalReserves.add(value);
+        totalReserves = totalReserves + value;
 
         emit Deposit(_token, _amount, value);
     }
@@ -130,7 +119,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         uint256 value = tokenValue(_token, _amount);
         OHM.burnFrom(msg.sender, value);
 
-        totalReserves = totalReserves.sub(value);
+        totalReserves -= value;
 
         IERC20(_token).safeTransfer(msg.sender, _amount);
 
@@ -152,10 +141,9 @@ contract OlympusTreasury is Ownable, ITreasury {
         uint256 availableDebt = sOHM.balanceOf(msg.sender).sub(debtorBalance[msg.sender]);
         require(value <= availableDebt, "Exceeds debt limit");
 
-        debtorBalance[msg.sender] = debtorBalance[msg.sender].add(value);
-        totalDebt = totalDebt.add(value);
-
-        totalReserves = totalReserves.sub(value);
+        debtorBalance[msg.sender] += value;
+        totalDebt += value;
+        totalReserves -= value;
 
         IERC20(_token).transfer(msg.sender, _amount);
 
@@ -174,10 +162,10 @@ contract OlympusTreasury is Ownable, ITreasury {
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 value = tokenValue(_token, _amount);
-        debtorBalance[msg.sender] = debtorBalance[msg.sender].sub(value);
-        totalDebt = totalDebt.sub(value);
 
-        totalReserves = totalReserves.add(value);
+        debtorBalance[msg.sender] -= value;
+        totalDebt -= value;
+        totalReserves += value;
 
         emit RepayDebt(msg.sender, _token, _amount, value);
     }
@@ -191,8 +179,8 @@ contract OlympusTreasury is Ownable, ITreasury {
 
         OHM.burnFrom(msg.sender, _amount);
 
-        debtorBalance[msg.sender] = debtorBalance[msg.sender].sub(_amount);
-        totalDebt = totalDebt.sub(_amount);
+        debtorBalance[msg.sender] -= _amount;
+        totalDebt -= _amount;
 
         emit RepayDebt(msg.sender, address(OHM), _amount, _amount);
     }
@@ -212,7 +200,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         uint256 value = tokenValue(_token, _amount);
         require(value <= excessReserves(), "Insufficient reserves");
 
-        totalReserves = totalReserves.sub(value);
+        totalReserves -= value;
 
         IERC20(_token).safeTransfer(msg.sender, _amount);
 
@@ -239,13 +227,21 @@ contract OlympusTreasury is Ownable, ITreasury {
      */
     function auditReserves() external onlyOwner {
         uint256 reserves;
+
         address[] memory reserveToken = registry[STATUS.RESERVETOKEN];
         for (uint256 i = 0; i < reserveToken.length; i++) {
-            reserves = reserves.add(tokenValue(reserveToken[i], IERC20(reserveToken[i]).balanceOf(address(this))));
+            reserves += tokenValue(
+                reserveToken[i],
+                IERC20(reserveToken[i]).balanceOf(address(this))
+            );
         }
+
         address[] memory liquidityToken = registry[STATUS.LIQUIDITYTOKEN];
         for (uint256 i = 0; i < liquidityToken.length; i++) {
-            reserves = reserves.add(tokenValue(liquidityToken[i], IERC20(liquidityToken[i]).balanceOf(address(this))));
+            reserves += tokenValue(
+                liquidityToken[i],
+                IERC20(liquidityToken[i]).balanceOf(address(this))
+            );
         }
         totalReserves = reserves;
         emit ReservesAudited(reserves);
@@ -263,15 +259,14 @@ contract OlympusTreasury is Ownable, ITreasury {
         address _calculator
     ) external onlyOwner {
         require(onChainGoverned, "OCG Not Enabled: Use queueTimelock");
-        if (_status == STATUS.SOHM) {
-            // 9
+
+        if (_status == STATUS.SOHM) { // 9
             sOHM = IERC20(_address);
         } else {
             registry[_status].push(_address);
             permissions[_status][_address] = true;
 
-            if (_status == STATUS.LIQUIDITYTOKEN) {
-                // 5
+            if (_status == STATUS.LIQUIDITYTOKEN) { // 5
                 bondCalculator[_address] = _calculator;
             }
         }
@@ -305,11 +300,22 @@ contract OlympusTreasury is Ownable, ITreasury {
         require(_address != address(0));
         require(!onChainGoverned, "OCG Enabled: Use enable");
 
-        uint256 timelock = block.number.add(blocksNeededForQueue);
+        uint256 timelock = block.number + blocksNeededForQueue;
         if (_status == STATUS.RESERVEMANAGER || _status == STATUS.LIQUIDITYMANAGER) {
-            timelock = block.number.add(blocksNeededForQueue.mul(2));
+            timelock = block.number + (blocksNeededForQueue * 2);
         }
-        permissionQueue.push(Queue({managing: _status, toPermit: _address, calculator: _calculator, timelockEnd: timelock, nullify: false, executed: false}));
+
+        permissionQueue.push(
+            Queue({
+                managing: _status,
+                toPermit: _address,
+                calculator: _calculator,
+                timelockEnd: timelock,
+                nullify: false,
+                executed: false
+            })
+        );
+
         emit PermissionQueued(_status, _address);
     }
 
@@ -326,18 +332,17 @@ contract OlympusTreasury is Ownable, ITreasury {
         require(!info.executed, "Action has already been executed");
         require(block.number >= info.timelockEnd, "Timelock not complete");
 
-        if (info.managing == STATUS.SOHM) {
-            // 9
+        if (info.managing == STATUS.SOHM) { // 9
             sOHM = IERC20(info.toPermit);
         } else {
             registry[info.managing].push(info.toPermit);
             permissions[info.managing][info.toPermit] = true;
 
-            if (info.managing == STATUS.LIQUIDITYTOKEN) {
-                // 5
+            if (info.managing == STATUS.LIQUIDITYTOKEN) { // 5
                 bondCalculator[info.toPermit] = info.calculator;
             }
         }
+
         permissionQueue[_index].executed = true;
         emit Permissioned(info.toPermit, info.managing, true);
     }
@@ -357,7 +362,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         if (onChainGovernanceTimelock != 0 && onChainGovernanceTimelock <= block.number) {
             onChainGoverned = true;
         } else {
-            onChainGovernanceTimelock = block.number.add(blocksNeededForQueue.mul(7)); // 7-day timelock
+            onChainGovernanceTimelock = block.number + (blocksNeededForQueue * 7); // 7-day timelock
         }
     }
 
@@ -368,7 +373,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         @return uint
      */
     function excessReserves() public view override returns (uint256) {
-        return totalReserves.sub(OHM.totalSupply().sub(totalDebt));
+        return totalReserves -(OHM.totalSupply() - totalDebt);
     }
 
     /**
@@ -378,7 +383,9 @@ contract OlympusTreasury is Ownable, ITreasury {
         @return value_ uint
      */
     function tokenValue(address _token, uint256 _amount) public view override returns (uint256 value_) {
-        value_ = _amount.mul(10**IERC20Metadata(address(OHM)).decimals()).div(10**IERC20Metadata(_token).decimals());
+        value_ = _amount
+            * (10 ** IERC20Metadata(address(OHM)).decimals())
+            / (10 ** IERC20Metadata(_token).decimals());
 
         if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             value_ = IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);
