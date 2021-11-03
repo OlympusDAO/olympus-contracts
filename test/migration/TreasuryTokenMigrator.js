@@ -7,18 +7,19 @@ const old_treasury_abi = require("../../abis/old_treasury_abi");
 const old_sohm_abi = require("../../abis/sohm");
 
 const { treasury_tokens, olympus_tokens, olympus_lp_tokens, swaps } = require("./tokens");
+const { addresses } = require("./config");
 
 const EPOCH_LEGNTH = 2200;
-const DAI_ADDRESS = process.env.DAI;
-const SUSHI_ROUTER = process.env.SUSHI_ROUTER;
-const UNISWAP_ROUTER = process.env.UNISWAP_ROUTER;
-const OLD_OHM_ADDRESS = process.env.OLD_OHM_ADDRESS;
-const OLD_SOHM_ADDRESS = process.env.OLD_SOHM_ADDRESS;
-const TREASURY_MANAGER = process.env.TREASURY_MANAGER;
-const NON_TOKEN_HOLDER = process.env.NON_TOKEN_HOLDER;
-const OLD_WSOHM_ADDRESS = process.env.OLD_WSOHM_ADDRESS;
-const OLD_STAKING_ADDRESS = process.env.OLD_STAKING_ADDRESS;
-const OLD_TREASURY_ADDRESS = process.env.OLD_TREASURY_ADDRESS;
+const DAI_ADDRESS = addresses.DAI;
+const SUSHI_ROUTER = addresses.SUSHI_ROUTER;
+const UNISWAP_ROUTER = addresses.UNISWAP_ROUTER;
+const OLD_OHM_ADDRESS = addresses.OLD_OHM_ADDRESS;
+const OLD_SOHM_ADDRESS = addresses.OLD_SOHM_ADDRESS;
+const TREASURY_MANAGER = addresses.TREASURY_MANAGER;
+const NON_TOKEN_HOLDER = addresses.NON_TOKEN_HOLDER;
+const OLD_WSOHM_ADDRESS = addresses.OLD_WSOHM_ADDRESS;
+const OLD_STAKING_ADDRESS = addresses.OLD_STAKING_ADDRESS;
+const OLD_TREASURY_ADDRESS = addresses.OLD_TREASURY_ADDRESS;
 
 const tokenAddresses = treasury_tokens.map((token) => token.address);
 const reserveToken = treasury_tokens.map((token) => token.isReserve);
@@ -181,8 +182,44 @@ describe("Treasury Token Migration", async function () {
             "ERC20: burn amount exceeds balance"
         );
     });
-    it("Should be able to withdraw sent assets to contract", async () => {
-        // TODO(zx): tests
+
+    describe.skip("Withdraw Functions", async () => {
+        it("should fail if the caller isn't the deployer", async () => {
+            await expect(
+                olympusTokenMigrator
+                    .connect(user1)
+                    .withdrawToken(DAI_ADDRESS, 1, addresses.ZERO_ADDRESS)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+            await expect(
+                olympusTokenMigrator.connect(user1).withdrawEth(1, addresses.ZERO_ADDRESS)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("should be able to withdraw sent dai", async () => {
+            const daiToken = treasury_tokens.find((token) => token.name == "dai");
+            const daiHolder = await impersonate(addresses.DAI_HOLDER);
+            const daiAmount = 420;
+            const daiTokenContract = daiToken.contract;
+            await expect(daiTokenContract).to.not.be.null;
+
+            // Send dai to address
+            await daiTokenContract
+                .connect(daiHolder)
+                .approve(olympusTokenMigrator.address, daiAmount);
+            await daiTokenContract
+                .connect(daiHolder)
+                .transfer(olympusTokenMigrator.address, daiAmount);
+
+            const migratorDaiBalance = await daiTokenContract.balanceOf(
+                olympusTokenMigrator.address
+            );
+            await expect(migratorDaiBalance).to.be.equal(daiAmount);
+
+            // withdraw dai
+            await olympusTokenMigrator
+                .connect(deployer)
+                .withdrawToken(DAI_ADDRESS, daiAmount, addresses.DAI_HOLDER);
+        });
     });
 
     describe("Olympus Token Migrations", async () => {
