@@ -43,7 +43,7 @@ describe("Treasury Token Migration", async () => {
         newStaking;
 
     before(async function () {
-        this.timeout(0); // disable timeout
+        this.timeout(40000); // 40s timeout
         await fork_network(13487643);
         [deployer, user1] = await ethers.getSigners();
 
