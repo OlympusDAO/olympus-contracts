@@ -182,6 +182,9 @@ describe("Treasury Token Migration", async () => {
             "ERC20: burn amount exceeds balance"
         );
     });
+    it("Should be able to withdraw sent assets to contract", async () => {
+        // TODO(zx): tests
+    });
 
     describe("Olympus Token Migrations", async () => {
         let sOHMindex = 1;
