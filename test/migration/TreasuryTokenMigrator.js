@@ -28,8 +28,8 @@ const lp_token_1 = olympus_lp_tokens.map((lp_token) => lp_token.token1);
 const is_sushi_lp = olympus_lp_tokens.map((lp_token) => lp_token.is_sushi);
 const lp_token_addresses = olympus_lp_tokens.map((lp_token) => lp_token.address);
 
-// TODO currently skipped
-describe("Treasury Token Migration", async () => {
+describe("Treasury Token Migration", async function () {
+    this.timeout(40000); // 40s timeout
     let deployer,
         user1,
         manager,
@@ -43,7 +43,6 @@ describe("Treasury Token Migration", async () => {
         newStaking;
 
     before(async function () {
-        this.timeout(0); // disable timeout
         await fork_network(13487643);
         [deployer, user1] = await ethers.getSigners();
 
