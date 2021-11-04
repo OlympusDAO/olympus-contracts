@@ -252,20 +252,6 @@ contract OlympusTokenMigrator is Ownable {
         tokenContract.safeTransfer(recipient, amount);
     }
 
-    // TODO(zx): Do we need this?
-    function withdrawEth(uint256 amount, address payable recipient) external onlyOwner {
-        if (recipient == address(0)) {
-            recipient = msg.sender; // if no address is specified the value will will be withdrawn to user
-        }
-
-        uint256 contractEthBalance = address(this).balance;
-        if (amount > contractEthBalance) {
-            amount = contractEthBalance;
-        }
-
-        recipient.transfer(amount);
-    }
-
     // migrate contracts
     function migrateContracts(
         address _newTreasury,

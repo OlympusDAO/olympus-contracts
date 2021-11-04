@@ -220,6 +220,18 @@ describe("Treasury Token Migration", async function () {
                 .connect(deployer)
                 .withdrawToken(DAI_ADDRESS, daiAmount, addresses.DAI_HOLDER);
         });
+        it("should not be able to send eth to the contract", async () => {
+            const provider = ethers.provider;
+            const startingEthBal = await provider.getBalance(user1.address);
+            await expect(
+                user1.sendTransaction({
+                    to: olympusTokenMigrator.address,
+                    value: startingEthBal.toString(), // 1 ether
+                })
+            ).to.be.revertedWith(
+                "Transaction reverted: function selector was not recognized and there's no fallback nor receive function"
+            );
+        });
     });
 
     describe("Olympus Token Migrations", async () => {
