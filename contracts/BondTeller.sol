@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.8.9;
 
-import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
@@ -12,7 +11,6 @@ import "./interfaces/IStaking.sol";
 contract BondTeller {
     /* ========== DEPENDENCIES ========== */
 
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     /* ========== EVENTS ========== */
@@ -67,17 +65,19 @@ contract BondTeller {
         address _gOHM
     ) {
         require(_depository != address(0));
-        depository = _depository;
         require(_staking != address(0));
-        staking = IStaking(_staking);
         require(_treasury != address(0));
-        treasury = ITreasury(_treasury);
         require(_OHM != address(0));
-        OHM = IERC20(_OHM);
         require(_sOHM != address(0));
-        sOHM = IERC20(_sOHM);
         require(_gOHM != address(0));
+
+        depository = _depository;
+        staking = IStaking(_staking);
+        treasury = ITreasury(_treasury);
+        OHM = IERC20(_OHM);
+        sOHM = IERC20(_sOHM);
         gOHM = IgOHM(_gOHM);
+
         IERC20(_OHM).approve(_staking, 1e27); // saves gas
     }
 
@@ -101,18 +101,25 @@ contract BondTeller {
         uint256 _expires,
         address _feo
     ) external onlyDepository returns (uint256 index_) {
-        treasury.mint(address(this), _payout.add(feReward));
+        treasury.mint(address(this), _payout + feReward);
 
         OHM.approve(address(staking), _payout); // approve staking payout
 
         staking.stake(_payout, address(this), true, true);
 
-        FERs[_feo] = FERs[_feo].add(feReward); // FE operator takes fee
+        FERs[_feo] = FERs[_feo] + feReward; // FE operator takes fee
 
         index_ = bonderInfo[_bonder].length;
 
         // store bond & stake payout
-        bonderInfo[_bonder].push(Bond({principal: _principal, principalPaid: _principalPaid, payout: gOHM.balanceTo(_payout), vested: _expires, created: block.timestamp, redeemed: 0}));
+        bonderInfo[_bonder].push(Bond({
+            principal: _principal,
+            principalPaid: _principalPaid,
+            payout: gOHM.balanceTo(_payout),
+            vested: _expires,
+            created: block.timestamp,
+            redeemed: 0
+        }));
     }
 
     /* ========== INTERACTABLE FUNCTIONS ========== */
@@ -141,7 +148,7 @@ contract BondTeller {
             if (pendingFor(_bonder, _indexes[i]) != 0) {
                 bonderInfo[_bonder][_indexes[i]].redeemed = block.timestamp; // mark as redeemed
 
-                dues = dues.add(info.payout);
+                dues += info.payout;
             }
         }
 
@@ -149,6 +156,7 @@ contract BondTeller {
 
         emit Redeemed(_bonder, dues);
         pay(_bonder, dues);
+
         return dues;
     }
 
@@ -179,6 +187,7 @@ contract BondTeller {
     function updateIndexesFor(address _bonder) public {
         Bond[] memory info = bonderInfo[_bonder];
         delete indexesFor[_bonder];
+
         for (uint256 i = 0; i < info.length; i++) {
             if (info[i].redeemed == 0) {
                 indexesFor[_bonder].push(i);
@@ -221,9 +230,11 @@ contract BondTeller {
      */
     function totalPendingFor(address _bonder) public view returns (uint256 pending_) {
         Bond[] memory info = bonderInfo[_bonder];
+
         for (uint256 i = 0; i < info.length; i++) {
             pending_ = pending_.add(pendingFor(_bonder, i));
         }
+
         pending_ = gOHM.balanceFrom(pending_);
     }
 
@@ -238,9 +249,9 @@ contract BondTeller {
     function percentVestedFor(address _bonder, uint256 _index) public view returns (uint256 percentVested_) {
         Bond memory bond = bonderInfo[_bonder][_index];
 
-        uint256 timeSince = block.timestamp.sub(bond.created);
-        uint256 term = bond.vested.sub(bond.created);
+        uint256 timeSince = block.timestamp - bond.created;
+        uint256 term = bond.vested - bond.created;
 
-        percentVested_ = timeSince.mul(1e9).div(term);
+        percentVested_ = (timeSince * 1e9) / term;
     }
 }

@@ -404,7 +404,10 @@ contract OlympusBondDepository is Governable, Guardable {
      * @return debtRatio_ uint
      */
     function debtRatio(uint256 _BID) public view returns (uint256 debtRatio_) {
-      debtRatio_ = FixedPoint.fraction(currentDebt(_BID).mul(1e9), OHM.totalSupply()).decode112with18().div(1e18);
+      debtRatio_ = FixedPoint.fraction(
+          currentDebt(_BID) * 1e9,
+          OHM.totalSupply()
+        ).decode112with18() / 1e18;
     }
 
     /**
@@ -413,8 +416,9 @@ contract OlympusBondDepository is Governable, Guardable {
      */
     function standardizedDebtRatio(uint256 _BID) public view returns (uint256) {
       Bond memory bond = bonds[_BID];
+
       if (address(bond.calculator) != address(0)) {
-        return debtRatio(_BID).mul(bond.calculator.markdown(address(bond.principal))).div(1e9);
+        return (debtRatio(_BID) * (bond.calculator.markdown(address(bond.principal)))) / 1e9;
       } else {
         return debtRatio(_BID);
       }
@@ -426,7 +430,7 @@ contract OlympusBondDepository is Governable, Guardable {
      * @return uint
      */
     function currentDebt(uint256 _BID) public view returns (uint256) {
-      return bonds[_BID].totalDebt.sub(debtDecay(_BID));
+      return bonds[_BID].totalDebt - debtDecay(_BID);
     }
 
     /**
@@ -436,8 +440,9 @@ contract OlympusBondDepository is Governable, Guardable {
      */
     function debtDecay(uint256 _BID) public view returns (uint256 decay_) {
       Bond memory bond = bonds[_BID];
-      uint256 blocksSinceLast = block.number.sub(bond.lastDecay);
-      decay_ = bond.totalDebt.mul(blocksSinceLast).div(bond.terms.vestingTerm);
+      uint256 blocksSinceLast = block.number - bond.lastDecay;
+
+      decay_ = (bond.totalDebt * blocksSinceLast) / bond.terms.vestingTerm;
       if (decay_ > bond.totalDebt) {
         decay_ = bond.totalDebt;
       }
