@@ -77,9 +77,9 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _OHM, uint256 _timelock) {
-        require(_OHM != address(0));
-        OHM = IOHMERC20(_OHM);
+    constructor(address _ohm, uint256 _timelock) {
+        require(_ohm != address(0), "Zero address found");
+        OHM = IOHMERC20(_ohm);
 
         blocksNeededForQueue = _timelock;
     }
@@ -103,7 +103,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         } else if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             require(permissions[STATUS.LIQUIDITYDEPOSITOR][msg.sender], "Not approved");
         } else {
-            require(1 == 0, "neither reserve nor liquidity token"); // guarantee revert
+            revert( "neither reserve nor liquidity token");
         }
 
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
@@ -354,6 +354,7 @@ contract OlympusTreasury is Ownable, ITreasury {
      * @notice disables timelocked functions
      */
     function enableOnChainGovernance() external onlyOwner {
+        require(!onChainGoverned, "OCG already enabled");
         if (onChainGovernanceTimelock != 0 && onChainGovernanceTimelock <= block.number) {
             onChainGoverned = true;
         } else {
