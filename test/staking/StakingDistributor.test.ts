@@ -311,21 +311,16 @@ describe("Distributor", () => {
       describe("removeRecipeint", () => {
           it("will set reciepent and rate to 0", async () => {
               await distributor.connect(governor).addRecipient(staking.address, 2975);
-              await distributor.connect(governor).removeRecipient(0, staking.address);
+              await distributor.connect(governor).removeRecipient(0);
 
               let r0 = await distributor.info(0);
               expect(r0.recipient).to.equal(ZERO_ADDRESS);
               expect(r0.rate).to.equal(0);
           });
 
-          it("will revert if address is incorrect", async () => {
-              await distributor.connect(governor).addRecipient(staking.address, 2975);
-              await expect(distributor.connect(governor).removeRecipient(0, other.address)).to.be.reverted;
-          });
-
           it("can be done by the guardian", async () => {
               await distributor.connect(governor).addRecipient(staking.address, 2975);
-              await distributor.connect(guardian).removeRecipient(0, staking.address);
+              await distributor.connect(guardian).removeRecipient(0);
 
               let r0 = await distributor.info(0);
               expect(r0.recipient).to.equal(ZERO_ADDRESS);
@@ -335,7 +330,7 @@ describe("Distributor", () => {
           it("must be done by either governor or guardian", async () => {
               await distributor.connect(governor).addRecipient(staking.address, 2975);
               await expect(
-                  distributor.connect(other).removeRecipient(0, staking.address)
+                  distributor.connect(other).removeRecipient(0)
               ).to.be.revertedWith("Caller is not governor or guardian");
           });
       });
