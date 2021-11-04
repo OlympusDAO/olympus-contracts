@@ -31,6 +31,7 @@ contract Distributor is Governable, Guardable {
         address recipient;
     }
     Info[] public info;
+    uint rateDenominator = 1_000_000;
 
     struct Adjust {
         bool add;
@@ -104,7 +105,7 @@ contract Distributor is Governable, Guardable {
         @return uint
      */
     function nextRewardAt(uint256 _rate) public view returns (uint256) {
-        return OHM.totalSupply().mul(_rate).div(1000000);
+        return OHM.totalSupply().mul(_rate).div(rateDenominator);
     }
 
     /**
