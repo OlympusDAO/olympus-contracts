@@ -183,7 +183,7 @@ describe("Treasury Token Migration", async function () {
         );
     });
 
-    describe.skip("Withdraw Functions", async () => {
+    describe("Withdraw Functions", async () => {
         it("should fail if the caller isn't the deployer", async () => {
             await expect(
                 olympusTokenMigrator
