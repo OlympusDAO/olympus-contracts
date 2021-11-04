@@ -29,12 +29,12 @@ contract Guardable is IGuardable {
     }
 
     function renounceGuardian() public virtual override onlyGuardian() {
-        emit GuardianPushed( _guardian, address(0) );
+        emit GuardianPulled( _guardian, address(0) );
         _guardian = address(0);
+        _newGuardian = address(0);
     }
 
     function pushGuardian( address newGuardian_ ) public virtual override onlyGuardian() {
-        require( newGuardian_ != address(0), "Guardable: new guardian is the zero address");
         emit GuardianPushed( _guardian, newGuardian_ );
         _newGuardian = newGuardian_;
     }
