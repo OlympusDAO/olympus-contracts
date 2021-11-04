@@ -190,9 +190,6 @@ describe("Treasury Token Migration", async function () {
                     .connect(user1)
                     .withdrawToken(DAI_ADDRESS, 1, addresses.ZERO_ADDRESS)
             ).to.be.revertedWith("Ownable: caller is not the owner");
-            await expect(
-                olympusTokenMigrator.connect(user1).withdrawEth(1, addresses.ZERO_ADDRESS)
-            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("should be able to withdraw sent dai", async () => {

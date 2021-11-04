@@ -231,13 +231,17 @@ contract OlympusTokenMigrator is Ownable {
         router.addLiquidity(token, address(newOHM), amountA, amountB, amountA, amountB, address(newTreasury), 100000000000);
     }
 
-    // Failsafe function to allow owner to withdraw funds sent directly to contract.
+    // Failsafe function to allow owner to withdraw funds sent directly to contract in case someone sends non-ohm tokens to the contract
     function withdrawToken(
         address tokenAddress,
         uint256 amount,
         address recipient
     ) external onlyOwner {
         require(tokenAddress != address(0), "Token address cannot be 0x0");
+        require(tokenAddress != address(gOHM), "Cannot withdraw: gOHM");
+        require(tokenAddress != address(oldOHM), "Cannot withdraw: old-OHM");
+        require(tokenAddress != address(oldsOHM), "Cannot withdraw: old-sOHM");
+        require(tokenAddress != address(oldwsOHM), "Cannot withdraw: old-wsOHM");
         require(amount > 0, "Withdraw value must be greater than 0");
         if (recipient == address(0)) {
             recipient = msg.sender; // if no address is specified the value will will be withdrawn to Owner
