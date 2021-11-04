@@ -129,6 +129,7 @@ contract gOHM is IgOHM {
         require(_staking != address(0));
         approved = _staking;
 
+        require(address(sOHM) == address(0));
         require(_sOHM != address(0));
         sOHM = IsOHM(_sOHM);
     }
