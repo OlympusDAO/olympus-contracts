@@ -112,9 +112,9 @@ describe("OlympusStaking", () => {
         expect(await staking.gOHM()).to.equal(gOHMFake.address);
       });
 
-      it("emits the gOHMSet event", async () => {
+      it("emits the GOHMSet event", async () => {
         await expect(staking.connect(governor).setContract(1, gOHMFake.address)).
-          to.emit(staking, "gOHMSet").withArgs(gOHMFake.address);
+          to.emit(staking, "GOHMSet").withArgs(gOHMFake.address);
       });
 
       it("will not allow updating gOHM if already set", async () => {
