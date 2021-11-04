@@ -12,7 +12,6 @@ import "./types/Governable.sol";
 import "./types/Guardable.sol";
 
 contract Distributor is IDistributor, Governable, Guardable {
-
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -26,7 +25,7 @@ contract Distributor is IDistributor, Governable, Guardable {
 
     mapping(uint256 => Adjust) public adjustments;
 
-    uint private immutable rateDenominator = 1_000_000;
+    uint256 private immutable rateDenominator = 1_000_000;
 
     /* ====== STRUCTS ====== */
 
@@ -170,14 +169,10 @@ contract Distributor is IDistributor, Governable, Guardable {
             require(_rate <= info[_index].rate.mul(25).div(1000), "Limiter: cannot adjust by >2.5%");
         }
 
-        if(!_add) {
+        if (!_add) {
             require(_rate <= info[_index].rate, "Cannot decrease rate by more than it already is");
         }
 
-        adjustments[_index] = Adjust({
-            add: _add,
-            rate: _rate,
-            target: _target
-        });
+        adjustments[_index] = Adjust({add: _add, rate: _rate, target: _target});
     }
 }
