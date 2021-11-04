@@ -20,10 +20,10 @@ contract OlympusBondingCalculator is IBondingCalculator {
     using SafeMath for uint;
     using SafeMath for uint112;
 
-    IERC20 immutable OHM;
+    IERC20 internal immutable OHM;
 
     constructor( address _OHM ) {
-        require( _OHM != address(0) );
+        require( _OHM != address(0), "Zero address found" );
         OHM = IERC20( _OHM );
     }
 
