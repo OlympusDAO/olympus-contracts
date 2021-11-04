@@ -53,7 +53,7 @@ contract sOlympus is IsOHM, ERC20Permit {
     Rebase[] public rebases; // past rebase data
 
     uint256 private constant MAX_UINT256 = ~uint256(0);
-    uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 5000000 * 10**9;
+    uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 5_000_000 * 10**9;
 
     // TOTAL_GONS is a multiple of INITIAL_FRAGMENTS_SUPPLY so that _gonsPerFragment is an integer.
     // Use the highest value that fits in a uint256 for max granularity.

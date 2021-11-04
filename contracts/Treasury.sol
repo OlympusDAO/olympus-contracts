@@ -125,7 +125,7 @@ contract OlympusTreasury is Ownable, ITreasury {
      */
     function withdraw(uint256 _amount, address _token) external override {
         require(permissions[STATUS.RESERVETOKEN][_token], "Not accepted"); // Only reserves can be used for redemptions
-        require(permissions[STATUS.RESERVESPENDER][msg.sender] == true, "Not approved");
+        require(permissions[STATUS.RESERVESPENDER][msg.sender], "Not approved");
 
         uint256 value = tokenValue(_token, _amount);
         OHM.burnFrom(msg.sender, value);
@@ -157,7 +157,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
         totalReserves = totalReserves.sub(value);
 
-        IERC20(_token).transfer(msg.sender, _amount);
+        IERC20(_token).safeTransfer(msg.sender, _amount);
 
         emit CreateDebt(msg.sender, _token, _amount, value);
     }
