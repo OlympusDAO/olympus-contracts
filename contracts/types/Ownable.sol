@@ -40,5 +40,6 @@ abstract contract Ownable is IOwnable {
         require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
         emit OwnershipPulled( _owner, _newOwner );
         _owner = _newOwner;
+        delete _newOwner;
     }
 }
