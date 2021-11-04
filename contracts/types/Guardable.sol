@@ -43,5 +43,6 @@ contract Guardable is IGuardable {
         require( msg.sender == _newGuardian, "Guardable: must be new guardian to pull");
         emit GuardianPulled( _guardian, _newGuardian );
         _guardian = _newGuardian;
+        delete _newGuardian;
     }
 }

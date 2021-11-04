@@ -44,5 +44,6 @@ contract Governable is IGovernable {
         require( msg.sender == _newGovernor, "Governable: must be new governor to pull");
         emit GovernorPulled( _governor, _newGovernor );
         _governor = _newGovernor;
+        delete _newGovernor;
     }
 }
