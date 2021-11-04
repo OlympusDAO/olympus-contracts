@@ -103,7 +103,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         } else if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             require(permissions[STATUS.LIQUIDITYDEPOSITOR][msg.sender], "Not approved");
         } else {
-            revert( "neither reserve nor liquidity token");
+            revert("neither reserve nor liquidity token");
         }
 
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
@@ -309,7 +309,9 @@ contract OlympusTreasury is Ownable, ITreasury {
         if (_status == STATUS.RESERVEMANAGER || _status == STATUS.LIQUIDITYMANAGER) {
             timelock = block.number.add(blocksNeededForQueue.mul(2));
         }
-        permissionQueue.push(Queue({managing: _status, toPermit: _address, calculator: _calculator, timelockEnd: timelock, nullify: false, executed: false}));
+        permissionQueue.push(
+            Queue({managing: _status, toPermit: _address, calculator: _calculator, timelockEnd: timelock, nullify: false, executed: false})
+        );
         emit PermissionQueued(_status, _address);
     }
 
