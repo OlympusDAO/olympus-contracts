@@ -137,7 +137,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         uint256 value = tokenValue(_token, _amount);
         require(value != 0);
 
-        uint256 availableDebt = sOHM.balanceOf(msg.sender).sub(debtorBalance[msg.sender]);
+        uint256 availableDebt = sOHM.balanceOf(msg.sender) - debtorBalance[msg.sender];
         require(value <= availableDebt, "Exceeds debt limit");
 
         debtorBalance[msg.sender] += value;

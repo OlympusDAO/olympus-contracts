@@ -2,7 +2,8 @@
 pragma solidity ^0.8.9;
 
 
-import "./libraries/FixedPoint.sol";
+//import "./libraries/FixedPoint.sol";
+import "./libraries/Math.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
@@ -11,8 +12,6 @@ import "./interfaces/IUniswapV2ERC20.sol";
 import "./interfaces/IUniswapV2Pair.sol";
 
 contract OlympusBondingCalculator is IBondingCalculator {
-    using FixedPoint for *;
-
     IERC20 immutable OHM;
 
     constructor( address _OHM ) {
@@ -29,15 +28,15 @@ contract OlympusBondingCalculator is IBondingCalculator {
         return ( reserve0 * reserve1 ) / ( 10 ** decimals );
     }
 
-    function getTotalValue( address _pair ) public view override returns ( uint256 _value ) {
-        return Babylonian.sqrt(getKValue( _pair )) * 2;
+    function getTotalValue( address _pair ) public view override returns ( uint256 ) {
+        return Math.sqrt(getKValue( _pair )) * 2;
     }
 
-    function valuation( address _pair, uint256 amount_ ) external view override returns ( uint256 ) {
+    function valuation( address _pair, uint256 _amount ) external view override returns ( uint256 ) {
         uint256 totalValue = getTotalValue( _pair );
-        uint256 totalSupply = IUniswapV2Pair( _pair ).totalSupply();
+        uint256 shares = _amount / IUniswapV2Pair( _pair ).totalSupply();
 
-        return (totalValue * FixedPoint.fraction( amount_, totalSupply ).decode112with18()) / 1e18;
+        return totalValue * shares / 1e18;
     }
 
     function markdown( address _pair ) external view override returns ( uint256 ) {

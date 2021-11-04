@@ -231,11 +231,13 @@ contract OlympusStaking is Governable {
                 IDistributor( distributor ).distribute();
             }
 
-            int256 diff = contractBalance() - totalStaked();
-            if( diff <= 0 ) {
+            uint256 balance = contractBalance();
+            uint256 staked = totalStaked();
+
+            if( balance <= staked ) {
                 epoch.distribute = 0;
             } else {
-                epoch.distribute = uint256(diff);
+                epoch.distribute = balance - staked;
             }
         }
     }
