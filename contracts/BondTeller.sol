@@ -8,8 +8,11 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IgOHM.sol";
 import "./interfaces/IStaking.sol";
+import "./interfaces/IOwnable.sol";
 
-contract BondTeller {
+import "./types/Ownable.sol";
+
+contract BondTeller is Ownable {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -54,8 +57,6 @@ contract BondTeller {
     mapping(address => uint256) public FERs; // front end operator rewards
     uint256 public feReward;
 
-    address public policy;
-
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
@@ -66,6 +67,7 @@ contract BondTeller {
         address _sOHM,
         address _gOHM
     ) {
+
         require(_depository != address(0));
         depository = _depository;
         require(_staking != address(0));
@@ -101,18 +103,28 @@ contract BondTeller {
         uint256 _expires,
         address _feo
     ) external onlyDepository returns (uint256 index_) {
-        treasury.mint(address(this), _payout.add(feReward));
+        uint reward = _payout.mul(feReward).div(10_000);
+        treasury.mint(address(this), _payout.add(reward));
 
         OHM.approve(address(staking), _payout); // approve staking payout
 
         staking.stake(_payout, address(this), true, true);
 
-        FERs[_feo] = FERs[_feo].add(feReward); // FE operator takes fee
+        FERs[_feo] = FERs[_feo].add(reward); // FE operator takes fee
 
         index_ = bonderInfo[_bonder].length;
 
         // store bond & stake payout
-        bonderInfo[_bonder].push(Bond({principal: _principal, principalPaid: _principalPaid, payout: gOHM.balanceTo(_payout), vested: _expires, created: block.timestamp, redeemed: 0}));
+        bonderInfo[_bonder].push(
+            Bond({
+                principal: _principal, 
+                principalPaid: _principalPaid, 
+                payout: gOHM.balanceTo(_payout), 
+                vested: _expires, 
+                created: block.timestamp, 
+                redeemed: 0
+            })
+        );
     }
 
     /* ========== INTERACTABLE FUNCTIONS ========== */
@@ -152,11 +164,17 @@ contract BondTeller {
         return dues;
     }
 
+    // pay reward to front end operator
+    function getReward() external {
+        uint reward = FERs[msg.sender];
+        FERs[msg.sender] = 0;
+        OHM.safeTransfer(msg.sender, reward);
+    }
+
     /* ========== OWNABLE FUNCTIONS ========== */
 
-    function setFEReward(uint256 reward) external {
-        require(msg.sender == policy, "Only policy");
-
+    // set reward for front end operator (4 decimals. 100 = 1%)
+    function setFEReward(uint256 reward) external onlyOwner() {
         feReward = reward;
     }
 
@@ -167,7 +185,7 @@ contract BondTeller {
      *  @param _amount uint
      */
     function pay(address _bonder, uint256 _amount) internal {
-        sOHM.transfer(_bonder, _amount);
+        sOHM.safeTransfer(_bonder, _amount);
     }
 
     /* ========== VIEW FUNCTIONS ========== */
