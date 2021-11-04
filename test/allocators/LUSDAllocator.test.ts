@@ -18,7 +18,7 @@ const ZERO_ADDRESS = ethers.utils.getAddress("0x00000000000000000000000000000000
 
 describe("LUSDAllocator", () => {
   let owner: SignerWithAddress;
-  let governor: SignerWithAddress;
+  let other: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let treasuryFake: FakeContract<ITreasury>;
@@ -27,7 +27,7 @@ describe("LUSDAllocator", () => {
   let lusdAllocator: LUSDAllocator;
 
   beforeEach(async () => {
-    [owner, governor, alice, bob] = await ethers.getSigners();
+    [owner, other, alice, bob] = await ethers.getSigners();
     treasuryFake = await smock.fake<ITreasury>("ITreasury");
     stabilityPoolFake = await smock.fake<IStabilityPool>("IStabilityPool");
     lusdTokenFake = await smock.fake<IERC20>("IERC20");
@@ -95,7 +95,77 @@ describe("LUSDAllocator", () => {
 
         expect(await lusdAllocator.totalAmountDeployed()).to.equal(AMOUNT);
         expect(await lusdAllocator.totalValueDeployed()).to.equal(VALUE);
-      })
+      });
+
+      it("can perform additional deposit", async () => {
+        const AMOUNT = 12345;
+        const VALUE = 999999;
+        treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, AMOUNT).returns(VALUE);
+        await lusdAllocator.connect(owner).deposit(lusdTokenFake.address, AMOUNT);
+        await lusdAllocator.connect(owner).deposit(lusdTokenFake.address, AMOUNT);
+
+        expect(await lusdAllocator.totalAmountDeployed()).to.equal(AMOUNT + AMOUNT);
+        expect(await lusdAllocator.totalValueDeployed()).to.equal(VALUE + VALUE);
+      });
+
+      it("reverts if non-LUSD token is passed", async () => {
+        await expect(lusdAllocator.connect(owner).deposit(other.address, 12345))
+          .to.be.revertedWith("token address does not match LUSD token");
+      });
+
+      it("can only be called by the owner", async () => {
+        await expect(lusdAllocator.connect(other).deposit(lusdTokenFake.address, 12345))
+          .to.be.revertedWith("Ownable: caller is not the owner");
+      });
+    });
+
+    describe("withdraw", () => {
+      const DEPOSIT_AMOUNT = 12345;
+      const DEPOSIT_VALUE = 999999;
+      beforeEach(async () => {
+        treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, DEPOSIT_AMOUNT).returns(DEPOSIT_VALUE);
+        await lusdAllocator.connect(owner).deposit(lusdTokenFake.address, DEPOSIT_AMOUNT);
+      });
+
+      it("can withdraw all the funds", async () => {
+        lusdTokenFake.balanceOf.whenCalledWith(lusdAllocator.address).returns(DEPOSIT_AMOUNT);
+        treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, DEPOSIT_AMOUNT).returns(DEPOSIT_VALUE);
+        await lusdAllocator.connect(owner).withdraw(lusdTokenFake.address, DEPOSIT_AMOUNT);
+
+        expect(stabilityPoolFake.withdrawFromSP).to.be.calledWith(DEPOSIT_AMOUNT);
+        expect(treasuryFake.deposit).to.be.calledWith(DEPOSIT_AMOUNT, lusdTokenFake.address, DEPOSIT_VALUE);
+        expect(lusdTokenFake.balanceOf).to.be.calledWith(lusdAllocator.address);
+        expect(lusdTokenFake.approve).to.be.calledWith(treasuryFake.address, DEPOSIT_AMOUNT);
+
+        expect(await lusdAllocator.totalAmountDeployed()).to.equal(0);
+        expect(await lusdAllocator.totalValueDeployed()).to.equal(0);
+      });
+
+      it("can do do a partial withdraw", async () => {
+        const PARTIAL_AMOUNT = 4321;
+        const PARTIAL_VALUE = 8888;
+        lusdTokenFake.balanceOf.whenCalledWith(lusdAllocator.address).returns(PARTIAL_AMOUNT);
+        treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, PARTIAL_AMOUNT).returns(PARTIAL_VALUE);
+        await lusdAllocator.connect(owner).withdraw(lusdTokenFake.address, PARTIAL_AMOUNT);
+
+        expect(stabilityPoolFake.withdrawFromSP).to.be.calledWith(PARTIAL_AMOUNT);
+        expect(treasuryFake.deposit).to.be.calledWith(PARTIAL_AMOUNT, lusdTokenFake.address, PARTIAL_VALUE);
+        expect(lusdTokenFake.balanceOf).to.be.calledWith(lusdAllocator.address);
+        expect(lusdTokenFake.approve).to.be.calledWith(treasuryFake.address, PARTIAL_AMOUNT);
+
+        expect(await lusdAllocator.totalAmountDeployed()).to.equal(DEPOSIT_AMOUNT - PARTIAL_AMOUNT);
+        expect(await lusdAllocator.totalValueDeployed()).to.equal(DEPOSIT_VALUE - PARTIAL_VALUE);
+      });
+
+      it("reverts if non-LUSD token is passed", async () => {
+        await expect(lusdAllocator.connect(owner).withdraw(other.address, 12345))
+          .to.be.revertedWith("token address does not match LUSD token");
+      });
+
+      it("can only be called by the owner", async () => {
+        await expect(lusdAllocator.connect(other).withdraw(lusdTokenFake.address, 12345))
+          .to.be.revertedWith("Ownable: caller is not the owner");
+      });
     });
   });
 });
