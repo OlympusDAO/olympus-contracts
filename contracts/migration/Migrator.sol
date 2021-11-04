@@ -1,7 +1,3 @@
-// Sources flattened with hardhat v2.6.7 https://hardhat.org
-
-// File contracts/interfaces/IERC20.sol
-
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
@@ -76,12 +72,6 @@ interface IERC20 {
   event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
-
-// File contracts/interfaces/IsOHM.sol
-
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
-
 interface IsOHM is IERC20 {
     function rebase( uint256 ohmProfit_, uint epoch_) external returns (uint256);
 
@@ -94,12 +84,6 @@ interface IsOHM is IERC20 {
     function index() external view returns ( uint );
 }
 
-
-// File contracts/interfaces/IwsOHM.sol
-
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
-
 // Old wsOHM interface
 interface IwsOHM is IERC20 {
   function wrap(uint256 _amount) external returns (uint256);
@@ -110,12 +94,6 @@ interface IwsOHM is IERC20 {
 
   function sOHMTowOHM(uint256 _amount) external view returns (uint256);
 }
-
-
-// File contracts/interfaces/IgOHM.sol
-
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
 
 interface IgOHM is IERC20 {
   function mint(address _to, uint256 _amount) external;
@@ -128,12 +106,6 @@ interface IgOHM is IERC20 {
 
   function migrate( address _staking, address _sOHM ) external;
 }
-
-
-// File contracts/interfaces/ITreasury.sol
-
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
 
 interface ITreasury {
     function deposit(
@@ -156,12 +128,6 @@ interface ITreasury {
 
     function excessReserves() external view returns (uint256);
 }
-
-
-// File contracts/interfaces/IStaking.sol
-
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
 
 interface IStaking {
 
@@ -191,12 +157,6 @@ interface IStaking {
 }
 
 
-// File contracts/interfaces/IOwnable.sol
-
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
-
-
 interface IOwnable {
   function owner() external view returns (address);
 
@@ -206,12 +166,6 @@ interface IOwnable {
   
   function pullManagement() external;
 }
-
-
-// File contracts/types/Ownable.sol
-
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
 
 abstract contract Ownable is IOwnable {
 
@@ -252,12 +206,6 @@ abstract contract Ownable is IOwnable {
         _owner = _newOwner;
     }
 }
-
-
-// File contracts/libraries/SafeMath.sol
-
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
 
 
 // TODO(zx): Replace all instances of SafeMath with OZ implementation
@@ -385,12 +333,6 @@ library SafeMath {
     }
 
 }
-
-
-// File contracts/libraries/Address.sol
-
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
 
 
 // TODO(zx): replace with OZ implementation.
@@ -622,12 +564,6 @@ library Address {
 }
 
 
-// File contracts/libraries/SafeERC20.sol
-
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
-
-
 library SafeERC20 {
     using SafeMath for uint256;
     using Address for address;
@@ -667,12 +603,6 @@ library SafeERC20 {
         }
     }
 }
-
-
-// File contracts/migration/OlympusTokenMigrator.sol
-
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
 
 
 

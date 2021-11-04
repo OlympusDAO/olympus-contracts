@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import "./interfaces/IERC20.sol";
+import "./libraries/SafeERC20.sol";
 import "./interfaces/ITreasury.sol";
 
 import "./types/Governable.sol";
