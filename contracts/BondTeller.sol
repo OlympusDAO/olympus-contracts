@@ -67,7 +67,6 @@ contract BondTeller is ITeller, Ownable {
         address _ohm,
         address _sOHM
     ) {
-
         require(_depository != address(0), "Zero address: Depository");
         depository = _depository;
         require(_staking != address(0), "Zero address: Staking");
@@ -113,11 +112,11 @@ contract BondTeller is ITeller, Ownable {
         // store bond & stake payout
         bonderInfo[_bonder].push(
             Bond({
-                principal: _principal, 
-                principalPaid: _principalPaid, 
-                payout: sOHM.toG(_payout), 
-                vested: _expires, 
-                created: block.timestamp, 
+                principal: _principal,
+                principalPaid: _principalPaid,
+                payout: sOHM.toG(_payout),
+                vested: _expires,
+                created: block.timestamp,
                 redeemed: 0
             })
         );
@@ -170,7 +169,7 @@ contract BondTeller is ITeller, Ownable {
     /* ========== OWNABLE FUNCTIONS ========== */
 
     // set reward for front end operator (4 decimals. 100 = 1%)
-    function setFEReward(uint256 reward) external override onlyOwner() {
+    function setFEReward(uint256 reward) external override onlyOwner {
         feReward = reward;
     }
 
