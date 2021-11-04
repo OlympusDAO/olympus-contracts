@@ -180,7 +180,7 @@ describe("OlympusStaking", () => {
         sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
         sOHMFake.balanceForGons.whenCalledWith(gons).returns(amount);
 
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         expect(await staking.supplyInWarmup()).to.equal(amount);
         expect(await staking.warmupPeriod()).to.equal(0);
@@ -199,7 +199,7 @@ describe("OlympusStaking", () => {
         ohmFake.transferFrom.whenCalledWith(alice.address, staking.address, amount).returns(true);
         sOHMFake.transfer.whenCalledWith(alice.address, amount).returns(true);
 
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         // nothing is in warmup
         sOHMFake.balanceForGons.whenCalledWith(0).returns(0);
@@ -215,7 +215,7 @@ describe("OlympusStaking", () => {
         ohmFake.transferFrom.whenCalledWith(alice.address, staking.address, amount).returns(true);
         gOHMFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
 
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         expect(gOHMFake.mint).to.be.calledWith(alice.address, indexedAmount);
       });
@@ -232,7 +232,7 @@ describe("OlympusStaking", () => {
         sOHMFake.balanceForGons.whenCalledWith(gons).returns(amount);
 
         await staking.connect(governor).setWarmup(1);
-        await staking.connect(alice).stake(amount, alice.address, true, true);
+        await staking.connect(alice).stake(alice.address, amount, true, true);
 
         expect(await staking.supplyInWarmup()).to.equal(amount);
         let warmupInfo = await staking.warmupInfo(alice.address);
@@ -253,7 +253,7 @@ describe("OlympusStaking", () => {
 
         await staking.connect(alice).toggleLock();
 
-        await expect(staking.connect(alice).stake(amount, bob.address, rebasing, claim)).
+        await expect(staking.connect(alice).stake(bob.address, amount, rebasing, claim)).
           to.be.revertedWith("External deposits for account are locked" );
       });
 
@@ -269,7 +269,7 @@ describe("OlympusStaking", () => {
 
         await staking.connect(alice).toggleLock();
 
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         expect(await staking.supplyInWarmup()).to.equal(amount);
       });
@@ -281,7 +281,7 @@ describe("OlympusStaking", () => {
         let claim = false;
         ohmFake.transferFrom.whenCalledWith(alice.address, staking.address, amount).returns(true);
         sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
-        await staking.connect(wallet).stake(amount, wallet.address, rebasing, claim);
+        await staking.connect(wallet).stake(wallet.address, amount, rebasing, claim);
       }
 
       it("transfers sOHM when rebasing is true", async () => {
@@ -371,7 +371,7 @@ describe("OlympusStaking", () => {
         ohmFake.transferFrom.whenCalledWith(alice.address, staking.address, amount).returns(true)
         sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
 
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
       });
 
       it("removes stake from warmup and returns OHM", async () => {
@@ -402,11 +402,11 @@ describe("OlympusStaking", () => {
 
         ohmFake.transferFrom.returns(true);
         sOHMFake.transfer.returns(true);
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         sOHMFake.transferFrom.returns(true);
         ohmFake.transfer.returns(true);
-        await staking.connect(alice).unstake(amount, false, rebasing);
+        await staking.connect(alice).unstake(alice.address, amount, false, rebasing);
 
         expect(sOHMFake.transferFrom).to.be.calledWith(alice.address, staking.address, amount);
         expect(ohmFake.transfer).to.be.calledWith(alice.address, amount);
@@ -419,11 +419,11 @@ describe("OlympusStaking", () => {
         let claim = true;
 
         ohmFake.transferFrom.returns(true);
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         gOHMFake.balanceFrom.whenCalledWith(indexedAmount).returns(amount);
         ohmFake.transfer.returns(true);
-        await staking.connect(alice).unstake(indexedAmount, false, rebasing);
+        await staking.connect(alice).unstake(alice.address, indexedAmount, false, rebasing);
 
         expect(ohmFake.transfer).to.be.calledWith(alice.address, amount);
         expect(gOHMFake.burn).to.be.calledWith(alice.address, indexedAmount);
@@ -438,7 +438,7 @@ describe("OlympusStaking", () => {
         gOHMFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
         sOHMFake.transferFrom.returns(true);
 
-        await staking.connect(alice).wrap(amount);
+        await staking.connect(alice).wrap(alice.address, amount);
 
         expect(gOHMFake.mint).to.be.calledWith(alice.address, indexedAmount);
         expect(sOHMFake.transferFrom).to.be.calledWith(alice.address, staking.address, amount);
@@ -453,7 +453,7 @@ describe("OlympusStaking", () => {
         gOHMFake.balanceFrom.whenCalledWith(indexedAmount).returns(amount);
         sOHMFake.transfer.returns(true);
 
-        await staking.connect(alice).unwrap(indexedAmount);
+        await staking.connect(alice).unwrap(alice.address, indexedAmount);
 
         expect(gOHMFake.burn).to.be.calledWith(alice.address, indexedAmount);
         expect(sOHMFake.transfer).to.be.calledWith(alice.address, amount);
