@@ -210,11 +210,11 @@ contract sOlympus is IsOHM, ERC20Permit {
     /* ========== VIEW FUNCTIONS ========== */
 
     function balanceOf( address who ) public view override(IERC20, ERC20) returns ( uint256 ) {
-        return _gonBalances[ who ] / ( _gonsPerFragment );
+        return _gonBalances[ who ] / _gonsPerFragment;
     }
 
     function gonsForBalance( uint amount ) public view returns ( uint ) {
-        return amount * ( _gonsPerFragment );
+        return amount * _gonsPerFragment;
     }
 
     function balanceForGons( uint gons ) public view returns ( uint ) {

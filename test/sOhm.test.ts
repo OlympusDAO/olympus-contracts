@@ -16,7 +16,7 @@ import {
   GOHM__factory,
   OlympusStaking,
   OlympusStaking__factory,
-} from '../../types';
+} from '../types';
 
 const TOTAL_GONS = 5000000000000000;
 const ZERO_ADDRESS = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");

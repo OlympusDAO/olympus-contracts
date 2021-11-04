@@ -1,32 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.8.9;
 pragma abicoder v2;
 
 import "ds-test/test.sol"; // ds-test
 
-import "../../../contracts/libraries/SafeMath.sol";
-import "../../../contracts/libraries/FixedPoint.sol";
-import "../../../contracts/libraries/FullMath.sol";
 import "../../../contracts/BondDepository.sol";
 import "../../../contracts/Staking.sol";
 import "../../../contracts/OlympusERC20.sol";
 import "../../../contracts/sOlympusERC20.sol";
 import "../../../contracts/StandardBondingCalculator.sol";
 import "../../../contracts/interfaces/IUniswapV2Pair.sol";
-import "../../../contracts/interfaces/IERC20Metadata.sol";
+import "../../../contracts/interfaces/IERC20.sol";
 import "../../../contracts/Treasury.sol";
 import "../../../contracts/BondDepository.sol";
-import "./util/Hevm.sol";
 import "../../../contracts/BondTeller.sol";
 import "../../../contracts/governance/gOHM.sol";
-import "./util/MockContract.sol";
 
+import "./util/Hevm.sol";
+import "./util/MockContract.sol";
 
 contract BondDepositoryTest is DSTest {
 
-    using FixedPoint for *;
-    using SafeMath for uint;
-    using SafeMath for uint112;
+    //using FixedPoint for *;
+    //using SafeMath for uint;
+    //using SafeMath for uint112;
 
     OlympusBondDepository internal bondDepository;
     OlympusStaking internal staking;
@@ -231,8 +228,8 @@ contract BondDepositoryTest is DSTest {
         pair.givenMethodReturn(abi.encodeWithSelector(ERC20.symbol.selector), abi.encode("MOCK"));
         pair.givenMethodReturnUint(abi.encodeWithSelector(ERC20.decimals.selector), 18);
 
-        pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token0.selector), address(ohm));
-        pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token1.selector), address(abcToken));
+        //pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token0.selector), address(ohm));
+        //pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token1.selector), address(abcToken));
         pair.givenMethodReturn(abi.encodeWithSelector(IUniswapV2Pair.getReserves.selector),
             abi.encode(uint112(5 * 10 ** 9), uint112(10 * 10 ** 9), uint32(0)));
 

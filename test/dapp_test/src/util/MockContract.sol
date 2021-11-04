@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 //Copied from https://github.com/gnosis/mock-contract/blob/b3db814ac41a3b632d8441cd1fbfbfce54e056f7/contracts/MockContract.sol but removed call "encodeWithSignature("updateInvocationCount" towards end
-pragma solidity >=0.7.0 <0.8.0;
+pragma solidity >=0.7.0;
 
 interface MockInterface {
 	/**
@@ -13,7 +13,7 @@ interface MockInterface {
 	function givenAnyReturn(bytes calldata response) external;
 	function givenAnyReturnBool(bool response) external;
 	function givenAnyReturnUint(uint response) external;
-	function givenAnyReturnAddress(address response) external;
+	//function givenAnyReturnAddress(address response) external;
 
 	function givenAnyRevert() external;
 	function givenAnyRevertWithMessage(string calldata message) external;
@@ -30,7 +30,7 @@ interface MockInterface {
 	function givenMethodReturn(bytes calldata method, bytes calldata response) external;
 	function givenMethodReturnBool(bytes calldata method, bool response) external;
 	function givenMethodReturnUint(bytes calldata method, uint response) external;
-	function givenMethodReturnAddress(bytes calldata method, address response) external;
+	//function givenMethodReturnAddress(bytes calldata method, address response) external;
 
 	function givenMethodRevert(bytes calldata method) external;
 	function givenMethodRevertWithMessage(bytes calldata method, string calldata message) external;
@@ -46,7 +46,7 @@ interface MockInterface {
 	function givenCalldataReturn(bytes calldata call, bytes calldata response) external;
 	function givenCalldataReturnBool(bytes calldata call, bool response) external;
 	function givenCalldataReturnUint(bytes calldata call, uint response) external;
-	function givenCalldataReturnAddress(bytes calldata call, address response) external;
+	//function givenCalldataReturnAddress(bytes calldata call, address response) external;
 
 	function givenCalldataRevert(bytes calldata call) external;
 	function givenCalldataRevertWithMessage(bytes calldata call, string calldata message) external;
@@ -144,9 +144,9 @@ contract MockContract is MockInterface {
 		_givenAnyReturn(uintToBytes(response));
 	}
 
-	function givenAnyReturnAddress(address response) override external {
-		_givenAnyReturn(uintToBytes(uint(response)));
-	}
+	//function givenAnyReturnAddress(address response) override external {
+	//	_givenAnyReturn(uintToBytes(uint(response)));
+	//}
 
 	function givenAnyRevert() override external {
 		fallbackMockType = MockType.Revert;
@@ -181,9 +181,9 @@ contract MockContract is MockInterface {
 		_givenCalldataReturn(call, uintToBytes(response));
 	}
 
-	function givenCalldataReturnAddress(bytes calldata call, address response) override external {
-		_givenCalldataReturn(call, uintToBytes(uint(response)));
-	}
+	//function givenCalldataReturnAddress(bytes calldata call, address response) override external {
+	//	_givenCalldataReturn(call, uintToBytes(uint(response)));
+	//}
 
 	function _givenMethodReturn(bytes memory call, bytes memory response) private {
 		bytes4 method = bytesToBytes4(call);
@@ -205,9 +205,9 @@ contract MockContract is MockInterface {
 		_givenMethodReturn(call, uintToBytes(response));
 	}
 
-	function givenMethodReturnAddress(bytes calldata call, address response) override external {
-		_givenMethodReturn(call, uintToBytes(uint(response)));
-	}
+	//function givenMethodReturnAddress(bytes calldata call, address response) override external {
+	//	_givenMethodReturn(call, uintToBytes(uint(response)));
+	//}
 
 	function givenCalldataRevert(bytes calldata call) override external {
 		calldataMockTypes[call] = MockType.Revert;

@@ -2,8 +2,8 @@
 pragma solidity ^0.8.9;
 
 
-//import "./libraries/FixedPoint.sol";
-import "./libraries/Math.sol";
+import "./libraries/FixedPointMathLib.sol";
+//import "./libraries/Math.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
@@ -12,6 +12,8 @@ import "./interfaces/IUniswapV2ERC20.sol";
 import "./interfaces/IUniswapV2Pair.sol";
 
 contract OlympusBondingCalculator is IBondingCalculator {
+    using FixedPointMathLib for uint256;
+
     IERC20 immutable OHM;
 
     constructor( address _OHM ) {
@@ -29,7 +31,7 @@ contract OlympusBondingCalculator is IBondingCalculator {
     }
 
     function getTotalValue( address _pair ) public view override returns ( uint256 ) {
-        return Math.sqrt(getKValue( _pair )) * 2;
+        return getKValue( _pair ).sqrt() * 2;
     }
 
     function valuation( address _pair, uint256 _amount ) external view override returns ( uint256 ) {

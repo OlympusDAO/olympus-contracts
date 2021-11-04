@@ -8,7 +8,7 @@ import {
   IOHMERC20,
   Distributor__factory,
   Distributor,
-} from '../../types';
+} from '../types';
 
 chai.use(smock.matchers);
 

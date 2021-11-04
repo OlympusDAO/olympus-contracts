@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.8.9;
 
 import "ds-test/test.sol"; // ds-test
 import "../../../contracts/OlympusERC20.sol";
@@ -14,7 +14,7 @@ contract OlymppusERC20TokenTest is DSTest {
     function test_erc20() public {
         assertEq("Olympus", ohmContract.name());
         assertEq("OHM", ohmContract.symbol());
-        assertEq(9, int(ohmContract.decimals()));
+        assertEq(9, ohmContract.decimals());
     }
 
     function testCannot_mint() public {
