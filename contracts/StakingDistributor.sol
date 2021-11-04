@@ -11,6 +11,7 @@ import "./types/Governable.sol";
 import "./types/Guardable.sol";
 
 contract Distributor is Governable, Guardable {
+
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -18,11 +19,13 @@ contract Distributor is Governable, Guardable {
 
     /* ====== VARIABLES ====== */
 
-    IERC20 immutable OHM;
-    ITreasury immutable treasury;
-    address immutable staking;
+    IERC20 private immutable ohm;
+    ITreasury private immutable treasury;
+    address private immutable staking;
 
     mapping(uint256 => Adjust) public adjustments;
+
+    uint private immutable rateDenominator = 1_000_000;
 
     /* ====== STRUCTS ====== */
 
@@ -45,11 +48,11 @@ contract Distributor is Governable, Guardable {
         address _ohm,
         address _staking
     ) {
-        require(_treasury != address(0));
+        require(_treasury != address(0), "Zero address found");
         treasury = ITreasury(_treasury);
-        require(_ohm != address(0));
-        OHM = IERC20(_ohm);
-        require(_staking != address(0));
+        require(_ohm != address(0), "Zero address found");
+        ohm = IERC20(_ohm);
+        require(_staking != address(0), "Zero address found");
         staking = _staking;
     }
 
@@ -104,7 +107,7 @@ contract Distributor is Governable, Guardable {
         @return uint
      */
     function nextRewardAt(uint256 _rate) public view returns (uint256) {
-        return OHM.totalSupply().mul(_rate).div(1000000);
+        return ohm.totalSupply().mul(_rate).div(rateDenominator);
     }
 
     /**
@@ -116,7 +119,7 @@ contract Distributor is Governable, Guardable {
         uint256 reward;
         for (uint256 i = 0; i < info.length; i++) {
             if (info[i].recipient == _recipient) {
-                reward = nextRewardAt(info[i].rate);
+                reward += nextRewardAt(info[i].rate);
             }
         }
         return reward;
@@ -130,18 +133,18 @@ contract Distributor is Governable, Guardable {
         @param _rewardRate uint
      */
     function addRecipient(address _recipient, uint256 _rewardRate) external onlyGovernor {
-        require(_recipient != address(0));
+        require(_recipient != address(0), "Zero address found");
+        require(_rewardRate <= rateDenominator, "Rate cannot exceed denominator");
         info.push(Info({recipient: _recipient, rate: _rewardRate}));
     }
 
     /**
         @notice removes recipient for distributions
         @param _index uint
-        @param _recipient address
      */
-    function removeRecipient(uint256 _index, address _recipient) external {
+    function removeRecipient(uint256 _index) external {
         require(msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian");
-        require(_recipient == info[_index].recipient);
+        require(info[_index].recipient != address(0), "Recipient does not exist");
         info[_index].recipient = address(0);
         info[_index].rate = 0;
     }
@@ -160,6 +163,7 @@ contract Distributor is Governable, Guardable {
         uint256 _target
     ) external {
         require(msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian");
+        require(info[_index].recipient != address(0), "Recipient does not exist");
 
         if (msg.sender == guardian()) {
             require(_rate <= info[_index].rate.mul(25).div(1000), "Limiter: cannot adjust by >2.5%");
