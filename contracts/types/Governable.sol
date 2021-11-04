@@ -30,12 +30,12 @@ contract Governable is IGovernable {
     }
 
     function renounceGovernor() public virtual override onlyGovernor() {
-        emit GovernorPushed( _governor, address(0) );
+        emit GovernorPulled( _governor, address(0) );
         _governor = address(0);
+        _newGovernor = address(0);
     }
 
     function pushGovernor( address newGovernor_ ) public virtual override onlyGovernor() {
-        require( newGovernor_ != address(0), "Governable: new governor is the zero address");
         emit GovernorPushed( _governor, newGovernor_ );
         _newGovernor = newGovernor_;
     }
