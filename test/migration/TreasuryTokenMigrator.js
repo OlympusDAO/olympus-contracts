@@ -169,7 +169,7 @@ describe("Treasury Token Migration", async function () {
     it("Should fail if user does not have any of the ohm tokens to migrate ", async () => {
         await sendETH(deployer, NON_TOKEN_HOLDER);
         const user = await impersonate(NON_TOKEN_HOLDER);
-        await expect(olympusTokenMigrator.connect(user).migrate(1000000, 0)).to.revertedWith(
+        await expect(olympusTokenMigrator.connect(user).migrate(1000000, 0, 2)).to.revertedWith(
             "ERC20: transfer amount exceeds balance"
         );
     });
@@ -554,7 +554,7 @@ async function migrateToken(deployer, migrator, gOhm, token, isBridgeBack = fals
     if (isBridgeBack) {
         await migrator.connect(user).bridgeBack(oldgOhmBalance, type);
     } else {
-        await migrator.connect(user).migrate(oldTokenBalance, type);
+        await migrator.connect(user).migrate(oldTokenBalance, type, 2);
     }
 
     let newTokenBalance = await contract.balanceOf(userAddress);
