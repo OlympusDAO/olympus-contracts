@@ -8,8 +8,11 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IgOHM.sol";
 import "./interfaces/IStaking.sol";
+import "./interfaces/IOwnable.sol";
 
-contract BondTeller {
+import "./types/Ownable.sol";
+
+contract BondTeller is Ownable {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -54,8 +57,6 @@ contract BondTeller {
     mapping(address => uint256) public FERs; // front end operator rewards
     uint256 public feReward;
 
-    address public policy;
-
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
@@ -66,6 +67,7 @@ contract BondTeller {
         address _sOHM,
         address _gOHM
     ) {
+
         require(_depository != address(0));
         depository = _depository;
         require(_staking != address(0));
@@ -154,9 +156,7 @@ contract BondTeller {
 
     /* ========== OWNABLE FUNCTIONS ========== */
 
-    function setFEReward(uint256 reward) external {
-        require(msg.sender == policy, "Only policy");
-
+    function setFEReward(uint256 reward) external onlyOwner() {
         feReward = reward;
     }
 
