@@ -448,7 +448,7 @@ describe("Treasury Token Migration", async function () {
         const user = await impersonate(wallet);
 
         await contract.connect(user).approve(olympusTokenMigrator.address, oldTokenBalance);
-        await olympusTokenMigrator.connect(user).migrate(oldTokenBalance, migrationType);
+        await olympusTokenMigrator.connect(user).migrate(oldTokenBalance, migrationType, 2); // to gOHM
 
         let newgOhmBalance = await gOhm.balanceOf(wallet);
         return { oldTokenBalance, newgOhmBalance };
