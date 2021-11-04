@@ -250,7 +250,7 @@ contract LUSDAllocator is Ownable {
 
     //Algorithm from https://github.com/liquity/dev/blob/main/README.md#adjusting-a-trove
     //TODO Try testing with address = 0x29D0cAb031DD0C4fb1adF98D56a7b0aD2d93Ca5F (went to SortedTroves https://etherscan.io/address/0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6#readContract and did getLast(), then getPrev() several times)
-    function getHints(address borrower) public returns (address upperHint, address lowerHint){
+    function getHints(address borrower) pubzlic returns (address upperHint, address lowerHint){
         (uint debt, uint coll, uint pendingLUSDDebtReward, uint pendingETHReward) = troveManager.getEntireDebtAndColl(borrower);
 
         uint256 nicr = coll.mul(1 * 10 ** 20).div(debt);
