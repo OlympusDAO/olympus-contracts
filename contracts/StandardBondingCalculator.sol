@@ -3,10 +3,8 @@ pragma solidity ^0.8.9;
 
 
 import "./libraries/FixedPoint.sol";
-import "./libraries/Address.sol";
 import "./libraries/SafeERC20.sol";
 
-// import "./interfaces/IERC20Metadata.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/IUniswapV2ERC20.sol";
@@ -44,13 +42,12 @@ contract OlympusBondingCalculator is IBondingCalculator {
 
     function markdown( address _pair ) external view override returns ( uint256 ) {
         ( uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair( _pair ).getReserves();
-
         uint256 reserve;
         if ( IUniswapV2Pair( _pair ).token0() == address( OHM ) ) {
             reserve = reserve1;
         } else {
             reserve = reserve0;
         }
-        return (reserve * ( 2 * ( 10 ** IERC20(address(OHM)).decimals() ) ) ) / getTotalValue( _pair );
+        return reserve * 2 * 10 ** OHM.decimals()  /  getTotalValue( _pair );
     }
 }

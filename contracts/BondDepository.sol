@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 pragma abicoder v2; //not needed anymore
 
 import "./libraries/FixedPoint.sol";
-import "./libraries/Address.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./types/Governable.sol";
@@ -12,7 +11,6 @@ import "./types/Guardable.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITeller.sol";
-// import "./interfaces/IERC20Metadata.sol";
 
 contract OlympusBondDepository is Governable, Guardable {
 

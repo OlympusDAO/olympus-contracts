@@ -59,7 +59,16 @@ interface IDAI {
   function move(address src, address dst, uint wad) external;
 
     // --- Approve by signature ---
-  function permit(address holder, address spender, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s) external;
+  function permit(
+    address holder, 
+    address spender, 
+    uint256 nonce, 
+    uint256 expiry, 
+    bool allowed, 
+    uint8 v, 
+    bytes32 r, 
+    bytes32 s
+  ) external;
 }
 
 ////// /nix/store/8xb41r4qd0cjb63wcrxf1qmfg88p0961-dss-6fd7de0/src/dai.sol
@@ -127,7 +136,7 @@ contract DAI is LibNote {
 
     // --- EIP712 niceties ---
     bytes32 public DOMAIN_SEPARATOR;
-    // bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address holder,address spender,uint256 nonce,uint256 expiry,bool allowed)");
+
     bytes32 public constant PERMIT_TYPEHASH = 0xea2aa0a1be11a07ed86d755c93467f4f82362b452371d1ba94d1715123511acb;
 
     constructor(uint256 chainId_) {

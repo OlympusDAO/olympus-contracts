@@ -2,18 +2,16 @@
 pragma solidity ^0.8.9;
 
 import "../libraries/SafeERC20.sol";
-import "../libraries/Address.sol";
 
 import "../interfaces/IERC20.sol";
 import "../interfaces/IsOHM.sol";
 import "../interfaces/IgOHM.sol";
-import "../types/ERC20.sol";
+
 
 contract gOHM is IgOHM {
     /* ========== DEPENDENCIES ========== */
 
     using SafeERC20 for IERC20;
-    using Address for address;
 
     /* ========== MODIFIERS ========== */
 
@@ -156,9 +154,7 @@ contract gOHM is IgOHM {
         @return uint
      */
     function balanceFrom(uint256 _amount) public view override returns (uint256) {
-        return _amount
-            * (IsOHM(sOHM).index())
-            / (10 ** decimals);
+        return _amount * IsOHM(sOHM).index() / (10 ** decimals);
     }
 
     /**
@@ -167,9 +163,7 @@ contract gOHM is IgOHM {
         @return uint
      */
     function balanceTo(uint256 _amount) public view override returns (uint256) {
-        return _amount
-            * (10 ** decimals)
-            / (IsOHM(sOHM).index());
+        return _amount * (10 ** decimals) / IsOHM(sOHM).index();
     }
 
     /**
