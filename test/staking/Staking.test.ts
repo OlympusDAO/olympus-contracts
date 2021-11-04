@@ -53,6 +53,7 @@ describe("OlympusStaking", () => {
                 FUTURE_END_BLOCK
             );
 
+            // Initial checks
             expect(await staking.OHM()).to.equal(ohmFake.address);
             expect(await staking.sOHM()).to.equal(sOHMFake.address);
             const epoch = await staking.epoch();
