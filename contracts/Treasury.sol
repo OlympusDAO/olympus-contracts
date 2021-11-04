@@ -354,6 +354,7 @@ contract OlympusTreasury is Ownable, ITreasury {
      * @notice disables timelocked functions
      */
     function enableOnChainGovernance() external onlyOwner {
+        require(!onChainGoverned, "On-Chain Governance Enabled");
         if (onChainGovernanceTimelock != 0 && onChainGovernanceTimelock <= block.number) {
             onChainGoverned = true;
         } else {
