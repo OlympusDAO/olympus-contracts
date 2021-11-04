@@ -48,9 +48,9 @@ All LP bonds use the Bonding Calculator contract which is used to compute RFV.
 
 **OLD Contracts**:
 
-sOHM: 0x31932e6e45012476ba3a3a4953cba62aee77fbbe 
-Vault: 0x886ce997aa9ee4f8c2282e182ab72a705762399d 
-Staking (v1): 0x0822f3c03dcc24d200aff33493dc08d0e1f274a2
+- sOHM: 0x31932e6e45012476ba3a3a4953cba62aee77fbbe 
+- Vault: 0x886ce997aa9ee4f8c2282e182ab72a705762399d 
+- Staking (v1): 0x0822f3c03dcc24d200aff33493dc08d0e1f274a2
 
 
 ### Testnet Addresses
