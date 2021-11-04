@@ -5,9 +5,10 @@ pragma solidity ^0.8.9;
 import "./types/ERC20Permit.sol";
 
 import "./interfaces/IgOHM.sol";
+import "./interfaces/IsOHM.sol";
 import "./interfaces/IStaking.sol";
 
-contract sOlympus is ERC20Permit {
+contract sOlympus is IsOHM, ERC20Permit {
 
     /* ========== EVENTS ========== */
 
@@ -43,7 +44,7 @@ contract sOlympus is ERC20Permit {
     address public stakingContract; // balance used to calc rebase
     IgOHM public gOHM; // additional staked supply (governance token)
 
-    Rebase[] public rebases; // past rebase data    
+    Rebase[] public rebases; // past rebase data
 
     uint256 private constant MAX_UINT256 = ~uint256(0);
     uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 5000000 * 10**9;
@@ -82,7 +83,7 @@ contract sOlympus is ERC20Permit {
         require( _gOHM != address(0) );
         gOHM = IgOHM( _gOHM );
     }
-    
+
     // do this last
     function initialize( address stakingContract_ ) external {
         require( msg.sender == initializer );
@@ -93,7 +94,7 @@ contract sOlympus is ERC20Permit {
 
         emit Transfer( address(0x0), stakingContract, _totalSupply );
         emit LogStakingContractUpdated( stakingContract_ );
-        
+
         initializer = address(0);
     }
 
@@ -104,10 +105,9 @@ contract sOlympus is ERC20Permit {
         @param profit_ uint256
         @return uint256
      */
-    function rebase( uint256 profit_, uint epoch_ ) public onlyStakingContract() returns ( uint256 ) {
+    function rebase( uint256 profit_, uint epoch_ ) public override onlyStakingContract() returns ( uint256 ) {
         uint256 rebaseAmount;
         uint256 circulatingSupply_ = circulatingSupply();
-
         if ( profit_ == 0 ) {
             emit LogSupply( epoch_, block.timestamp, _totalSupply );
             emit LogRebase( epoch_, 0, index() );
@@ -149,14 +149,14 @@ contract sOlympus is ERC20Permit {
             index: index(),
             blockNumberOccured: block.number
         }));
-        
+
         emit LogSupply( epoch_, block.timestamp, _totalSupply );
         emit LogRebase( epoch_, rebasePercent, index() );
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function transfer( address to, uint256 value ) public override returns (bool) {
+    function transfer( address to, uint256 value ) public override(IERC20, ERC20) returns (bool) {
         uint256 gonValue = value * _gonsPerFragment;
         _gonBalances[ msg.sender ] -= gonValue;
         _gonBalances[ to ] += gonValue;
@@ -164,7 +164,7 @@ contract sOlympus is ERC20Permit {
         return true;
     }
 
-    function transferFrom( address from, address to, uint256 value ) public override returns (bool) {
+    function transferFrom( address from, address to, uint256 value ) public override(IERC20, ERC20) returns (bool) {
        _allowedValue[ from ][ msg.sender ] -= value;
        emit Approval( from, msg.sender,  _allowedValue[ from ][ msg.sender ] );
 
@@ -176,7 +176,7 @@ contract sOlympus is ERC20Permit {
        return true;
     }
 
-    function approve( address spender, uint256 value ) public override returns (bool) {
+    function approve( address spender, uint256 value ) public override(IERC20, ERC20) returns (bool) {
          _allowedValue[ msg.sender ][ spender ] = value;
          emit Approval( msg.sender, spender, value );
          return true;
@@ -209,7 +209,7 @@ contract sOlympus is ERC20Permit {
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    function balanceOf( address who ) public view override returns ( uint256 ) {
+    function balanceOf( address who ) public view override(IERC20, ERC20) returns ( uint256 ) {
         return _gonBalances[ who ] / ( _gonsPerFragment );
     }
 
@@ -222,18 +222,18 @@ contract sOlympus is ERC20Permit {
     }
 
     // Staking contract holds excess rOHM
-    function circulatingSupply() public view returns ( uint ) {
+    function circulatingSupply() public override view returns ( uint ) {
         return _totalSupply
                     - balanceOf( stakingContract )
                     + gOHM.balanceFrom( IERC20( address(gOHM) ).totalSupply() )
                     + IStaking( stakingContract ).supplyInWarmup();
     }
 
-    function index() public view returns ( uint ) {
+    function index() public override view returns ( uint ) {
         return balanceForGons( INDEX );
     }
 
-    function allowance( address owner_, address spender ) public view override returns ( uint256 ) {
+    function allowance( address owner_, address spender ) public view override(IERC20, ERC20) returns ( uint256 ) {
         return _allowedValue[ owner_ ][ spender ];
     }
 }
