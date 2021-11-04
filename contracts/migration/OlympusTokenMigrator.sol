@@ -119,8 +119,8 @@ contract OlympusTokenMigrator is Ownable {
         WRAPPED
     }
 
-    // migrate OHM, sOHM, or wsOHM for gOHM
-    function migrate(uint256 _amount, TYPE _from) external {
+    // migrate OHMv1, sOHMv1, or wsOHM for OHMv2, sOHMv2, or gOHM
+    function migrate(uint256 _amount, TYPE _from, TYPE _to) external {
         uint256 sAmount = _amount;
         uint256 wAmount = oldwsOHM.sOHMTowOHM(_amount);
 
@@ -136,9 +136,20 @@ contract OlympusTokenMigrator is Ownable {
 
         if (ohmMigrated) {
             require(oldSupply >= oldOHM.totalSupply(), "OHMv1 minted");
-            gOHM.safeTransfer(msg.sender, wAmount);
+            _send(wAmount, _to);
         } else {
             gOHM.mint(msg.sender, wAmount);
+        }
+    }
+
+    // send preferred token
+    function _send(uint wAmount, TYPE _to) internal {
+        if(_to == TYPE.WRAPPED) {
+            gOHM.safeTransfer(msg.sender, wAmount);
+        } else if (_to == TYPE.STAKED) {
+            newStaking.unwrap(msg.sender, wAmount);
+        } else if (_to == TYPE.UNSTAKED) {
+            newStaking.unstake(msg.sender, wAmount, false, false);
         }
     }
 
