@@ -2,7 +2,8 @@
 pragma solidity ^0.8.9;
 
 interface IBondingCalculator {
-    function markdown( address _LP ) external view returns ( uint );
-
-    function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
+    function getKValue( address _pair ) external view returns ( uint k_ );
+    function getTotalValue( address _pair ) external view returns ( uint _value );
+    function valuation( address _pair, uint amount_ ) external view returns ( uint _value );
+    function markdown( address _pair ) external view returns ( uint );
 }

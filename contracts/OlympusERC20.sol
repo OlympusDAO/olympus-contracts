@@ -9,9 +9,7 @@ import "./types/Ownable.sol";
 import "./types/VaultOwned.sol";
 
 
-contract OlympusERC20Token is ERC20Permit, VaultOwned {
-
-    constructor() ERC20("Olympus", "OHM", 9) {}
+contract OlympusERC20Token is ERC20Permit, VaultOwned, ERC20("Olympus", "OHM", 9) {
 
     function mint(address account_, uint256 amount_) external onlyVault() {
         _mint(account_, amount_);

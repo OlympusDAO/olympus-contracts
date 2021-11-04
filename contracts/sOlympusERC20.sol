@@ -114,7 +114,7 @@ contract sOlympus is ERC20Permit {
             emit LogRebase( epoch_, 0, index() );
             return _totalSupply;
         } else if ( circulatingSupply_ > 0 ){
-            rebaseAmount = (profit_ * _totalSupply ) / circulatingSupply_;
+            rebaseAmount = profit_ * _totalSupply / circulatingSupply_;
         } else {
             rebaseAmount = profit_;
         }
@@ -139,7 +139,7 @@ contract sOlympus is ERC20Permit {
         @param epoch_ uint
      */
     function _storeRebase( uint previousCirculating_, uint profit_, uint epoch_ ) internal {
-        uint rebasePercent = (profit_ * 1e18) /  previousCirculating_;
+        uint rebasePercent = profit_ * 1e18 /  previousCirculating_;
 
         rebases.push( Rebase ( {
             epoch: epoch_,
@@ -158,7 +158,7 @@ contract sOlympus is ERC20Permit {
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     function transfer( address to, uint256 value ) public override returns (bool) {
-        uint256 gonValue = value.mul( _gonsPerFragment );
+        uint256 gonValue = value * _gonsPerFragment;
         _gonBalances[ msg.sender ] -= gonValue;
         _gonBalances[ to ] += gonValue;
         emit Transfer( msg.sender, to, value );
@@ -211,15 +211,15 @@ contract sOlympus is ERC20Permit {
     /* ========== VIEW FUNCTIONS ========== */
 
     function balanceOf( address who ) public view override returns ( uint256 ) {
-        return _gonBalances[ who ].div( _gonsPerFragment );
+        return _gonBalances[ who ] / ( _gonsPerFragment );
     }
 
     function gonsForBalance( uint amount ) public view returns ( uint ) {
-        return amount.mul( _gonsPerFragment );
+        return amount * ( _gonsPerFragment );
     }
 
     function balanceForGons( uint gons ) public view returns ( uint ) {
-        return gons.div( _gonsPerFragment );
+        return gons / _gonsPerFragment;
     }
 
     // Staking contract holds excess rOHM

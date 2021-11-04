@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-import "./libraries/SafeMath.sol";
+// import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
@@ -12,7 +12,6 @@ import "./interfaces/IStaking.sol";
 contract BondTeller {
     /* ========== DEPENDENCIES ========== */
 
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     /* ========== EVENTS ========== */
@@ -101,18 +100,27 @@ contract BondTeller {
         uint256 _expires,
         address _feo
     ) external onlyDepository returns (uint256 index_) {
-        treasury.mint(address(this), _payout.add(feReward));
+
+        uint256 mintAmount = _payout + feReward;
+        treasury.mint( address(this), mintAmount );
 
         OHM.approve(address(staking), _payout); // approve staking payout
 
         staking.stake(_payout, address(this), true, true);
 
-        FERs[_feo] = FERs[_feo].add(feReward); // FE operator takes fee
+        FERs[_feo] += feReward; // FE operator takes fee
 
         index_ = bonderInfo[_bonder].length;
 
         // store bond & stake payout
-        bonderInfo[_bonder].push(Bond({principal: _principal, principalPaid: _principalPaid, payout: gOHM.balanceTo(_payout), vested: _expires, created: block.timestamp, redeemed: 0}));
+        bonderInfo[_bonder].push(Bond({
+            principal: _principal, 
+            principalPaid: _principalPaid, 
+            payout: gOHM.balanceTo(_payout), 
+            vested: _expires, 
+            created: block.timestamp, 
+            redeemed: 0
+        }));
     }
 
     /* ========== INTERACTABLE FUNCTIONS ========== */
@@ -141,7 +149,7 @@ contract BondTeller {
             if (pendingFor(_bonder, _indexes[i]) != 0) {
                 bonderInfo[_bonder][_indexes[i]].redeemed = block.timestamp; // mark as redeemed
 
-                dues = dues.add(info.payout);
+                dues += info.payout;
             }
         }
 
@@ -209,7 +217,7 @@ contract BondTeller {
      */
     function pendingForIndexes(address _bonder, uint256[] memory _indexes) public view returns (uint256 pending_) {
         for (uint256 i = 0; i < _indexes.length; i++) {
-            pending_ = pending_.add(pendingFor(_bonder, i));
+            pending_ = pending_ + pendingFor(_bonder, i);
         }
         pending_ = gOHM.balanceFrom(pending_);
     }
@@ -222,7 +230,7 @@ contract BondTeller {
     function totalPendingFor(address _bonder) public view returns (uint256 pending_) {
         Bond[] memory info = bonderInfo[_bonder];
         for (uint256 i = 0; i < info.length; i++) {
-            pending_ = pending_.add(pendingFor(_bonder, i));
+            pending_ = pending_ + pendingFor(_bonder, i);
         }
         pending_ = gOHM.balanceFrom(pending_);
     }
@@ -238,9 +246,9 @@ contract BondTeller {
     function percentVestedFor(address _bonder, uint256 _index) public view returns (uint256 percentVested_) {
         Bond memory bond = bonderInfo[_bonder][_index];
 
-        uint256 timeSince = block.timestamp.sub(bond.created);
-        uint256 term = bond.vested.sub(bond.created);
+        uint256 timeSince = block.timestamp - bond.created;
+        uint256 term = bond.vested - bond.created;
 
-        percentVested_ = timeSince.mul(1e9).div(term);
+        percentVested_ = timeSince * 1e9 / term;
     }
 }

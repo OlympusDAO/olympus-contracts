@@ -5,7 +5,6 @@ import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IOwnable.sol";
 import "./interfaces/IERC20.sol";
-import "./interfaces/IERC20Metadata.sol";
 import "./interfaces/IOHMERC20.sol";
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITreasury.sol";
@@ -384,8 +383,8 @@ contract OlympusTreasury is Ownable, ITreasury {
      */
     function tokenValue(address _token, uint256 _amount) public view override returns (uint256 value_) {
         value_ = _amount
-            * (10 ** IERC20Metadata(address(OHM)).decimals())
-            / (10 ** IERC20Metadata(_token).decimals());
+            * (10 ** IERC20(address(OHM)).decimals())
+            / (10 ** IERC20(_token).decimals());
 
         if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             value_ = IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);

@@ -101,7 +101,7 @@ contract Distributor is Governable, Guardable {
         @return uint
      */
     function nextRewardAt(uint256 _rate) public view returns (uint256) {
-        return (OHM.totalSupply() * _rate) / 1000000;
+        return OHM.totalSupply() * _rate / 1000000;
     }
 
     /**
@@ -128,7 +128,11 @@ contract Distributor is Governable, Guardable {
      */
     function addRecipient(address _recipient, uint256 _rewardRate) external onlyGovernor {
         require(_recipient != address(0));
-        info.push(Info({recipient: _recipient, rate: _rewardRate}));
+        
+        info.push(Info({
+            recipient: _recipient, 
+            rate: _rewardRate
+        }));
     }
 
     /**
@@ -160,7 +164,7 @@ contract Distributor is Governable, Guardable {
         require(msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian");
 
         if (msg.sender == guardian()) {
-            require(_rate <= ((info[_index].rate * 25) / 1000), "Limiter: cannot adjust by >2.5%");
+            require(_rate <= info[_index].rate * 25 / 1000, "Limiter: cannot adjust by >2.5%");
         }
 
         adjustments[_index] = Adjust({
