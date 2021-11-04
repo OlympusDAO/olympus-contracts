@@ -117,7 +117,7 @@ contract Distributor is Governable, Guardable {
         uint256 reward;
         for (uint256 i = 0; i < info.length; i++) {
             if (info[i].recipient == _recipient) {
-                reward = nextRewardAt(info[i].rate);
+                reward += nextRewardAt(info[i].rate);
             }
         }
         return reward;
@@ -132,6 +132,7 @@ contract Distributor is Governable, Guardable {
      */
     function addRecipient(address _recipient, uint256 _rewardRate) external onlyGovernor {
         require(_recipient != address(0));
+        require(_rewardRate < rateDenominator);
         info.push(Info({recipient: _recipient, rate: _rewardRate}));
     }
 
@@ -143,6 +144,7 @@ contract Distributor is Governable, Guardable {
     function removeRecipient(uint256 _index, address _recipient) external {
         require(msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian");
         require(_recipient == info[_index].recipient);
+        require(info[_index].recipient != address(0));
         info[_index].recipient = address(0);
         info[_index].rate = 0;
     }
@@ -161,6 +163,7 @@ contract Distributor is Governable, Guardable {
         uint256 _target
     ) external {
         require(msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian");
+        require(info[_index].recipient != address(0));
 
         if (msg.sender == guardian()) {
             require(_rate <= info[_index].rate.mul(25).div(1000), "Limiter: cannot adjust by >2.5%");
