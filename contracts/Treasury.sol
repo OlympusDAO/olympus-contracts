@@ -157,7 +157,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
         totalReserves = totalReserves.sub(value);
 
-        IERC20(_token).transfer(msg.sender, _amount);
+        IERC20(_token).safeTransfer(msg.sender, _amount);
 
         emit CreateDebt(msg.sender, _token, _amount, value);
     }
