@@ -56,7 +56,7 @@ contract gOHM is IgOHM {
     /* ========== CONSTRUCTOR ========== */
 
     constructor(address _migrator) {
-        require(_migrator != address(0));
+        require(_migrator != address(0), "Zero address found");
         approved = _migrator;
     }
 
@@ -124,13 +124,13 @@ contract gOHM is IgOHM {
      * @param _sOHM address
      */
     function migrate(address _staking, address _sOHM) external override onlyApproved {
-        require(_staking != approved);
+        require(_staking != approved, "Invalid argument");
 
-        require(_staking != address(0));
+        require(_staking != address(0), "Zero address found");
         approved = _staking;
 
-        require(address(sOHM) == address(0));
-        require(_sOHM != address(0));
+        require(address(sOHM) == address(0), "Cannot migrate twice");
+        require(_sOHM != address(0), "Zero address found");
         sOHM = IsOHM(_sOHM);
     }
 
