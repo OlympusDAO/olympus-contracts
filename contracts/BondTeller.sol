@@ -108,7 +108,7 @@ contract BondTeller is Ownable {
 
         OHM.approve(address(staking), _payout); // approve staking payout
 
-        staking.stake(_payout, address(this), true, true);
+        staking.stake(address(this), _payout, true, true);
 
         FERs[_feo] = FERs[_feo].add(reward); // FE operator takes fee
 

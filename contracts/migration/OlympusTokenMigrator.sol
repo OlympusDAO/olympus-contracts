@@ -272,7 +272,7 @@ contract OlympusTokenMigrator is Ownable {
     function fund(uint256 _amount) internal {
         newTreasury.mint(address(this), _amount);
         newOHM.approve(address(newStaking), _amount);
-        newStaking.stake(_amount, address(this), false, true); // stake and claim gOHM
+        newStaking.stake(address(this), _amount, false, true); // stake and claim gOHM
 
         emit Funded(_amount);
     }

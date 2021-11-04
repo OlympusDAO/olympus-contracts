@@ -13,7 +13,7 @@ interface IStaking {
 
     function unstake( address _to, uint _amount, bool _trigger, bool _rebasing ) external returns ( uint );
 
-    function unwrap( address _to, uint _amount ) external returns ( uint gBalance_ );
+    function wrap( address _to, uint _amount ) external returns ( uint gBalance_ );
 
     function unwrap( address _to, uint _amount ) external returns ( uint sBalance_ );
 
