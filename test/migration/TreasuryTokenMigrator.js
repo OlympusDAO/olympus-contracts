@@ -44,6 +44,7 @@ describe("Treasury Token Migration", async function () {
         newStaking;
 
     before(async function () {
+        // Fixed fork
         await fork_network(13487643);
         [deployer, user1] = await ethers.getSigners();
 
