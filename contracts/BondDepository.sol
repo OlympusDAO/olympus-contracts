@@ -207,7 +207,7 @@ contract OlympusBondDepository is Governable, Guardable, IBondDepository {
           info.capacity -= _amount;
         }
 
-//emit log_named_uint("payout", payout);
+emit log_named_uint("payout", payout);
         require(payout >= 10000000, "Bond too small"); // must be > 0.01 OHM ( underflow protection )
         require(payout <= maxPayout(_BID), "Bond too large"); // size protection because there is no slippage
 
