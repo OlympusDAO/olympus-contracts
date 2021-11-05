@@ -173,7 +173,7 @@ contract OlympusBondDepository is Governable, Guardable, IBondDepository {
         require(block.number < info.terms.conclusion, "Bond concluded");
 
         emit beforeBond(_BID, bondPriceInUSD(_BID), bondPrice(_BID), debtRatio(_BID));
-        calcDebtDecay(_BID);
+//        calcDebtDecay(_BID);
         decayDebt(_BID);
 
         require(info.totalDebt <= info.terms.maxDebt, "Max debt exceeded");
@@ -181,19 +181,19 @@ contract OlympusBondDepository is Governable, Guardable, IBondDepository {
 
         uint256 value = treasury.tokenValue(address(info.principal), _amount);
 
-//       emit log_named_uint("value", value);
-//
-//        emit log_named_uint("bonds[ _BID ].terms.controlVariable", bonds[ _BID ].terms.controlVariable);
-//
-//        emit log_named_uint("currentDebt(_BID)", currentDebt(_BID));
-//        emit log_named_uint("OHM.totalSupply", OHM.totalSupply());
-//        emit log_named_uint("bonds[ _BID ].totalDebt", bonds[ _BID ].totalDebt);
+       emit log_named_uint("value", value);
+
+        emit log_named_uint("bonds[ _BID ].terms.controlVariable", bonds[ _BID ].terms.controlVariable);
+
+        emit log_named_uint("currentDebt(_BID)", currentDebt(_BID));
+        emit log_named_uint("OHM.totalSupply", OHM.totalSupply());
+        emit log_named_uint("bonds[ _BID ].totalDebt", bonds[ _BID ].totalDebt);
 
 
 
-//        emit log_named_uint("debtRatio mnanual calc", (currentDebt(_BID) * 1e9 / OHM.totalSupply()) / 1e18);
-//        emit log_named_uint("debtRatio(_BID)", debtRatio(_BID));
-//        emit log_named_uint("price_", (bonds[ _BID ].terms.controlVariable * debtRatio(_BID) + 1000000000) / 1e7);
+        emit log_named_uint("debtRatio mnanual calc", (currentDebt(_BID) * 1e9 / OHM.totalSupply()) / 1e18);
+        emit log_named_uint("debtRatio(_BID)", debtRatio(_BID));
+        emit log_named_uint("price_", (bonds[ _BID ].terms.controlVariable * debtRatio(_BID) + 1000000000) / 1e7);
         uint256 payout = payoutFor(value, _BID); // payout to bonder is computed
 
         // ensure there is remaining capacity for bond
