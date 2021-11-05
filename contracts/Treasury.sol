@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.9;
 
-import {IOHMERC20, IBondingCalculator, ITreasury} from "./interfaces/OlympusInterfaces.sol";
-
+import {ITreasury} from "./interfaces/OlympusInterfaces.sol";
+import {IOHMERC20} from "./interfaces/OlympusInterfaces.sol";
+import {IBondingCalculator} from "./interfaces/OlympusInterfaces.sol";
 import "./interfaces/IOwnable.sol";
 
 import "./libraries/SafeERC20.sol";

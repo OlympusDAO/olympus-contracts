@@ -2,7 +2,10 @@
 pragma solidity ^0.8.9;
 // pragma abicoder v2; //not needed anymore, enabled by default
 
-import {ITreasury, IBondingCalculator, ITeller, IBondDepository} from "./interfaces/OlympusInterfaces.sol";
+import {ITreasury} from "./interfaces/OlympusInterfaces.sol";
+import {ITeller} from "./interfaces/OlympusInterfaces.sol";
+import {IBondDepository} from "./interfaces/OlympusInterfaces.sol";
+import {IBondingCalculator} from "./interfaces/OlympusInterfaces.sol";
 
 import "./libraries/SafeERC20.sol";
 

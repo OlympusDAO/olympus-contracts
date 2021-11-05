@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-
 import {IBondingCalculator} from "./interfaces/OlympusInterfaces.sol";
 
 import "./interfaces/IUniswapV2ERC20.sol";
 import "./interfaces/IUniswapV2Pair.sol";
 
 import "./libraries/FixedPointMathLib.sol";
-//import "./libraries/Math.sol";
 import "./libraries/SafeERC20.sol";
+//import "./libraries/Math.sol";
 
 contract OlympusBondingCalculator is IBondingCalculator {
     using FixedPointMathLib for uint256;

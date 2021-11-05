@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import {ITreasury, IDistributor} from "./interfaces/OlympusInterfaces.sol";
+import {ITreasury} from "./interfaces/OlympusInterfaces.sol";
+import {IDistributor} from "./interfaces/OlympusInterfaces.sol";
 
 import "./libraries/SafeERC20.sol";
 

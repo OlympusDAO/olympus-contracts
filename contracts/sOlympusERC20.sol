@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import {IgOHM, IsOHM, IStaking} from "./interfaces/OlympusInterfaces.sol";
+import {IgOHM} from "./interfaces/OlympusInterfaces.sol";
+import {IsOHM} from "./interfaces/OlympusInterfaces.sol";
+import {IStaking} from "./interfaces/OlympusInterfaces.sol";
 
 import "./types/ERC20.sol";
 
