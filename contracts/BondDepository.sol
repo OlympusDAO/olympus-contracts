@@ -194,6 +194,8 @@ contract OlympusBondDepository is Governable, Guardable, IBondDepository {
         emit log_named_uint("debtRatio mnanual calc", (currentDebt(_BID) * 1e9 / OHM.totalSupply()) / 1e18);
         emit log_named_uint("debtRatio(_BID)", debtRatio(_BID));
         emit log_named_uint("price_", (bonds[ _BID ].terms.controlVariable * debtRatio(_BID) + 1000000000) / 1e7);
+
+        calcPayoutFor(value, _BID);
         uint256 payout = payoutFor(value, _BID); // payout to bonder is computed
 
         // ensure there is remaining capacity for bond
@@ -323,6 +325,11 @@ emit log_named_uint("payout", payout);
      */
     function payoutFor(uint256 _value, uint256 _BID) public view returns (uint256) {
       return (_value / bondPrice(_BID)) / 1e16;
+    }
+    function calcPayoutFor(uint256 _value, uint256 _BID) public returns (uint256) {
+        emit log_named_uint("calPayoutFor, _value", _value);
+        emit log_named_uint("calPayoutFor, bondPrice(_BID)", bondPrice(_BID));
+        return  (_value / calcBondPrice(_BID)) / 1e16;
     }
 
     /**
