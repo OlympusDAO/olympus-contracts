@@ -8,6 +8,7 @@ import "./interfaces/IgOHM.sol";
 import "./interfaces/IsOHM.sol";
 import "./interfaces/IStaking.sol";
 
+
 contract sOlympus is IsOHM, ERC20Permit {
 
     /* ========== EVENTS ========== */

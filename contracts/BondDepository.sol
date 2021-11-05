@@ -1,25 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.9;
-pragma abicoder v2; //not needed anymore
+// pragma abicoder v2; //not needed anymore, enabled by default
+
+import {ITreasury, IBondingCalculator, ITeller, IBondDepository} from "./interfaces/OlympusInterfaces.sol";
 
 import "./libraries/SafeERC20.sol";
 
 import "./types/Governable.sol";
 import "./types/Guardable.sol";
 
-import "./interfaces/ITreasury.sol";
-import "./interfaces/IBondingCalculator.sol";
-import "./interfaces/ITeller.sol";
-
-contract OlympusBondDepository is Governable, Guardable {
+contract OlympusBondDepository is Governable, Guardable, IBondDepository {
 
     using SafeERC20 for IERC20;
-
-    /* ======== EVENTS ======== */
-
-    event beforeBond(uint256 index, uint256 price, uint256 internalPrice, uint256 debtRatio);
-    event CreateBond(uint256 index, uint256 amount, uint256 payout, uint256 expires);
-    event afterBond(uint256 index, uint256 price, uint256 internalPrice, uint256 debtRatio);
 
     /* ======== STRUCTS ======== */
 

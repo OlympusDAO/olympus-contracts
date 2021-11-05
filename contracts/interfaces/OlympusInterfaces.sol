@@ -116,10 +116,6 @@ interface IStaking {
   /* ====== VIEW FUNCTIONS ====== */
 
   function distributor() external view returns (address);
-
-  function epoch() external view returns (Epoch calldata);
-
-  function warmupInfo(address) external view returns (Claim calldata);
   
   function contractBalance() external view returns (uint256);
 
@@ -179,10 +175,6 @@ interface ITeller {
 
   /* ====== VIEW FUNCTIONS ====== */
 
-  function staking() external view returns (IStaking);
-
-  function treasury() external view returns (ITreasury);
-
   function pendingFor(address _bonder, uint256 _index) external view returns (uint256);
 
   function pendingForIndexes(address _bonder, uint256[] memory _indexes) external view returns (uint256 pending_);
@@ -221,10 +213,6 @@ interface ITreasury {
   function tokenValue(address _token,  uint256 _amount) external view returns (uint256 value_);
 }
 
-interface IWarmup {
-  function retrieve( address staker_, uint256 amount_ ) external;
-}
-
 interface IDistributor {
 
   /* ====== DATA STRUCTURES ====== */
@@ -243,7 +231,7 @@ interface IDistributor {
 
   /* ====== PUBLIC FUNCTIONS ====== */
 
-  function distribute() external returns (bool);
+  function distribute() external;
 
 
   /* ====== VIEW FUNCTIONS ====== */
@@ -251,10 +239,6 @@ interface IDistributor {
   function staking() external view returns (address);
 
   function treasury() external view returns (ITreasury);
-
-  function info(uint256 i) external view returns (Info memory);
-
-  function adjustments(uint256 _BID) external view returns (Adjust memory);
 
   function nextRewardAt(uint256 _rate) external view returns (uint256);
 

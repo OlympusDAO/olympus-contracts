@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.9;
 
+import {ITreasury, IDistributor} from "./interfaces/OlympusInterfaces.sol";
+
 import "./libraries/SafeERC20.sol";
-import "./interfaces/ITreasury.sol";
 
 import "./types/Governable.sol";
 import "./types/Guardable.sol";
 
-contract Distributor is Governable, Guardable {
+contract Distributor is Governable, Guardable, IDistributor {
     /* ========== DEPENDENCIES ========== */
 
     using SafeERC20 for IERC20;
@@ -15,24 +16,14 @@ contract Distributor is Governable, Guardable {
     /* ====== VARIABLES ====== */
 
     IERC20 public immutable OHM;
+
     ITreasury public immutable treasury;
+
     address public immutable staking;
 
     mapping(uint256 => Adjust) public adjustments;
 
-    /* ====== STRUCTS ====== */
-
-    struct Info {
-        uint256 rate; // in ten-thousandths ( 5000 = 0.5% )
-        address recipient;
-    }
     Info[] public info;
-
-    struct Adjust {
-        bool add;
-        uint256 rate;
-        uint256 target;
-    }
 
     /* ====== CONSTRUCTOR ====== */
 

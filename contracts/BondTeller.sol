@@ -1,22 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import "./libraries/SafeERC20.sol";
+import {ITreasury, IgOHM, ITeller, IStaking} from "./interfaces/OlympusInterfaces.sol";
 
 import "./interfaces/IERC20.sol";
-import "./interfaces/ITreasury.sol";
-import "./interfaces/IgOHM.sol";
-import "./interfaces/IStaking.sol";
 
-contract BondTeller {
+import "./libraries/SafeERC20.sol";
+
+contract BondTeller is ITeller {
+
     /* ========== DEPENDENCIES ========== */
 
     using SafeERC20 for IERC20;
 
-    /* ========== EVENTS ========== */
-
-    event BondCreated(address indexed bonder, uint256 payout, uint256 expires);
-    event Redeemed(address indexed bonder, uint256 payout);
 
     /* ========== MODIFIERS ========== */
 
@@ -24,6 +20,7 @@ contract BondTeller {
         require(msg.sender == depository, "Only depository");
         _;
     }
+
 
     /* ========== STRUCTS ========== */
 

@@ -1,51 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity >=0.8.0;
+pragma solidity 0.8.9;
 
-import "./interfaces/IERC20.sol";
-import "./interfaces/IsOHM.sol";
-import "./interfaces/IgOHM.sol";
-import "./interfaces/IDistributor.sol";
-import "./interfaces/IStaking.sol";
+import {IsOHM, IgOHM, IDistributor, IStaking} from "./interfaces/OlympusInterfaces.sol";
 
 import "./libraries/SafeERC20.sol";
 
 import "./types/Governable.sol";
 
-contract OlympusStaking is Governable {
+contract OlympusStaking is Governable, IStaking {
 
     /* ========== DEPENDENCIES ========== */
 
     using SafeERC20 for IERC20;
     using SafeERC20 for IsOHM;
     using SafeERC20 for IgOHM;
-
-
-
-    /* ========== EVENTS ========== */
-
-    event gOHMSet( address gOHM );
-    event DistributorSet( address distributor );
-    event WarmupSet( uint warmup );
-
-    /* ========== DATA STRUCTURES ========== */
-
-    struct Epoch {
-        uint length;
-        uint number;
-        uint endBlock;
-        uint distribute;
-    }
-
-    struct Claim {
-        uint deposit;
-        uint gons;
-        uint expiry;
-        bool lock; // prevents malicious delays
-    }
-
-    enum CONTRACTS { DISTRIBUTOR, gOHM }
-
-
 
     /* ========== STATE VARIABLES ========== */
 
@@ -181,7 +149,7 @@ contract OlympusStaking is Governable {
 
         uint amount = _amount;
         if ( _rebasing ) {
-            sOHM.safeTransferFrom( msg.sender, address(this), _amount );
+            IERC20(address(sOHM)).safeTransferFrom( msg.sender, address(this), _amount );
         } else {
             gOHM.burn( msg.sender, _amount ); // amount was given in gOHM terms
             amount = gOHM.balanceFrom( _amount ); // convert amount to OHM terms
@@ -198,7 +166,7 @@ contract OlympusStaking is Governable {
      * @return gBalance_ uint
      */
     function wrap( uint _amount ) external returns ( uint gBalance_ ) {
-        sOHM.safeTransferFrom( msg.sender, address(this), _amount );
+        IERC20(address(sOHM)).safeTransferFrom( msg.sender, address(this), _amount );
 
         gBalance_ = gOHM.balanceTo( _amount );
         gOHM.mint( msg.sender, gBalance_ );
@@ -213,7 +181,7 @@ contract OlympusStaking is Governable {
         gOHM.burn( msg.sender, _amount );
 
         sBalance_ = gOHM.balanceFrom( _amount );
-        sOHM.safeTransfer( msg.sender, sBalance_ );
+        IERC20(address(sOHM)).safeTransfer( msg.sender, sBalance_ );
     }
 
     /**
@@ -251,7 +219,7 @@ contract OlympusStaking is Governable {
      */
     function _send( address _recipient, uint _amount, bool _rebasing ) internal returns ( uint ) {
         if ( _rebasing ) {
-            sOHM.safeTransfer( _recipient, _amount ); // send as sOHM (equal unit as OHM)
+            IERC20(address(sOHM)).safeTransfer( _recipient, _amount ); // send as sOHM (equal unit as OHM)
             return _amount;
         } else {
             gOHM.mint( _recipient, gOHM.balanceTo( _amount ) ); // send as gOHM (convert units from OHM)
