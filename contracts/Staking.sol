@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-
-import "./libraries/SafeERC20.sol";
-
 import "./interfaces/IERC20.sol";
 import "./interfaces/IsOHM.sol";
 import "./interfaces/IgOHM.sol";
 import "./interfaces/IDistributor.sol";
+import "./interfaces/IStaking.sol";
+
+import "./libraries/SafeERC20.sol";
 
 import "./types/Governable.sol";
-
 
 contract OlympusStaking is Governable {
 
