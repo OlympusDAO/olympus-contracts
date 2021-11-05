@@ -1,21 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.9;
 
+import {IgOHM, IsOHM, IStaking} from "./interfaces/OlympusInterfaces.sol";
 
-import "./types/ERC20Permit.sol";
+import "./types/ERC20.sol";
 
-import "./interfaces/IgOHM.sol";
-import "./interfaces/IsOHM.sol";
-import "./interfaces/IStaking.sol";
-
-
-contract sOlympus is IsOHM, ERC20Permit {
-
-    /* ========== EVENTS ========== */
-
-    event LogSupply(uint256 indexed epoch, uint256 timestamp, uint256 totalSupply );
-    event LogRebase( uint256 indexed epoch, uint256 rebase, uint256 index );
-    event LogStakingContractUpdated( address stakingContract );
+contract sOlympus is IsOHM, ERC20 {
 
     /* ========== MODIFIERS ========== */
 
@@ -64,7 +54,7 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor() ERC20("Staked OHM", "sOHM", 9) ERC20Permit() {
+    constructor() ERC20("Staked OHM", "sOHM", 9) {
         initializer = msg.sender;
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
         _gonsPerFragment = TOTAL_GONS / _totalSupply;

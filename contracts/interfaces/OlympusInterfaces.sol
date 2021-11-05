@@ -36,6 +36,12 @@ interface IOHMERC20 is IERC20 {
 
 interface IsOHM is IERC20 {
 
+  /* ====== EVENTS ====== */
+
+  event LogSupply(uint256 indexed epoch, uint256 timestamp, uint256 totalSupply );
+  event LogRebase( uint256 indexed epoch, uint256 rebase, uint256 index );
+  event LogStakingContractUpdated( address stakingContract );
+
   /* ====== sOHM ====== */
 
   function rebase( uint256 ohmProfit_, uint epoch_) external returns (uint256);
