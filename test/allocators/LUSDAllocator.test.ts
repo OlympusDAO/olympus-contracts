@@ -8,6 +8,9 @@ import {
   IERC20,
   ITreasury,
   IStabilityPool,
+  ITroveManager,
+  ISortedTroves,
+  IHintHelpers,
   LUSDAllocator,
   LUSDAllocator__factory,
 } from '../../types';
@@ -23,6 +26,9 @@ describe("LUSDAllocator", () => {
   let bob: SignerWithAddress;
   let treasuryFake: FakeContract<ITreasury>;
   let stabilityPoolFake: FakeContract<IStabilityPool>;
+  let troveManagerFake: FakeContract<ITroveManager>;
+  let sortedTroveFake: FakeContract<ISortedTroves>;
+  let hintHelperFake: FakeContract<IHintHelpers>;
   let lusdTokenFake: FakeContract<IERC20>;
   let lusdAllocator: LUSDAllocator;
 
@@ -30,6 +36,9 @@ describe("LUSDAllocator", () => {
     [owner, other, alice, bob] = await ethers.getSigners();
     treasuryFake = await smock.fake<ITreasury>("ITreasury");
     stabilityPoolFake = await smock.fake<IStabilityPool>("IStabilityPool");
+    troveManagerFake = await smock.fake<ITroveManager>("ITroveManager");
+    sortedTroveFake = await smock.fake<ISortedTroves>("ISortedTroves");
+    hintHelperFake = await smock.fake<IHintHelpers>("IHintHelpers");
     lusdTokenFake = await smock.fake<IERC20>("IERC20");
   });
 
@@ -39,6 +48,9 @@ describe("LUSDAllocator", () => {
         treasuryFake.address,
         lusdTokenFake.address,
         stabilityPoolFake.address,
+        sortedTroveFake.address,
+        hintHelperFake.address,
+        troveManagerFake.address,
         ZERO_ADDRESS
       );
       expect(await lusdAllocator.lusdTokenAddress()).to.equal(lusdTokenFake.address);
@@ -49,6 +61,9 @@ describe("LUSDAllocator", () => {
         ZERO_ADDRESS,
         lusdTokenFake.address,
         stabilityPoolFake.address,
+        sortedTroveFake.address,
+        hintHelperFake.address,
+        troveManagerFake.address,
         ZERO_ADDRESS
       )).to.be.revertedWith("treasury address cannot be 0x0");
     });
@@ -58,6 +73,9 @@ describe("LUSDAllocator", () => {
         treasuryFake.address,
         lusdTokenFake.address,
         ZERO_ADDRESS,
+        sortedTroveFake.address,
+        hintHelperFake.address,
+        troveManagerFake.address,
         ZERO_ADDRESS
       )).to.be.revertedWith("stabilityPool address cannot be 0x0");
     });
@@ -67,17 +85,23 @@ describe("LUSDAllocator", () => {
         treasuryFake.address,
         ZERO_ADDRESS,
         stabilityPoolFake.address,
+        sortedTroveFake.address,
+        hintHelperFake.address,
+        troveManagerFake.address,
         ZERO_ADDRESS
       )).to.be.revertedWith("LUSD token address cannot be 0x0");
     });
   });
-  
+
   describe("post-constructor", () => {
     beforeEach(async () => {
       lusdAllocator = await (new LUSDAllocator__factory(owner)).deploy(
         treasuryFake.address,
         lusdTokenFake.address,
         stabilityPoolFake.address,
+        sortedTroveFake.address,
+        hintHelperFake.address,
+        troveManagerFake.address,
         ZERO_ADDRESS
       );
     });

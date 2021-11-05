@@ -250,12 +250,18 @@ contract LUSDAllocator is Ownable {
 
     //Algorithm from https://github.com/liquity/dev/blob/main/README.md#adjusting-a-trove
     //TODO Try testing with address = 0x29D0cAb031DD0C4fb1adF98D56a7b0aD2d93Ca5F (went to SortedTroves https://etherscan.io/address/0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6#readContract and did getLast(), then getPrev() several times)
-    function getHints(address borrower) pubzlic returns (address upperHint, address lowerHint){
+    function getHints(address borrower) public view returns (address upperHint, address lowerHint){
         (uint debt, uint coll, uint pendingLUSDDebtReward, uint pendingETHReward) = troveManager.getEntireDebtAndColl(borrower);
 
-        uint256 nicr = coll.mul(1 * 10 ** 20).div(debt);
-        uint256 numTrials =  sortedTroves.getSize().mul(15);
-        uint pseudoRandom = uint(keccak256(block.difficulty, now));  // From https://stackoverflow.com/a/67332959
+        //Got back:
+//        [ getEntireDebtAndColl(address) method Response ]
+//    debt   uint256 :  363407671459371026109145
+//    coll   uint256 :  130659000000000000000
+//    pendingLUSDDebtReward   uint256 :  0
+//    pendingETHReward   uint256 :  0
+        uint256 nicr = coll.mul(1 * 10 ** 20).div(debt);  //3.595383649313183e16
+        uint256 numTrials =  sortedTroves.getSize().mul(15); //size = 1213, so * 15 = 18195
+        uint pseudoRandom = uint(keccak256(abi.encode(block.difficulty, block.timestamp)));  // From https://stackoverflow.com/a/67332959
         (address hintAddress, uint diff, uint latestRandomSeed) = hintHelper.getApproxHint(nicr, numTrials, pseudoRandom);
 
         // Use the approximate hint to get the exact upper and lower hints from the deployed SortedTroves contract
