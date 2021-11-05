@@ -15,6 +15,8 @@ import "../../../contracts/Treasury.sol";
 import "../../../contracts/BondDepository.sol";
 import "../../../contracts/BondTeller.sol";
 import "../../../contracts/governance/gOHM.sol";
+import "../../../contracts/interfaces/OlympusInterfaces.sol";
+
 
 import "./util/Hevm.sol";
 import "./util/MockContract.sol";
@@ -53,9 +55,9 @@ contract BondDepositoryTest is DSTest {
 
 
         abcToken = new MockContract();
-        abcToken.givenMethodReturn(abi.encodeWithSelector(ERC20.name.selector), abi.encode("ABC DAO"));
-        abcToken.givenMethodReturn(abi.encodeWithSelector(ERC20.symbol.selector), abi.encode("ABC"));
-        abcToken.givenMethodReturnUint(abi.encodeWithSelector(ERC20.decimals.selector), 18);
+        abcToken.givenMethodReturn(abi.encodeWithSelector(IERC20.name.selector), abi.encode("ABC DAO"));
+        abcToken.givenMethodReturn(abi.encodeWithSelector(IERC20.symbol.selector), abi.encode("ABC"));
+        abcToken.givenMethodReturnUint(abi.encodeWithSelector(IERC20.decimals.selector), 18);
 
         bondingCalculator = new OlympusBondingCalculator(address(ohm));
         treasury = new OlympusTreasury(address(ohm), 1);
@@ -81,7 +83,7 @@ contract BondDepositoryTest is DSTest {
     //    public {
     //        uint256 amount = 5 * 10 ** 16;
     //    uint256 ohmMintAmount = 10 * 10 ** 18;
-    //        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+    //        IBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
     //        uint256 initialDebt = 0;
     //
     //        try  this.createBond_deposit(amount, ohmMintAmount, capacityIsPayout, capacity, terms, initialDebt){
@@ -94,7 +96,7 @@ contract BondDepositoryTest is DSTest {
     function test_vaultOwned() public {
         ohm.setVault(address(0x0));
 
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 10000, maxDebt : 10});
+        IBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 10000, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 11 * 10 ** 18;
 
@@ -106,7 +108,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_mulDiv() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        IBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
         try this.createBond_deposit(2763957476737854671246564045522737104576123858413359401, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
@@ -117,7 +119,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_mulOverflow() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        IBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
         try this.createBond_deposit(75002556493819725874826918455844256653204641352000021311689657671948594686325, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
@@ -128,7 +130,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_fixedPointFractionOverflow() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        IBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
         try this.createBond_deposit(5136935571488474593545398400365374838660649282530, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
@@ -139,7 +141,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_happyPath() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 10000, maxDebt : 10});
+        IBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 10000, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 11 * 10 ** 18;
 
@@ -147,7 +149,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_insufficientReserves() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1 * 10 ** 18, maxDebt : 10});
+        IBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1 * 10 ** 18, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 9;
         try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1){
@@ -158,7 +160,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_bondTooLarge() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1 * 10 ** 9, maxDebt : 10});
+        IBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1 * 10 ** 9, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 9;
         try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1){
@@ -169,7 +171,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_zeroAmount() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        IBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
 
@@ -181,7 +183,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_bondConcluded() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 2, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        IBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 2, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
         try this.createBond_deposit(5 * 10 ** 25, ohmMintAmount, false, 1 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
@@ -196,7 +198,7 @@ contract BondDepositoryTest is DSTest {
         uint256 treasuryDeposit,
         bool capacityIsPayout,
         uint256 capacity,
-        OlympusBondDepository.Terms memory terms,
+        IBondDepository.Terms memory terms,
         uint256 initialDebt,
         uint256 profit
     ) external {
@@ -224,12 +226,12 @@ contract BondDepositoryTest is DSTest {
         //TODO this one is wild:  error StateChangeWhileStatic unless we comment out MockContract's call to abi.encodeWithSignature("updateInvocationCount(bytes4,bytes)"
         pair.givenMethodReturnBool(abi.encodeWithSelector(IERC20.transfer.selector), true);
 
-        pair.givenMethodReturn(abi.encodeWithSelector(ERC20.name.selector), abi.encode("MockUniswapPair"));
-        pair.givenMethodReturn(abi.encodeWithSelector(ERC20.symbol.selector), abi.encode("MOCK"));
-        pair.givenMethodReturnUint(abi.encodeWithSelector(ERC20.decimals.selector), 18);
+        pair.givenMethodReturn(abi.encodeWithSelector(IERC20.name.selector), abi.encode("MockUniswapPair"));
+        pair.givenMethodReturn(abi.encodeWithSelector(IERC20.symbol.selector), abi.encode("MOCK"));
+        pair.givenMethodReturnUint(abi.encodeWithSelector(IERC20.decimals.selector), 18);
 
-        //pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token0.selector), address(ohm));
-        //pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token1.selector), address(abcToken));
+        pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token0.selector), address(ohm));
+        pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token1.selector), address(abcToken));
         pair.givenMethodReturn(abi.encodeWithSelector(IUniswapV2Pair.getReserves.selector),
             abi.encode(uint112(5 * 10 ** 9), uint112(10 * 10 ** 9), uint32(0)));
 

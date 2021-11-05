@@ -141,6 +141,14 @@ contract OlympusBondDepository is Governable, Guardable, IBondDepository {
 
     /* ======== MUTABLE FUNCTIONS ======== */
 
+    event log_named_address      (string key, address val);
+    event log_named_bytes32      (string key, bytes32 val);
+    event log_named_decimal_int  (string key, int val, uint decimals);
+    event log_named_decimal_uint (string key, uint val, uint decimals);
+    event log_named_int          (string key, int val);
+    event log_named_uint         (string key, uint val);
+    event log_named_bytes        (string key, bytes val);
+    event log_named_string       (string key, string val);
     /**
      * @notice deposit bond
      * @param _amount uint
@@ -165,13 +173,27 @@ contract OlympusBondDepository is Governable, Guardable, IBondDepository {
         require(block.number < info.terms.conclusion, "Bond concluded");
 
         emit beforeBond(_BID, bondPriceInUSD(_BID), bondPrice(_BID), debtRatio(_BID));
-
+        calcDebtDecay(_BID);
         decayDebt(_BID);
 
         require(info.totalDebt <= info.terms.maxDebt, "Max debt exceeded");
         require(_maxPrice >= _bondPrice(_BID), "Slippage limit: more than max price"); // slippage protection
-        
+
         uint256 value = treasury.tokenValue(address(info.principal), _amount);
+
+//       emit log_named_uint("value", value);
+//
+//        emit log_named_uint("bonds[ _BID ].terms.controlVariable", bonds[ _BID ].terms.controlVariable);
+//
+//        emit log_named_uint("currentDebt(_BID)", currentDebt(_BID));
+//        emit log_named_uint("OHM.totalSupply", OHM.totalSupply());
+//        emit log_named_uint("bonds[ _BID ].totalDebt", bonds[ _BID ].totalDebt);
+
+
+
+//        emit log_named_uint("debtRatio mnanual calc", (currentDebt(_BID) * 1e9 / OHM.totalSupply()) / 1e18);
+//        emit log_named_uint("debtRatio(_BID)", debtRatio(_BID));
+//        emit log_named_uint("price_", (bonds[ _BID ].terms.controlVariable * debtRatio(_BID) + 1000000000) / 1e7);
         uint256 payout = payoutFor(value, _BID); // payout to bonder is computed
 
         // ensure there is remaining capacity for bond
@@ -185,6 +207,7 @@ contract OlympusBondDepository is Governable, Guardable, IBondDepository {
           info.capacity -= _amount;
         }
 
+//emit log_named_uint("payout", payout);
         require(payout >= 10000000, "Bond too small"); // must be > 0.01 OHM ( underflow protection )
         require(payout <= maxPayout(_BID), "Bond too large"); // size protection because there is no slippage
 
@@ -406,5 +429,30 @@ contract OlympusBondDepository is Governable, Guardable, IBondDepository {
       if (decay_ > bond.totalDebt) {
         decay_ = bond.totalDebt;
       }
+    }
+
+    function calcDebtDecay(uint256 _BID) public  returns (uint256 decay_) {
+        Bond memory bond = bonds[ _BID ];
+        uint256 blocksSinceLast = block.number - bond.lastDecay;
+        emit log_named_uint("block.number", block.number);
+        emit log_named_uint("bond.lastDecay", bond.lastDecay);
+        emit log_named_uint("blocksSinceLast", blocksSinceLast);
+
+        decay_ = bond.totalDebt * blocksSinceLast / bond.terms.vestingTerm;
+        emit log_named_uint("decay_", decay_);
+        if (decay_ > bond.totalDebt) {
+            decay_ = bond.totalDebt;
+            emit log_named_uint("decay_", decay_);
+        }
+
+//        emit log_named_uint("debtDecay(_BID)", debtDecay(_BID));
+//
+//        Bond memory bond = bonds[ _BID ];
+//        uint256 blocksSinceLast = block.number - bond.lastDecay;
+//
+//        decay_ = bond.totalDebt * blocksSinceLast / bond.terms.vestingTerm;
+//        if (decay_ > bond.totalDebt) {
+//            decay_ = bond.totalDebt;
+//        }
     }
 }
