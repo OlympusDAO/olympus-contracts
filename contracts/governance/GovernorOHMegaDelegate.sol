@@ -78,7 +78,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
       * @param description String description of the proposal
       * @return Proposal id of new proposal
       */
-    function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
+    function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint256) {
         // Reject proposals before initiating as Governor
         require(initialProposalId != 0, "GovernorOHMega::propose: Governor OHMega not active");
         /// @notice change from original contract
@@ -276,7 +276,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
       * @param support The support value for the vote. 0=against, 1=for, 2=abstain
       * @return The number of votes cast
       */
-    function castVoteInternal(address voter, uint proposalId, uint8 support) internal returns (uint) {
+    function castVoteInternal(address voter, uint proposalId, uint8 support) internal returns (uint256) {
         require(state(proposalId) == ProposalState.Active, "GovernorOHMega::castVoteInternal: voting is closed");
         require(support <= 2, "GovernorOHMega::castVoteInternal: invalid vote type");
         Proposal storage proposal = proposals[proposalId];
@@ -394,13 +394,13 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
         emit NewPendingAdmin(oldPendingAdmin, pendingAdmin);
     }
 
-    function add256(uint256 a, uint256 b) internal pure returns (uint) {
+    function add256(uint256 a, uint256 b) internal pure returns (uint256) {
         uint c = a + b;
         require(c >= a, "addition overflow");
         return c;
     }
 
-    function sub256(uint256 a, uint256 b) internal pure returns (uint) {
+    function sub256(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b <= a, "subtraction underflow");
         return a - b;
     }
@@ -424,7 +424,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
         return c;
     }
 
-    function getChainIdInternal() internal pure returns (uint) {
+    function getChainIdInternal() internal pure returns (uint256) {
         uint chainId;
         assembly { chainId := chainid() }
         return chainId;

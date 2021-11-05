@@ -6,8 +6,9 @@ import {ITreasury} from "./interfaces/OlympusInterfaces.sol";
 import {ITeller} from "./interfaces/OlympusInterfaces.sol";
 import {IBondDepository} from "./interfaces/OlympusInterfaces.sol";
 import {IBondingCalculator} from "./interfaces/OlympusInterfaces.sol";
+import {IERC20} from "./interfaces/OlympusInterfaces.sol";
 
-import "./libraries/SafeERC20.sol";
+import {SafeERC20} from "./libraries/SafeERC20.sol";
 
 import "./types/Governable.sol";
 import "./types/Guardable.sol";
@@ -15,32 +16,6 @@ import "./types/Guardable.sol";
 contract OlympusBondDepository is Governable, Guardable, IBondDepository {
 
     using SafeERC20 for IERC20;
-
-    /* ======== STRUCTS ======== */
-
-    // Info about each type of bond
-    struct Bond {
-        IERC20 principal; // token to accept as payment
-        IBondingCalculator calculator; // contract to value principal
-        Terms terms; // terms of bond
-        bool termsSet; // have terms been set
-        uint256 capacity; // capacity remaining
-        bool capacityIsPayout; // capacity limit is for payout vs principal
-        uint256 totalDebt; // total debt from bond
-        uint256 lastDecay; // last block when debt was decayed
-    }
-
-    // Info for creating new bonds
-    struct Terms {
-        uint256 controlVariable; // scaling variable for price
-        bool fixedTerm; // fixed term or fixed expiration
-        uint256 vestingTerm; // term in blocks (fixed-term)
-        uint256 expiration; // block number bond matures (fixed-expiration)
-        uint256 conclusion; // block number bond no longer offered
-        uint256 minimumPrice; // vs principal value
-        uint256 maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
-        uint256 maxDebt; // 9 decimal debt ratio, max % total supply created as debt
-    }
 
     /* ======== STATE VARIABLES ======== */
 
@@ -195,7 +170,7 @@ contract OlympusBondDepository is Governable, Guardable, IBondDepository {
 
         require(info.totalDebt <= info.terms.maxDebt, "Max debt exceeded");
         require(_maxPrice >= _bondPrice(_BID), "Slippage limit: more than max price"); // slippage protection
-
+        
         uint256 value = treasury.tokenValue(address(info.principal), _amount);
         uint256 payout = payoutFor(value, _BID); // payout to bonder is computed
 
@@ -213,7 +188,7 @@ contract OlympusBondDepository is Governable, Guardable, IBondDepository {
         require(payout >= 10000000, "Bond too small"); // must be > 0.01 OHM ( underflow protection )
         require(payout <= maxPayout(_BID), "Bond too large"); // size protection because there is no slippage
 
-        info.principal.safeTransfer(address(treasury), _amount); // send payout to treasury
+        SafeERC20.safeTransfer(info.principal, address(treasury), _amount); // send payout to treasury
 
         bonds[ _BID ].totalDebt = info.totalDebt + value; // increase total debt
 

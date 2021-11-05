@@ -176,8 +176,8 @@ contract GovernorOHMegaDelegateStorageV1 is GovernorOHMegaDelegatorStorage {
 }
 
 interface TimelockInterface {
-    function delay() external view returns (uint);
-    function GRACE_PERIOD() external view returns (uint);
+    function delay() external view returns (uint256);
+    function GRACE_PERIOD() external view returns (uint256);
     function acceptAdmin() external;
     function queuedTransactions(bytes32 hash) external view returns (bool);
     function queueTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external returns (bytes32);
@@ -187,18 +187,18 @@ interface TimelockInterface {
 
 /// @notice change from original contract
 interface gOHMInterface {
-    function getPriorVotes(address account, uint blockNumber) external view returns (uint);
-    function balanceTo( uint _amount ) external view returns ( uint );
-    function balanceFrom( uint _amount ) external view returns ( uint );
+    function getPriorVotes(address account, uint blockNumber) external view returns (uint256);
+    function balanceTo( uint _amount ) external view returns (uint256);
+    function balanceFrom( uint _amount ) external view returns (uint256);
 }
 
 /// @notice change from original contract
 interface sOHMInterface {
-    function circulatingSupply() external view returns ( uint );
+    function circulatingSupply() external view returns (uint256);
 }
 
 
 interface GovernorAlpha {
     /// @notice The total number of proposals
-    function proposalCount() external returns (uint);
+    function proposalCount() external returns (uint256);
 }

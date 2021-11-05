@@ -7,20 +7,20 @@ contract GovernorAlpha {
 
     /// @notice The percent of sOHM in support of a proposal required in order for a quorum to be reached and for a vote to succeed
     /// @notice change from original contract
-    function quorumPercent() public pure returns (uint) { return 40000; } // In ten-thosandaths 40000 = 4.00%
+    function quorumPercent() public pure returns (uint256) { return 40000; } // In ten-thosandaths 40000 = 4.00%
 
     /// @notice The maximum setable proposal threshold percent
     /// @notice change from original contract
-    function proposalThresholdPercent() public pure returns (uint) { return 100000; } // 1.00% of sOHM circulating supply : In ten-thosandaths 10000 = 1.00%
+    function proposalThresholdPercent() public pure returns (uint256) { return 100000; } // 1.00% of sOHM circulating supply : In ten-thosandaths 10000 = 1.00%
 
     /// @notice The maximum number of actions that can be included in a proposal
-    function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
+    function proposalMaxOperations() public pure returns (uint256) { return 10; } // 10 actions
 
     /// @notice The delay before voting on a proposal may take place, once proposed
-    function votingDelay() public pure returns (uint) { return 1; } // 1 block
+    function votingDelay() public pure returns (uint256) { return 1; } // 1 block
 
     /// @notice The duration of voting on a proposal, in blocks
-    function votingPeriod() public pure returns (uint) { return 17280; } // ~3 days in blocks (assuming 15s blocks)
+    function votingPeriod() public pure returns (uint256) { return 17280; } // ~3 days in blocks (assuming 15s blocks)
 
     /// @notice The address of the Olympus Protocol Timelock
     TimelockInterface public timelock;
@@ -151,7 +151,7 @@ contract GovernorAlpha {
         guardian = guardian_;
     }
 
-    function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
+    function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint256) {
         /// @notice change from original contract
         require(gOHM.getPriorVotes(msg.sender, sub256(block.number, 1)) > getVotesFromPercentOfsOHMSupply(proposalThresholdPercent()), "GovernorAlpha::propose: proposer votes below proposal threshold");
         require(targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length, "GovernorAlpha::propose: proposal function information arity mismatch");
@@ -334,13 +334,13 @@ contract GovernorAlpha {
         timelock.executeTransaction(address(timelock), 0, "setPendingAdmin(address)", abi.encode(newPendingAdmin), eta);
     }
 
-    function add256(uint256 a, uint256 b) internal pure returns (uint) {
+    function add256(uint256 a, uint256 b) internal pure returns (uint256) {
         uint c = a + b;
         require(c >= a, "addition overflow");
         return c;
     }
 
-    function sub256(uint256 a, uint256 b) internal pure returns (uint) {
+    function sub256(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b <= a, "subtraction underflow");
         return a - b;
     }
@@ -364,7 +364,7 @@ contract GovernorAlpha {
         return c;
     }
 
-    function getChainId() internal pure returns (uint) {
+    function getChainId() internal pure returns (uint256) {
         uint chainId;
         assembly { chainId := chainid() }
         return chainId;
@@ -372,8 +372,8 @@ contract GovernorAlpha {
 }
 
 interface TimelockInterface {
-    function delay() external view returns (uint);
-    function GRACE_PERIOD() external view returns (uint);
+    function delay() external view returns (uint256);
+    function GRACE_PERIOD() external view returns (uint256);
     function acceptAdmin() external;
     function queuedTransactions(bytes32 hash) external view returns (bool);
     function queueTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external returns (bytes32);
@@ -383,12 +383,12 @@ interface TimelockInterface {
 
 /// @notice change from original contract
 interface gOHMInterface {
-    function getPriorVotes(address account, uint blockNumber) external view returns (uint);
-    function balanceTo( uint _amount ) external view returns ( uint );
+    function getPriorVotes(address account, uint blockNumber) external view returns (uint256);
+    function balanceTo( uint _amount ) external view returns (uint256);
 }
 
 /// @notice change from original contract
 interface sOHMInterface {
-    function circulatingSupply() external view returns ( uint );
+    function circulatingSupply() external view returns (uint256);
 }
 

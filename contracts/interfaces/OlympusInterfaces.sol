@@ -1,30 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-interface IERC20 {
+import "./IERC20.sol";
 
-  /* ====== EVENTS ====== */
-
-  event Transfer(address indexed from, address indexed to, uint256 value);
-  event Approval(address indexed owner, address indexed spender, uint256 value);
-
-  /* ====== ERC20 ====== */
-
-  function totalSupply() external view returns (uint256);
-  function balanceOf(address account) external view returns (uint256);
-  function transfer(address recipient, uint256 amount) external returns (bool);
-  function allowance(address owner, address spender) external view returns (uint256);
-  function approve(address spender, uint256 amount) external returns (bool);
-  function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-
-  /* ====== ERC20-Metadata ====== */
-
-  function name() external view returns (string memory);
-  function symbol() external view returns (string memory);
-  function decimals() external view returns (uint8);
-}
-
-interface IOHMERC20 is IERC20 {
+interface IOHMERC20 {
 
   /* ====== OHM ====== */
 
@@ -34,7 +13,7 @@ interface IOHMERC20 is IERC20 {
   function vault() external returns (address);
 }
 
-interface IsOHM is IERC20 {
+interface IsOHM {
 
   /* ====== EVENTS ====== */
 
@@ -46,12 +25,12 @@ interface IsOHM is IERC20 {
 
   function rebase( uint256 ohmProfit_, uint epoch_) external returns (uint256);
   function circulatingSupply() external view returns (uint256);
-  function gonsForBalance( uint amount ) external view returns ( uint );
-  function balanceForGons( uint gons ) external view returns ( uint );
-  function index() external view returns ( uint );
+  function gonsForBalance( uint amount ) external view returns (uint256);
+  function balanceForGons( uint gons ) external view returns (uint256);
+  function index() external view returns (uint256);
 }
 
-interface IgOHM  is IERC20 {
+interface IgOHM {
 
   /* ====== gOHM ====== */
 

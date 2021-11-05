@@ -2,16 +2,12 @@
 pragma solidity ^0.8.9;
 
 import "./interfaces/IERC20.sol";
-import "./interfaces/IERC2612Permit.sol";
 
-import "./types/ERC20Permit.sol";
+import "./types/ERC20.sol";
 import "./types/Ownable.sol";
 import "./types/VaultOwned.sol";
 
-
-contract OlympusERC20Token is ERC20Permit, VaultOwned {
-
-    constructor() ERC20("Olympus", "OHM", 9) {}
+contract OlympusERC20Token is VaultOwned, ERC20("Olympus", "OHM", 9) {
 
     function mint(address account_, uint256 amount_) external onlyVault() {
         _mint(account_, amount_);
@@ -26,9 +22,7 @@ contract OlympusERC20Token is ERC20Permit, VaultOwned {
     }
 
     function _burnFrom(address account_, uint256 amount_) public virtual {
-        uint256 decreasedAllowance_ = allowance(account_, msg.sender) - amount_;
-
-        _approve(account_, msg.sender, decreasedAllowance_);
+        _allowance[account_][msg.sender] -= amount_;
         _burn(account_, amount_);
     }
 }

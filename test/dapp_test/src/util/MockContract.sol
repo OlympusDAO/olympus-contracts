@@ -55,19 +55,19 @@ interface MockInterface {
 	/**
 	 * @dev Returns the number of times anything has been called on this mock since last reset
 	 */
-	function invocationCount() external returns (uint);
+	function invocationCount() external returns (uint256);
 
 	/**
 	 * @dev Returns the number of times the given method has been called on this mock since last reset
 	 * @param method ABI encoded methodId. It is valid to pass full calldata (including arguments). The mock will extract the methodId from it
 	 */
-	function invocationCountForMethod(bytes calldata method) external returns (uint);
+	function invocationCountForMethod(bytes calldata method) external returns (uint256);
 
 	/**
 	 * @dev Returns the number of times this mock has been called with the exact calldata since last reset.
 	 * @param call ABI encoded calldata (methodId and arguments)
 	 */
-	function invocationCountForCalldata(bytes calldata call) external returns (uint);
+	function invocationCountForCalldata(bytes calldata call) external returns (uint256);
 
 	/**
 	 * @dev Resets all mocked methods and invocation counts.
@@ -245,16 +245,16 @@ contract MockContract is MockInterface {
 		trackMethodIdMock(method);
 	}
 
-	function invocationCount() override external view returns (uint) {
+	function invocationCount() override external view returns (uint256) {
 		return invocations;
 	}
 
-	function invocationCountForMethod(bytes calldata call) override external view returns (uint) {
+	function invocationCountForMethod(bytes calldata call) override external view returns (uint256) {
 		bytes4 method = bytesToBytes4(call);
 		return methodIdInvocations[keccak256(abi.encodePacked(resetCount, method))];
 	}
 
-	function invocationCountForCalldata(bytes calldata call) override external view returns (uint) {
+	function invocationCountForCalldata(bytes calldata call) override external view returns (uint256) {
 		return calldataInvocations[keccak256(abi.encodePacked(resetCount, call))];
 	}
 

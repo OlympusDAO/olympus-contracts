@@ -742,7 +742,7 @@ library SafeERC20 {
 }
 
 interface IsOHMOLD {
-    function INDEX() external view returns ( uint );
+    function INDEX() external view returns (uint256);
 }
 
 contract wOHM is ERC20 {
@@ -762,7 +762,7 @@ contract wOHM is ERC20 {
         @param _amount uint
         @return uint
      */
-    function wrap( uint _amount ) external returns ( uint ) {
+    function wrap( uint _amount ) external returns (uint256) {
         IERC20( sOHM ).transferFrom( msg.sender, address(this), _amount );
 
         uint value = sOHMTowOHM( _amount );
@@ -775,7 +775,7 @@ contract wOHM is ERC20 {
         @param _amount uint
         @return uint
      */
-    function unwrap( uint _amount ) external returns ( uint ) {
+    function unwrap( uint _amount ) external returns (uint256) {
         _burn( msg.sender, _amount );
 
         uint value = wOHMTosOHM( _amount );
@@ -788,7 +788,7 @@ contract wOHM is ERC20 {
         @param _amount uint
         @return uint
      */
-    function wOHMTosOHM( uint _amount ) public view returns ( uint ) {
+    function wOHMTosOHM( uint _amount ) public view returns (uint256) {
         return _amount.mul( IsOHMOLD( sOHM ).INDEX() ).div( 10 ** decimals() );
     }
 
@@ -797,7 +797,7 @@ contract wOHM is ERC20 {
         @param _amount uint
         @return uint
      */
-    function sOHMTowOHM( uint _amount ) public view returns ( uint ) {
+    function sOHMTowOHM( uint _amount ) public view returns (uint256) {
         return _amount.mul( 10 ** decimals() ).div( IsOHMOLD( sOHM ).INDEX() );
     }
 

@@ -68,7 +68,7 @@ contract OlympusStaking is Governable, IStaking {
      * @param _claim bool
      * @param _rebasing bool
      */
-    function stake( uint _amount, address _recipient, bool _rebasing, bool _claim ) external returns ( uint ) {
+    function stake( uint _amount, address _recipient, bool _rebasing, bool _claim ) external returns (uint256) {
         rebase();
 
         OHM.safeTransferFrom( msg.sender, address(this), _amount );
@@ -101,7 +101,7 @@ contract OlympusStaking is Governable, IStaking {
      * @param _recipient address
      * @param _rebasing bool
      */
-    function claim ( address _recipient, bool _rebasing ) public returns ( uint ) {
+    function claim ( address _recipient, bool _rebasing ) public returns (uint256) {
         Claim memory info = warmupInfo[ _recipient ];
 
         if ( !info.lock ) {
@@ -121,7 +121,7 @@ contract OlympusStaking is Governable, IStaking {
     /**
      * @notice forfeit stake and retrieve OHM
      */
-    function forfeit() external returns ( uint ) {
+    function forfeit() external returns (uint256) {
         Claim memory info = warmupInfo[ msg.sender ];
         delete warmupInfo[ msg.sender ];
 
@@ -145,7 +145,7 @@ contract OlympusStaking is Governable, IStaking {
      * @param _trigger bool
      * @param _rebasing bool
      */
-    function unstake( uint _amount, bool _trigger, bool _rebasing ) external returns ( uint ) {
+    function unstake( uint _amount, bool _trigger, bool _rebasing ) external returns (uint256) {
         if ( _trigger ) {
             rebase();
         }
@@ -220,7 +220,7 @@ contract OlympusStaking is Governable, IStaking {
      * @param _amount uint
      * @param _rebasing bool
      */
-    function _send( address _recipient, uint _amount, bool _rebasing ) internal returns ( uint ) {
+    function _send( address _recipient, uint _amount, bool _rebasing ) internal returns (uint256) {
         if ( _rebasing ) {
             IERC20(address(sOHM)).safeTransfer( _recipient, _amount ); // send as sOHM (equal unit as OHM)
             return _amount;
@@ -238,7 +238,7 @@ contract OlympusStaking is Governable, IStaking {
         @notice returns the sOHM index, which tracks rebase growth
         @return uint
      */
-    function index() public view returns ( uint ) {
+    function index() public view returns (uint256) {
         return sOHM.index();
     }
 
@@ -246,15 +246,15 @@ contract OlympusStaking is Governable, IStaking {
         @notice returns contract OHM holdings, including bonuses provided
         @return uint
      */
-    function contractBalance() public view returns ( uint ) {
+    function contractBalance() public view returns (uint256) {
         return OHM.balanceOf( address(this) );
     }
 
-    function totalStaked() public view returns ( uint ) {
+    function totalStaked() public view returns (uint256) {
         return sOHM.circulatingSupply();
     }
 
-    function supplyInWarmup() public view returns ( uint ) {
+    function supplyInWarmup() public view returns (uint256) {
         return sOHM.balanceForGons( gonsInWarmup );
     }
 

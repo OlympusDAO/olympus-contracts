@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: WTFPL  "Do What the Fuck You Want To Public License"
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
-pragma solidity >=0.8.0;
+pragma solidity 0.8.9;
 
 // forked from solmate, added ERC777 hooks
 contract ERC20 {
@@ -15,9 +15,9 @@ contract ERC20 {
 
     uint256 public totalSupply;
 
-    mapping(address => uint256) public balanceOf;
+    mapping(address => uint256) internal _balanceOf;
 
-    mapping(address => mapping(address => uint256)) public allowance;
+    mapping(address => mapping(address => uint256)) internal _allowance;
 
     bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
 
@@ -56,15 +56,15 @@ contract ERC20 {
     /*/////////////////    ERC20 LOGIC    /////////////////*/
     
     function approve(address spender, uint256 value) external virtual returns (bool) {
-        allowance[msg.sender][spender] = value;
+        _allowance[msg.sender][spender] = value;
         emit Approval(spender, spender, value);
         return true;
     }
 
     function transfer(address to, uint256 value) external virtual returns (bool) {
         _beforeTransferHook(msg.sender, to, value);
-        balanceOf[msg.sender] -= value;
-        unchecked {balanceOf[to] += value;}
+        _balanceOf[msg.sender] -= value;
+        unchecked {_balanceOf[to] += value;}
         _afterTransferHook(msg.sender, to, value);
         emit Transfer(msg.sender, to, value);
         return true;
@@ -76,9 +76,9 @@ contract ERC20 {
         uint256 value
     ) external virtual returns (bool) {
         _beforeTransferHook(msg.sender, to, value);
-        if (allowance[from][msg.sender] != type(uint256).max) allowance[from][msg.sender] -= value;
-        balanceOf[from] -= value;
-        unchecked {balanceOf[to] += value;}
+        if (_allowance[from][msg.sender] != type(uint256).max) _allowance[from][msg.sender] -= value;
+        _balanceOf[from] -= value;
+        unchecked {_balanceOf[to] += value;}
         _afterTransferHook(from, to, value);
         emit Transfer(from, to, value);
         return true;
@@ -105,8 +105,16 @@ contract ERC20 {
         address recoveredAddress = ecrecover(digest, v, r, s);
         require(recoveredAddress != address(0) && recoveredAddress == owner, 
         "INVALID_PERMIT_SIGNATURE");
-        allowance[recoveredAddress][spender] = value;
+        _allowance[recoveredAddress][spender] = value;
         emit Approval(spender, spender, value);
+    }
+
+    function balanceOf(address who) external virtual view returns (uint256) { 
+        return _balanceOf[who];
+    }
+
+    function allowance(address account, address who) external virtual view returns (uint256) { 
+        return _allowance[account][who];
     }
 
     /*/////////////////    INTERNAL FUNCTIONS    /////////////////*/
@@ -114,14 +122,14 @@ contract ERC20 {
     function _mint(address to, uint256 value) internal virtual {
         _beforeTransferHook(address(0), to, value);
         totalSupply += value;
-        unchecked {balanceOf[to] += value;}
+        unchecked {_balanceOf[to] += value;}
         _afterTransferHook(address(0), to, value);
         emit Transfer(address(0), to, value);
     }
 
     function _burn(address from, uint256 value) internal virtual {
         _beforeTransferHook(from, address(0), value);
-        balanceOf[from] -= value;
+        _balanceOf[from] -= value;
         unchecked {totalSupply -= value;}
         _afterTransferHook(from, address(0), value);
         emit Transfer(from, address(0), value);

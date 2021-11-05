@@ -77,11 +77,11 @@ interface IsOHM is IERC20 {
 
     function circulatingSupply() external view returns (uint256);
 
-    function gonsForBalance( uint amount ) external view returns ( uint );
+    function gonsForBalance( uint amount ) external view returns (uint256);
 
-    function balanceForGons( uint gons ) external view returns ( uint );
+    function balanceForGons( uint gons ) external view returns (uint256);
 
-    function index() external view returns ( uint );
+    function index() external view returns (uint256);
 }
 
 // Old wsOHM interface
@@ -131,15 +131,15 @@ interface ITreasury {
 
 interface IStaking {
 
-    function stake( uint _amount, address _recipient, bool _rebasing, bool _claim ) external returns ( uint );
+    function stake( uint _amount, address _recipient, bool _rebasing, bool _claim ) external returns (uint256);
 
-    function claim ( address _recipient, bool _rebasing ) external returns ( uint );
+    function claim ( address _recipient, bool _rebasing ) external returns (uint256);
 
-    function forfeit() external returns ( uint );
+    function forfeit() external returns (uint256);
 
     function toggleLock() external;
 
-    function unstake( uint _amount, bool _trigger, bool _rebasing ) external returns ( uint );
+    function unstake( uint _amount, bool _trigger, bool _rebasing ) external returns (uint256);
 
     function wrap( uint _amount ) external returns ( uint gBalance_ );
 
@@ -147,13 +147,13 @@ interface IStaking {
 
     function rebase() external;
 
-    function index() external view returns ( uint );
+    function index() external view returns (uint256);
 
-    function contractBalance() external view returns ( uint );
+    function contractBalance() external view returns (uint256);
 
-    function totalStaked() external view returns ( uint );
+    function totalStaked() external view returns (uint256);
 
-    function supplyInWarmup() external view returns ( uint );
+    function supplyInWarmup() external view returns (uint256);
 }
 
 

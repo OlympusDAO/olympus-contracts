@@ -34,7 +34,7 @@ interface IDAI {
 
 
     // --- Auth ---
-  function wards() external returns ( uint256 );
+  function wards() external returns (uint256);
 
   function rely(address guy) external;
 
@@ -151,11 +151,11 @@ contract DAI is LibNote {
         dailyDAILimit = 10000000000000000000000;
     }
 
-    function allowance( address account_, address sender_ ) external view returns ( uint ) {
+    function allowance( address account_, address sender_ ) external view returns (uint256) {
       return _allowance( account_, sender_ );
     }
 
-    function _allowance( address account_, address sender_ ) internal view returns ( uint ) {
+    function _allowance( address account_, address sender_ ) internal view returns (uint256) {
       
       return allowances[account_][sender_];
     }

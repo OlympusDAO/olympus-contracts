@@ -371,7 +371,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         @return uint
      */
     function excessReserves() public view override returns (uint256) {
-        return totalReserves -(OHM.totalSupply() - totalDebt);
+        return totalReserves - (IERC20(address(OHM)).totalSupply() - totalDebt);
     }
 
     /**

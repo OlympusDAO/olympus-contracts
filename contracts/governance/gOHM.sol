@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {IsOHM} from "../interfaces/OlympusInterfaces.sol";
+import {IgOHM} from "../interfaces/OlympusInterfaces.sol";
+
 import "../libraries/SafeERC20.sol";
 
-import "../interfaces/IERC20.sol";
-import "../interfaces/IsOHM.sol";
-import "../interfaces/IgOHM.sol";
-
-
-contract gOHM is IgOHM {
+contract gOHM is IgOHM, IERC20 {
     /* ========== DEPENDENCIES ========== */
 
     using SafeERC20 for IERC20;
