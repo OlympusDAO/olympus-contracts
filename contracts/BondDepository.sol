@@ -440,28 +440,4 @@ emit log_named_uint("payout", payout);
       }
     }
 
-    function calcDebtDecay(uint256 _BID) public  returns (uint256 decay_) {
-        Bond memory bond = bonds[ _BID ];
-        uint256 blocksSinceLast = block.number - bond.lastDecay;
-        emit log_named_uint("block.number", block.number);
-        emit log_named_uint("bond.lastDecay", bond.lastDecay);
-        emit log_named_uint("blocksSinceLast", blocksSinceLast);
-
-        decay_ = bond.totalDebt * blocksSinceLast / bond.terms.vestingTerm;
-        emit log_named_uint("decay_", decay_);
-        if (decay_ > bond.totalDebt) {
-            decay_ = bond.totalDebt;
-            emit log_named_uint("decay_", decay_);
-        }
-
-//        emit log_named_uint("debtDecay(_BID)", debtDecay(_BID));
-//
-//        Bond memory bond = bonds[ _BID ];
-//        uint256 blocksSinceLast = block.number - bond.lastDecay;
-//
-//        decay_ = bond.totalDebt * blocksSinceLast / bond.terms.vestingTerm;
-//        if (decay_ > bond.totalDebt) {
-//            decay_ = bond.totalDebt;
-//        }
-    }
 }
