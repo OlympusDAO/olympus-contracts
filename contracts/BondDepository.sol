@@ -329,7 +329,9 @@ emit log_named_uint("payout", payout);
     function calcPayoutFor(uint256 _value, uint256 _BID) public returns (uint256) {
         emit log_named_uint("calPayoutFor, _value", _value);
         emit log_named_uint("calPayoutFor, bondPrice(_BID)", bondPrice(_BID));
-        return  (_value / calcBondPrice(_BID)) / 1e16;
+        emit log_named_uint("A", (_value / bondPrice(_BID)));
+        emit log_named_uint("B", (_value / bondPrice(_BID)) / 1e16);
+        return  (_value / bondPrice(_BID)) / 1e16;
     }
 
     /**
