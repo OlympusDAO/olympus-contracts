@@ -2,11 +2,11 @@
 export DAPP_REMAPPINGS="hardhat/=node_modules/hardhat/
 @openzeppelin/=node_modules/@openzeppelin/
 hardhat-deploy/=node_modules/hardhat-deploy/
-ds-test/=lib/ds-test/src/
-mock-contract/=lib/mock-contract/contracts/"
-export DAPP_SRC=dapp_test/
+ds-test/=test/dapp_test/lib/ds-test/src/"
+export DAPP_SRC=test/dapp_test/src
+export DAPP_LIB=test/dapp_test/lib
 export DAPP_OUT=.dapp/
-export DAPP_SOLC_VERSION=0.7.5
+export DAPP_SOLC_VERSION=0.8.9
 export DAPP_BUILD_OPTIMIZE=1
 export DAPP_BUILD_OPTIMIZE_RUNS=999999
 export DAPP_LINK_TEST_LIBRARIES=0

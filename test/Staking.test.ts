@@ -11,7 +11,7 @@ import {
   IOHMERC20,
   OlympusStaking,
   OlympusStaking__factory,
-} from '../../types';
+} from '../types';
 
 chai.use(smock.matchers);
 

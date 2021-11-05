@@ -4,31 +4,32 @@
 name: Smart Contract CI
 
 on:
-  push:
-    branches: [ Version-1.1, Version-2]
-  pull_request:
-    branches: [ "*" ]
+    push:
+        branches: [Version-1.1, Version-2]
+    pull_request:
+        branches: ["*"]
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        node-version: [14.x]
-        os: [ubuntu-latest]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v2
-    - id: yarn-cache
-      run: echo "::set-output name=dir::$(yarn cache dir)"
-    - uses: actions/cache@v2
-      with:
-        path: ${{ steps.yarn-cache.outputs.dir }}
-        key: ${{ matrix.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: |
-          ${{ matrix.os }}-yarn-
-    - run: yarn --frozen-lockfile
-    - run: yarn compile
-    - run : echo "We would run tests here if we had them :dafoe:"
+    build:
+        strategy:
+            matrix:
+                node-version: [14.x]
+                os: [ubuntu-latest]
+                # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v2
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v2
+            - id: yarn-cache
+              run: echo "::set-output name=dir::$(yarn cache dir)"
+            - uses: actions/cache@v2
+              with:
+                  path: ${{ steps.yarn-cache.outputs.dir }}
+                  key: ${{ matrix.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+                  restore-keys: |
+                      ${{ matrix.os }}-yarn-
+            - run: yarn --frozen-lockfile
+            - run: yarn compile
+            - run: cp .env.example .env
+            - run: yarn test
