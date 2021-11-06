@@ -25,7 +25,7 @@ import "./util/MockContract.sol";
 contract BondDepositoryTest is DSTest {
 
     using FixedPoint for *;
-    using SafeMath for uint;
+    using SafeMath for uint256;
     using SafeMath for uint112;
 
     OlympusBondDepository internal bondDepository;
@@ -210,7 +210,7 @@ contract BondDepositoryTest is DSTest {
 
         //        ohm.mint(address(this), ohmMintAmount);
         treasury.enableOnChainGovernance();
-        uint currentBlock = 8;
+        uint256 currentBlock = 8;
         hevm.roll(currentBlock);
         //7 day timelock TODO add test where it's not long enough
         treasury.enableOnChainGovernance();

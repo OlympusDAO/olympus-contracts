@@ -11,9 +11,9 @@ contract GovernorOHMegaDelegator is GovernorOHMegaDelegatorStorage, GovernorOHMe
 			address gOHM_,
 			address admin_,
 	        address implementation_,
-	        uint votingPeriod_,
-	        uint votingDelay_,
-            uint proposalThreshold_) public {
+	        uint256 votingPeriod_,
+	        uint256 votingDelay_,
+            uint256 proposalThreshold_) public {
 
         // Admin set to msg.sender for initialization
         admin = msg.sender;

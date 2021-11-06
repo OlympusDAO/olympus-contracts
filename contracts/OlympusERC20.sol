@@ -4,20 +4,14 @@ pragma solidity 0.7.5;
 import "./libraries/SafeMath.sol";
 import "./libraries/EnumerableSet.sol";
 
-import "./interfaces/IERC20.sol";
-import "./interfaces/IERC2612Permit.sol";
-
 import "./types/ERC20Permit.sol";
-import "./types/Ownable.sol";
 import "./types/VaultOwned.sol";
-
 
 contract OlympusERC20Token is ERC20Permit, VaultOwned {
 
     using SafeMath for uint256;
 
-    constructor() ERC20("Olympus", "OHM", 9) {
-    }
+    constructor() ERC20("Olympus", "OHM", 9) {}
 
     function mint(address account_, uint256 amount_) external onlyVault() {
         _mint(account_, amount_);

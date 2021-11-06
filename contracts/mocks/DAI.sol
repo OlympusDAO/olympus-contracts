@@ -34,29 +34,29 @@ interface IDAI {
 
 
     // --- Auth ---
-  function wards() external returns ( uint256 );
+  function wards() external returns (uint256);
 
   function rely(address guy) external;
 
   function deny(address guy) external;
 
     // --- Token ---
-  function transfer(address dst, uint wad) external returns (bool);
+  function transfer(address dst, uint256 wad) external returns (bool);
 
-  function transferFrom(address src, address dst, uint wad) external returns (bool);
+  function transferFrom(address src, address dst, uint256 wad) external returns (bool);
 
-  function mint(address usr, uint wad) external;
+  function mint(address usr, uint256 wad) external;
 
-  function burn(address usr, uint wad) external;
+  function burn(address usr, uint256 wad) external;
 
-  function approve(address usr, uint wad) external returns (bool);
+  function approve(address usr, uint256 wad) external returns (bool);
 
     // --- Alias ---
-  function push(address usr, uint wad) external;
+  function push(address usr, uint256 wad) external;
 
-  function pull(address usr, uint wad) external;
+  function pull(address usr, uint256 wad) external;
 
-  function move(address src, address dst, uint wad) external;
+  function move(address src, address dst, uint256 wad) external;
 
     // --- Approve by signature ---
   function permit(address holder, address spender, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s) external;
@@ -84,11 +84,11 @@ interface IDAI {
 
 contract DAI is LibNote {
   
-  event Approval(address indexed src, address indexed guy, uint wad);
-  event Transfer(address indexed src, address indexed dst, uint wad);
+  event Approval(address indexed src, address indexed guy, uint256 wad);
+  event Transfer(address indexed src, address indexed dst, uint256 wad);
   
     // --- Auth ---
-    mapping (address => uint) public wards;
+    mapping (address => uint256) public wards;
 
     function rely(address guy) external note auth { wards[guy] = 1; }
 
@@ -105,23 +105,23 @@ contract DAI is LibNote {
     string  public constant version  = "1";
     uint8   public constant decimals = 18;
     uint256 public totalSupply;
-    uint public dailyDAILimit;
+    uint256 public dailyDAILimit;
 
-    mapping (address => uint)                      public balanceOf;
-    mapping (address => mapping (address => uint)) private allowances;
-    mapping (address => uint)                      public nonces;
-    mapping (address => uint)                      public lastMintRestart;
-    mapping (address => uint)                      public daiMintedToday;
+    mapping (address => uint256)                      public balanceOf;
+    mapping (address => mapping (address => uint256)) private allowances;
+    mapping (address => uint256)                      public nonces;
+    mapping (address => uint256)                      public lastMintRestart;
+    mapping (address => uint256)                      public daiMintedToday;
 
-    // event Approval(address indexed src, address indexed guy, uint wad);
-    // event Transfer(address indexed src, address indexed dst, uint wad);
+    // event Approval(address indexed src, address indexed guy, uint256 wad);
+    // event Transfer(address indexed src, address indexed dst, uint256 wad);
 
     // --- Math ---
-    function add(uint x, uint y) internal pure returns (uint z) {
+    function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require((z = x + y) >= x);
     }
 
-    function sub(uint x, uint y) internal pure returns (uint z) {
+    function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require((z = x - y) <= x);
     }
 
@@ -142,25 +142,25 @@ contract DAI is LibNote {
         dailyDAILimit = 10000000000000000000000;
     }
 
-    function allowance( address account_, address sender_ ) external view returns ( uint ) {
+    function allowance( address account_, address sender_ ) external view returns (uint256) {
       return _allowance( account_, sender_ );
     }
 
-    function _allowance( address account_, address sender_ ) internal view returns ( uint ) {
+    function _allowance( address account_, address sender_ ) internal view returns (uint256) {
       
       return allowances[account_][sender_];
     }
 
     // --- Token ---
-    function transfer(address dst, uint wad) external returns (bool) {
+    function transfer(address dst, uint256 wad) external returns (bool) {
         return transferFrom(msg.sender, dst, wad);
     }
 
-    function transferFrom(address src, address dst, uint wad) public returns (bool) {
+    function transferFrom(address src, address dst, uint256 wad) public returns (bool) {
       
       
       require(balanceOf[src] >= wad, "Dai/insufficient-balance");
-        if (src != msg.sender && _allowance( src, msg.sender ) != uint(-1)) {
+        if (src != msg.sender && _allowance( src, msg.sender ) != uint256(-1)) {
             require(_allowance( src, msg.sender ) >= wad, "Dai/insufficient-allowance");
             allowances[src][msg.sender] = sub(_allowance( src, msg.sender ), wad);
         }
@@ -174,11 +174,11 @@ contract DAI is LibNote {
         wards[usr] = 1;
     }
 
-    function adjustDailyDAILimit(uint _limit) external auth {
+    function adjustDailyDAILimit(uint256 _limit) external auth {
         dailyDAILimit = _limit;
     }
 
-    function mint(address usr, uint wad) external {
+    function mint(address usr, uint256 wad) external {
 
       if(wards[msg.sender] == 0) {
         require(add(wad, daiMintedToday[msg.sender]) <= dailyDAILimit || sub(block.number, lastMintRestart[msg.sender]) >= 6500 && wad <= dailyDAILimit, "Over daily DAI Limit");
@@ -198,9 +198,9 @@ contract DAI is LibNote {
       emit Transfer(address(0), usr, wad);
     }
 
-    function burn(address usr, uint wad) external {
+    function burn(address usr, uint256 wad) external {
         require(balanceOf[usr] >= wad, "Dai/insufficient-balance");
-        if (usr != msg.sender && _allowance( usr, msg.sender ) != uint(-1)) {
+        if (usr != msg.sender && _allowance( usr, msg.sender ) != uint256(-1)) {
             require(_allowance( usr, msg.sender ) >= wad, "Dai/insufficient-allowance");
             allowances[usr][msg.sender] = sub(_allowance( usr, msg.sender ), wad);
         }
@@ -209,7 +209,7 @@ contract DAI is LibNote {
         emit Transfer(usr, address(0), wad);
     }
 
-    function _approve(address usr, uint wad) internal returns (bool) {
+    function _approve(address usr, uint256 wad) internal returns (bool) {
       
       allowances[msg.sender][usr] = wad;
       
@@ -217,21 +217,21 @@ contract DAI is LibNote {
       return true;
     }
 
-    function approve(address usr_, uint wad_ ) external returns (bool) {
+    function approve(address usr_, uint256 wad_ ) external returns (bool) {
       
       return _approve( usr_, wad_ ) ;
     }
 
     // --- Alias ---
-    function push(address usr, uint wad) external {
+    function push(address usr, uint256 wad) external {
         transferFrom(msg.sender, usr, wad);
     }
 
-    function pull(address usr, uint wad) external {
+    function pull(address usr, uint256 wad) external {
         transferFrom(usr, msg.sender, wad);
     }
 
-    function move(address src, address dst, uint wad) external {
+    function move(address src, address dst, uint256 wad) external {
         transferFrom(src, dst, wad);
     }
 
@@ -255,7 +255,7 @@ contract DAI is LibNote {
         require(holder == ecrecover(digest, v, r, s), "Dai/invalid-permit");
         require(expiry == 0 || block.timestamp <= expiry, "Dai/permit-expired");
         require(nonce == nonces[holder]++, "Dai/invalid-nonce");
-        uint wad = allowed ? uint(-1) : 0;
+        uint256 wad = allowed ? uint256(-1) : 0;
         allowances[holder][spender] = wad;
         emit Approval(holder, spender, wad);
     }

@@ -12,7 +12,7 @@ interface MockInterface {
 	 */
 	function givenAnyReturn(bytes calldata response) external;
 	function givenAnyReturnBool(bool response) external;
-	function givenAnyReturnUint(uint response) external;
+	function givenAnyReturnUint(uint256 response) external;
 	function givenAnyReturnAddress(address response) external;
 
 	function givenAnyRevert() external;
@@ -29,7 +29,7 @@ interface MockInterface {
 	 */
 	function givenMethodReturn(bytes calldata method, bytes calldata response) external;
 	function givenMethodReturnBool(bytes calldata method, bool response) external;
-	function givenMethodReturnUint(bytes calldata method, uint response) external;
+	function givenMethodReturnUint(bytes calldata method, uint256 response) external;
 	function givenMethodReturnAddress(bytes calldata method, address response) external;
 
 	function givenMethodRevert(bytes calldata method) external;
@@ -45,7 +45,7 @@ interface MockInterface {
 	 */
 	function givenCalldataReturn(bytes calldata call, bytes calldata response) external;
 	function givenCalldataReturnBool(bytes calldata call, bool response) external;
-	function givenCalldataReturnUint(bytes calldata call, uint response) external;
+	function givenCalldataReturnUint(bytes calldata call, uint256 response) external;
 	function givenCalldataReturnAddress(bytes calldata call, address response) external;
 
 	function givenCalldataRevert(bytes calldata call) external;
@@ -55,19 +55,19 @@ interface MockInterface {
 	/**
 	 * @dev Returns the number of times anything has been called on this mock since last reset
 	 */
-	function invocationCount() external returns (uint);
+	function invocationCount() external returns (uint256);
 
 	/**
 	 * @dev Returns the number of times the given method has been called on this mock since last reset
 	 * @param method ABI encoded methodId. It is valid to pass full calldata (including arguments). The mock will extract the methodId from it
 	 */
-	function invocationCountForMethod(bytes calldata method) external returns (uint);
+	function invocationCountForMethod(bytes calldata method) external returns (uint256);
 
 	/**
 	 * @dev Returns the number of times this mock has been called with the exact calldata since last reset.
 	 * @param call ABI encoded calldata (methodId and arguments)
 	 */
-	function invocationCountForCalldata(bytes calldata call) external returns (uint);
+	function invocationCountForCalldata(bytes calldata call) external returns (uint256);
 
 	/**
 	 * @dev Resets all mocked methods and invocation counts.
@@ -92,19 +92,19 @@ contract MockContract is MockInterface {
 	mapping(bytes => MockType) calldataMockTypes;
 	mapping(bytes => bytes) calldataExpectations;
 	mapping(bytes => string) calldataRevertMessage;
-	mapping(bytes32 => uint) calldataInvocations;
+	mapping(bytes32 => uint256) calldataInvocations;
 
 	mapping(bytes4 => bytes4) methodIdMocks;
 	mapping(bytes4 => MockType) methodIdMockTypes;
 	mapping(bytes4 => bytes) methodIdExpectations;
 	mapping(bytes4 => string) methodIdRevertMessages;
-	mapping(bytes32 => uint) methodIdInvocations;
+	mapping(bytes32 => uint256) methodIdInvocations;
 
 	MockType fallbackMockType;
 	bytes fallbackExpectation = DEFAULT_FALLBACK_VALUE;
 	string fallbackRevertMessage;
-	uint invocations;
-	uint resetCount;
+	uint256 invocations;
+	uint256 resetCount;
 
 	constructor() {
 		calldataMocks[MOCKS_LIST_START] = MOCKS_LIST_END;
@@ -136,16 +136,16 @@ contract MockContract is MockInterface {
 	}
 
 	function givenAnyReturnBool(bool response) override external {
-		uint flag = response ? 1 : 0;
+		uint256 flag = response ? 1 : 0;
 		_givenAnyReturn(uintToBytes(flag));
 	}
 
-	function givenAnyReturnUint(uint response) override external {
+	function givenAnyReturnUint(uint256 response) override external {
 		_givenAnyReturn(uintToBytes(response));
 	}
 
 	function givenAnyReturnAddress(address response) override external {
-		_givenAnyReturn(uintToBytes(uint(response)));
+		_givenAnyReturn(uintToBytes(uint256(response)));
 	}
 
 	function givenAnyRevert() override external {
@@ -173,16 +173,16 @@ contract MockContract is MockInterface {
 	}
 
 	function givenCalldataReturnBool(bytes calldata call, bool response) override external {
-		uint flag = response ? 1 : 0;
+		uint256 flag = response ? 1 : 0;
 		_givenCalldataReturn(call, uintToBytes(flag));
 	}
 
-	function givenCalldataReturnUint(bytes calldata call, uint response) override external {
+	function givenCalldataReturnUint(bytes calldata call, uint256 response) override external {
 		_givenCalldataReturn(call, uintToBytes(response));
 	}
 
 	function givenCalldataReturnAddress(bytes calldata call, address response) override external {
-		_givenCalldataReturn(call, uintToBytes(uint(response)));
+		_givenCalldataReturn(call, uintToBytes(uint256(response)));
 	}
 
 	function _givenMethodReturn(bytes memory call, bytes memory response) private {
@@ -197,16 +197,16 @@ contract MockContract is MockInterface {
 	}
 
 	function givenMethodReturnBool(bytes calldata call, bool response) override external {
-		uint flag = response ? 1 : 0;
+		uint256 flag = response ? 1 : 0;
 		_givenMethodReturn(call, uintToBytes(flag));
 	}
 
-	function givenMethodReturnUint(bytes calldata call, uint response) override external {
+	function givenMethodReturnUint(bytes calldata call, uint256 response) override external {
 		_givenMethodReturn(call, uintToBytes(response));
 	}
 
 	function givenMethodReturnAddress(bytes calldata call, address response) override external {
-		_givenMethodReturn(call, uintToBytes(uint(response)));
+		_givenMethodReturn(call, uintToBytes(uint256(response)));
 	}
 
 	function givenCalldataRevert(bytes calldata call) override external {
@@ -245,16 +245,16 @@ contract MockContract is MockInterface {
 		trackMethodIdMock(method);
 	}
 
-	function invocationCount() override external view returns (uint) {
+	function invocationCount() override external view returns (uint256) {
 		return invocations;
 	}
 
-	function invocationCountForMethod(bytes calldata call) override external view returns (uint) {
+	function invocationCountForMethod(bytes calldata call) override external view returns (uint256) {
 		bytes4 method = bytesToBytes4(call);
 		return methodIdInvocations[keccak256(abi.encodePacked(resetCount, method))];
 	}
 
-	function invocationCountForCalldata(bytes calldata call) override external view returns (uint) {
+	function invocationCountForCalldata(bytes calldata call) override external view returns (uint256) {
 		return calldataInvocations[keccak256(abi.encodePacked(resetCount, call))];
 	}
 
@@ -310,7 +310,7 @@ contract MockContract is MockInterface {
 
 	function bytesToBytes4(bytes memory b) private pure returns (bytes4) {
 		bytes4 out;
-		for (uint i = 0; i < 4; i++) {
+		for (uint256 i = 0; i < 4; i++) {
 			out |= bytes4(b[i] & 0xFF) >> (i * 8);
 		}
 		return out;

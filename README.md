@@ -87,7 +87,7 @@ The first step is withdraw funds from the treasury via the "manage" function. "M
 Pass in the token address and the amount to manage. The token will be sent to the contract calling the function.
 
 ```
-function manage( address _token, uint _amount ) external;
+function manage( address _token, uint256 _amount ) external;
 ```
 
 Managing treasury assets should look something like this:
@@ -104,13 +104,13 @@ We utilize the `deposit` function to do this. Deposit allows an approved contrac
 
 Pass in the address sending the funds (most likely the allocator contract), the amount to deposit, and the address of the token. The final parameter, profit, dictates how much OHM to send. send_, the amount of OHM to send, equals the value of amount minus profit.
 ```
-function deposit( address _from, uint _amount, address _token, uint _profit ) external returns ( uint send_ );
+function deposit( address _from, uint256 _amount, address _token, uint256 _profit ) external returns ( uint256 send_ );
 ```
 
 To ensure no OHM is minted, we first get the value of the asset, and pass that in as profit.
 Pass in the token address and amount to get the treasury value.
 ```
-function valueOf( address _token, uint _amount ) public view returns ( uint value_ );
+function valueOf( address _token, uint256 _amount ) public view returns ( uint256 value_ );
 ```
 
 All together, returning funds should look something like this:

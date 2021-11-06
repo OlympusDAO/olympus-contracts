@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-import "./libraries/SafeMath.sol";
-import "./libraries/SafeERC20.sol";
+import {IOHM} from "./interfaces/OlympusV2Interface.sol";
+import {ITreasury} from "./interfaces/OlympusV2Interface.sol";
+import {IBondingCalculator} from "./interfaces/OlympusV2Interface.sol";
 
 import "./interfaces/IOwnable.sol";
-import "./interfaces/IERC20.sol";
 import "./interfaces/IERC20Metadata.sol";
-import "./interfaces/IOHMERC20.sol";
-import "./interfaces/IBondingCalculator.sol";
-import "./interfaces/ITreasury.sol";
+
+import "./libraries/SafeMath.sol";
+import "./libraries/SafeERC20.sol";
 
 import "./types/Ownable.sol";
 
@@ -57,7 +57,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /* ========== STATE VARIABLES ========== */
 
-    IOHMERC20 immutable OHM;
+    IOHM immutable OHM;
     IERC20 public sOHM;
 
     mapping(STATUS => address[]) public registry;
@@ -79,7 +79,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     constructor(address _OHM, uint256 _timelock) {
         require(_OHM != address(0));
-        OHM = IOHMERC20(_OHM);
+        OHM = IOHM(_OHM);
 
         blocksNeededForQueue = _timelock;
     }
@@ -88,10 +88,10 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /**
         @notice allow approved address to deposit an asset for OHM
-        @param _amount uint
+        @param _amount uint256
         @param _token address
-        @param _profit uint
-        @return send_ uint
+        @param _profit uint256
+        @return send_ uint256
      */
     function deposit(
         uint256 _amount,
@@ -120,7 +120,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /**
         @notice allow approved address to burn OHM for reserves
-        @param _amount uint
+        @param _amount uint256
         @param _token address
      */
     function withdraw(uint256 _amount, address _token) external override {
@@ -139,7 +139,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /**
         @notice allow approved address to borrow reserves
-        @param _amount uint
+        @param _amount uint256
         @param _token address
      */
     function incurDebt(uint256 _amount, address _token) external override {
@@ -164,7 +164,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /**
         @notice allow approved address to repay borrowed reserves with reserves
-        @param _amount uint
+        @param _amount uint256
         @param _token address
      */
     function repayDebtWithReserve(uint256 _amount, address _token) external override {
@@ -184,7 +184,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /**
         @notice allow approved address to repay borrowed reserves with OHM
-        @param _amount uint
+        @param _amount uint256
      */
     function repayDebtWithOHM(uint256 _amount) external {
         require(permissions[STATUS.DEBTOR][msg.sender], "Not approved");
@@ -200,7 +200,7 @@ contract OlympusTreasury is Ownable, ITreasury {
     /**
         @notice allow approved address to withdraw assets
         @param _token address
-        @param _amount uint
+        @param _amount uint256
      */
     function manage(address _token, uint256 _amount) external override {
         if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
@@ -309,13 +309,22 @@ contract OlympusTreasury is Ownable, ITreasury {
         if (_status == STATUS.RESERVEMANAGER || _status == STATUS.LIQUIDITYMANAGER) {
             timelock = block.number.add(blocksNeededForQueue.mul(2));
         }
-        permissionQueue.push(Queue({managing: _status, toPermit: _address, calculator: _calculator, timelockEnd: timelock, nullify: false, executed: false}));
+
+        permissionQueue.push(Queue({
+            managing: _status,
+            toPermit: _address,
+            calculator: _calculator,
+            timelockEnd: timelock,
+            nullify: false,
+            executed: false
+        }));
+        
         emit PermissionQueued(_status, _address);
     }
 
     /**
      *  @notice enable queued permission
-     *  @param _index uint
+     *  @param _index uint256
      */
     function execute(uint256 _index) external {
         require(!onChainGoverned);
@@ -344,7 +353,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /**
      * @notice cancel timelocked action
-     * @param _index uint
+     * @param _index uint256
      */
     function nullify(uint256 _index) external onlyOwner {
         permissionQueue[_index].nullify = true;
@@ -365,7 +374,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /**
         @notice returns excess reserves not backing tokens
-        @return uint
+        @return uint256
      */
     function excessReserves() public view override returns (uint256) {
         return totalReserves.sub(OHM.totalSupply().sub(totalDebt));
@@ -374,8 +383,8 @@ contract OlympusTreasury is Ownable, ITreasury {
     /**
         @notice returns OHM valuation of asset
         @param _token address
-        @param _amount uint
-        @return value_ uint
+        @param _amount uint256
+        @return value_ uint256
      */
     function tokenValue(address _token, uint256 _amount) public view override returns (uint256 value_) {
         value_ = _amount.mul(10**IERC20Metadata(address(OHM)).decimals()).div(10**IERC20Metadata(_token).decimals());

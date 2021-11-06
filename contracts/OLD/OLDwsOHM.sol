@@ -742,13 +742,13 @@ library SafeERC20 {
 }
 
 interface IsOHMOLD {
-    function INDEX() external view returns ( uint );
+    function INDEX() external view returns (uint256);
 }
 
 contract wOHM is ERC20 {
     using SafeERC20 for ERC20;
     using Address for address;
-    using SafeMath for uint;
+    using SafeMath for uint256;
 
     address public immutable sOHM;
 
@@ -759,45 +759,45 @@ contract wOHM is ERC20 {
 
     /**
         @notice wrap sOHM
-        @param _amount uint
-        @return uint
+        @param _amount uint256
+        @return uint256
      */
-    function wrap( uint _amount ) external returns ( uint ) {
+    function wrap( uint256 _amount ) external returns (uint256) {
         IERC20( sOHM ).transferFrom( msg.sender, address(this), _amount );
 
-        uint value = sOHMTowOHM( _amount );
+        uint256 value = sOHMTowOHM( _amount );
         _mint( msg.sender, value );
         return value;
     }
 
     /**
         @notice unwrap sOHM
-        @param _amount uint
-        @return uint
+        @param _amount uint256
+        @return uint256
      */
-    function unwrap( uint _amount ) external returns ( uint ) {
+    function unwrap( uint256 _amount ) external returns (uint256) {
         _burn( msg.sender, _amount );
 
-        uint value = wOHMTosOHM( _amount );
+        uint256 value = wOHMTosOHM( _amount );
         IERC20( sOHM ).transfer( msg.sender, value );
         return value;
     }
 
     /**
         @notice converts wOHM amount to sOHM
-        @param _amount uint
-        @return uint
+        @param _amount uint256
+        @return uint256
      */
-    function wOHMTosOHM( uint _amount ) public view returns ( uint ) {
+    function wOHMTosOHM( uint256 _amount ) public view returns (uint256) {
         return _amount.mul( IsOHMOLD( sOHM ).INDEX() ).div( 10 ** decimals() );
     }
 
     /**
         @notice converts sOHM amount to wOHM
-        @param _amount uint
-        @return uint
+        @param _amount uint256
+        @return uint256
      */
-    function sOHMTowOHM( uint _amount ) public view returns ( uint ) {
+    function sOHMTowOHM( uint256 _amount ) public view returns (uint256) {
         return _amount.mul( 10 ** decimals() ).div( IsOHMOLD( sOHM ).INDEX() );
     }
 
