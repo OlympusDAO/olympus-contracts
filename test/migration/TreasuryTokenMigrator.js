@@ -66,7 +66,7 @@ describe("Treasury Token Migration", async function () {
             OLD_WSOHM_ADDRESS,
             SUSHI_ROUTER,
             UNISWAP_ROUTER,
-            1 // timelock for defunds
+            1 // timelock for defund
         );
         const migratorAddress = olympusTokenMigrator.address;
 
