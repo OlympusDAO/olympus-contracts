@@ -211,6 +211,19 @@ contract sOlympus is IsOHM, ERC20Permit {
         return true;
     }
 
+    function changeDebt(
+        uint256 amount,
+        address debtor,
+        bool add
+    ) external {
+        require(msg.sender == treasury, "Only treasury");
+        if (add) {
+            debtBalances[debtor] = debtBalances[debtor].add(amount);
+        } else {
+            debtBalances[debtor] = debtBalances[debtor].sub(amount);
+        }
+    }
+
     /* ========== INTERNAL FUNCTIONS ========== */
 
     function _approve(
@@ -244,11 +257,11 @@ contract sOlympus is IsOHM, ERC20Permit {
         return gOHM.balanceFrom(amount);
     }
 
-    function toG(uint amount) external override view returns (uint) {
+    function toG(uint256 amount) external view override returns (uint256) {
         return gOHM.balanceTo(amount);
     }
 
-    function fromG(uint amount) external override view returns (uint) {
+    function fromG(uint256 amount) external view override returns (uint256) {
         return gOHM.balanceFrom(amount);
     }
 
