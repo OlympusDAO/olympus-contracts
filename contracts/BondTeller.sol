@@ -86,11 +86,11 @@ contract BondTeller is ITeller, Ownable {
      * @notice add new bond payout to user data
      * @param _bonder address
      * @param _principal address
-     * @param _principalPaid uint
-     * @param _payout uint
-     * @param _expires uint
+     * @param _principalPaid uint256
+     * @param _payout uint256
+     * @param _expires uint256
      * @param _feo address
-     * @return index_ uint
+     * @return index_ uint256
      */
     function newBond(
         address _bonder,
@@ -100,7 +100,7 @@ contract BondTeller is ITeller, Ownable {
         uint256 _expires,
         address _feo
     ) external override onlyDepository returns (uint256 index_) {
-        uint reward = _payout.mul(feReward).div(10_000);
+        uint256 reward = _payout.mul(feReward).div(10_000);
         treasury.mint(address(this), _payout.add(reward));
 
         OHM.approve(address(staking), _payout);
@@ -128,7 +128,7 @@ contract BondTeller is ITeller, Ownable {
     /**
      *  @notice redeems all redeemable bonds
      *  @param _bonder address
-     *  @return uint
+     *  @return uint256
      */
     function redeemAll(address _bonder) external override returns (uint256) {
         updateIndexesFor(_bonder);
@@ -138,8 +138,8 @@ contract BondTeller is ITeller, Ownable {
     /**
      *  @notice redeem bond for user
      *  @param _bonder address
-     *  @param _indexes calldata uint[]
-     *  @return uint
+     *  @param _indexes calldata uint256[]
+     *  @return uint256
      */
     function redeem(address _bonder, uint256[] memory _indexes) public override returns (uint256) {
         uint256 dues;
@@ -162,7 +162,7 @@ contract BondTeller is ITeller, Ownable {
 
     // pay reward to front end operator
     function getReward() external override {
-        uint reward = FERs[msg.sender];
+        uint256 reward = FERs[msg.sender];
         FERs[msg.sender] = 0;
         OHM.safeTransfer(msg.sender, reward);
     }
@@ -178,7 +178,7 @@ contract BondTeller is ITeller, Ownable {
 
     /**
      *  @notice send payout
-     *  @param _amount uint
+     *  @param _amount uint256
      */
     function pay(address _bonder, uint256 _amount) internal {
         sOHM.safeTransfer(_bonder, _amount);
@@ -205,8 +205,8 @@ contract BondTeller is ITeller, Ownable {
     /**
      * @notice calculate amount of OHM available for claim for single bond
      * @param _bonder address
-     * @param _index uint
-     * @return uint
+     * @param _index uint256
+     * @return uint256
      */
     function pendingFor(address _bonder, uint256 _index) public view override returns (uint256) {
         if (bonderInfo[_bonder][_index].redeemed == 0 && bonderInfo[_bonder][_index].vested <= block.number) {
@@ -218,8 +218,8 @@ contract BondTeller is ITeller, Ownable {
     /**
      * @notice calculate amount of OHM available for claim for array of bonds
      * @param _bonder address
-     * @param _indexes uint[]
-     * @return pending_ uint
+     * @param _indexes uint256[]
+     * @return pending_ uint256
      */
     function pendingForIndexes(address _bonder, uint256[] memory _indexes) public view override returns (uint256 pending_) {
         for (uint256 i = 0; i < _indexes.length; i++) {
@@ -231,7 +231,7 @@ contract BondTeller is ITeller, Ownable {
     /**
      *  @notice total pending on all bonds for bonder
      *  @param _bonder address
-     *  @return pending_ uint
+     *  @return pending_ uint256
      */
     function totalPendingFor(address _bonder) public view override returns (uint256 pending_) {
         Bond[] memory info = bonderInfo[_bonder];
@@ -246,8 +246,8 @@ contract BondTeller is ITeller, Ownable {
     /**
      * @notice calculate how far into vesting a depositor is
      * @param _bonder address
-     * @param _index uint
-     * @return percentVested_ uint
+     * @param _index uint256
+     * @return percentVested_ uint256
      */
     function percentVestedFor(address _bonder, uint256 _index) public view override returns (uint256 percentVested_) {
         Bond memory bond = bonderInfo[_bonder][_index];
