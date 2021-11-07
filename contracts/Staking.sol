@@ -68,6 +68,7 @@ contract OlympusStaking is Governable {
     constructor ( 
         address _ohm, 
         address _sOHM, 
+        address _gOHM,
         uint _epochLength,
         uint _firstEpochNumber,
         uint _firstEpochBlock
