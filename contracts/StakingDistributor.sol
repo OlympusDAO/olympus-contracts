@@ -48,11 +48,11 @@ contract Distributor is Governable, Guardable {
         address _ohm,
         address _staking
     ) {
-        require(_treasury != address(0), "Zero address found");
+        require(_treasury != address(0), "Zero address: Treasury");
         treasury = ITreasury(_treasury);
-        require(_ohm != address(0), "Zero address found");
+        require(_ohm != address(0), "Zero address: OHM");
         ohm = IERC20(_ohm);
-        require(_staking != address(0), "Zero address found");
+        require(_staking != address(0), "Zero address: Staking");
         staking = _staking;
     }
 
@@ -133,7 +133,7 @@ contract Distributor is Governable, Guardable {
         @param _rewardRate uint
      */
     function addRecipient(address _recipient, uint256 _rewardRate) external onlyGovernor {
-        require(_recipient != address(0), "Zero address found");
+        require(_recipient != address(0), "Zero address: Recipient");
         require(_rewardRate <= rateDenominator, "Rate cannot exceed denominator");
         info.push(Info({recipient: _recipient, rate: _rewardRate}));
     }

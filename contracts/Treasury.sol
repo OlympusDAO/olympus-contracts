@@ -78,7 +78,7 @@ contract OlympusTreasury is Ownable, ITreasury {
     /* ========== CONSTRUCTOR ========== */
 
     constructor(address _ohm, uint256 _timelock) {
-        require(_ohm != address(0), "Zero address found");
+        require(_ohm != address(0), "Zero address: OHM");
         OHM = IOHMERC20(_ohm);
 
         blocksNeededForQueue = _timelock;

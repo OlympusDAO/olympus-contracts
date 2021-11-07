@@ -23,7 +23,7 @@ contract OlympusBondingCalculator is IBondingCalculator {
     IERC20 internal immutable OHM;
 
     constructor( address _OHM ) {
-        require( _OHM != address(0), "Zero address found" );
+        require( _OHM != address(0), "Zero address: OHM" );
         OHM = IERC20( _OHM );
     }
 

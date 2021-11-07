@@ -26,7 +26,6 @@ contract OlympusStaking is Governable {
 
     /* ========== EVENTS ========== */
 
-    event GOHMSet( address gOHM );
     event DistributorSet( address distributor );
     event WarmupSet( uint warmup );
 
@@ -46,15 +45,13 @@ contract OlympusStaking is Governable {
         bool lock; // prevents malicious delays
     }
 
-    enum CONTRACTS { DISTRIBUTOR, gOHM }
-
 
 
     /* ========== STATE VARIABLES ========== */
 
     IERC20 public immutable OHM;
     IsOHM public immutable sOHM;
-    IgOHM public gOHM;
+    IgOHM public immutable gOHM;
 
     Epoch public epoch;
 
@@ -69,16 +66,18 @@ contract OlympusStaking is Governable {
     /* ========== CONSTRUCTOR ========== */
     
     constructor ( 
-        address _OHM, 
+        address _ohm, 
         address _sOHM, 
         uint _epochLength,
         uint _firstEpochNumber,
         uint _firstEpochBlock
     ) {
-        require(_OHM != address(0), "Zero address");
-        OHM = IERC20( _OHM );
-        require(_sOHM != address(0), "Zero address");
+        require(_ohm != address(0), "Zero address: OHM");
+        OHM = IERC20( _ohm );
+        require(_sOHM != address(0), "Zero address: sOHM");
         sOHM = IsOHM( _sOHM );
+        require(_gOHM != address(0), "Zero address: gOHM");
+        gOHM = IgOHM( _gOHM );
         
         epoch = Epoch({
             length: _epochLength,
@@ -302,25 +301,18 @@ contract OlympusStaking is Governable {
 
     /**
      * @notice sets the contract address for LP staking
-     * @param _contract address
-     * @param _address address
+     * @param _distributor address
      */
-    function setContract( CONTRACTS _contract, address _address ) external onlyGovernor() {
-        if( _contract == CONTRACTS.DISTRIBUTOR ) { // 0
-            distributor = _address;
-            emit DistributorSet( _address );
-        } else if ( _contract == CONTRACTS.gOHM ) { // 1
-            require(address( gOHM ) == address(0), "Cannot set twice"); // only set once
-            gOHM = IgOHM( _address );
-            emit GOHMSet( _address );
-        }
+    function setDistributor( address _distributor ) external onlyGovernor() {
+        distributor = _distributor;
+        emit DistributorSet( _distributor );
     }
     
     /**
      * @notice set warmup period for new stakers
      * @param _warmupPeriod uint
      */
-    function setWarmup( uint _warmupPeriod ) external onlyGovernor() {
+    function setWarmupLength( uint _warmupPeriod ) external onlyGovernor() {
         warmupPeriod = _warmupPeriod;
         emit WarmupSet( _warmupPeriod );
     }
