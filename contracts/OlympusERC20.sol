@@ -2,7 +2,6 @@
 pragma solidity 0.7.5;
 
 import "./libraries/SafeMath.sol";
-import "./libraries/EnumerableSet.sol";
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/IERC2612Permit.sol";
