@@ -184,7 +184,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         _gonBalances[ from ] = _gonBalances[from].sub( gonValue );
         _gonBalances[ to ] = _gonBalances[to].add( gonValue );
 
-        require(_gonBalances[ msg.sender ].div( _gonsPerFragment ) >= debtBalances[msg.sender], "Debt: cannot transfer");
+        require(_gonBalances[ from ].div( _gonsPerFragment ) >= debtBalances[from], "Debt: cannot transfer");
         emit Transfer( from, to, value );
         return true;
     }
