@@ -31,7 +31,7 @@ describe("OlympusStaking", () => {
 
     const EPOCH_LENGTH = 2200;
     const EPOCH_NUMBER = 1;
-    const FUTURE_END_BLOCK = 102201; // an arbitrary future block number
+    const FUTURE_END_BLOCK = 102201; // an arbitrary fixed  future block number
 
     beforeEach(async () => {
         [owner, governor, alice, bob, other] = await ethers.getSigners();
