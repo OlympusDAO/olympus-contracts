@@ -142,6 +142,31 @@ contract OlympusTokenMigrator is Ownable {
         }
     }
 
+    // migrate all tokens held
+    function migrateAll(TYPE _to) external {
+        uint ohmBal = oldOHM.balanceOf(msg.sender);
+        uint sOHMBal = oldsOHM.balanceOf(msg.sender);
+        uint wsOHMBal = oldwsOHM.balanceOf(msg.sender);
+
+        if(ohmBal > 0) {
+            oldOHM.safeTransferFrom(msg.sender, address(this), ohmBal);
+        }
+        if(sOHMBal > 0) {
+            oldsOHM.safeTransferFrom(msg.sender, address(this), sOHMBal);
+        }
+        if(wsOHMBal > 0) {
+            oldwsOHM.safeTransferFrom(msg.sender, address(this), wsOHMBal);
+        }
+
+        uint wAmount = wsOHMBal.add( oldwsOHM.sOHMTowOHM( ohmBal.add(sOHMBal) ) );
+        if (ohmMigrated) {
+            require(oldSupply >= oldOHM.totalSupply(), "OHMv1 minted");
+            _send(wAmount, _to);
+        } else {
+            gOHM.mint(msg.sender, wAmount);
+        }
+    }
+
     // send preferred token
     function _send(uint wAmount, TYPE _to) internal {
         if(_to == TYPE.WRAPPED) {
