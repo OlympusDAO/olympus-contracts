@@ -47,6 +47,7 @@ describe("OlympusStaking", () => {
       staking = await (new OlympusStaking__factory(owner)).deploy(
         ohmFake.address,
         sOHMFake.address,
+        gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         FUTURE_END_BLOCK,
@@ -66,6 +67,7 @@ describe("OlympusStaking", () => {
       await expect((new OlympusStaking__factory(owner)).deploy(
         ZERO_ADDRESS,
         sOHMFake.address,
+        gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         FUTURE_END_BLOCK,
@@ -75,6 +77,18 @@ describe("OlympusStaking", () => {
     it("will not allow a 0x0 sOHM address", async () => {
       await expect((new OlympusStaking__factory(owner)).deploy(
         ohmFake.address,
+        ZERO_ADDRESS,
+        gOHMFake.address,
+        EPOCH_LENGTH,
+        EPOCH_NUMBER,
+        FUTURE_END_BLOCK,
+      )).to.be.reverted;
+    });
+
+    it("will not allow a 0x0 gOHM address", async () => {
+      await expect((new OlympusStaking__factory(owner)).deploy(
+        ohmFake.address,
+        sOHMFake.address,
         ZERO_ADDRESS,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
@@ -88,6 +102,7 @@ describe("OlympusStaking", () => {
       staking = await (new OlympusStaking__factory(owner)).deploy(
         ohmFake.address,
         sOHMFake.address,
+        gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         FUTURE_END_BLOCK,
@@ -96,53 +111,37 @@ describe("OlympusStaking", () => {
       await staking.connect(governor).pullGovernor();
     });
 
-    describe("setContract", () => {
+    describe("setDistributor", () => {
       it("can set the distributor", async () => {
-        await staking.connect(governor).setContract(0, distributorFake.address);
+        await staking.connect(governor).setDistributor(distributorFake.address);
         expect(await staking.distributor()).to.equal(distributorFake.address);
       });
 
       it("emits the DistributorSet event", async () => {
-        await expect(staking.connect(governor).setContract(0, distributorFake.address)).
+        await expect(staking.connect(governor).setDistributor(distributorFake.address)).
           to.emit(staking, "DistributorSet").withArgs(distributorFake.address);
       });
 
-      it("can set gOHM", async () => {
-        await staking.connect(governor).setContract(1, gOHMFake.address);
-        expect(await staking.gOHM()).to.equal(gOHMFake.address);
-      });
-
-      it("emits the GOHMSet event", async () => {
-        await expect(staking.connect(governor).setContract(1, gOHMFake.address)).
-          to.emit(staking, "GOHMSet").withArgs(gOHMFake.address);
-      });
-
-      it("will not allow updating gOHM if already set", async () => {
-        await staking.connect(governor).setContract(1, gOHMFake.address);
-        await expect(staking.connect(governor).setContract(1, other.address)).
-          to.be.reverted
-      });
-
       it("can only be done by the governor", async () => {
-        await expect(staking.connect(other).setContract(1, gOHMFake.address)).
+        await expect(staking.connect(other).setDistrbutor(distributorFake.address)).
           to.be.reverted;
       });
     });
 
-    describe("setWarmup", () => {
+    describe("setWarmupLength", () => {
       it("sets the number of epochs of warmup are required", async () => {
         expect(await staking.warmupPeriod()).to.equal(0);
-        await staking.connect(governor).setWarmup(2);
+        await staking.connect(governor).setWarmupLength(2);
         expect(await staking.warmupPeriod()).to.equal(2);
       });
 
       it("emits a WarmupSet event", async () => {
-        await expect(staking.connect(governor).setWarmup(2)).
+        await expect(staking.connect(governor).setWarmupLength(2)).
           to.emit(staking, "WarmupSet").withArgs(2);
       });
 
       it("can only be set by the governor", async () => {
-        await expect(staking.connect(other).setWarmup(2)).to.be.reverted;
+        await expect(staking.connect(other).setWarmupLength(2)).to.be.reverted;
       });
     });
   });
@@ -152,14 +151,14 @@ describe("OlympusStaking", () => {
       staking = await (new OlympusStaking__factory(owner)).deploy(
         ohmFake.address,
         sOHMFake.address,
+        gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         nextRebaseBlock,
       );
       await staking.connect(owner).pushGovernor(governor.address);
       await staking.connect(governor).pullGovernor();
-      await staking.connect(governor).setContract(0, distributorFake.address);
-      await staking.connect(governor).setContract(1, gOHMFake.address);
+      await staking.connect(governor).setDistributor(distributorFake.address);
     }
 
     beforeEach(async () => {
@@ -231,7 +230,7 @@ describe("OlympusStaking", () => {
         sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
         sOHMFake.balanceForGons.whenCalledWith(gons).returns(amount);
 
-        await staking.connect(governor).setWarmup(1);
+        await staking.connect(governor).setWarmupLength(1);
         await staking.connect(alice).stake(alice.address, amount, true, true);
 
         expect(await staking.supplyInWarmup()).to.equal(amount);
@@ -348,7 +347,7 @@ describe("OlympusStaking", () => {
       });
 
       it("does nothing when the warmup isn't over", async () => {
-        await staking.connect(governor).setWarmup(2);
+        await staking.connect(governor).setWarmupLength(2);
         await createClaim(alice, 1000, 10);
 
         await staking.connect(alice).claim(alice.address, true);
