@@ -8,6 +8,7 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IStaking.sol";
 import "./interfaces/IOwnable.sol";
+import "./interfaces/IsOHM.sol";
 
 import "./types/Ownable.sol";
 
@@ -16,6 +17,7 @@ contract BondTeller is Ownable {
 
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using SafeERC20 for IsOHM;
 
     /* ========== EVENTS ========== */
 
@@ -47,7 +49,7 @@ contract BondTeller is Ownable {
     IStaking internal immutable staking; // contract to stake payout
     ITreasury internal immutable treasury;
     IERC20 internal immutable OHM;
-    IERC20 internal immutable sOHM; // payment token
+    IsOHM internal immutable sOHM; // payment token
 
     mapping(address => Bond[]) public bonderInfo; // user data
     mapping(address => uint256[]) public indexesFor; // user bond indexes
@@ -74,7 +76,7 @@ contract BondTeller is Ownable {
         require(_ohm != address(0), "Zero address: OHM");
         OHM = IERC20(_ohm);
         require(_sOHM != address(0), "Zero address: sOHM");
-        sOHM = IERC20(_sOHM);
+        sOHM = IsOHM(_sOHM);
     }
 
     /* ========== DEPOSITORY FUNCTIONS ========== */
