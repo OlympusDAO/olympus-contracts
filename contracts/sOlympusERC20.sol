@@ -164,7 +164,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         emit LogRebase(epoch_, rebasePercent, index());
     }
 
-    /* ========== MUTATIVE FUNCTIONS ========== */
+    /* ========== MUTATIVE FUNCTIONS =========== */
 
     function transfer(address to, uint256 value) public override(IERC20, ERC20) returns (bool) {
         uint256 gonValue = value.mul(_gonsPerFragment);
