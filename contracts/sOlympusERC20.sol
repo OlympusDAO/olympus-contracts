@@ -45,7 +45,7 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     address initializer;
 
-    uint INDEX; // Index Gons - tracks rebase growth
+    uint private INDEX; // Index Gons - tracks rebase growth
 
     address public stakingContract; // balance used to calc rebase
     IgOHM public gOHM; // additional staked supply (governance token)
@@ -64,6 +64,9 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     uint256 private _gonsPerFragment;
     mapping(address => uint256) private _gonBalances;
+
+    address private treasury;
+    mapping(address => uint256) public debtBalances;
 
     mapping ( address => mapping ( address => uint256 ) ) private _allowedValue;
 
@@ -91,12 +94,15 @@ contract sOlympus is IsOHM, ERC20Permit {
     }
 
     // do this last
-    function initialize( address stakingContract_ ) external {
+    function initialize( address stakingContract_, address _treasury ) external {
         require( msg.sender == initializer );
 
-        require( stakingContract_ != address(0) );
+        require( stakingContract_ != address(0), "Zero address: Staking" );
         stakingContract = stakingContract_;
         _gonBalances[ stakingContract ] = TOTAL_GONS;
+
+        require( _treasury != address(0), "Zero address: Treasury" );
+        treasury = _treasury;
 
         emit Transfer( address(0x0), stakingContract, _totalSupply );
         emit LogStakingContractUpdated( stakingContract_ );
@@ -165,6 +171,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         uint256 gonValue = value.mul( _gonsPerFragment );
         _gonBalances[ msg.sender ] = _gonBalances[ msg.sender ].sub( gonValue );
         _gonBalances[ to ] = _gonBalances[ to ].add( gonValue );
+        require(_gonBalances[ msg.sender ].div( _gonsPerFragment ) >= debtBalances[msg.sender], "Debt: cannot transfer");
         emit Transfer( msg.sender, to, value );
         return true;
     }
@@ -176,6 +183,8 @@ contract sOlympus is IsOHM, ERC20Permit {
         uint256 gonValue = gonsForBalance( value );
         _gonBalances[ from ] = _gonBalances[from].sub( gonValue );
         _gonBalances[ to ] = _gonBalances[to].add( gonValue );
+
+        require(_gonBalances[ msg.sender ].div( _gonsPerFragment ) >= debtBalances[msg.sender], "Debt: cannot transfer");
         emit Transfer( from, to, value );
         return true;
     }
@@ -201,6 +210,15 @@ contract sOlympus is IsOHM, ERC20Permit {
         }
         emit Approval( msg.sender, spender, _allowedValue[ msg.sender ][ spender ] );
         return true;
+    }
+
+    function changeDebt(uint amount, address debtor, bool add) external {
+        require(msg.sender == treasury, "Only treasury");
+        if( add ) {
+            debtBalances[debtor] = debtBalances[debtor].add(amount);
+        } else {
+            debtBalances[debtor] = debtBalances[debtor].sub(amount);
+        }
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
