@@ -36,10 +36,14 @@ library FullMath {
         uint256 d
     ) internal pure returns (uint256) {
         (uint256 l, uint256 h) = fullMul(x, y);
+
         uint256 mm = mulmod(x, y, d);
         if (mm > l) h -= 1;
         l -= mm;
-        require(h < d, 'FullMath::mulDiv: overflow');
+
+        if (h == 0) return l / d;
+
+        require(h < d, 'FullMath: FULLDIV_OVERFLOW');
         return fullDiv(l, h, d);
     }
 }
