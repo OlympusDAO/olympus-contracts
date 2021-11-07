@@ -123,7 +123,7 @@ describe("OlympusStaking", () => {
       });
 
       it("can only be done by the governor", async () => {
-        await expect(staking.connect(other).setDistrbutor(distributorFake.address)).
+        await expect(staking.connect(other).setDistributor(distributorFake.address)).
           to.be.reverted;
       });
     });
