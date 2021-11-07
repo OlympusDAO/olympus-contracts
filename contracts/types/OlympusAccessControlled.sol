@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+pragma solidity >=0.7.5;
+
+import {IOlympusAuthority} from "../interfaces/OlympusV2Interface.sol";
+
+abstract contract OlympusAccessControlled {
+
+    /* ========== EVENTS ========== */
+
+    event AuthorityUpdated(IOlympusAuthority indexed authority);
+
+
+    /* ========== STATE VARIABLES ========== */
+
+    IOlympusAuthority public authority;
+
+
+    /* ========== Constructor ========== */
+
+    constructor(IOlympusAuthority _authority) {
+        authority = _authority;
+        emit AuthorityUpdated(_authority);
+    }
+    
+
+    /* ========== MODIFIERS ========== */
+    
+    modifier onlyGovernor() {
+        require(msg.sender == authority.governor(), "UNAUTHORIZED");
+        _;
+    }
+    
+    modifier onlyGaurdian() {
+        require(msg.sender == authority.gaurdian(), "UNAUTHORIZED");
+        _;
+    }
+    
+    modifier onlyPolicy() {
+        require(msg.sender == authority.policy(), "UNAUTHORIZED");
+        _;
+    }
+    
+    /* ========== GOV ONLY ========== */
+    
+    function setAuthority(IOlympusAuthority _newAuthority) external onlyGovernor {
+        authority = _newAuthority;
+        emit AuthorityUpdated(_newAuthority);
+    }
+}
