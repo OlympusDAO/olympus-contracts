@@ -161,7 +161,7 @@ contract OlympusStaking is Governable {
     }
 
     /**
-     * @notice redeem sOHM for OHM
+     * @notice redeem sOHM for OHMs
      * @param _to address
      * @param _amount uint
      * @param _trigger bool
