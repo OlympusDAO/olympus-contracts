@@ -147,7 +147,6 @@ contract OlympusTreasury is Ownable, ITreasury {
         require(permissions[STATUS.RESERVETOKEN][_token], "Not accepted");
 
         uint256 value = tokenValue(_token, _amount);
-        require(value != 0);
 
         uint256 availableDebt = sOHM.balanceOf(msg.sender).sub(debtorBalance[msg.sender]);
         require(value <= availableDebt, "Exceeds debt limit");
@@ -383,5 +382,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             value_ = IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);
         }
+
+        require(value_ != 0);
     }
 }
