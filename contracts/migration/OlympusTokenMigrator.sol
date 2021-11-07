@@ -54,6 +54,7 @@ contract OlympusTokenMigrator is Ownable {
     using SafeERC20 for IERC20;
     using SafeERC20 for IgOHM;
     using SafeERC20 for IsOHM;
+    using SafeERC20 for IwsOHM;
 
     /* ========== MIGRATION ========== */
 
@@ -129,7 +130,7 @@ contract OlympusTokenMigrator is Ownable {
         } else if (_from == TYPE.STAKED) {
             oldsOHM.safeTransferFrom(msg.sender, address(this), _amount);
         } else if (_from == TYPE.WRAPPED) {
-            oldwsOHM.transferFrom(msg.sender, address(this), _amount);
+            oldwsOHM.safeTransferFrom(msg.sender, address(this), _amount);
             wAmount = _amount;
             sAmount = oldwsOHM.wOHMTosOHM(_amount);
         }
