@@ -63,7 +63,7 @@ contract BondDepositoryTest is DSTest {
         bondingCalculator = new OlympusBondingCalculator(address(ohm));
         treasury = new OlympusTreasury(address(ohm), 1);
 
-        staking = new OlympusStaking(address(ohm), address(sohm), 8, 0, 0);
+        staking = new OlympusStaking(address(ohm), address(sohm), address(gohm), 8, 0, 0);
 
 
         sohm.initialize(address(staking));
@@ -72,7 +72,7 @@ contract BondDepositoryTest is DSTest {
 
         bondDepository = new OlympusBondDepository(address(ohm), address(treasury));
 
-        teller = new BondTeller(address(bondDepository), address(staking), address(treasury), address(ohm), address(sohm), address(gohm));
+        teller = new BondTeller(address(bondDepository), address(staking), address(treasury), address(ohm), address(sohm));
         bondDepository.setTeller(address(teller));
     }
 
