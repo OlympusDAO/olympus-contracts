@@ -5,7 +5,6 @@ import {IOHM} from "./interfaces/OlympusV2Interface.sol";
 import {ITreasury} from "./interfaces/OlympusV2Interface.sol";
 import {IBondingCalculator} from "./interfaces/OlympusV2Interface.sol";
 
-import "./interfaces/IOwnable.sol";
 import "./interfaces/IERC20Metadata.sol";
 
 import "./libraries/SafeMath.sol";
