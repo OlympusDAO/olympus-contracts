@@ -120,7 +120,7 @@ contract Distributor is IDistributor, Governable, Guardable {
         uint256 reward;
         for (uint256 i = 0; i < info.length; i++) {
             if (info[i].recipient == _recipient) {
-                reward += nextRewardAt(info[i].rate);
+                reward = reward.add(nextRewardAt(info[i].rate));
             }
         }
         return reward;
@@ -170,6 +170,14 @@ contract Distributor is IDistributor, Governable, Guardable {
             require(_rate <= info[_index].rate.mul(25).div(1000), "Limiter: cannot adjust by >2.5%");
         }
 
-        adjustments[_index] = Adjust({add: _add, rate: _rate, target: _target});
+        if(!_add) {
+            require(_rate <= info[_index].rate, "Cannot decrease rate by more than it already is");
+        }
+
+        adjustments[_index] = Adjust({
+            add: _add,
+            rate: _rate,
+            target: _target
+        });
     }
 }
