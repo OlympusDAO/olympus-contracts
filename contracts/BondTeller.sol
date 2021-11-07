@@ -39,7 +39,7 @@ contract BondTeller is ITeller, Ownable {
         address principal; // token used to pay for bond
         uint256 principalPaid; // amount of principal token paid for bond
         uint256 payout; // sOHM remaining to be paid. agnostic balance
-        uint256 vested; // Block when vested
+        uint256 vested; // Block when bond is vested
         uint256 created; // time bond was created
         uint256 redeemed; // time bond was redeemed
     }
