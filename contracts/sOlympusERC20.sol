@@ -225,6 +225,14 @@ contract sOlympus is IsOHM, ERC20Permit {
         return gons.div( _gonsPerFragment );
     }
 
+    function toG(uint amount) external view returns (uint) {
+        return gOHM.balanceTo(amount);
+    }
+
+    function fromG(uint amount) external view returns (uint) {
+        return gOHM.balanceFrom(amount);
+    }
+
     // Staking contract holds excess rOHM
     function circulatingSupply() public override view returns ( uint ) {
         return _totalSupply

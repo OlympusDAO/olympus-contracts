@@ -6,7 +6,6 @@ import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
-import "./interfaces/IgOHM.sol";
 import "./interfaces/IStaking.sol";
 import "./interfaces/IOwnable.sol";
 
@@ -44,12 +43,11 @@ contract BondTeller is Ownable {
 
     /* ========== STATE VARIABLES ========== */
 
-    address depository; // contract where users deposit bonds
-    IStaking immutable staking; // contract to stake payout
-    ITreasury immutable treasury;
-    IERC20 immutable OHM;
-    IERC20 immutable sOHM; // payment token
-    IgOHM immutable gOHM;
+    address internal immutable depository; // contract where users deposit bonds
+    IStaking internal immutable staking; // contract to stake payout
+    ITreasury internal immutable treasury;
+    IERC20 internal immutable OHM;
+    IERC20 internal immutable sOHM; // payment token
 
     mapping(address => Bond[]) public bonderInfo; // user data
     mapping(address => uint256[]) public indexesFor; // user bond indexes
@@ -63,23 +61,20 @@ contract BondTeller is Ownable {
         address _depository,
         address _staking,
         address _treasury,
-        address _OHM,
-        address _sOHM,
-        address _gOHM
+        address _ohm,
+        address _sOHM
     ) {
 
-        require(_depository != address(0));
+        require(_depository != address(0), "Zero address: Depository");
         depository = _depository;
-        require(_staking != address(0));
+        require(_staking != address(0), "Zero address: Staking");
         staking = IStaking(_staking);
-        require(_treasury != address(0));
+        require(_treasury != address(0), "Zero address: Treasury");
         treasury = ITreasury(_treasury);
-        require(_OHM != address(0));
-        OHM = IERC20(_OHM);
-        require(_sOHM != address(0));
+        require(_ohm != address(0), "Zero address: OHM");
+        OHM = IERC20(_ohm);
+        require(_sOHM != address(0), "Zero address: sOHM");
         sOHM = IERC20(_sOHM);
-        require(_gOHM != address(0));
-        gOHM = IgOHM(_gOHM);
         IERC20(_OHM).approve(_staking, 1e27); // saves gas
     }
 
@@ -119,7 +114,7 @@ contract BondTeller is Ownable {
             Bond({
                 principal: _principal, 
                 principalPaid: _principalPaid, 
-                payout: gOHM.balanceTo(_payout), 
+                payout: sOHM.toG(_payout), 
                 vested: _expires, 
                 created: block.timestamp, 
                 redeemed: 0
@@ -157,7 +152,7 @@ contract BondTeller is Ownable {
             }
         }
 
-        dues = gOHM.balanceFrom(dues);
+        dues = sOHM.fromG(dues);
 
         emit Redeemed(_bonder, dues);
         pay(_bonder, dues);
@@ -229,7 +224,7 @@ contract BondTeller is Ownable {
         for (uint256 i = 0; i < _indexes.length; i++) {
             pending_ = pending_.add(pendingFor(_bonder, i));
         }
-        pending_ = gOHM.balanceFrom(pending_);
+        pending_ = sOHM.fromG(pending_);
     }
 
     /**
@@ -242,7 +237,7 @@ contract BondTeller is Ownable {
         for (uint256 i = 0; i < info.length; i++) {
             pending_ = pending_.add(pendingFor(_bonder, i));
         }
-        pending_ = gOHM.balanceFrom(pending_);
+        pending_ = sOHM.fromG(pending_);
     }
 
     // VESTING

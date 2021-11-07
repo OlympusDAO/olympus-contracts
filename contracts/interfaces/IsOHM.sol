@@ -13,4 +13,8 @@ interface IsOHM is IERC20 {
     function balanceForGons( uint gons ) external view returns ( uint );
 
     function index() external view returns ( uint );
+
+    function toG(uint amount) external view returns (uint);
+
+    function fromG(uint amount) external view returns (uint);
 }
