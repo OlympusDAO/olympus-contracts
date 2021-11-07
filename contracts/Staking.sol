@@ -37,7 +37,7 @@ contract OlympusStaking is Governable {
         uint256 deposit;
         uint256 gons;
         uint256 expiry;
-        bool lock; // prevents malicious delays
+        bool lock; // prevents malicious delays for claim
     }
 
     /* ========== STATE VARIABLES ========== */
