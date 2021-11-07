@@ -12,7 +12,7 @@ import "../../../contracts/Staking.sol";
 import "../../../contracts/OlympusERC20.sol";
 import "../../../contracts/sOlympusERC20.sol";
 import "../../../contracts/StandardBondingCalculator.sol";
-import "../../../contracts/interfaces/IUniswapV2Pair.sol";
+import "../../../contracts/interfaces/UniswapV2/IUniswapV2Pair.sol";
 import "../../../contracts/interfaces/IERC20Metadata.sol";
 import "../../../contracts/Treasury.sol";
 import "../../../contracts/BondDepository.sol";
@@ -20,6 +20,9 @@ import "./util/Hevm.sol";
 import "../../../contracts/BondTeller.sol";
 import "../../../contracts/governance/gOHM.sol";
 import "./util/MockContract.sol";
+
+import {IBondDepository} from "../../../contracts/interfaces/OlympusV2Interface.sol";
+
 
 
 contract BondDepositoryTest is DSTest {
@@ -97,7 +100,7 @@ contract BondDepositoryTest is DSTest {
     function test_vaultOwned() public {
         ohm.setVault(address(0x0));
 
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 10000, maxDebt : 10});
+        OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 10000, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 11 * 10 ** 18;
 
@@ -109,7 +112,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_mulDiv() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
         try this.createBond_deposit(2763957476737854671246564045522737104576123858413359401, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
@@ -120,7 +123,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_mulOverflow() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
         try this.createBond_deposit(75002556493819725874826918455844256653204641352000021311689657671948594686325, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
@@ -131,7 +134,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_fixedPointFractionOverflow() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
         try this.createBond_deposit(5136935571488474593545398400365374838660649282530, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
@@ -142,7 +145,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_happyPath() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 10000, maxDebt : 10});
+        OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 10000, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 11 * 10 ** 18;
 
@@ -150,7 +153,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_insufficientReserves() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1 * 10 ** 18, maxDebt : 10});
+        OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1 * 10 ** 18, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 9;
         try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1){
@@ -161,7 +164,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_bondTooLarge() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1 * 10 ** 9, maxDebt : 10});
+        OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1 * 10 ** 9, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 9;
         try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1){
@@ -172,7 +175,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_zeroAmount() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
 
@@ -184,7 +187,7 @@ contract BondDepositoryTest is DSTest {
     }
 
     function test_createBond_bondConcluded() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 2, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
+        OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 2, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
         try this.createBond_deposit(5 * 10 ** 25, ohmMintAmount, false, 1 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
