@@ -85,7 +85,7 @@ describe("Treasury Token Migration", async function () {
         await ohm.connect(deployer).setVault(newTreasury.address);
 
         // Initialize staking
-        newStaking.connect(deployer).setWarmup(0);
+        newStaking.connect(deployer).setWarmupLength(0);
 
         // Initialize new sOHM
         const oldSohm = await new ethers.Contract(OLD_SOHM_ADDRESS, old_sohm_abi, ethers.provider);
