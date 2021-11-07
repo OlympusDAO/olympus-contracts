@@ -147,7 +147,7 @@ contract OlympusTokenMigrator is Ownable {
         }
     }
 
-    // migrate all tokens held
+    // migrate all olympus tokens held
     function migrateAll(TYPE _to) external {
         uint256 ohmBal = oldOHM.balanceOf(msg.sender);
         uint256 sOHMBal = oldsOHM.balanceOf(msg.sender);
