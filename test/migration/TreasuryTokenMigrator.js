@@ -84,7 +84,7 @@ describe("Treasury Token Migration", async function () {
         );
 
         /**
-         * Connect the contracts once they have been deployed
+         *  Connect the contracts once they have been deployed
          * */
 
         // Set gOHM on migrator contract
