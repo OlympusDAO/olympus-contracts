@@ -357,16 +357,16 @@ interface IOlympusAuthority {
     /* ========== EVENTS ========== */
     
     event GovernorPushed(address from, address to, bool _effectiveImmediately);
-    event GaurdianPushed(address from, address to, bool _effectiveImmediately);    
+    event GuardianPushed(address from, address to, bool _effectiveImmediately);    
     event PolicyPushed(address from, address to, bool _effectiveImmediately);    
     
     event GovernorPulled(address from, address to);
-    event GaurdianPulled(address from, address to);
+    event GuardianPulled(address from, address to);
     event PolicyPulled(address from, address to);
     
     /* ========== VIEW ========== */
     
     function governor() external view returns (address);
     function policy() external view returns (address);
-    function gaurdian() external view returns (address);
+    function guardian() external view returns (address);
 }

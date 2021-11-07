@@ -14,10 +14,9 @@ import "./libraries/FixedPoint.sol";
 import "./libraries/Address.sol";
 import "./libraries/SafeERC20.sol";
 
-import "./types/Governable.sol";
-import "./types/Guardable.sol";
+import "./types/OlympusAccessControlled.sol";
 
-contract OlympusBondDepository is Governable, Guardable, IBondDepository {
+contract OlympusBondDepository is OlympusAccessControlled, IBondDepository {
 
   /* ======== DEPENDENCIES ======== */
 
@@ -28,16 +27,22 @@ contract OlympusBondDepository is Governable, Guardable, IBondDepository {
   /* ======== STATE VARIABLES ======== */
 
   mapping(uint256 => Bond) public bonds;
+
   address[] public IDs; // bond IDs
 
   ITeller public teller; // handles payment
 
   ITreasury immutable treasury;
+
   IERC20 immutable OHM;
 
   /* ======== CONSTRUCTOR ======== */
 
-  constructor(address _OHM, address _treasury) {
+  constructor(
+    address _OHM, 
+    address _treasury, 
+    IOlympusAuthority _authority
+  ) OlympusAccessControlled(_authority) {
     require(_OHM != address(0));
     OHM = IERC20(_OHM);
     require(_treasury != address(0));

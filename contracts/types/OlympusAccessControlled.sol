@@ -30,8 +30,8 @@ abstract contract OlympusAccessControlled {
         _;
     }
     
-    modifier onlyGaurdian() {
-        require(msg.sender == authority.gaurdian(), "UNAUTHORIZED");
+    modifier onlyGuardian() {
+        require(msg.sender == authority.guardian(), "UNAUTHORIZED");
         _;
     }
     

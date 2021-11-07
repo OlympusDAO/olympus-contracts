@@ -12,13 +12,13 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
     
     address public override governor;
     
-    address public override gaurdian;
+    address public override guardian;
     
     address public override policy;
     
     address public newGovernor;
     
-    address public newGaurdian;
+    address public newGuardian;
     
     address public newPolicy;
     
@@ -27,13 +27,13 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
     
     constructor(
         address _governor, 
-        address _gaurdian,
+        address _guardian,
         address _policy
     ) OlympusAccessControlled( IOlympusAuthority(address(this)) ) {
         governor = _governor;
         emit GovernorPushed(address(0), governor, true);
-        gaurdian = _gaurdian;
-        emit GaurdianPushed(address(0), gaurdian, true);
+        guardian = _guardian;
+        emit GuardianPushed(address(0), guardian, true);
         policy = _policy;
         emit PolicyPushed(address(0), policy, true);
     }
@@ -47,10 +47,10 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
         emit GovernorPushed(governor, newGovernor, _effectiveImmediately);
     }
     
-    function pushGaurdian(address _newGaurdian, bool _effectiveImmediately) external onlyGovernor {
-        if( _effectiveImmediately ) gaurdian = _newGaurdian;
-        newGaurdian = _newGaurdian;
-        emit GovernorPushed(gaurdian, newGaurdian, _effectiveImmediately);
+    function pushGuardian(address _newGuardian, bool _effectiveImmediately) external onlyGovernor {
+        if( _effectiveImmediately ) guardian = _newGuardian;
+        newGuardian = _newGuardian;
+        emit GovernorPushed(guardian, newGuardian, _effectiveImmediately);
     }
     
     function pushPolicy(address _newPolicy, bool _effectiveImmediately) external onlyGovernor {
@@ -68,10 +68,10 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
         governor = newGovernor;
     }
 
-    function pullGaurdian() external {
-        require(msg.sender == newGaurdian, "!newGov");
-        emit GaurdianPulled(gaurdian, newGaurdian);
-        gaurdian = newGaurdian;
+    function pullGuardian() external {
+        require(msg.sender == newGuardian, "!newGov");
+        emit GuardianPulled(guardian, newGuardian);
+        guardian = newGuardian;
     }
     
     function pullPolicy() external {

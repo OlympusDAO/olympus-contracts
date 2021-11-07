@@ -7,10 +7,9 @@ import {IDistributor} from "./interfaces/OlympusV2Interface.sol";
 import "./libraries/SafeERC20.sol";
 import "./libraries/SafeMath.sol";
 
-import "./types/Governable.sol";
-import "./types/Guardable.sol";
+import "./types/OlympusAccessControlled.sol";
 
-contract Distributor is Governable, Guardable, IDistributor {
+contract Distributor is OlympusAccessControlled, IDistributor {
   
   /* ========== DEPENDENCIES ========== */
 
@@ -27,14 +26,14 @@ contract Distributor is Governable, Guardable, IDistributor {
 
   mapping(uint256 => Adjust) public adjustments;
 
-
   /* ====== CONSTRUCTOR ====== */
 
   constructor(
     address _treasury,
     address _ohm,
-    address _staking
-  ) {
+    address _staking, 
+    IOlympusAuthority _authority
+  ) OlympusAccessControlled(_authority) {
     require(_treasury != address(0));
     treasury = ITreasury(_treasury);
     require(_ohm != address(0));
@@ -130,7 +129,11 @@ contract Distributor is Governable, Guardable, IDistributor {
     @param _recipient address
    */
   function removeRecipient(uint256 _index, address _recipient) external override {
-    require(msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian");
+    require(
+      msg.sender == authority.governor() || 
+      msg.sender == authority.guardian(), 
+      "Caller is not governor or guardian"
+    );
     require(_recipient == info[_index].recipient);
     info[_index].recipient = address(0);
     info[_index].rate = 0;
@@ -149,9 +152,13 @@ contract Distributor is Governable, Guardable, IDistributor {
     uint256 _rate,
     uint256 _target
   ) external override {
-    require(msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian");
+    require(
+      msg.sender == authority.governor() || 
+      msg.sender == authority.guardian(), 
+      "Caller is not governor or guardian"
+    );
 
-    if (msg.sender == guardian()) {
+    if (msg.sender == authority.guardian()) {
       require(_rate <= info[_index].rate.mul(25).div(1000), "Limiter: cannot adjust by >2.5%");
     }
 
