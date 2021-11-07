@@ -75,7 +75,6 @@ contract BondTeller is Ownable {
         OHM = IERC20(_ohm);
         require(_sOHM != address(0), "Zero address: sOHM");
         sOHM = IERC20(_sOHM);
-        IERC20(_OHM).approve(_staking, 1e27); // saves gas
     }
 
     /* ========== DEPOSITORY FUNCTIONS ========== */
@@ -101,11 +100,10 @@ contract BondTeller is Ownable {
         uint reward = _payout.mul(feReward).div(10_000);
         treasury.mint(address(this), _payout.add(reward));
 
-        OHM.approve(address(staking), _payout); // approve staking payout
-
+        OHM.approve(address(staking), _payout);
         staking.stake(address(this), _payout, true, true);
 
-        FERs[_feo] = FERs[_feo].add(reward); // FE operator takes fee
+        FERs[_feo] = FERs[_feo].add(reward); // front end operator reward
 
         index_ = bonderInfo[_bonder].length;
 
