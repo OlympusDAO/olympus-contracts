@@ -244,11 +244,11 @@ contract sOlympus is IsOHM, ERC20Permit {
         return gOHM.balanceFrom(amount);
     }
 
-    function toG(uint amount) external view returns (uint) {
+    function toG(uint amount) external override view returns (uint) {
         return gOHM.balanceTo(amount);
     }
 
-    function fromG(uint amount) external view returns (uint) {
+    function fromG(uint amount) external override view returns (uint) {
         return gOHM.balanceFrom(amount);
     }
 
