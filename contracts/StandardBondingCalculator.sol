@@ -54,6 +54,7 @@ contract OlympusBondingCalculator is IBondingCalculator {
         if ( IUniswapV2Pair( _pair ).token0() == address( OHM ) ) {
             reserve = reserve1;
         } else {
+            require( IUniswapV2Pair( _pair ).token1() == address( OHM ), "Invalid pair");
             reserve = reserve0;
         }
         return reserve.mul( 2 * ( 10 ** IERC20Metadata(address(OHM)).decimals() ) ).div( getTotalValue( _pair ) );
