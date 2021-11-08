@@ -11,7 +11,7 @@ contract GovernorAlpha {
 
     /// @notice The maximum setable proposal threshold percent
     /// @notice change from original contract
-    function proposalThresholdPercent() public pure returns (uint) { return 100000; } // 1.00% of sOHM circulating supply : In ten-thosandaths 10000 = 1.00%
+    function proposalThresholdPercent() public pure returns (uint) { return 10000; } // 1.00% of sOHM circulating supply : In ten-thosandaths 10000 = 1.00%
 
     /// @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
