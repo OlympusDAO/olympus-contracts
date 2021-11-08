@@ -16,6 +16,7 @@ import "../../../contracts/interfaces/UniswapV2/IUniswapV2Pair.sol";
 import "../../../contracts/interfaces/IERC20Metadata.sol";
 import "../../../contracts/Treasury.sol";
 import "../../../contracts/BondDepository.sol";
+import "../../../contracts/OlympusAuthority.sol";
 import "./util/Hevm.sol";
 import "../../../contracts/BondTeller.sol";
 import "../../../contracts/governance/gOHM.sol";
@@ -36,6 +37,7 @@ contract BondDepositoryTest is DSTest {
     OlympusBondingCalculator internal bondingCalculator;
     OlympusTreasury internal treasury;
     BondTeller internal teller;
+    IOlympusAuthority internal authority;
 
     OlympusERC20Token internal ohm;
     sOlympus internal sohm;
@@ -65,15 +67,17 @@ contract BondDepositoryTest is DSTest {
 
         bondingCalculator = new OlympusBondingCalculator(address(ohm));
         treasury = new OlympusTreasury(address(ohm), 1);
+        authority = new OlympusAuthority(address(this), address(this), address(this));
 
-        staking = new OlympusStaking(address(ohm), address(sohm), 8, 0, 0);
+
+        staking = new OlympusStaking(address(ohm), address(sohm), 8, 0, 0, authority);
 
 
         sohm.initialize(address(staking));
         gohm.migrate(address(staking), address(sohm));
         ohm.setVault(address(treasury));
 
-        bondDepository = new OlympusBondDepository(address(ohm), address(treasury));
+        bondDepository = new OlympusBondDepository(address(ohm), address(treasury), authority);
 
         teller = new BondTeller(address(bondDepository), address(staking), address(treasury), address(ohm), address(sohm), address(gohm));
         bondDepository.setTeller(address(teller));
