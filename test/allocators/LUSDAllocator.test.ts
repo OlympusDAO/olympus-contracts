@@ -191,5 +191,43 @@ describe("LUSDAllocator", () => {
           .to.be.revertedWith("Ownable: caller is not the owner");
       });
     });
+
+   describe("harvest", () => {
+      it("aaaa", async () => {
+        const DEBT = 363407671459371026109145;
+        const COLL = 130659000000000000000;
+        troveManagerFake.getEntireDebtAndColl.whenCalledWith().returns(DEBT, COLL, 0, 0);
+        sortedTroveFake.getSize.whenCalledWith().returns(1213);
+        await lusdAllocator.connect(owner).harvest();
+
+        expect(treasuryFake.manage).to.be.calledWith(lusdTokenFake.address, AMOUNT);
+        expect(lusdTokenFake.approve).to.be.calledWith(stabilityPoolFake.address, AMOUNT);
+        expect(stabilityPoolFake.provideToSP).to.be.calledWith(AMOUNT, ZERO_ADDRESS);
+
+        expect(await lusdAllocator.totalAmountDeployed()).to.equal(AMOUNT);
+        expect(await lusdAllocator.totalValueDeployed()).to.equal(VALUE);
+      });
+
+//       it("can perform additional deposit", async () => {
+//         const AMOUNT = 12345;
+//         const VALUE = 999999;
+//         treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, AMOUNT).returns(VALUE);
+//         await lusdAllocator.connect(owner).deposit(lusdTokenFake.address, AMOUNT);
+//         await lusdAllocator.connect(owner).deposit(lusdTokenFake.address, AMOUNT);
+//
+//         expect(await lusdAllocator.totalAmountDeployed()).to.equal(AMOUNT + AMOUNT);
+//         expect(await lusdAllocator.totalValueDeployed()).to.equal(VALUE + VALUE);
+//       });
+//
+//       it("reverts if non-LUSD token is passed", async () => {
+//         await expect(lusdAllocator.connect(owner).deposit(other.address, 12345))
+//           .to.be.revertedWith("token address does not match LUSD token");
+//       });
+//
+//       it("can only be called by the owner", async () => {
+//         await expect(lusdAllocator.connect(other).deposit(lusdTokenFake.address, 12345))
+//           .to.be.revertedWith("Ownable: caller is not the owner");
+//       });
+    });
   });
 });
