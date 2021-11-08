@@ -3,13 +3,13 @@ pragma solidity ^0.7.5;
 
 import "./libraries/SafeMath.sol";
 
-import "./interfaces/IOHMERC20.sol";
+import "./interfaces/IOHM.sol";
 
 import "./types/ERC20Permit.sol";
 import "./types/VaultOwned.sol";
 
 
-contract OlympusERC20Token is ERC20Permit, IOHMERC20, VaultOwned {
+contract OlympusERC20Token is ERC20Permit, IOHM, VaultOwned {
 
     using SafeMath for uint256;
 

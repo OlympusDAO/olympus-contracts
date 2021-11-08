@@ -8,7 +8,7 @@ import {
   IDistributor,
   IgOHM,
   IsOHM,
-  IOHMERC20,
+  IOHM,
   OlympusStaking,
   OlympusStaking__factory,
 } from '../../types';
@@ -23,7 +23,7 @@ describe("OlympusStaking", () => {
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let other: SignerWithAddress;
-  let ohmFake: FakeContract<IOHMERC20>;
+  let ohmFake: FakeContract<IOHM>;
   let sOHMFake: FakeContract<IsOHM>;
   let gOHMFake: FakeContract<IgOHM>;
   let distributorFake: FakeContract<IDistributor>;
@@ -35,7 +35,7 @@ describe("OlympusStaking", () => {
 
   beforeEach(async () => {
     [owner, governor, alice, bob, other] = await ethers.getSigners();
-    ohmFake = await smock.fake<IOHMERC20>("IOHMERC20");
+    ohmFake = await smock.fake<IOHM>("IOHM");
     gOHMFake = await smock.fake<IgOHM>("IgOHM");
     // need to be specific because IsOHM is also defined in OLD
     sOHMFake = await smock.fake<IsOHM>("contracts/interfaces/IsOHM.sol:IsOHM");
