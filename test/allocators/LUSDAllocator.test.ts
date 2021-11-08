@@ -8,9 +8,6 @@ import {
   IERC20,
   ITreasury,
   IStabilityPool,
-  ITroveManager,
-  ISortedTroves,
-  IHintHelpers,
   LUSDAllocator,
   LUSDAllocator__factory,
 } from '../../types';
@@ -26,9 +23,6 @@ describe("LUSDAllocator", () => {
   let bob: SignerWithAddress;
   let treasuryFake: FakeContract<ITreasury>;
   let stabilityPoolFake: FakeContract<IStabilityPool>;
-  let troveManagerFake: FakeContract<ITroveManager>;
-  let sortedTroveFake: FakeContract<ISortedTroves>;
-  let hintHelperFake: FakeContract<IHintHelpers>;
   let lusdTokenFake: FakeContract<IERC20>;
   let lusdAllocator: LUSDAllocator;
 
@@ -36,9 +30,6 @@ describe("LUSDAllocator", () => {
     [owner, other, alice, bob] = await ethers.getSigners();
     treasuryFake = await smock.fake<ITreasury>("ITreasury");
     stabilityPoolFake = await smock.fake<IStabilityPool>("IStabilityPool");
-    troveManagerFake = await smock.fake<ITroveManager>("ITroveManager");
-    sortedTroveFake = await smock.fake<ISortedTroves>("ISortedTroves");
-    hintHelperFake = await smock.fake<IHintHelpers>("IHintHelpers");
     lusdTokenFake = await smock.fake<IERC20>("IERC20");
   });
 
@@ -48,9 +39,6 @@ describe("LUSDAllocator", () => {
         treasuryFake.address,
         lusdTokenFake.address,
         stabilityPoolFake.address,
-        sortedTroveFake.address,
-        hintHelperFake.address,
-        troveManagerFake.address,
         ZERO_ADDRESS
       );
       expect(await lusdAllocator.lusdTokenAddress()).to.equal(lusdTokenFake.address);
@@ -61,9 +49,6 @@ describe("LUSDAllocator", () => {
         ZERO_ADDRESS,
         lusdTokenFake.address,
         stabilityPoolFake.address,
-        sortedTroveFake.address,
-        hintHelperFake.address,
-        troveManagerFake.address,
         ZERO_ADDRESS
       )).to.be.revertedWith("treasury address cannot be 0x0");
     });
@@ -73,9 +58,6 @@ describe("LUSDAllocator", () => {
         treasuryFake.address,
         lusdTokenFake.address,
         ZERO_ADDRESS,
-        sortedTroveFake.address,
-        hintHelperFake.address,
-        troveManagerFake.address,
         ZERO_ADDRESS
       )).to.be.revertedWith("stabilityPool address cannot be 0x0");
     });
@@ -85,23 +67,17 @@ describe("LUSDAllocator", () => {
         treasuryFake.address,
         ZERO_ADDRESS,
         stabilityPoolFake.address,
-        sortedTroveFake.address,
-        hintHelperFake.address,
-        troveManagerFake.address,
         ZERO_ADDRESS
       )).to.be.revertedWith("LUSD token address cannot be 0x0");
     });
   });
-
+  
   describe("post-constructor", () => {
     beforeEach(async () => {
       lusdAllocator = await (new LUSDAllocator__factory(owner)).deploy(
         treasuryFake.address,
         lusdTokenFake.address,
         stabilityPoolFake.address,
-        sortedTroveFake.address,
-        hintHelperFake.address,
-        troveManagerFake.address,
         ZERO_ADDRESS
       );
     });
@@ -190,44 +166,6 @@ describe("LUSDAllocator", () => {
         await expect(lusdAllocator.connect(other).withdraw(lusdTokenFake.address, 12345))
           .to.be.revertedWith("Ownable: caller is not the owner");
       });
-    });
-
-   describe("harvest", () => {
-      it("aaaa", async () => {
-        const DEBT = 363407671459371026109145;
-        const COLL = 130659000000000000000;
-        troveManagerFake.getEntireDebtAndColl.whenCalledWith().returns(DEBT, COLL, 0, 0);
-        sortedTroveFake.getSize.whenCalledWith().returns(1213);
-        await lusdAllocator.connect(owner).harvest();
-
-        expect(treasuryFake.manage).to.be.calledWith(lusdTokenFake.address, AMOUNT);
-        expect(lusdTokenFake.approve).to.be.calledWith(stabilityPoolFake.address, AMOUNT);
-        expect(stabilityPoolFake.provideToSP).to.be.calledWith(AMOUNT, ZERO_ADDRESS);
-
-        expect(await lusdAllocator.totalAmountDeployed()).to.equal(AMOUNT);
-        expect(await lusdAllocator.totalValueDeployed()).to.equal(VALUE);
-      });
-
-//       it("can perform additional deposit", async () => {
-//         const AMOUNT = 12345;
-//         const VALUE = 999999;
-//         treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, AMOUNT).returns(VALUE);
-//         await lusdAllocator.connect(owner).deposit(lusdTokenFake.address, AMOUNT);
-//         await lusdAllocator.connect(owner).deposit(lusdTokenFake.address, AMOUNT);
-//
-//         expect(await lusdAllocator.totalAmountDeployed()).to.equal(AMOUNT + AMOUNT);
-//         expect(await lusdAllocator.totalValueDeployed()).to.equal(VALUE + VALUE);
-//       });
-//
-//       it("reverts if non-LUSD token is passed", async () => {
-//         await expect(lusdAllocator.connect(owner).deposit(other.address, 12345))
-//           .to.be.revertedWith("token address does not match LUSD token");
-//       });
-//
-//       it("can only be called by the owner", async () => {
-//         await expect(lusdAllocator.connect(other).deposit(lusdTokenFake.address, 12345))
-//           .to.be.revertedWith("Ownable: caller is not the owner");
-//       });
     });
   });
 });
