@@ -8,20 +8,12 @@ import "./interfaces/IOwnable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IERC20Metadata.sol";
 import "./interfaces/IOHM.sol";
+import "./interfaces/IsOHM.sol";
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITreasury.sol";
 
 import "./types/Ownable.sol";
 
-interface IsOHM is IERC20 {
-    function changeDebt(
-        uint256 amount,
-        address debtor,
-        bool add
-    ) external;
-
-    function debtBalances(address _address) external view returns (uint256);
-}
 
 contract OlympusTreasury is Ownable, ITreasury {
     /* ========== DEPENDENCIES ========== */
@@ -68,7 +60,7 @@ contract OlympusTreasury is Ownable, ITreasury {
     /* ========== STATE VARIABLES ========== */
 
     IOHM public immutable OHM;
-    IERC20 public sOHM;
+    IsOHM public sOHM;
 
     mapping(STATUS => address[]) public registry;
     mapping(STATUS => mapping(address => bool)) public permissions;
@@ -201,7 +193,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
         OHM.burnFrom(msg.sender, _amount);
 
-        sOHM.changeDebt(value, msg.sender, false);
+        sOHM.changeDebt(_amount, msg.sender, false);
         totalDebt = totalDebt.sub(_amount);
 
         emit RepayDebt(msg.sender, address(OHM), _amount, _amount);
@@ -274,7 +266,7 @@ contract OlympusTreasury is Ownable, ITreasury {
     ) external onlyOwner {
         require(onChainGoverned, "OCG Not Enabled: Use queueTimelock");
         if (_status == STATUS.SOHM) {
-            sOHM = IERC20(_address);
+            sOHM = IsOHM(_address);
         } else {
             permissions[_status][_address] = true;
 
@@ -368,7 +360,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
         if (info.managing == STATUS.SOHM) {
             // 9
-            sOHM = IERC20(info.toPermit);
+            sOHM = IsOHM(info.toPermit);
         } else {
             permissions[_status][_address] = true;
 
