@@ -7,10 +7,9 @@ interface IOHM is IERC20 {
 
   /* ====== OHM ====== */
 
-  function mint(uint256 amount_) external;
   function mint(address account_, uint256 ammount_) external;
+  function burn(uint256 amount) external;
   function burnFrom(address account_, uint256 amount_) external;
-  function vault() external returns (address);
 }
 
 interface IsOHM is IERC20 {
@@ -18,18 +17,18 @@ interface IsOHM is IERC20 {
     /* ========== DATA STRUCTURES ========== */
 
     struct Rebase {
-        uint epoch;
-        uint rebase; // 18 decimals
-        uint totalStakedBefore;
-        uint totalStakedAfter;
-        uint amountRebased;
-        uint index;
-        uint blockNumberOccured;
+        uint256 epoch;
+        uint256 rebase; // 18 decimals
+        uint256 totalStakedBefore;
+        uint256 totalStakedAfter;
+        uint256 amountRebased;
+        uint256 index;
+        uint256 blockNumberOccured;
     }
 
   /* ====== EVENTS ====== */
 
-  event LogSupply(uint256 indexed epoch, uint256 timestamp, uint256 totalSupply );
+  event LogSupply(uint256 indexed epoch, uint256 totalSupply );
   event LogRebase( uint256 indexed epoch, uint256 rebase, uint256 index );
   event LogStakingContractUpdated( address stakingContract );
 
@@ -40,6 +39,8 @@ interface IsOHM is IERC20 {
   function gonsForBalance( uint256 amount ) external view returns (uint256);
   function balanceForGons( uint256 gons ) external view returns (uint256);
   function index() external view returns (uint256);
+  function toG(uint256 amount) external view returns (uint256);
+  function fromG(uint256 amount) external view returns (uint256);
 }
 
 interface IgOHM is IERC20 {
@@ -91,17 +92,23 @@ interface IStaking {
   enum CONTRACTS { DISTRIBUTOR, gOHM }
 
 
+  /* ====== GOV ONLY ====== */
+
+  function setDistributor(address _distributor) external;
+
+  function setWarmupLength(uint256 _warmupPeriod) external;
+
   /* ====== PUBLIC FUNCTIONS ====== */
 
-  function stake(uint256 _amount, address _recipient, bool _rebasing, bool _claim) external returns (uint256);
+  function stake( address _to, uint256 _amount, bool _rebasing, bool _claim ) external returns (uint256);
   
-  function unstake(uint256 _amount, bool _trigger, bool _rebasing) external returns (uint256);
+  function unstake( address _to, uint256 _amount, bool _trigger, bool _rebasing ) external returns (uint256);
+
+  function claim(address _to, bool _rebasing) external returns (uint256);
   
-  function claim (address _recipient, bool _rebasing) external returns (uint256);
+  function wrap(address _to, uint256 _amount) external returns ( uint256 gBalance_ );
   
-  function wrap(uint256 _amount) external returns (uint256 gBalance_);
-  
-  function unwrap( uint256 _amount) external returns (uint256 sBalance_);
+  function unwrap(address _to, uint256 _amount) external returns ( uint256 sBalance_ );
   
   function forfeit() external returns (uint256);
   
@@ -124,12 +131,6 @@ interface IStaking {
   
   function index() external view returns (uint256);
 
-
-  /* ====== POLICY ====== */
-
-  function setContract(CONTRACTS _contract, address _address) external;
-
-  function setWarmup(uint256 _warmupPeriod) external;
 }
 
 interface ITeller {
@@ -180,6 +181,10 @@ interface ITeller {
 
 
   /* ====== POLICY ====== */
+
+  function updateIndexesFor(address _bonder) external;
+
+  function getReward() external;
 
   function setFEReward(uint256 reward) external;
 }
@@ -240,7 +245,7 @@ interface IDistributor {
 
   function addRecipient(address _recipient, uint256 _rewardRate) external;
 
-  function removeRecipient(uint256 _index, address _recipient) external;
+  function removeRecipient(uint256 _index) external;
 
   function setAdjustment(uint256 _index, bool _add, uint256 _rate, uint256 _target) external;
 }
