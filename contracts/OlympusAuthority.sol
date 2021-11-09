@@ -67,9 +67,9 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
     }
 
     function pushVault(address _newVault, bool _effectiveImmediately) external onlyGovernor {
-        if( _effectiveImmediately ) policy = _newVault;
-        newPolicy = _newVault;
-        emit GovernorPushed(policy, newPolicy, _effectiveImmediately);
+        if( _effectiveImmediately ) vault = _newVault;
+        newVault = _newVault;
+        emit GovernorPushed(vault, newVault, _effectiveImmediately);
     }
 
 
