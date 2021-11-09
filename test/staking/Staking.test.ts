@@ -11,6 +11,7 @@ import {
   IOHM,
   OlympusStaking,
   OlympusStaking__factory,
+  OlympusAuthority,
 } from '../../types';
 
 chai.use(smock.matchers);
@@ -20,6 +21,7 @@ const ZERO_ADDRESS = ethers.utils.getAddress("0x00000000000000000000000000000000
 describe("OlympusStaking", () => {
   let owner: SignerWithAddress;
   let governor: SignerWithAddress;
+  let guardian: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let other: SignerWithAddress;
@@ -28,18 +30,28 @@ describe("OlympusStaking", () => {
   let gOHMFake: FakeContract<IgOHM>;
   let distributorFake: FakeContract<IDistributor>;
   let staking: OlympusStaking;
+  let authority: OlympusAuthority;
 
   const EPOCH_LENGTH = 2200;
   const EPOCH_NUMBER = 1;
   const FUTURE_END_BLOCK = 102201; // an arbitrary future block number
 
   beforeEach(async () => {
-    [owner, governor, alice, bob, other] = await ethers.getSigners();
+    [owner, governor, guardian, alice, bob, other] = await ethers.getSigners();
     ohmFake = await smock.fake<IOHM>("IOHM");
     gOHMFake = await smock.fake<IgOHM>("IgOHM");
     // need to be specific because IsOHM is also defined in OLD
     sOHMFake = await smock.fake<IsOHM>("contracts/interfaces/IsOHM.sol:IsOHM");
     distributorFake = await smock.fake<IDistributor>("IDistributor");
+
+    const Authority = await ethers.getContractFactory("OlympusAuthority");
+    const authority = await Authority.deploy(
+        governor.address,
+        guardian.address,
+        owner.address,
+        owner.address
+    );
+    await authority.deployed();
   });
 
   describe("constructor", () => {
@@ -51,6 +63,7 @@ describe("OlympusStaking", () => {
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         FUTURE_END_BLOCK,
+        authority.address,
       );
 
       expect(await staking.OHM()).to.equal(ohmFake.address);
@@ -71,6 +84,7 @@ describe("OlympusStaking", () => {
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         FUTURE_END_BLOCK,
+        authority.address,
       )).to.be.reverted;
     });
 
@@ -82,6 +96,7 @@ describe("OlympusStaking", () => {
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         FUTURE_END_BLOCK,
+        authority.address,
       )).to.be.reverted;
     });
 
@@ -93,6 +108,7 @@ describe("OlympusStaking", () => {
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         FUTURE_END_BLOCK,
+        authority.address,
       )).to.be.reverted;
     });
   });
@@ -106,9 +122,10 @@ describe("OlympusStaking", () => {
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         FUTURE_END_BLOCK,
+        authority.address,
       );
-      await staking.connect(owner).pushGovernor(governor.address);
-      await staking.connect(governor).pullGovernor();
+      await authority.connect(owner).pushGovernor(governor.address);
+      await authority.connect(governor).pullGovernor();
     });
 
     describe("setDistributor", () => {
@@ -155,9 +172,10 @@ describe("OlympusStaking", () => {
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         nextRebaseBlock,
+        authority.address,
       );
-      await staking.connect(owner).pushGovernor(governor.address);
-      await staking.connect(governor).pullGovernor();
+      await authority.connect(owner).pushGovernor(governor.address);
+      await authority.connect(governor).pullGovernor();
       await staking.connect(governor).setDistributor(distributorFake.address);
     }
 
