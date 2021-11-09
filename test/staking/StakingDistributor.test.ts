@@ -5,7 +5,7 @@ import { FakeContract, smock } from '@defi-wonderland/smock'
 import {
   IStaking,
   ITreasury,
-  IOHMERC20,
+  IOHM,
   Distributor__factory,
   Distributor,
 } from '../../types';
@@ -20,14 +20,14 @@ describe("Distributor", () => {
     let governor: SignerWithAddress;
     let guardian: SignerWithAddress;
     let other: SignerWithAddress;
-    let ohmFake: FakeContract<IOHMERC20>;
+    let ohmFake: FakeContract<IOHM>;
     let treasuryFake: FakeContract<ITreasury>;
     let distributor: Distributor;
 
     beforeEach(async () => {
         [owner, staking, governor, guardian, other] = await ethers.getSigners();
         treasuryFake = await smock.fake<ITreasury>('ITreasury');
-        ohmFake = await smock.fake<IOHMERC20>("IOHMERC20");
+        ohmFake = await smock.fake<IOHM>("IOHM");
     });
 
     describe("constructor", () => {
