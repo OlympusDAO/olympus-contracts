@@ -101,7 +101,7 @@ describe("Treasury Token Migration", async function () {
         index = await oldSohm.connect(deployer).index();
         sOhm.connect(deployer).setIndex(index);
         sOhm.connect(deployer).setgOHM(gOhm.address);
-        sOhm.connect(deployer).initialize(newStaking.address);
+        sOhm.connect(deployer).initialize(newStaking.address, newTreasury.address);
 
         // Send treasury_manager eth for gas on simimulated mainnet
         await sendETH(deployer, TREASURY_MANAGER);
