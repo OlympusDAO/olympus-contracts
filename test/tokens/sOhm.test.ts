@@ -23,6 +23,7 @@ const ZERO_ADDRESS = ethers.utils.getAddress("0x00000000000000000000000000000000
 
 describe("sOhm", () => {
   let initializer: SignerWithAddress;
+  let treasury: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let ohm: OlympusERC20Token;
@@ -78,22 +79,22 @@ describe("sOhm", () => {
 
     describe("initialize", () => {
       it("assigns TOTAL_GONS to the stakingFake contract's balance", async () => {
-        await sOhm.connect(initializer).initialize(stakingFake.address);
+        await sOhm.connect(initializer).initialize(stakingFake.address, treasury.address);
         expect(await sOhm.balanceOf(stakingFake.address)).to.equal(TOTAL_GONS);
       });
 
       it("emits Transfer event", async () => {
-        await expect(sOhm.connect(initializer).initialize(stakingFake.address)).
+        await expect(sOhm.connect(initializer).initialize(stakingFake.address, treasury.address)).
           to.emit(sOhm, "Transfer").withArgs(ZERO_ADDRESS, stakingFake.address, TOTAL_GONS);
       });
 
       it("emits LogStakingContractUpdated event", async () => {
-        await expect(sOhm.connect(initializer).initialize(stakingFake.address)).
+        await expect(sOhm.connect(initializer).initialize(stakingFake.address, treasury.address)).
           to.emit(sOhm, "LogStakingContractUpdated").withArgs(stakingFake.address);
       });
 
       it("unsets the initializer, so it cannot be called again", async () => {
-        await sOhm.connect(initializer).initialize(stakingFake.address);
+        await sOhm.connect(initializer).initialize(stakingFake.address, treasury.address);
         await expect(sOhm.connect(initializer).initialize(stakingFake.address)).to.be.reverted;
       });
     });
@@ -103,7 +104,7 @@ describe("sOhm", () => {
     beforeEach(async () => {
       await sOhm.connect(initializer).setIndex(1);
       await sOhm.connect(initializer).setgOHM(gOhmFake.address);
-      await sOhm.connect(initializer).initialize(stakingFake.address);
+      await sOhm.connect(initializer).initialize(stakingFake.address, treasury.address);
     });
 
     describe("approve", () => {
