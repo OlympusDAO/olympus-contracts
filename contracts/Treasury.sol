@@ -201,7 +201,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
         OHM.burnFrom(msg.sender, _amount);
 
-        sOHM.changeDebt(value, msg.sender, false);
+        sOHM.changeDebt(_amount, msg.sender, false);
         totalDebt = totalDebt.sub(_amount);
 
         emit RepayDebt(msg.sender, address(OHM), _amount, _amount);
@@ -370,22 +370,22 @@ contract OlympusTreasury is Ownable, ITreasury {
             // 9
             sOHM = IERC20(info.toPermit);
         } else {
-            permissions[_status][_address] = true;
+            permissions[info.managing][info.toPermit] = true;
 
-            if (_status == STATUS.LIQUIDITYTOKEN) {
-                bondCalculator[_address] = _calculator;
+            if (info.managing == STATUS.LIQUIDITYTOKEN) {
+                bondCalculator[info.toPermit] = info.calculator;
             }
-            (bool registered, ) = indexInRegistry(_address, _status);
+            (bool registered, ) = indexInRegistry(info.toPermit, info.managing);
             if (!registered) {
-                registry[_status].push(_address);
+                registry[info.managing].push(info.toPermit);
 
-                if (_status == STATUS.LIQUIDITYTOKEN) {
-                    (bool reg, uint256 index) = indexInRegistry(_address, STATUS.RESERVETOKEN);
+                if (info.managing == STATUS.LIQUIDITYTOKEN) {
+                    (bool reg, uint256 index) = indexInRegistry(info.toPermit, STATUS.RESERVETOKEN);
                     if (reg) {
                         delete registry[STATUS.RESERVETOKEN][index];
                     }
-                } else if (_status == STATUS.RESERVETOKEN) {
-                    (bool reg, uint256 index) = indexInRegistry(_address, STATUS.LIQUIDITYTOKEN);
+                } else if (info.managing == STATUS.RESERVETOKEN) {
+                    (bool reg, uint256 index) = indexInRegistry(info.toPermit, STATUS.LIQUIDITYTOKEN);
                     if (reg) {
                         delete registry[STATUS.LIQUIDITYTOKEN][index];
                     }
