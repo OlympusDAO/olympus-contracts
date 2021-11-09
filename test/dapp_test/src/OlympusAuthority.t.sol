@@ -130,4 +130,22 @@ contract OlympusAuthorityTest is DSTest {
             assertEq("!newVault", error);
         }
     }
+
+    function test_pushRole_not_authorized() public {
+        authority = new OlympusAuthority(UNAUTHORIZED_USER, address(this), address(this), address(this));
+        accessControlledMock = new AccessControlledMock( address(authority) );
+
+        try authority.pushGovernor(UNAUTHORIZED_USER, true) {
+            fail();
+        } catch Error(string memory error) {
+            assertEq("UNAUTHORIZED", error);
+        }
+    }
+
+    function test_pushRole_authorized() public {
+        authority = new OlympusAuthority(address(this), address(this), address(this), address(this));
+        accessControlledMock = new AccessControlledMock( address(authority) );
+
+        authority.pushGovernor(address(this), true);
+    }
 }
