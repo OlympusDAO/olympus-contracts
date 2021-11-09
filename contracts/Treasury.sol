@@ -27,7 +27,7 @@ contract OlympusTreasury is Ownable, ITreasury {
     event Withdrawal(address indexed token, uint256 amount, uint256 value);
     event CreateDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
     event RepayDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
-    event ReservesManaged(address indexed token, uint256 amount);
+    event Managed(address indexed token, uint256 amount);
     event ReservesAudited(uint256 indexed totalReserves);
     event Minted(address indexed caller, address indexed recipient, uint256 amount);
     event PermissionQueued(STATUS indexed status, address queued);
@@ -208,18 +208,17 @@ contract OlympusTreasury is Ownable, ITreasury {
         if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             require(permissions[STATUS.LIQUIDITYMANAGER][msg.sender], "Not approved");
         } else {
-            require(permissions[STATUS.RESERVETOKEN][_token], "Not reserve token");
             require(permissions[STATUS.RESERVEMANAGER][msg.sender], "Not approved");
         }
-
-        uint256 value = tokenValue(_token, _amount);
-        require(value <= excessReserves(), "Insufficient reserves");
-
-        totalReserves = totalReserves.sub(value);
+        if( permissions[STATUS.RESERVETOKEN][_token] || permissions[STATUS.LIQUIDITYTOKEN][_token]) {
+            uint256 value = tokenValue(_token, _amount);
+            require(value <= excessReserves(), "Insufficient reserves");
+            totalReserves = totalReserves.sub(value);
+        } 
 
         IERC20(_token).safeTransfer(msg.sender, _amount);
 
-        emit ReservesManaged(_token, _amount);
+        emit Managed(_token, _amount);
     }
 
     /**
