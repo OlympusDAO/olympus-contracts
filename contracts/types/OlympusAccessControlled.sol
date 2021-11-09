@@ -45,15 +45,6 @@ abstract contract OlympusAccessControlled {
         require(msg.sender == authority.vault(), UNAUTHORIZED);
         _;
     }
-
-    // used for methods that give access to multiple roles
-    modifier onlyOlympus(bool governor, bool guardian, bool policy, bool vault) {
-        if (governor) require(msg.sender == authority.governor(), UNAUTHORIZED);
-        if (guardian) require(msg.sender == authority.guardian(), UNAUTHORIZED);
-        if (policy) require(msg.sender == authority.policy(), UNAUTHORIZED);
-        if (vault) require(msg.sender == authority.vault(), UNAUTHORIZED);
-        _;
-    }
     
     /* ========== GOV ONLY ========== */
     
