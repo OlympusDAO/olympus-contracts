@@ -49,19 +49,6 @@ library SafeMath {
         require(b != 0, errorMessage);
         return a % b;
     }
-
-    function sqrrt(uint256 a) internal pure returns (uint c) {
-        if (a > 3) {
-            c = a;
-            uint b = add( div( a, 2), 1 );
-            while (b < c) {
-                c = b;
-                b = div( add( div( a, b ), b), 2 );
-            }
-        } else if (a != 0) {
-            c = 1;
-        }
-    }
 }
 
 contract Timelock {

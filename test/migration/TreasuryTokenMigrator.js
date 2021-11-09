@@ -56,9 +56,6 @@ describe("Treasury Token Migration", async function () {
         let newTreasuryContract = await ethers.getContractFactory("OlympusTreasury");
         newTreasury = await newTreasuryContract.deploy(ohm.address, 10);
 
-        let newStakingContract = await ethers.getContractFactory("OlympusStaking");
-        newStaking = await newStakingContract.deploy(ohm.address, sOhm.address, EPOCH_LEGNTH, 0, 0);
-
         let tokenMigratorContract = await ethers.getContractFactory("OlympusTokenMigrator");
         olympusTokenMigrator = await tokenMigratorContract.deploy(
             OLD_OHM_ADDRESS,
@@ -75,6 +72,16 @@ describe("Treasury Token Migration", async function () {
         let gOhmContract = await ethers.getContractFactory("gOHM");
         gOhm = await gOhmContract.deploy(migratorAddress);
 
+        let newStakingContract = await ethers.getContractFactory("OlympusStaking");
+        newStaking = await newStakingContract.deploy(
+            ohm.address,
+            sOhm.address,
+            gOhm.address,
+            EPOCH_LEGNTH,
+            0,
+            0
+        );
+
         /**
          * Connect the contracts once they have been deployed
          * */
@@ -86,8 +93,7 @@ describe("Treasury Token Migration", async function () {
         await ohm.connect(deployer).setVault(newTreasury.address);
 
         // Initialize staking
-        newStaking.connect(deployer).setContract(1, gOhm.address);
-        newStaking.connect(deployer).setWarmup(0);
+        newStaking.connect(deployer).setWarmupLength(0);
 
         // Initialize new sOHM
         const oldSohm = await new ethers.Contract(OLD_SOHM_ADDRESS, old_sohm_abi, ethers.provider);
@@ -170,8 +176,9 @@ describe("Treasury Token Migration", async function () {
     it("Should fail if user does not have any of the ohm tokens to migrate ", async () => {
         await sendETH(deployer, NON_TOKEN_HOLDER);
         const user = await impersonate(NON_TOKEN_HOLDER);
-        await expect(olympusTokenMigrator.connect(user).migrate(1000000, 0)).to.revertedWith(
-            "ERC20: transfer amount exceeds balance"
+        // Using safeTransferFrom so generic safeERC20 error message
+        await expect(olympusTokenMigrator.connect(user).migrate(1000000, 0, 2)).to.revertedWith(
+            "TRANSFER_FROM_FAILED"
         );
     });
 
@@ -497,7 +504,7 @@ describe("Treasury Token Migration", async function () {
         const user = await impersonate(wallet);
 
         await contract.connect(user).approve(olympusTokenMigrator.address, oldTokenBalance);
-        await olympusTokenMigrator.connect(user).migrate(oldTokenBalance, migrationType);
+        await olympusTokenMigrator.connect(user).migrate(oldTokenBalance, migrationType, 2); // to gOHM
 
         let newgOhmBalance = await gOhm.balanceOf(wallet);
         return { oldTokenBalance, newgOhmBalance };
@@ -603,7 +610,7 @@ async function migrateToken(deployer, migrator, gOhm, token, isBridgeBack = fals
     if (isBridgeBack) {
         await migrator.connect(user).bridgeBack(oldgOhmBalance, type);
     } else {
-        await migrator.connect(user).migrate(oldTokenBalance, type);
+        await migrator.connect(user).migrate(oldTokenBalance, type, 2);
     }
 
     let newTokenBalance = await contract.balanceOf(userAddress);

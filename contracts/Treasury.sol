@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.7.5;
 
 import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
@@ -7,7 +7,7 @@ import "./libraries/SafeERC20.sol";
 import "./interfaces/IOwnable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IERC20Metadata.sol";
-import "./interfaces/IOHMERC20.sol";
+import "./interfaces/IOHM.sol";
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITreasury.sol";
 
@@ -57,7 +57,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /* ========== STATE VARIABLES ========== */
 
-    IOHMERC20 immutable OHM;
+    IOHM public immutable OHM;
     IERC20 public sOHM;
 
     mapping(STATUS => address[]) public registry;
@@ -77,9 +77,9 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _OHM, uint256 _timelock) {
-        require(_OHM != address(0));
-        OHM = IOHMERC20(_OHM);
+    constructor(address _ohm, uint256 _timelock) {
+        require(_ohm != address(0), "Zero address: OHM");
+        OHM = IOHM(_ohm);
 
         blocksNeededForQueue = _timelock;
     }
@@ -103,7 +103,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         } else if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             require(permissions[STATUS.LIQUIDITYDEPOSITOR][msg.sender], "Not approved");
         } else {
-            require(1 == 0, "neither reserve nor liquidity token"); // guarantee revert
+            revert( "neither reserve nor liquidity token");
         }
 
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
@@ -125,7 +125,7 @@ contract OlympusTreasury is Ownable, ITreasury {
      */
     function withdraw(uint256 _amount, address _token) external override {
         require(permissions[STATUS.RESERVETOKEN][_token], "Not accepted"); // Only reserves can be used for redemptions
-        require(permissions[STATUS.RESERVESPENDER][msg.sender] == true, "Not approved");
+        require(permissions[STATUS.RESERVESPENDER][msg.sender], "Not approved");
 
         uint256 value = tokenValue(_token, _amount);
         OHM.burnFrom(msg.sender, value);
@@ -156,7 +156,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
         totalReserves = totalReserves.sub(value);
 
-        IERC20(_token).transfer(msg.sender, _amount);
+        IERC20(_token).safeTransfer(msg.sender, _amount);
 
         emit CreateDebt(msg.sender, _token, _amount, value);
     }
@@ -220,7 +220,7 @@ contract OlympusTreasury is Ownable, ITreasury {
     }
 
     /**
-        @notice send epoch reward to staking contract
+        @notice mint new OHM using excess reserves
      */
     function mint(address _recipient, uint256 _amount) external override {
         require(permissions[STATUS.REWARDMANAGER][msg.sender], "Not approved");
@@ -354,6 +354,7 @@ contract OlympusTreasury is Ownable, ITreasury {
      * @notice disables timelocked functions
      */
     function enableOnChainGovernance() external onlyOwner {
+        require(!onChainGoverned, "OCG already enabled");
         if (onChainGovernanceTimelock != 0 && onChainGovernanceTimelock <= block.number) {
             onChainGoverned = true;
         } else {

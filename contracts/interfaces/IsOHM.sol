@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity >=0.7.5;
 
 import "./IERC20.sol";
 
@@ -13,4 +13,8 @@ interface IsOHM is IERC20 {
     function balanceForGons( uint gons ) external view returns ( uint );
 
     function index() external view returns ( uint );
+
+    function toG(uint amount) external view returns (uint);
+
+    function fromG(uint amount) external view returns (uint);
 }

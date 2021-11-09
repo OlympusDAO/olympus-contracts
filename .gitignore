@@ -12,6 +12,7 @@ types/
 
 node_modules/
 .env
+yarn-error.log
 
 .yalc
 yalc.lock

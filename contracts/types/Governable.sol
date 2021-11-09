@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity >=0.7.5;
 
 import "../interfaces/IGovernable.sol";
 
@@ -30,12 +30,12 @@ contract Governable is IGovernable {
     }
 
     function renounceGovernor() public virtual override onlyGovernor() {
-        emit GovernorPushed( _governor, address(0) );
+        emit GovernorPulled( _governor, address(0) );
         _governor = address(0);
+        _newGovernor = address(0);
     }
 
     function pushGovernor( address newGovernor_ ) public virtual override onlyGovernor() {
-        require( newGovernor_ != address(0), "Governable: new governor is the zero address");
         emit GovernorPushed( _governor, newGovernor_ );
         _newGovernor = newGovernor_;
     }
@@ -44,5 +44,6 @@ contract Governable is IGovernable {
         require( msg.sender == _newGovernor, "Governable: must be new governor to pull");
         emit GovernorPulled( _governor, _newGovernor );
         _governor = _newGovernor;
+        _newGovernor = address(0);
     }
 }
