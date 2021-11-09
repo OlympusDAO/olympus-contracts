@@ -26,6 +26,7 @@ const ZERO_ADDRESS = ethers.utils.getAddress("0x00000000000000000000000000000000
 
 describe("sOhm", () => {
   let initializer: SignerWithAddress;
+  let treasury: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let ohm: OlympusERC20Token;
