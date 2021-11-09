@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.7.5;
 
 import "./libraries/SafeMath.sol";
-import "./libraries/EnumerableSet.sol";
+
+import {IOHM} from "./interfaces/OlympusV2Interface.sol";
 
 import "./types/ERC20Permit.sol";
 import "./types/OlympusAccessControlled.sol";
 
-contract OlympusERC20Token is ERC20Permit, OlympusAccessControlled {
+contract OlympusERC20Token is ERC20Permit, OlympusAccessControlled, IOHM {
 
     using SafeMath for uint256;
 
@@ -15,19 +16,19 @@ contract OlympusERC20Token is ERC20Permit, OlympusAccessControlled {
         ERC20("Olympus", "OHM", 9) 
         OlympusAccessControlled( IOlympusAuthority(_authority) ) {}
 
-    function mint(address account_, uint256 amount_) external onlyVault() {
+    function mint(address account_, uint256 amount_) external override onlyVault() {
         _mint(account_, amount_);
     }
 
-    function burn(uint256 amount) public virtual {
+    function burn(uint256 amount) external override {
         _burn(msg.sender, amount);
     }
      
-    function burnFrom(address account_, uint256 amount_) public virtual {
+    function burnFrom(address account_, uint256 amount_) external override {
         _burnFrom(account_, amount_);
     }
 
-    function _burnFrom(address account_, uint256 amount_) public virtual {
+    function _burnFrom(address account_, uint256 amount_) internal {
         uint256 decreasedAllowance_ =
             allowance(account_, msg.sender).sub(
                 amount_,

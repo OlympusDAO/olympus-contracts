@@ -59,6 +59,7 @@ describe("OlympusStaking", () => {
             staking = await new OlympusStaking__factory(owner).deploy(
                 ohmFake.address,
                 sOHMFake.address,
+                gOHMFake.address,
                 EPOCH_LENGTH,
                 EPOCH_NUMBER,
                 FUTURE_END_BLOCK,
@@ -80,6 +81,7 @@ describe("OlympusStaking", () => {
                 new OlympusStaking__factory(owner).deploy(
                     ZERO_ADDRESS,
                     sOHMFake.address,
+                    gOHMFake.address,
                     EPOCH_LENGTH,
                     EPOCH_NUMBER,
                     FUTURE_END_BLOCK,
@@ -93,6 +95,7 @@ describe("OlympusStaking", () => {
                 new OlympusStaking__factory(owner).deploy(
                     ohmFake.address,
                     ZERO_ADDRESS,
+                    gOHMFake.address,
                     EPOCH_LENGTH,
                     EPOCH_NUMBER,
                     FUTURE_END_BLOCK,
@@ -107,6 +110,7 @@ describe("OlympusStaking", () => {
             staking = await new OlympusStaking__factory(owner).deploy(
                 ohmFake.address,
                 sOHMFake.address,
+                gOHMFake.address,
                 EPOCH_LENGTH,
                 EPOCH_NUMBER,
                 FUTURE_END_BLOCK,

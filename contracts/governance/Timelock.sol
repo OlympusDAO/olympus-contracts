@@ -49,19 +49,6 @@ library SafeMath {
         require(b != 0, errorMessage);
         return a % b;
     }
-
-    function sqrrt(uint256 a) internal pure returns (uint256 c) {
-        if (a > 3) {
-            c = a;
-            uint256 b = add( div( a, 2), 1 );
-            while (b < c) {
-                c = b;
-                b = div( add( div( a, b ), b), 2 );
-            }
-        } else if (a != 0) {
-            c = 1;
-        }
-    }
 }
 
 contract Timelock {
@@ -70,9 +57,33 @@ contract Timelock {
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
     event NewDelay(uint256 indexed newDelay);
-    event CancelTransaction(bytes32 indexed txHash, address indexed target, uint256 value, string signature,  bytes data, uint256 eta);
-    event ExecuteTransaction(bytes32 indexed txHash, address indexed target, uint256 value, string signature,  bytes data, uint256 eta);
-    event QueueTransaction(bytes32 indexed txHash, address indexed target, uint256 value, string signature, bytes data, uint256 eta);
+
+    event CancelTransaction(
+        bytes32 indexed txHash, 
+        address indexed target, 
+        uint256 value, 
+        string signature,  
+        bytes data, 
+        uint256 eta
+    );
+
+    event ExecuteTransaction(
+        bytes32 indexed txHash, 
+        address indexed target, 
+        uint256 value, 
+        string signature,  
+        bytes data, 
+        uint256 eta
+    );
+
+    event QueueTransaction(
+        bytes32 indexed txHash, 
+        address indexed target, 
+        uint256 value,
+        string signature, 
+        bytes data, 
+        uint256 eta
+    );
 
     uint256 public constant GRACE_PERIOD = 14 days;
     uint256 public constant MINIMUM_DELAY = 2 days;
@@ -86,8 +97,14 @@ contract Timelock {
 
 
     constructor(address admin_, uint256 delay_) public {
-        require(delay_ >= MINIMUM_DELAY, "Timelock::constructor: Delay must exceed minimum delay.");
-        require(delay_ <= MAXIMUM_DELAY, "Timelock::setDelay: Delay must not exceed maximum delay.");
+        require(
+            delay_ >= MINIMUM_DELAY, 
+            "Timelock::constructor: Delay must exceed minimum delay."
+        );
+        require(
+            delay_ <= MAXIMUM_DELAY, 
+            "Timelock::setDelay: Delay must not exceed maximum delay."
+        );
 
         admin = admin_;
         delay = delay_;
@@ -119,9 +136,21 @@ contract Timelock {
         emit NewPendingAdmin(pendingAdmin);
     }
 
-    function queueTransaction(address target, uint256 value, string memory signature, bytes memory data, uint256 eta) public returns (bytes32) {
-        require(msg.sender == admin, "Timelock::queueTransaction: Call must come from admin.");
-        require(eta >= getBlockTimestamp().add(delay), "Timelock::queueTransaction: Estimated execution block must satisfy delay.");
+    function queueTransaction(
+        address target, 
+        uint256 value, 
+        string memory signature, 
+        bytes memory data,
+        uint256 eta
+    ) public returns (bytes32) {
+        require(
+            msg.sender == admin, 
+            "Timelock::queueTransaction: Call must come from admin."
+        );
+        require(
+            eta >= getBlockTimestamp().add(delay), 
+            "Timelock::queueTransaction: Estimated execution block must satisfy delay."
+        );
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = true;
@@ -130,7 +159,13 @@ contract Timelock {
         return txHash;
     }
 
-    function cancelTransaction(address target, uint256 value, string memory signature, bytes memory data, uint256 eta) public {
+    function cancelTransaction(
+        address target, 
+        uint256 value, 
+        string memory signature,
+        bytes memory data, 
+        uint256 eta
+    ) public {
         require(msg.sender == admin, "Timelock::cancelTransaction: Call must come from admin.");
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
@@ -139,7 +174,13 @@ contract Timelock {
         emit CancelTransaction(txHash, target, value, signature, data, eta);
     }
 
-    function executeTransaction(address target, uint256 value, string memory signature, bytes memory data, uint256 eta) public payable returns (bytes memory) {
+    function executeTransaction(
+        address target, 
+        uint256 value, 
+        string memory signature, 
+        bytes memory data, 
+        uint256 eta
+    ) public payable returns (bytes memory) {
         require(msg.sender == admin, "Timelock::executeTransaction: Call must come from admin.");
 
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));

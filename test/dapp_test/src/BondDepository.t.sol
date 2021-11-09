@@ -69,11 +69,15 @@ contract BondDepositoryTest is DSTest {
         bondingCalculator = new OlympusBondingCalculator(address(ohm));
         treasury = new OlympusTreasury(address(ohm), 1, address(authority));
         authority.pushVault(address(treasury), true);
-        staking = new OlympusStaking(address(ohm), address(sohm), 8, 0, 0, authority);
+        staking = new OlympusStaking(address(ohm), address(sohm), address(gohm), 8, 0, 0, address(authority));
+
+
         sohm.initialize(address(staking));
         gohm.migrate(address(staking), address(sohm));
+
         bondDepository = new OlympusBondDepository(address(ohm), address(treasury), authority);
-        teller = new BondTeller(address(bondDepository), address(staking), address(treasury), address(ohm), address(sohm), address(gohm));
+
+        teller = new BondTeller(address(bondDepository), address(staking), address(treasury), address(ohm), address(sohm), address(authority));
         bondDepository.setTeller(address(teller));
     }
 
@@ -99,10 +103,18 @@ contract BondDepositoryTest is DSTest {
         OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
-        try this.createBond_deposit(2763957476737854671246564045522737104576123858413359401, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
+        try this.createBond_deposit(
+            2763957476737854671246564045522737104576123858413359401,
+            ohmMintAmount,
+            false,
+            9 * 10 ** 20,
+            terms,
+            initialDebt,
+            1 * 10 ** 9
+        ){
             fail();
         } catch Error(string memory error) {
-            assertEq("FullMath::mulDiv: overflow", error);
+            assertEq("FullMath: FULLDIV_OVERFLOW", error);
         }
     }
 

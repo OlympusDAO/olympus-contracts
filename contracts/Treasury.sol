@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.7.5;
 
 import {IOHM} from "./interfaces/OlympusV2Interface.sol";
 import {ITreasury} from "./interfaces/OlympusV2Interface.sol";
@@ -56,7 +56,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
     /* ========== STATE VARIABLES ========== */
 
-    IOHM immutable OHM;
+    IOHM public immutable OHM;
     IERC20 public sOHM;
 
     mapping(STATUS => address[]) public registry;
@@ -76,10 +76,14 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _OHM, uint256 _timelock, address _authority) OlympusAccessControlled(IOlympusAuthority(_authority)) {
-        require(_OHM != address(0));
-        OHM = IOHM(_OHM);
+    constructor(
+        address _OHM, 
+        uint256 _timelock, 
+        address _authority
+    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
 
+        require(_OHM != address(0), "Zero address: OHM");
+        OHM = IOHM(_OHM);
         blocksNeededForQueue = _timelock;
     }
 
@@ -102,7 +106,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         } else if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             require(permissions[STATUS.LIQUIDITYDEPOSITOR][msg.sender], "Not approved");
         } else {
-            require(1 == 0, "neither reserve nor liquidity token"); // guarantee revert
+            revert( "neither reserve nor liquidity token");
         }
 
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
@@ -124,7 +128,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      */
     function withdraw(uint256 _amount, address _token) external override {
         require(permissions[STATUS.RESERVETOKEN][_token], "Not accepted"); // Only reserves can be used for redemptions
-        require(permissions[STATUS.RESERVESPENDER][msg.sender] == true, "Not approved");
+        require(permissions[STATUS.RESERVESPENDER][msg.sender], "Not approved");
 
         uint256 value = tokenValue(_token, _amount);
         OHM.burnFrom(msg.sender, value);
@@ -156,7 +160,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
         totalReserves = totalReserves.sub(value);
 
-        IERC20(_token).transfer(msg.sender, _amount);
+        IERC20(_token).safeTransfer(msg.sender, _amount);
 
         emit CreateDebt(msg.sender, _token, _amount, value);
     }
@@ -219,7 +223,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     }
 
     /**
-        @notice send epoch reward to staking contract
+        @notice mint new OHM using excess reserves
      */
     function mint(address _recipient, uint256 _amount) external override {
         require(permissions[STATUS.REWARDMANAGER][msg.sender], "Not approved");
@@ -362,6 +366,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      * @notice disables timelocked functions
      */
     function enableOnChainGovernance() external onlyGovernor {
+        require(!onChainGoverned, "OCG already enabled");
         if (onChainGovernanceTimelock != 0 && onChainGovernanceTimelock <= block.number) {
             onChainGoverned = true;
         } else {

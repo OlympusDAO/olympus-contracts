@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.7.5;
 
 import "./libraries/SafeMath.sol";
 import "./libraries/FixedPoint.sol";
-import "./libraries/Address.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20Metadata.sol";
@@ -15,12 +14,11 @@ contract OlympusBondingCalculator is IBondingCalculator {
 
     using FixedPoint for *;
     using SafeMath for uint256;
-    using SafeMath for uint112;
 
-    IERC20 immutable OHM;
+    IERC20 internal immutable OHM;
 
     constructor( address _OHM ) {
-        require( _OHM != address(0) );
+        require( _OHM != address(0), "Zero address: OHM" );
         OHM = IERC20( _OHM );
     }
 
@@ -51,6 +49,7 @@ contract OlympusBondingCalculator is IBondingCalculator {
         if ( IUniswapV2Pair( _pair ).token0() == address( OHM ) ) {
             reserve = reserve1;
         } else {
+            require( IUniswapV2Pair( _pair ).token1() == address( OHM ), "Invalid pair");
             reserve = reserve0;
         }
         return reserve.mul( 2 * ( 10 ** IERC20Metadata(address(OHM)).decimals() ) ).div( getTotalValue( _pair ) );
