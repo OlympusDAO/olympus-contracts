@@ -54,6 +54,7 @@ contract OlympusTokenMigrator is Ownable {
     using SafeERC20 for IERC20;
     using SafeERC20 for IgOHM;
     using SafeERC20 for IsOHM;
+    using SafeERC20 for IwsOHM;
 
     /* ========== MIGRATION ========== */
 
@@ -119,8 +120,8 @@ contract OlympusTokenMigrator is Ownable {
         WRAPPED
     }
 
-    // migrate OHM, sOHM, or wsOHM for gOHM
-    function migrate(uint256 _amount, TYPE _from) external {
+    // migrate OHMv1, sOHMv1, or wsOHM for OHMv2, sOHMv2, or gOHM
+    function migrate(uint256 _amount, TYPE _from, TYPE _to) external {
         uint256 sAmount = _amount;
         uint256 wAmount = oldwsOHM.sOHMTowOHM(_amount);
 
@@ -129,16 +130,52 @@ contract OlympusTokenMigrator is Ownable {
         } else if (_from == TYPE.STAKED) {
             oldsOHM.safeTransferFrom(msg.sender, address(this), _amount);
         } else if (_from == TYPE.WRAPPED) {
-            oldwsOHM.transferFrom(msg.sender, address(this), _amount);
+            oldwsOHM.safeTransferFrom(msg.sender, address(this), _amount);
             wAmount = _amount;
             sAmount = oldwsOHM.wOHMTosOHM(_amount);
         }
 
         if (ohmMigrated) {
             require(oldSupply >= oldOHM.totalSupply(), "OHMv1 minted");
-            gOHM.safeTransfer(msg.sender, wAmount);
+            _send(wAmount, _to);
         } else {
             gOHM.mint(msg.sender, wAmount);
+        }
+    }
+
+    // migrate all tokens held
+    function migrateAll(TYPE _to) external {
+        uint ohmBal = oldOHM.balanceOf(msg.sender);
+        uint sOHMBal = oldsOHM.balanceOf(msg.sender);
+        uint wsOHMBal = oldwsOHM.balanceOf(msg.sender);
+
+        if(ohmBal > 0) {
+            oldOHM.safeTransferFrom(msg.sender, address(this), ohmBal);
+        }
+        if(sOHMBal > 0) {
+            oldsOHM.safeTransferFrom(msg.sender, address(this), sOHMBal);
+        }
+        if(wsOHMBal > 0) {
+            oldwsOHM.safeTransferFrom(msg.sender, address(this), wsOHMBal);
+        }
+
+        uint wAmount = wsOHMBal.add( oldwsOHM.sOHMTowOHM( ohmBal.add(sOHMBal) ) );
+        if (ohmMigrated) {
+            require(oldSupply >= oldOHM.totalSupply(), "OHMv1 minted");
+            _send(wAmount, _to);
+        } else {
+            gOHM.mint(msg.sender, wAmount);
+        }
+    }
+
+    // send preferred token
+    function _send(uint wAmount, TYPE _to) internal {
+        if(_to == TYPE.WRAPPED) {
+            gOHM.safeTransfer(msg.sender, wAmount);
+        } else if (_to == TYPE.STAKED) {
+            newStaking.unwrap(msg.sender, wAmount);
+        } else if (_to == TYPE.UNSTAKED) {
+            newStaking.unstake(msg.sender, wAmount, false, false);
         }
     }
 
@@ -290,7 +327,7 @@ contract OlympusTokenMigrator is Ownable {
     function fund(uint256 _amount) internal {
         newTreasury.mint(address(this), _amount);
         newOHM.approve(address(newStaking), _amount);
-        newStaking.stake(_amount, address(this), false, true); // stake and claim gOHM
+        newStaking.stake(address(this), _amount, false, true); // stake and claim gOHM
 
         emit Funded(_amount);
     }
