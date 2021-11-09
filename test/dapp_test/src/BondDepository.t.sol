@@ -123,7 +123,7 @@ contract BondDepositoryTest is DSTest {
         ){
             fail();
         } catch Error(string memory error) {
-            assertEq("FullMath::mulDiv: overflow", error);
+            assertEq("FullMath: FULLDIV_OVERFLOW", error);
         }
     }
 
