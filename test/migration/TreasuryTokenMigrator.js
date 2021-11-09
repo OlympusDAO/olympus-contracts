@@ -49,7 +49,12 @@ describe("Treasury Token Migration", async function () {
         [deployer, user1] = await ethers.getSigners();
 
         let authorityContract = await ethers.getContractFactory("OlympusAuthority");
-        authority = await authorityContract.deploy(deployer, deployer, deployer, deployer);
+        authority = await authorityContract.deploy(
+            deployer.address,
+            deployer.address,
+            deployer.address,
+            deployer.address
+        );
 
         let ohmContract = await ethers.getContractFactory("OlympusERC20Token");
         ohm = await ohmContract.deploy(authority.address);
@@ -61,7 +66,14 @@ describe("Treasury Token Migration", async function () {
         newTreasury = await newTreasuryContract.deploy(ohm.address, 10, authority.address);
 
         let newStakingContract = await ethers.getContractFactory("OlympusStaking");
-        newStaking = await newStakingContract.deploy(ohm.address, sOhm.address, EPOCH_LEGNTH, 0, 0, authority.address);
+        newStaking = await newStakingContract.deploy(
+            ohm.address,
+            sOhm.address,
+            EPOCH_LEGNTH,
+            0,
+            0,
+            authority.address
+        );
 
         let tokenMigratorContract = await ethers.getContractFactory("OlympusTokenMigrator");
         olympusTokenMigrator = await tokenMigratorContract.deploy(
