@@ -8,6 +8,7 @@ import {
   IOHM,
   Distributor__factory,
   Distributor,
+  OlympusAuthority,
 } from '../../types';
 
 chai.use(smock.matchers);
@@ -23,11 +24,16 @@ describe("Distributor", () => {
     let ohmFake: FakeContract<IOHM>;
     let treasuryFake: FakeContract<ITreasury>;
     let distributor: Distributor;
+    let authority: OlympusAuthority;
 
     beforeEach(async () => {
         [owner, staking, governor, guardian, other] = await ethers.getSigners();
         treasuryFake = await smock.fake<ITreasury>('ITreasury');
         ohmFake = await smock.fake<IOHM>("IOHM");
+
+        const Authority = await ethers.getContractFactory("OlympusAuthority");
+        const authority = await Authority.deploy(governor, guardian, owner, owner);
+        await authority.deployed();
     });
 
     describe("constructor", () => {
@@ -36,6 +42,7 @@ describe("Distributor", () => {
               treasuryFake.address,
               ohmFake.address,
               staking.address,
+              authority.address
             );
        });
 
@@ -45,6 +52,7 @@ describe("Distributor", () => {
                 ZERO_ADDRESS,
                 ohmFake.address,
                 staking.address,
+                authority.address
               )
             ).to.be.reverted;
         });
@@ -55,6 +63,7 @@ describe("Distributor", () => {
                 treasuryFake.address,
                 ZERO_ADDRESS,
                 staking.address,
+                authority.address
               )
             ).to.be.reverted;
         });
@@ -65,6 +74,7 @@ describe("Distributor", () => {
                 treasuryFake.address,
                 ohmFake.address,
                 ZERO_ADDRESS,
+                authority.address
               )
             ).to.be.reverted;
         });
@@ -76,11 +86,12 @@ describe("Distributor", () => {
             treasuryFake.address,
             ohmFake.address,
             staking.address,
+            authority.address
           );
-          await distributor.connect(owner).pushGovernor(governor.address);
-          await distributor.connect(governor).pullGovernor();
-          await distributor.connect(owner).pushGuardian(guardian.address);
-          await distributor.connect(guardian).pullGuardian();
+          // await distributor.connect(owner).pushGovernor(governor.address);
+          // await distributor.connect(governor).pullGovernor();
+          // await distributor.connect(owner).pushGuardian(guardian.address);
+          // await distributor.connect(guardian).pullGuardian();
       });
 
       describe("distribute", () => {
