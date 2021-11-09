@@ -67,7 +67,7 @@ contract BondDepositoryTest is DSTest {
 
         bondingCalculator = new OlympusBondingCalculator(address(ohm));
         treasury = new OlympusTreasury(address(ohm), 1);
-        authority = new OlympusAuthority(address(this), address(this), address(this));
+        authority = new OlympusAuthority(address(this), address(this), address(this), address(this));
 
 
         staking = new OlympusStaking(address(ohm), address(sohm), 8, 0, 0, authority);

@@ -11,7 +11,7 @@ contract OlympusAuthorityTest is DSTest {
     address dummy = address(0x1);
 
     function setUp() public {
-        authority = new OlympusAuthority(dummy, address(this), address(this));
+        authority = new OlympusAuthority(dummy, address(this), address(this), address(this));
     }
 
     function testCannot_governor() public {
