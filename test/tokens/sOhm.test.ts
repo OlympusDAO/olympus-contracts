@@ -95,7 +95,7 @@ describe("sOhm", () => {
 
       it("unsets the initializer, so it cannot be called again", async () => {
         await sOhm.connect(initializer).initialize(stakingFake.address, treasury.address);
-        await expect(sOhm.connect(initializer).initialize(stakingFake.address)).to.be.reverted;
+        await expect(sOhm.connect(initializer).initialize(stakingFake.address, treasury.address)).to.be.reverted;
       });
     });
   });
