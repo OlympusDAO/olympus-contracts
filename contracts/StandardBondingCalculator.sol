@@ -18,7 +18,6 @@ contract OlympusBondingCalculator is IBondingCalculator {
 
     using FixedPoint for *;
     using SafeMath for uint;
-    using SafeMath for uint112;
 
     IERC20 internal immutable OHM;
 
