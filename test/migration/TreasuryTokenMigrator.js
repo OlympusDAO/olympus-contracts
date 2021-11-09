@@ -41,23 +41,39 @@ describe("Treasury Token Migration", async function () {
         sOhm,
         gOhm,
         newTreasury,
-        newStaking;
+        newStaking,
+        authority;
 
     before(async function () {
         await fork_network(13487643);
         [deployer, user1] = await ethers.getSigners();
 
+        let authorityContract = await ethers.getContractFactory("OlympusAuthority");
+        authority = await authorityContract.deploy(
+            deployer.address,
+            deployer.address,
+            deployer.address,
+            deployer.address
+        );
+
         let ohmContract = await ethers.getContractFactory("OlympusERC20Token");
-        ohm = await ohmContract.deploy();
+        ohm = await ohmContract.deploy(authority.address);
 
         let sOhmContract = await ethers.getContractFactory("sOlympus");
-        sOhm = await sOhmContract.connect(deployer).deploy();
+        sOhm = await sOhmContract.connect(deployer).deploy(authority.address);
 
         let newTreasuryContract = await ethers.getContractFactory("OlympusTreasury");
-        newTreasury = await newTreasuryContract.deploy(ohm.address, 10);
+        newTreasury = await newTreasuryContract.deploy(ohm.address, 10, authority.address);
 
         let newStakingContract = await ethers.getContractFactory("OlympusStaking");
-        newStaking = await newStakingContract.deploy(ohm.address, sOhm.address, EPOCH_LEGNTH, 0, 0);
+        newStaking = await newStakingContract.deploy(
+            ohm.address,
+            sOhm.address,
+            EPOCH_LEGNTH,
+            0,
+            0,
+            authority.address
+        );
 
         let tokenMigratorContract = await ethers.getContractFactory("OlympusTokenMigrator");
         olympusTokenMigrator = await tokenMigratorContract.deploy(
@@ -68,7 +84,8 @@ describe("Treasury Token Migration", async function () {
             OLD_WSOHM_ADDRESS,
             SUSHI_ROUTER,
             UNISWAP_ROUTER,
-            1 // timelock for defunds
+            1, // timelock for defunds
+            authority.address
         );
         const migratorAddress = olympusTokenMigrator.address;
 
@@ -156,7 +173,7 @@ describe("Treasury Token Migration", async function () {
         let token = treasury_tokens[0];
         await expect(
             olympusTokenMigrator.connect(user1).migrateToken(token.address)
-        ).to.revertedWith("Ownable: caller is not the owner");
+        ).to.revertedWith("UNAUTHORIZED");
 
         let lpToken = olympus_lp_tokens[0];
 
@@ -164,7 +181,7 @@ describe("Treasury Token Migration", async function () {
             olympusTokenMigrator
                 .connect(user1)
                 .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0)
-        ).to.revertedWith("Ownable: caller is not the owner");
+        ).to.revertedWith("UNAUTHORIZED");
     });
 
     it("Should fail if user does not have any of the ohm tokens to migrate ", async () => {
@@ -189,7 +206,7 @@ describe("Treasury Token Migration", async function () {
                 olympusTokenMigrator
                     .connect(user1)
                     .withdrawToken(DAI_ADDRESS, 1, addresses.ZERO_ADDRESS)
-            ).to.be.revertedWith("Ownable: caller is not the owner");
+            ).to.be.revertedWith("UNAUTHORIZED");
         });
 
         it("should be able to withdraw sent dai", async () => {
@@ -217,6 +234,7 @@ describe("Treasury Token Migration", async function () {
                 .connect(deployer)
                 .withdrawToken(DAI_ADDRESS, daiAmount, addresses.DAI_HOLDER);
         });
+
         it("should not be able to send eth to the contract", async () => {
             const provider = ethers.provider;
             const startingEthBal = await provider.getBalance(user1.address);
@@ -615,7 +633,7 @@ async function migrateToken(deployer, migrator, gOhm, token, isBridgeBack = fals
 }
 
 // TODO(zx): DEBUG re-use this method at the end of migration to view full balances.
-async function getTreasuryBalanceOldAndNewAfterTx() {
+async function getTreasuryBalanceOldAndNewAfterTx(deployer, newTreasury, ohm) {
     for (let i = 0; i < treasury_tokens.length; i++) {
         console.log("===============Treasury Token Migration Done!===============");
         const contract = treasury_tokens[i].contract;

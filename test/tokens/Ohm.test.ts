@@ -14,8 +14,12 @@ describe("OlympusTest", () => {
   beforeEach(async () => {
     [deployer, vault, bob, alice] = await ethers.getSigners();
 
-    ohm = await (new OlympusERC20Token__factory(deployer)).deploy();
-    await ohm.setVault(vault.address);
+    const Authority = await ethers.getContractFactory("OlympusAuthority");
+    const authority = await Authority.deploy(deployer, deployer, deployer, vault);
+    await authority.deployed();
+
+    ohm = await (new OlympusERC20Token__factory(deployer)).deploy(authority.address);
+
   });
 
   it("correctly constructs an ERC20", async () => {
@@ -27,7 +31,7 @@ describe("OlympusTest", () => {
   describe("mint", () => {
     it("must be done by vault", async () => {
       await expect(ohm.connect(deployer).mint(bob.address, 100)).
-        to.be.revertedWith("VaultOwned: caller is not the Vault");
+        to.be.revertedWith("UNAUTHORIZED");
     });
 
     it("increases total supply", async () => {

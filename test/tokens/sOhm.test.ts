@@ -34,7 +34,12 @@ describe("sOhm", () => {
     [initializer, alice, bob] = await ethers.getSigners();
     stakingFake = await smock.fake<IStaking>('IStaking');
     gOhmFake = await smock.fake<GOHM>('gOHM');
-    ohm = await (new OlympusERC20Token__factory(initializer)).deploy();
+
+    const Authority = await ethers.getContractFactory("OlympusAuthority");
+    const authority = await Authority.deploy(initializer, initializer, initializer, initializer);
+    await authority.deployed();
+
+    ohm = await (new OlympusERC20Token__factory(initializer)).deploy(authority.address);
     sOhm = await (new SOlympus__factory(initializer)).deploy();
   });
 

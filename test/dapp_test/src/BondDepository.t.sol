@@ -16,6 +16,7 @@ import "../../../contracts/interfaces/UniswapV2/IUniswapV2Pair.sol";
 import "../../../contracts/interfaces/IERC20Metadata.sol";
 import "../../../contracts/Treasury.sol";
 import "../../../contracts/BondDepository.sol";
+import "../../../contracts/OlympusAuthority.sol";
 import "./util/Hevm.sol";
 import "../../../contracts/BondTeller.sol";
 import "../../../contracts/governance/gOHM.sol";
@@ -36,6 +37,7 @@ contract BondDepositoryTest is DSTest {
     OlympusBondingCalculator internal bondingCalculator;
     OlympusTreasury internal treasury;
     BondTeller internal teller;
+    OlympusAuthority internal authority;
 
     OlympusERC20Token internal ohm;
     sOlympus internal sohm;
@@ -51,12 +53,13 @@ contract BondDepositoryTest is DSTest {
         hevm.warp(0);
         hevm.roll(0);
 
-        ohm = new OlympusERC20Token();
+        authority = new OlympusAuthority(address(this), address(this), address(this), address(this));
+
+        ohm = new OlympusERC20Token(address(authority));
         gohm = new gOHM(address(this));
         sohm = new sOlympus();
         sohm.setIndex(10);
         sohm.setgOHM(address(gohm));
-
 
         abcToken = new MockContract();
         abcToken.givenMethodReturn(abi.encodeWithSelector(ERC20.name.selector), abi.encode("ABC DAO"));
@@ -64,17 +67,12 @@ contract BondDepositoryTest is DSTest {
         abcToken.givenMethodReturnUint(abi.encodeWithSelector(ERC20.decimals.selector), 18);
 
         bondingCalculator = new OlympusBondingCalculator(address(ohm));
-        treasury = new OlympusTreasury(address(ohm), 1);
-
-        staking = new OlympusStaking(address(ohm), address(sohm), 8, 0, 0);
-
-
+        treasury = new OlympusTreasury(address(ohm), 1, address(authority));
+        authority.pushVault(address(treasury), true);
+        staking = new OlympusStaking(address(ohm), address(sohm), 8, 0, 0, authority);
         sohm.initialize(address(staking));
         gohm.migrate(address(staking), address(sohm));
-        ohm.setVault(address(treasury));
-
-        bondDepository = new OlympusBondDepository(address(ohm), address(treasury));
-
+        bondDepository = new OlympusBondDepository(address(ohm), address(treasury), authority);
         teller = new BondTeller(address(bondDepository), address(staking), address(treasury), address(ohm), address(sohm), address(gohm));
         bondDepository.setTeller(address(teller));
     }
@@ -96,20 +94,6 @@ contract BondDepositoryTest is DSTest {
     //TODO use gnosis MockContract, this isn't a real error
     //        }
     //    }
-
-    function test_vaultOwned() public {
-        ohm.setVault(address(0x0));
-
-        OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 10000, maxDebt : 10});
-        uint256 initialDebt = 0;
-        uint256 ohmMintAmount = 11 * 10 ** 18;
-
-        try this.createBond_deposit(5 * 10 ** 16, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
-            fail();
-        } catch Error(string memory error) {
-            assertEq("VaultOwned: caller is not the Vault", error);
-        }
-    }
 
     function test_createBond_mulDiv() public {
         OlympusBondDepository.Terms memory terms = IBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});

@@ -9,6 +9,7 @@ abstract contract OlympusAccessControlled {
 
     event AuthorityUpdated(IOlympusAuthority indexed authority);
 
+    string UNAUTHORIZED = "UNAUTHORIZED"; // save gas
 
     /* ========== STATE VARIABLES ========== */
 
@@ -26,17 +27,22 @@ abstract contract OlympusAccessControlled {
     /* ========== MODIFIERS ========== */
     
     modifier onlyGovernor() {
-        require(msg.sender == authority.governor(), "UNAUTHORIZED");
+        require(msg.sender == authority.governor(), UNAUTHORIZED);
         _;
     }
     
     modifier onlyGuardian() {
-        require(msg.sender == authority.guardian(), "UNAUTHORIZED");
+        require(msg.sender == authority.guardian(), UNAUTHORIZED);
         _;
     }
     
     modifier onlyPolicy() {
-        require(msg.sender == authority.policy(), "UNAUTHORIZED");
+        require(msg.sender == authority.policy(), UNAUTHORIZED);
+        _;
+    }
+
+    modifier onlyVault() {
+        require(msg.sender == authority.vault(), UNAUTHORIZED);
         _;
     }
     
