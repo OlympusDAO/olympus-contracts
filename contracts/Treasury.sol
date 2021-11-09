@@ -430,5 +430,6 @@ contract OlympusTreasury is Ownable, ITreasury {
         if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             value_ = IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);
         }
+        require(value_ != 0, "Token zero value error");
     }
 }
