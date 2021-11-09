@@ -73,7 +73,7 @@ describe("OlympusStaking", () => {
       expect(epoch.number).to.equal(BigNumber.from(EPOCH_NUMBER));
       expect(epoch.endBlock).to.equal(BigNumber.from(FUTURE_END_BLOCK));
 
-      expect(await staking.governor()).to.equal(owner.address);
+      expect(await authority.governor()).to.equal(owner.address);
     });
 
     it("will not allow a 0x0 OHM address", async () => {
@@ -124,7 +124,7 @@ describe("OlympusStaking", () => {
         FUTURE_END_BLOCK,
         authority.address,
       );
-      await authority.connect(owner).pushGovernor(governor.address);
+      await authority.connect(owner).pushGovernor(governor.address, false);
       await authority.connect(governor).pullGovernor();
     });
 
@@ -174,7 +174,7 @@ describe("OlympusStaking", () => {
         nextRebaseBlock,
         authority.address,
       );
-      await authority.connect(owner).pushGovernor(governor.address);
+      await authority.connect(owner).pushGovernor(governor.address, false);
       await authority.connect(governor).pullGovernor();
       await staking.connect(governor).setDistributor(distributorFake.address);
     }
