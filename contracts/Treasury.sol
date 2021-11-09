@@ -8,10 +8,12 @@ import "./interfaces/IOwnable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IERC20Metadata.sol";
 import "./interfaces/IOHM.sol";
+import "./interfaces/IsOHM.sol";
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITreasury.sol";
 
 import "./types/Ownable.sol";
+
 
 contract OlympusTreasury is Ownable, ITreasury {
     /* ========== DEPENDENCIES ========== */
@@ -58,7 +60,7 @@ contract OlympusTreasury is Ownable, ITreasury {
     /* ========== STATE VARIABLES ========== */
 
     IOHM public immutable OHM;
-    IERC20 public sOHM;
+    IsOHM public sOHM;
 
     mapping(STATUS => address[]) public registry;
     mapping(STATUS => mapping(address => bool)) public permissions;
@@ -103,7 +105,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         } else if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             require(permissions[STATUS.LIQUIDITYDEPOSITOR][msg.sender], "Not approved");
         } else {
-            revert( "neither reserve nor liquidity token");
+            revert("neither reserve nor liquidity token");
         }
 
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
@@ -147,12 +149,12 @@ contract OlympusTreasury is Ownable, ITreasury {
         require(permissions[STATUS.RESERVETOKEN][_token], "Not accepted");
 
         uint256 value = tokenValue(_token, _amount);
-        require(value != 0);
+        require(value != 0, "Invalid output token");
 
-        uint256 availableDebt = sOHM.balanceOf(msg.sender).sub(debtorBalance[msg.sender]);
+        uint256 availableDebt = sOHM.balanceOf(msg.sender).sub(sOHM.debtBalances(msg.sender));
         require(value <= availableDebt, "Exceeds debt limit");
 
-        debtorBalance[msg.sender] = debtorBalance[msg.sender].add(value);
+        sOHM.changeDebt(value, msg.sender, true);
         totalDebt = totalDebt.add(value);
 
         totalReserves = totalReserves.sub(value);
@@ -174,7 +176,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 value = tokenValue(_token, _amount);
-        debtorBalance[msg.sender] = debtorBalance[msg.sender].sub(value);
+        sOHM.changeDebt(value, msg.sender, false);
         totalDebt = totalDebt.sub(value);
 
         totalReserves = totalReserves.add(value);
@@ -191,7 +193,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
         OHM.burnFrom(msg.sender, _amount);
 
-        debtorBalance[msg.sender] = debtorBalance[msg.sender].sub(_amount);
+        sOHM.changeDebt(_amount, msg.sender, false);
         totalDebt = totalDebt.sub(_amount);
 
         emit RepayDebt(msg.sender, address(OHM), _amount, _amount);
@@ -264,18 +266,46 @@ contract OlympusTreasury is Ownable, ITreasury {
     ) external onlyOwner {
         require(onChainGoverned, "OCG Not Enabled: Use queueTimelock");
         if (_status == STATUS.SOHM) {
-            // 9
-            sOHM = IERC20(_address);
+            sOHM = IsOHM(_address);
         } else {
-            registry[_status].push(_address);
             permissions[_status][_address] = true;
 
             if (_status == STATUS.LIQUIDITYTOKEN) {
-                // 5
                 bondCalculator[_address] = _calculator;
+            }
+
+            (bool registered, ) = indexInRegistry(_address, _status);
+            if (!registered) {
+                registry[_status].push(_address);
+
+                if (_status == STATUS.LIQUIDITYTOKEN) {
+                    (bool reg, uint256 index) = indexInRegistry(_address, STATUS.RESERVETOKEN);
+                    if (reg) {
+                        delete registry[STATUS.RESERVETOKEN][index];
+                    }
+                } else if (_status == STATUS.RESERVETOKEN) {
+                    (bool reg, uint256 index) = indexInRegistry(_address, STATUS.LIQUIDITYTOKEN);
+                    if (reg) {
+                        delete registry[STATUS.LIQUIDITYTOKEN][index];
+                    }
+                }
             }
         }
         emit Permissioned(_address, _status, true);
+    }
+
+    /**
+     * @notice check if registry contains address
+     * @return uint
+     */
+    function indexInRegistry(address _address, STATUS _status) public view returns (bool, uint256) {
+        address[] memory entries = registry[_status];
+        for (uint256 i = 0; i < entries.length; i++) {
+            if (_address == entries[i]) {
+                return (true, i);
+            }
+        }
+        return (false, 0);
     }
 
     /**
@@ -309,7 +339,9 @@ contract OlympusTreasury is Ownable, ITreasury {
         if (_status == STATUS.RESERVEMANAGER || _status == STATUS.LIQUIDITYMANAGER) {
             timelock = block.number.add(blocksNeededForQueue.mul(2));
         }
-        permissionQueue.push(Queue({managing: _status, toPermit: _address, calculator: _calculator, timelockEnd: timelock, nullify: false, executed: false}));
+        permissionQueue.push(
+            Queue({managing: _status, toPermit: _address, calculator: _calculator, timelockEnd: timelock, nullify: false, executed: false})
+        );
         emit PermissionQueued(_status, _address);
     }
 
@@ -328,14 +360,28 @@ contract OlympusTreasury is Ownable, ITreasury {
 
         if (info.managing == STATUS.SOHM) {
             // 9
-            sOHM = IERC20(info.toPermit);
+            sOHM = IsOHM(info.toPermit);
         } else {
-            registry[info.managing].push(info.toPermit);
             permissions[info.managing][info.toPermit] = true;
 
             if (info.managing == STATUS.LIQUIDITYTOKEN) {
-                // 5
                 bondCalculator[info.toPermit] = info.calculator;
+            }
+            (bool registered, ) = indexInRegistry(info.toPermit, info.managing);
+            if (!registered) {
+                registry[info.managing].push(info.toPermit);
+
+                if (info.managing == STATUS.LIQUIDITYTOKEN) {
+                    (bool reg, uint256 index) = indexInRegistry(info.toPermit, STATUS.RESERVETOKEN);
+                    if (reg) {
+                        delete registry[STATUS.RESERVETOKEN][index];
+                    }
+                } else if (info.managing == STATUS.RESERVETOKEN) {
+                    (bool reg, uint256 index) = indexInRegistry(info.toPermit, STATUS.LIQUIDITYTOKEN);
+                    if (reg) {
+                        delete registry[STATUS.LIQUIDITYTOKEN][index];
+                    }
+                }
             }
         }
         permissionQueue[_index].executed = true;
