@@ -66,6 +66,9 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     mapping(address => mapping(address => uint256)) private _allowedValue;
 
+    address public treasury;
+    mapping(address => uint256) public debtBalances;
+
     /* ========== CONSTRUCTOR ========== */
 
     constructor() ERC20("Staked OHM", "sOHM", 9) ERC20Permit() {
@@ -90,15 +93,18 @@ contract sOlympus is IsOHM, ERC20Permit {
     }
 
     // do this last
-    function initialize(address stakingContract_) external {
+    function initialize(address _stakingContract, address _treasury) external {
         require(msg.sender == initializer, "Initializer:  caller is not initializer");
 
-        require(stakingContract_ != address(0));
-        stakingContract = stakingContract_;
+        require(_stakingContract != address(0), "Staking");
+        stakingContract = _stakingContract;
         _gonBalances[stakingContract] = TOTAL_GONS;
 
+        require(_treasury != address(0), "Zero address: Treasury");
+        treasury = _treasury;
+
         emit Transfer(address(0x0), stakingContract, _totalSupply);
-        emit LogStakingContractUpdated(stakingContract_);
+        emit LogStakingContractUpdated(stakingContract);
 
         initializer = address(0);
     }
@@ -172,6 +178,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         _gonBalances[msg.sender] = _gonBalances[msg.sender].sub(gonValue);
         _gonBalances[to] = _gonBalances[to].add(gonValue);
 
+        require(balanceOf(msg.sender) >= debtBalances(msg.sender), "Debt: cannot transfer amount");
         emit Transfer(msg.sender, to, value);
         return true;
     }
@@ -187,6 +194,8 @@ contract sOlympus is IsOHM, ERC20Permit {
         uint256 gonValue = gonsForBalance(value);
         _gonBalances[from] = _gonBalances[from].sub(gonValue);
         _gonBalances[to] = _gonBalances[to].add(gonValue);
+
+        require(balanceOf(from) >= debtBalances(from), "Debt: cannot transfer amount");
         emit Transfer(from, to, value);
         return true;
     }
