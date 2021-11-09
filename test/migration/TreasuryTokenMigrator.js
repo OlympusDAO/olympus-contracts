@@ -44,6 +44,7 @@ describe("Treasury Token Migration", async function () {
         newStaking;
 
     before(async function () {
+        // Fixed fork
         await fork_network(13487643);
         [deployer, user1] = await ethers.getSigners();
 
@@ -65,7 +66,7 @@ describe("Treasury Token Migration", async function () {
             OLD_WSOHM_ADDRESS,
             SUSHI_ROUTER,
             UNISWAP_ROUTER,
-            1 // timelock for defunds
+            1 // timelock for defund
         );
         const migratorAddress = olympusTokenMigrator.address;
 
@@ -83,7 +84,7 @@ describe("Treasury Token Migration", async function () {
         );
 
         /**
-         * Connect the contracts once they have been deployed
+         *  Connect the contracts once they have been deployed
          * */
 
         // Set gOHM on migrator contract
@@ -100,7 +101,7 @@ describe("Treasury Token Migration", async function () {
         index = await oldSohm.connect(deployer).index();
         sOhm.connect(deployer).setIndex(index);
         sOhm.connect(deployer).setgOHM(gOhm.address);
-        sOhm.connect(deployer).initialize(newStaking.address);
+        sOhm.connect(deployer).initialize(newStaking.address, newTreasury.address);
 
         // Send treasury_manager eth for gas on simimulated mainnet
         await sendETH(deployer, TREASURY_MANAGER);
