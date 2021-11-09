@@ -8,7 +8,7 @@ import {
   IDistributor,
   IgOHM,
   IsOHM,
-  IOHMERC20,
+  IOHM,
   OlympusStaking,
   OlympusStaking__factory,
 } from '../../types';
@@ -23,7 +23,7 @@ describe("OlympusStaking", () => {
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let other: SignerWithAddress;
-  let ohmFake: FakeContract<IOHMERC20>;
+  let ohmFake: FakeContract<IOHM>;
   let sOHMFake: FakeContract<IsOHM>;
   let gOHMFake: FakeContract<IgOHM>;
   let distributorFake: FakeContract<IDistributor>;
@@ -35,7 +35,7 @@ describe("OlympusStaking", () => {
 
   beforeEach(async () => {
     [owner, governor, alice, bob, other] = await ethers.getSigners();
-    ohmFake = await smock.fake<IOHMERC20>("IOHMERC20");
+    ohmFake = await smock.fake<IOHM>("IOHM");
     gOHMFake = await smock.fake<IgOHM>("IgOHM");
     // need to be specific because IsOHM is also defined in OLD
     sOHMFake = await smock.fake<IsOHM>("contracts/interfaces/IsOHM.sol:IsOHM");
@@ -47,6 +47,7 @@ describe("OlympusStaking", () => {
       staking = await (new OlympusStaking__factory(owner)).deploy(
         ohmFake.address,
         sOHMFake.address,
+        gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         FUTURE_END_BLOCK,
@@ -66,6 +67,7 @@ describe("OlympusStaking", () => {
       await expect((new OlympusStaking__factory(owner)).deploy(
         ZERO_ADDRESS,
         sOHMFake.address,
+        gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         FUTURE_END_BLOCK,
@@ -75,6 +77,18 @@ describe("OlympusStaking", () => {
     it("will not allow a 0x0 sOHM address", async () => {
       await expect((new OlympusStaking__factory(owner)).deploy(
         ohmFake.address,
+        ZERO_ADDRESS,
+        gOHMFake.address,
+        EPOCH_LENGTH,
+        EPOCH_NUMBER,
+        FUTURE_END_BLOCK,
+      )).to.be.reverted;
+    });
+
+    it("will not allow a 0x0 gOHM address", async () => {
+      await expect((new OlympusStaking__factory(owner)).deploy(
+        ohmFake.address,
+        sOHMFake.address,
         ZERO_ADDRESS,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
@@ -88,6 +102,7 @@ describe("OlympusStaking", () => {
       staking = await (new OlympusStaking__factory(owner)).deploy(
         ohmFake.address,
         sOHMFake.address,
+        gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         FUTURE_END_BLOCK,
@@ -96,53 +111,37 @@ describe("OlympusStaking", () => {
       await staking.connect(governor).pullGovernor();
     });
 
-    describe("setContract", () => {
+    describe("setDistributor", () => {
       it("can set the distributor", async () => {
-        await staking.connect(governor).setContract(0, distributorFake.address);
+        await staking.connect(governor).setDistributor(distributorFake.address);
         expect(await staking.distributor()).to.equal(distributorFake.address);
       });
 
       it("emits the DistributorSet event", async () => {
-        await expect(staking.connect(governor).setContract(0, distributorFake.address)).
+        await expect(staking.connect(governor).setDistributor(distributorFake.address)).
           to.emit(staking, "DistributorSet").withArgs(distributorFake.address);
       });
 
-      it("can set gOHM", async () => {
-        await staking.connect(governor).setContract(1, gOHMFake.address);
-        expect(await staking.gOHM()).to.equal(gOHMFake.address);
-      });
-
-      it("emits the gOHMSet event", async () => {
-        await expect(staking.connect(governor).setContract(1, gOHMFake.address)).
-          to.emit(staking, "gOHMSet").withArgs(gOHMFake.address);
-      });
-
-      it("will not allow updating gOHM if already set", async () => {
-        await staking.connect(governor).setContract(1, gOHMFake.address);
-        await expect(staking.connect(governor).setContract(1, other.address)).
-          to.be.reverted
-      });
-
       it("can only be done by the governor", async () => {
-        await expect(staking.connect(other).setContract(1, gOHMFake.address)).
+        await expect(staking.connect(other).setDistributor(distributorFake.address)).
           to.be.reverted;
       });
     });
 
-    describe("setWarmup", () => {
+    describe("setWarmupLength", () => {
       it("sets the number of epochs of warmup are required", async () => {
         expect(await staking.warmupPeriod()).to.equal(0);
-        await staking.connect(governor).setWarmup(2);
+        await staking.connect(governor).setWarmupLength(2);
         expect(await staking.warmupPeriod()).to.equal(2);
       });
 
       it("emits a WarmupSet event", async () => {
-        await expect(staking.connect(governor).setWarmup(2)).
+        await expect(staking.connect(governor).setWarmupLength(2)).
           to.emit(staking, "WarmupSet").withArgs(2);
       });
 
       it("can only be set by the governor", async () => {
-        await expect(staking.connect(other).setWarmup(2)).to.be.reverted;
+        await expect(staking.connect(other).setWarmupLength(2)).to.be.reverted;
       });
     });
   });
@@ -152,14 +151,14 @@ describe("OlympusStaking", () => {
       staking = await (new OlympusStaking__factory(owner)).deploy(
         ohmFake.address,
         sOHMFake.address,
+        gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
         nextRebaseBlock,
       );
       await staking.connect(owner).pushGovernor(governor.address);
       await staking.connect(governor).pullGovernor();
-      await staking.connect(governor).setContract(0, distributorFake.address);
-      await staking.connect(governor).setContract(1, gOHMFake.address);
+      await staking.connect(governor).setDistributor(distributorFake.address);
     }
 
     beforeEach(async () => {
@@ -180,7 +179,7 @@ describe("OlympusStaking", () => {
         sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
         sOHMFake.balanceForGons.whenCalledWith(gons).returns(amount);
 
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         expect(await staking.supplyInWarmup()).to.equal(amount);
         expect(await staking.warmupPeriod()).to.equal(0);
@@ -199,7 +198,7 @@ describe("OlympusStaking", () => {
         ohmFake.transferFrom.whenCalledWith(alice.address, staking.address, amount).returns(true);
         sOHMFake.transfer.whenCalledWith(alice.address, amount).returns(true);
 
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         // nothing is in warmup
         sOHMFake.balanceForGons.whenCalledWith(0).returns(0);
@@ -215,7 +214,7 @@ describe("OlympusStaking", () => {
         ohmFake.transferFrom.whenCalledWith(alice.address, staking.address, amount).returns(true);
         gOHMFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
 
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         expect(gOHMFake.mint).to.be.calledWith(alice.address, indexedAmount);
       });
@@ -231,8 +230,8 @@ describe("OlympusStaking", () => {
         sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
         sOHMFake.balanceForGons.whenCalledWith(gons).returns(amount);
 
-        await staking.connect(governor).setWarmup(1);
-        await staking.connect(alice).stake(amount, alice.address, true, true);
+        await staking.connect(governor).setWarmupLength(1);
+        await staking.connect(alice).stake(alice.address, amount, true, true);
 
         expect(await staking.supplyInWarmup()).to.equal(amount);
         let warmupInfo = await staking.warmupInfo(alice.address);
@@ -253,7 +252,7 @@ describe("OlympusStaking", () => {
 
         await staking.connect(alice).toggleLock();
 
-        await expect(staking.connect(alice).stake(amount, bob.address, rebasing, claim)).
+        await expect(staking.connect(alice).stake(bob.address, amount, rebasing, claim)).
           to.be.revertedWith("External deposits for account are locked" );
       });
 
@@ -269,7 +268,7 @@ describe("OlympusStaking", () => {
 
         await staking.connect(alice).toggleLock();
 
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         expect(await staking.supplyInWarmup()).to.equal(amount);
       });
@@ -281,7 +280,7 @@ describe("OlympusStaking", () => {
         let claim = false;
         ohmFake.transferFrom.whenCalledWith(alice.address, staking.address, amount).returns(true);
         sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
-        await staking.connect(wallet).stake(amount, wallet.address, rebasing, claim);
+        await staking.connect(wallet).stake(wallet.address, amount, rebasing, claim);
       }
 
       it("transfers sOHM when rebasing is true", async () => {
@@ -348,7 +347,7 @@ describe("OlympusStaking", () => {
       });
 
       it("does nothing when the warmup isn't over", async () => {
-        await staking.connect(governor).setWarmup(2);
+        await staking.connect(governor).setWarmupLength(2);
         await createClaim(alice, 1000, 10);
 
         await staking.connect(alice).claim(alice.address, true);
@@ -371,7 +370,7 @@ describe("OlympusStaking", () => {
         ohmFake.transferFrom.whenCalledWith(alice.address, staking.address, amount).returns(true)
         sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
 
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
       });
 
       it("removes stake from warmup and returns OHM", async () => {
@@ -402,11 +401,11 @@ describe("OlympusStaking", () => {
 
         ohmFake.transferFrom.returns(true);
         sOHMFake.transfer.returns(true);
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         sOHMFake.transferFrom.returns(true);
         ohmFake.transfer.returns(true);
-        await staking.connect(alice).unstake(amount, false, rebasing);
+        await staking.connect(alice).unstake(alice.address, amount, false, rebasing);
 
         expect(sOHMFake.transferFrom).to.be.calledWith(alice.address, staking.address, amount);
         expect(ohmFake.transfer).to.be.calledWith(alice.address, amount);
@@ -419,11 +418,11 @@ describe("OlympusStaking", () => {
         let claim = true;
 
         ohmFake.transferFrom.returns(true);
-        await staking.connect(alice).stake(amount, alice.address, rebasing, claim);
+        await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
         gOHMFake.balanceFrom.whenCalledWith(indexedAmount).returns(amount);
         ohmFake.transfer.returns(true);
-        await staking.connect(alice).unstake(indexedAmount, false, rebasing);
+        await staking.connect(alice).unstake(alice.address, indexedAmount, false, rebasing);
 
         expect(ohmFake.transfer).to.be.calledWith(alice.address, amount);
         expect(gOHMFake.burn).to.be.calledWith(alice.address, indexedAmount);
@@ -438,7 +437,7 @@ describe("OlympusStaking", () => {
         gOHMFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
         sOHMFake.transferFrom.returns(true);
 
-        await staking.connect(alice).wrap(amount);
+        await staking.connect(alice).wrap(alice.address, amount);
 
         expect(gOHMFake.mint).to.be.calledWith(alice.address, indexedAmount);
         expect(sOHMFake.transferFrom).to.be.calledWith(alice.address, staking.address, amount);
@@ -453,7 +452,7 @@ describe("OlympusStaking", () => {
         gOHMFake.balanceFrom.whenCalledWith(indexedAmount).returns(amount);
         sOHMFake.transfer.returns(true);
 
-        await staking.connect(alice).unwrap(indexedAmount);
+        await staking.connect(alice).unwrap(alice.address, indexedAmount);
 
         expect(gOHMFake.burn).to.be.calledWith(alice.address, indexedAmount);
         expect(sOHMFake.transfer).to.be.calledWith(alice.address, amount);

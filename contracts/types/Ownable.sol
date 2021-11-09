@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity >=0.7.5;
 
 import "../interfaces/IOwnable.sol";
 
@@ -26,12 +26,12 @@ abstract contract Ownable is IOwnable {
     }
 
     function renounceManagement() public virtual override onlyOwner() {
-        emit OwnershipPushed( _owner, address(0) );
+        emit OwnershipPulled( _owner, address(0) );
         _owner = address(0);
+        _newOwner = address(0);
     }
 
     function pushManagement( address newOwner_ ) public virtual override onlyOwner() {
-        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
         emit OwnershipPushed( _owner, newOwner_ );
         _newOwner = newOwner_;
     }
@@ -40,5 +40,6 @@ abstract contract Ownable is IOwnable {
         require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
         emit OwnershipPulled( _owner, _newOwner );
         _owner = _newOwner;
+        _newOwner = address(0);
     }
 }
