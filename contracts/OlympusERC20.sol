@@ -5,7 +5,7 @@ import "./libraries/SafeMath.sol";
 import "./libraries/EnumerableSet.sol";
 
 import "./interfaces/IERC20.sol";
-import "./interfaces/IERC2612Permit.sol";
+import "./interfaces/IERC20Permit.sol";
 
 import "./types/ERC20Permit.sol";
 import "./types/Ownable.sol";
@@ -16,7 +16,7 @@ contract OlympusERC20Token is ERC20Permit, VaultOwned {
 
     using SafeMath for uint256;
 
-    constructor() ERC20("Olympus", "OHM", 9) {
+    constructor() ERC20("Olympus", "OHM", 9) ERC20Permit("Olympus"){
     }
 
     function mint(address account_, uint256 amount_) external onlyVault() {
