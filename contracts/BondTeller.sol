@@ -1,21 +1,26 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.7.5;
 
 import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
-import "./interfaces/IgOHM.sol";
 import "./interfaces/IStaking.sol";
+import "./interfaces/IOwnable.sol";
+import "./interfaces/IsOHM.sol";
+import "./interfaces/ITeller.sol";
 
-contract BondTeller {
+import "./types/Ownable.sol";
+
+contract BondTeller is ITeller, Ownable {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using SafeERC20 for IsOHM;
 
-    /* ========== EVENTS ========== */
+    /* ========== EVENTS =========== */
 
     event BondCreated(address indexed bonder, uint256 payout, uint256 expires);
     event Redeemed(address indexed bonder, uint256 payout);
@@ -34,19 +39,18 @@ contract BondTeller {
         address principal; // token used to pay for bond
         uint256 principalPaid; // amount of principal token paid for bond
         uint256 payout; // sOHM remaining to be paid. agnostic balance
-        uint256 vested; // Block when vested
+        uint256 vested; // Block when bond is vested
         uint256 created; // time bond was created
         uint256 redeemed; // time bond was redeemed
     }
 
     /* ========== STATE VARIABLES ========== */
 
-    address depository; // contract where users deposit bonds
-    IStaking immutable staking; // contract to stake payout
-    ITreasury immutable treasury;
-    IERC20 immutable OHM;
-    IERC20 immutable sOHM; // payment token
-    IgOHM immutable gOHM;
+    address internal immutable depository; // contract where users deposit bonds
+    IStaking internal immutable staking; // contract to stake payout
+    ITreasury internal immutable treasury;
+    IERC20 internal immutable OHM;
+    IsOHM internal immutable sOHM; // payment token
 
     mapping(address => Bond[]) public bonderInfo; // user data
     mapping(address => uint256[]) public indexesFor; // user bond indexes
@@ -54,31 +58,25 @@ contract BondTeller {
     mapping(address => uint256) public FERs; // front end operator rewards
     uint256 public feReward;
 
-    address public policy;
-
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
         address _depository,
         address _staking,
         address _treasury,
-        address _OHM,
-        address _sOHM,
-        address _gOHM
+        address _ohm,
+        address _sOHM
     ) {
-        require(_depository != address(0));
+        require(_depository != address(0), "Zero address: Depository");
         depository = _depository;
-        require(_staking != address(0));
+        require(_staking != address(0), "Zero address: Staking");
         staking = IStaking(_staking);
-        require(_treasury != address(0));
+        require(_treasury != address(0), "Zero address: Treasury");
         treasury = ITreasury(_treasury);
-        require(_OHM != address(0));
-        OHM = IERC20(_OHM);
-        require(_sOHM != address(0));
-        sOHM = IERC20(_sOHM);
-        require(_gOHM != address(0));
-        gOHM = IgOHM(_gOHM);
-        IERC20(_OHM).approve(_staking, 1e27); // saves gas
+        require(_ohm != address(0), "Zero address: OHM");
+        OHM = IERC20(_ohm);
+        require(_sOHM != address(0), "Zero address: sOHM");
+        sOHM = IsOHM(_sOHM);
     }
 
     /* ========== DEPOSITORY FUNCTIONS ========== */
@@ -87,11 +85,11 @@ contract BondTeller {
      * @notice add new bond payout to user data
      * @param _bonder address
      * @param _principal address
-     * @param _principalPaid uint
-     * @param _payout uint
-     * @param _expires uint
+     * @param _principalPaid uint256
+     * @param _payout uint256
+     * @param _expires uint256
      * @param _feo address
-     * @return index_ uint
+     * @return index_ uint256
      */
     function newBond(
         address _bonder,
@@ -100,19 +98,28 @@ contract BondTeller {
         uint256 _payout,
         uint256 _expires,
         address _feo
-    ) external onlyDepository returns (uint256 index_) {
-        treasury.mint(address(this), _payout.add(feReward));
+    ) external override onlyDepository returns (uint256 index_) {
+        uint256 reward = _payout.mul(feReward).div(10_000);
+        treasury.mint(address(this), _payout.add(reward));
 
-        OHM.approve(address(staking), _payout); // approve staking payout
+        OHM.approve(address(staking), _payout);
+        staking.stake(address(this), _payout, true, true);
 
-        staking.stake(_payout, address(this), true, true);
-
-        FERs[_feo] = FERs[_feo].add(feReward); // FE operator takes fee
+        FERs[_feo] = FERs[_feo].add(reward); // front end operator reward
 
         index_ = bonderInfo[_bonder].length;
 
         // store bond & stake payout
-        bonderInfo[_bonder].push(Bond({principal: _principal, principalPaid: _principalPaid, payout: gOHM.balanceTo(_payout), vested: _expires, created: block.timestamp, redeemed: 0}));
+        bonderInfo[_bonder].push(
+            Bond({
+                principal: _principal,
+                principalPaid: _principalPaid,
+                payout: sOHM.toG(_payout),
+                vested: _expires,
+                created: block.timestamp,
+                redeemed: 0
+            })
+        );
     }
 
     /* ========== INTERACTABLE FUNCTIONS ========== */
@@ -120,9 +127,9 @@ contract BondTeller {
     /**
      *  @notice redeems all redeemable bonds
      *  @param _bonder address
-     *  @return uint
+     *  @return uint256
      */
-    function redeemAll(address _bonder) external returns (uint256) {
+    function redeemAll(address _bonder) external override returns (uint256) {
         updateIndexesFor(_bonder);
         return redeem(_bonder, indexesFor[_bonder]);
     }
@@ -130,10 +137,10 @@ contract BondTeller {
     /**
      *  @notice redeem bond for user
      *  @param _bonder address
-     *  @param _indexes calldata uint[]
-     *  @return uint
+     *  @param _indexes calldata uint256[]
+     *  @return uint256
      */
-    function redeem(address _bonder, uint256[] memory _indexes) public returns (uint256) {
+    function redeem(address _bonder, uint256[] memory _indexes) public override returns (uint256) {
         uint256 dues;
         for (uint256 i = 0; i < _indexes.length; i++) {
             Bond memory info = bonderInfo[_bonder][_indexes[i]];
@@ -145,18 +152,24 @@ contract BondTeller {
             }
         }
 
-        dues = gOHM.balanceFrom(dues);
+        dues = sOHM.fromG(dues);
 
         emit Redeemed(_bonder, dues);
         pay(_bonder, dues);
         return dues;
     }
 
+    // pay reward to front end operator
+    function getReward() external override {
+        uint256 reward = FERs[msg.sender];
+        FERs[msg.sender] = 0;
+        OHM.safeTransfer(msg.sender, reward);
+    }
+
     /* ========== OWNABLE FUNCTIONS ========== */
 
-    function setFEReward(uint256 reward) external {
-        require(msg.sender == policy, "Only policy");
-
+    // set reward for front end operator (4 decimals. 100 = 1%)
+    function setFEReward(uint256 reward) external override onlyOwner {
         feReward = reward;
     }
 
@@ -164,10 +177,10 @@ contract BondTeller {
 
     /**
      *  @notice send payout
-     *  @param _amount uint
+     *  @param _amount uint256
      */
     function pay(address _bonder, uint256 _amount) internal {
-        sOHM.transfer(_bonder, _amount);
+        sOHM.safeTransfer(_bonder, _amount);
     }
 
     /* ========== VIEW FUNCTIONS ========== */
@@ -176,7 +189,7 @@ contract BondTeller {
      *  @notice returns indexes of live bonds
      *  @param _bonder address
      */
-    function updateIndexesFor(address _bonder) public {
+    function updateIndexesFor(address _bonder) public override {
         Bond[] memory info = bonderInfo[_bonder];
         delete indexesFor[_bonder];
         for (uint256 i = 0; i < info.length; i++) {
@@ -191,10 +204,10 @@ contract BondTeller {
     /**
      * @notice calculate amount of OHM available for claim for single bond
      * @param _bonder address
-     * @param _index uint
-     * @return uint
+     * @param _index uint256
+     * @return uint256
      */
-    function pendingFor(address _bonder, uint256 _index) public view returns (uint256) {
+    function pendingFor(address _bonder, uint256 _index) public view override returns (uint256) {
         if (bonderInfo[_bonder][_index].redeemed == 0 && bonderInfo[_bonder][_index].vested <= block.number) {
             return bonderInfo[_bonder][_index].payout;
         }
@@ -204,27 +217,27 @@ contract BondTeller {
     /**
      * @notice calculate amount of OHM available for claim for array of bonds
      * @param _bonder address
-     * @param _indexes uint[]
-     * @return pending_ uint
+     * @param _indexes uint256[]
+     * @return pending_ uint256
      */
-    function pendingForIndexes(address _bonder, uint256[] memory _indexes) public view returns (uint256 pending_) {
+    function pendingForIndexes(address _bonder, uint256[] memory _indexes) public view override returns (uint256 pending_) {
         for (uint256 i = 0; i < _indexes.length; i++) {
             pending_ = pending_.add(pendingFor(_bonder, i));
         }
-        pending_ = gOHM.balanceFrom(pending_);
+        pending_ = sOHM.fromG(pending_);
     }
 
     /**
      *  @notice total pending on all bonds for bonder
      *  @param _bonder address
-     *  @return pending_ uint
+     *  @return pending_ uint256
      */
-    function totalPendingFor(address _bonder) public view returns (uint256 pending_) {
+    function totalPendingFor(address _bonder) public view override returns (uint256 pending_) {
         Bond[] memory info = bonderInfo[_bonder];
         for (uint256 i = 0; i < info.length; i++) {
             pending_ = pending_.add(pendingFor(_bonder, i));
         }
-        pending_ = gOHM.balanceFrom(pending_);
+        pending_ = sOHM.fromG(pending_);
     }
 
     // VESTING
@@ -232,10 +245,10 @@ contract BondTeller {
     /**
      * @notice calculate how far into vesting a depositor is
      * @param _bonder address
-     * @param _index uint
-     * @return percentVested_ uint
+     * @param _index uint256
+     * @return percentVested_ uint256
      */
-    function percentVestedFor(address _bonder, uint256 _index) public view returns (uint256 percentVested_) {
+    function percentVestedFor(address _bonder, uint256 _index) public view override returns (uint256 percentVested_) {
         Bond memory bond = bonderInfo[_bonder][_index];
 
         uint256 timeSince = block.timestamp.sub(bond.created);

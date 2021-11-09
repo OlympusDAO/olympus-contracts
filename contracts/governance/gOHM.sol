@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.7.5;
+pragma solidity ^0.7.5;
 
 import "../libraries/SafeERC20.sol";
 import "../libraries/SafeMath.sol";
@@ -56,7 +56,7 @@ contract gOHM is IgOHM {
     /* ========== CONSTRUCTOR ========== */
 
     constructor(address _migrator) {
-        require(_migrator != address(0));
+        require(_migrator != address(0), "Zero address found");
         approved = _migrator;
     }
 
@@ -124,12 +124,13 @@ contract gOHM is IgOHM {
      * @param _sOHM address
      */
     function migrate(address _staking, address _sOHM) external override onlyApproved {
-        require(_staking != approved);
+        require(_staking != approved, "Invalid argument");
 
-        require(_staking != address(0));
+        require(_staking != address(0), "Zero address found");
         approved = _staking;
 
-        require(_sOHM != address(0));
+        require(address(sOHM) == address(0), "Cannot migrate twice");
+        require(_sOHM != address(0), "Zero address found");
         sOHM = IsOHM(_sOHM);
     }
 
@@ -370,7 +371,6 @@ contract gOHM is IgOHM {
         uint256 oldVotes,
         uint256 newVotes
     ) internal {
-
         if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == block.number) {
             checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
         } else {
