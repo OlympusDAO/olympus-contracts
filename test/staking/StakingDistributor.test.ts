@@ -510,5 +510,4 @@ describe("Distributor", () => {
               ).to.be.revertedWith("Caller is not governor or guardian");
           });
       });
-    });
 });
