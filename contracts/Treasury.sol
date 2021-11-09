@@ -208,6 +208,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             require(permissions[STATUS.LIQUIDITYMANAGER][msg.sender], "Not approved");
         } else {
+            require(permissions[STATUS.RESERVETOKEN][_token], "Not reserve token");
             require(permissions[STATUS.RESERVEMANAGER][msg.sender], "Not approved");
         }
 
