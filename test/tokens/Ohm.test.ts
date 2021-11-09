@@ -27,7 +27,7 @@ describe("OlympusTest", () => {
   describe("mint", () => {
     it("must be done by vault", async () => {
       await expect(ohm.connect(deployer).mint(bob.address, 100)).
-        to.be.revertedWith("VaultOwned: caller is not the Vault");
+        to.be.revertedWith("UNAUTHORIZED");
     });
 
     it("increases total supply", async () => {

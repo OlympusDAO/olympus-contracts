@@ -10,9 +10,9 @@ import "./interfaces/IERC20Metadata.sol";
 import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
-import "./types/Ownable.sol";
+import "./types/OlympusAccessControlled.sol";
 
-contract OlympusTreasury is Ownable, ITreasury {
+contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -76,7 +76,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _OHM, uint256 _timelock) {
+    constructor(address _OHM, uint256 _timelock, address _authority) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_OHM != address(0));
         OHM = IOHM(_OHM);
 
@@ -236,7 +236,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         @notice takes inventory of all tracked assets
         @notice always consolidate to recognized reserves before audit
      */
-    function auditReserves() external onlyOwner {
+    function auditReserves() external onlyGovernor {
         uint256 reserves;
         address[] memory reserveToken = registry[STATUS.RESERVETOKEN];
         for (uint256 i = 0; i < reserveToken.length; i++) {
@@ -260,7 +260,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         STATUS _status,
         address _address,
         address _calculator
-    ) external onlyOwner {
+    ) external onlyGovernor {
         require(onChainGoverned, "OCG Not Enabled: Use queueTimelock");
         if (_status == STATUS.SOHM) {
             // 9
@@ -282,7 +282,7 @@ contract OlympusTreasury is Ownable, ITreasury {
      *  @param _status STATUS
      *  @param _toDisable address
      */
-    function disable(STATUS _status, address _toDisable) external onlyOwner {
+    function disable(STATUS _status, address _toDisable) external onlyGovernor {
         permissions[_status][_toDisable] = false;
         emit Permissioned(_toDisable, _status, false);
     }
@@ -300,7 +300,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         STATUS _status,
         address _address,
         address _calculator
-    ) external onlyOwner {
+    ) external onlyGovernor {
         require(_address != address(0));
         require(!onChainGoverned, "OCG Enabled: Use enable");
 
@@ -354,14 +354,14 @@ contract OlympusTreasury is Ownable, ITreasury {
      * @notice cancel timelocked action
      * @param _index uint256
      */
-    function nullify(uint256 _index) external onlyOwner {
+    function nullify(uint256 _index) external onlyGovernor {
         permissionQueue[_index].nullify = true;
     }
 
     /**
      * @notice disables timelocked functions
      */
-    function enableOnChainGovernance() external onlyOwner {
+    function enableOnChainGovernance() external onlyGovernor {
         if (onChainGovernanceTimelock != 0 && onChainGovernanceTimelock <= block.number) {
             onChainGoverned = true;
         } else {

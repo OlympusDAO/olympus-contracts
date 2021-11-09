@@ -83,5 +83,51 @@ contract OlympusAuthorityTest is DSTest {
         accessControlledMock.vaultTest();
     }
 
+    // TODO create tests for push/pull mechanism within OlympusAuthority
 
+    function test_pullRole_authorized() public {
+        authority = new OlympusAuthority(address(this), address(this), address(this), address(this));
+        accessControlledMock = new AccessControlledMock( address(authority) );
+        authority.pushGovernor(address(this), false);
+        authority.pushGuardian(address(this), false);
+        authority.pushPolicy(address(this), false);
+        authority.pushVault(address(this), false);
+        authority.pullGovernor();
+        authority.pullGuardian();
+        authority.pullPolicy();
+        authority.pullVault();
+    }
+
+    function test_pullRole_not_authorized() public {
+        authority = new OlympusAuthority(address(this), address(this), address(this), address(this));
+        accessControlledMock = new AccessControlledMock( address(authority) );
+        authority.pushGovernor(UNAUTHORIZED_USER, false);
+        authority.pushGuardian(UNAUTHORIZED_USER, false);
+        authority.pushPolicy(UNAUTHORIZED_USER, false);
+        authority.pushVault(UNAUTHORIZED_USER, false);
+        
+        try authority.pullGovernor() {
+            fail();
+        } catch Error(string memory error) {
+            assertEq("!newGovernor", error);
+        }
+
+        try authority.pullGuardian() {
+            fail();
+        } catch Error(string memory error) {
+            assertEq("!newGuard", error);
+        }
+
+        try authority.pullPolicy(){
+            fail();
+        } catch Error(string memory error) {
+            assertEq("!newPolicy", error);
+        }
+
+        try authority.pullVault() {
+            fail();
+        } catch Error(string memory error) {
+            assertEq("!newVault", error);
+        }
+    }
 }
