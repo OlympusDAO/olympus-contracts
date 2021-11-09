@@ -67,7 +67,7 @@ contract sOlympus is IsOHM, ERC20Permit {
     mapping(address => mapping(address => uint256)) private _allowedValue;
 
     address public treasury;
-    mapping(address => uint256) public debtBalances;
+    mapping(address => uint256) public override debtBalances;
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -178,7 +178,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         _gonBalances[msg.sender] = _gonBalances[msg.sender].sub(gonValue);
         _gonBalances[to] = _gonBalances[to].add(gonValue);
 
-        require(balanceOf(msg.sender) >= debtBalances(msg.sender), "Debt: cannot transfer amount");
+        require(balanceOf(msg.sender) >= debtBalances[msg.sender], "Debt: cannot transfer amount");
         emit Transfer(msg.sender, to, value);
         return true;
     }
@@ -195,7 +195,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         _gonBalances[from] = _gonBalances[from].sub(gonValue);
         _gonBalances[to] = _gonBalances[to].add(gonValue);
 
-        require(balanceOf(from) >= debtBalances(from), "Debt: cannot transfer amount");
+        require(balanceOf(from) >= debtBalances[from], "Debt: cannot transfer amount");
         emit Transfer(from, to, value);
         return true;
     }
@@ -224,7 +224,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         uint256 amount,
         address debtor,
         bool add
-    ) external {
+    ) external override {
         require(msg.sender == treasury, "Only treasury");
         if (add) {
             debtBalances[debtor] = debtBalances[debtor].add(amount);
@@ -256,14 +256,6 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     function balanceForGons(uint256 gons) public view override returns (uint256) {
         return gons.div(_gonsPerFragment);
-    }
-
-    function toG(uint256 amount) external view override returns (uint256) {
-        return gOHM.balanceTo(amount);
-    }
-
-    function fromG(uint256 amount) external view override returns (uint256) {
-        return gOHM.balanceFrom(amount);
     }
 
     function toG(uint256 amount) external view override returns (uint256) {
