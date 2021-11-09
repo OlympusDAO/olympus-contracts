@@ -20,7 +20,7 @@ contract BondTeller is ITeller, Ownable {
     using SafeERC20 for IERC20;
     using SafeERC20 for IsOHM;
 
-    /* ========== EVENTS ========== */
+    /* ========== EVENTS =========== */
 
     event BondCreated(address indexed bonder, uint256 payout, uint256 expires);
     event Redeemed(address indexed bonder, uint256 payout);
