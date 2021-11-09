@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.7.5;
 
 import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
@@ -7,7 +7,7 @@ import "./libraries/SafeERC20.sol";
 import "./interfaces/IOwnable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IERC20Metadata.sol";
-import "./interfaces/IOHMERC20.sol";
+import "./interfaces/IOHM.sol";
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITreasury.sol";
 
@@ -57,7 +57,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /* ========== STATE VARIABLES ========== */
 
-    IOHMERC20 immutable OHM;
+    IOHM public immutable OHM;
     IERC20 public sOHM;
 
     mapping(STATUS => address[]) public registry;
@@ -79,7 +79,7 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     constructor(address _ohm, uint256 _timelock) {
         require(_ohm != address(0), "Zero address: OHM");
-        OHM = IOHMERC20(_ohm);
+        OHM = IOHM(_ohm);
 
         blocksNeededForQueue = _timelock;
     }

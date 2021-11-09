@@ -112,10 +112,18 @@ contract BondDepositoryTest is DSTest {
         OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 16, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
         uint256 initialDebt = 0;
         uint256 ohmMintAmount = 10 * 10 ** 18;
-        try this.createBond_deposit(2763957476737854671246564045522737104576123858413359401, ohmMintAmount, false, 9 * 10 ** 20, terms, initialDebt, 1 * 10 ** 9){
+        try this.createBond_deposit(
+            2763957476737854671246564045522737104576123858413359401,
+            ohmMintAmount,
+            false,
+            9 * 10 ** 20,
+            terms,
+            initialDebt,
+            1 * 10 ** 9
+        ){
             fail();
         } catch Error(string memory error) {
-            assertEq("FullMath::mulDiv: overflow", error);
+            assertEq("FullMath: FULLDIV_OVERFLOW", error);
         }
     }
 

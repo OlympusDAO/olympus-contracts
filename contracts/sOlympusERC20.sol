@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.7.5;
 
 import "./libraries/Address.sol";
 import "./libraries/SafeMath.sol";
@@ -18,7 +18,7 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     /* ========== EVENTS ========== */
 
-    event LogSupply(uint256 indexed epoch, uint256 timestamp, uint256 totalSupply );
+    event LogSupply(uint256 indexed epoch, uint256 totalSupply );
     event LogRebase( uint256 indexed epoch, uint256 rebase, uint256 index );
     event LogStakingContractUpdated( address stakingContract );
 
@@ -52,7 +52,7 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     Rebase[] public rebases; // past rebase data
 
-    uint256 private constant MAX_UINT256 = ~uint256(0);
+    uint256 private constant MAX_UINT256 = type(uint256).max;
     uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 5_000_000 * 10**9;
 
     // TOTAL_GONS is a multiple of INITIAL_FRAGMENTS_SUPPLY so that _gonsPerFragment is an integer.
@@ -77,22 +77,22 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     /* ========== INITIALIZATION ========== */
 
-    function setIndex( uint _INDEX ) external {
-        require( msg.sender == initializer );
-        require( INDEX == 0 );
-        INDEX = gonsForBalance( _INDEX );
+    function setIndex( uint _index ) external {
+        require( msg.sender == initializer, "Initializer:  caller is not initializer");
+        require( INDEX == 0, "Cannot set INDEX again");
+        INDEX = gonsForBalance( _index );
     }
 
     function setgOHM( address _gOHM ) external {
-        require( msg.sender == initializer );
-        require( address( gOHM ) == address(0) );
-        require( _gOHM != address(0) );
+        require( msg.sender == initializer, "Initializer:  caller is not initializer");
+        require( address( gOHM ) == address(0), "gOHM:  gOHM already set");
+        require( _gOHM != address(0), "gOHM:  gOHM is not a valid contract");
         gOHM = IgOHM( _gOHM );
     }
 
     // do this last
     function initialize( address stakingContract_ ) external {
-        require( msg.sender == initializer );
+        require( msg.sender == initializer, "Initializer:  caller is not initializer");
 
         require( stakingContract_ != address(0) );
         stakingContract = stakingContract_;
@@ -115,7 +115,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         uint256 rebaseAmount;
         uint256 circulatingSupply_ = circulatingSupply();
         if ( profit_ == 0 ) {
-            emit LogSupply( epoch_, block.timestamp, _totalSupply );
+            emit LogSupply( epoch_, _totalSupply );
             emit LogRebase( epoch_, 0, index() );
             return _totalSupply;
         } else if ( circulatingSupply_ > 0 ){
@@ -155,7 +155,7 @@ contract sOlympus is IsOHM, ERC20Permit {
             blockNumberOccured: block.number
         }));
 
-        emit LogSupply( epoch_, block.timestamp, _totalSupply );
+        emit LogSupply( epoch_, _totalSupply );
         emit LogRebase( epoch_, rebasePercent, index() );
     }
 
@@ -163,15 +163,17 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     function transfer( address to, uint256 value ) public override(IERC20, ERC20) returns (bool) {
         uint256 gonValue = value.mul( _gonsPerFragment );
+
         _gonBalances[ msg.sender ] = _gonBalances[ msg.sender ].sub( gonValue );
         _gonBalances[ to ] = _gonBalances[ to ].add( gonValue );
+
         emit Transfer( msg.sender, to, value );
         return true;
     }
 
     function transferFrom( address from, address to, uint256 value ) public override(IERC20, ERC20) returns (bool) {
-       _allowedValue[ from ][ msg.sender ] = _allowedValue[ from ][ msg.sender ].sub( value );
-       emit Approval( from, msg.sender,  _allowedValue[ from ][ msg.sender ] );
+        _allowedValue[ from ][ msg.sender ] = _allowedValue[ from ][ msg.sender ].sub( value );
+        emit Approval( from, msg.sender,  _allowedValue[ from ][ msg.sender ] );
 
         uint256 gonValue = gonsForBalance( value );
         _gonBalances[ from ] = _gonBalances[from].sub( gonValue );
@@ -181,31 +183,27 @@ contract sOlympus is IsOHM, ERC20Permit {
     }
 
     function approve( address spender, uint256 value ) public override(IERC20, ERC20) returns (bool) {
-         _allowedValue[ msg.sender ][ spender ] = value;
-         emit Approval( msg.sender, spender, value );
-         return true;
+        _approve(msg.sender, spender, value);
+        return true;
     }
 
     function increaseAllowance( address spender, uint256 addedValue ) public override returns (bool) {
-        _allowedValue[ msg.sender ][ spender ] = _allowedValue[ msg.sender ][ spender ].add( addedValue );
-        emit Approval( msg.sender, spender, _allowedValue[ msg.sender ][ spender ] );
+        _approve(msg.sender, spender, _allowedValue[msg.sender][spender].add(addedValue));
         return true;
     }
 
     function decreaseAllowance( address spender, uint256 subtractedValue ) public override returns (bool) {
-        uint256 oldValue = _allowedValue[ msg.sender ][ spender ];
+        uint256 oldValue = _allowedValue[msg.sender][spender];
         if (subtractedValue >= oldValue) {
-            _allowedValue[ msg.sender ][ spender ] = 0;
+            _approve(msg.sender, spender, 0);
         } else {
-            _allowedValue[ msg.sender ][ spender ] = oldValue.sub( subtractedValue );
+            _approve(msg.sender, spender, oldValue.sub(subtractedValue));
         }
-        emit Approval( msg.sender, spender, _allowedValue[ msg.sender ][ spender ] );
         return true;
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
 
-    // called in a permit
     function _approve( address owner, address spender, uint256 value ) internal override virtual {
         _allowedValue[owner][spender] = value;
         emit Approval( owner, spender, value );
