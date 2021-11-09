@@ -151,6 +151,30 @@ interface IStabilityPool {
     function getCompoundedFrontEndStake(address _frontEnd) external view returns (uint256);
 }
 
+// Copied selected methods from https://github.com/liquity/dev/blob/f0fa535fd9a44a5322ab461f1f5c421a20c0234d/packages/contracts/contracts/Interfaces/ITroveManager.sol
+interface ITroveManager {
+    function getEntireDebtAndColl(address _borrower) external view returns (
+        uint debt,
+        uint coll,
+        uint pendingLUSDDebtReward,
+        uint pendingETHReward
+    );
+}
+
+// Copied selected methods from
+interface ISortedTroves {
+    function getSize() external view returns (uint256);
+    function findInsertPosition(uint256 _ICR, address _prevId, address _nextId) external view returns (address, address);
+}
+
+// Copied selected methods from https://github.com/liquity/dev/blob/052d05837e6f1bf402a608378792da5acb8cf618/packages/contracts/contracts/HintHelpers.sol
+interface IHintHelpers {
+    function getApproxHint(uint _CR, uint _numTrials, uint _inputRandomSeed)
+    external
+    view
+    returns (address hintAddress, uint diff, uint latestRandomSeed);
+}
+
 /**
  *  Contract deploys reserves from treasury into the Aave lending pool,
  *  earning interest and $stkAAVE.
@@ -165,10 +189,14 @@ contract LUSDAllocator is Ownable {
     /* ======== STATE VARIABLES ======== */
 
     IStabilityPool immutable lusdStabilityPool;
+    IHintHelpers immutable hintHelper;  // 0xE84251b93D9524E0d2e621Ba7dc7cb3579F997C0 from https://github.com/liquity/dev/blob/main/packages/contracts/mainnetDeployment/realDeploymentOutput/output14.txt#L17
+    ITroveManager immutable troveManager; // 0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2 from https://github.com/liquity/dev/blob/main/packages/contracts/mainnetDeployment/realDeploymentOutput/output14.txt#L10
+    ISortedTroves immutable sortedTroves;  // 0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6 from https://github.com/liquity/dev/blob/main/packages/contracts/mainnetDeployment/realDeploymentOutput/output14.txt#L9
     ITreasury immutable treasury; // Olympus Treasury
     // TODO(zx): I don't think we care about front-end because we're our own frontend.
     address public frontEndAddress; // frontEndAddress for potential liquity rewards
-    address public lusdTokenAddress; // LUSD Address (0x5f98805A4E8be255a32880FDeC7F6728C6568bA0)
+    address public lusdTokenAddress; // LUSD Address (0x5f98805A4E8be255a32880FDeC7F6728C6568bA0) from https://github.com/liquity/dev/blob/main/packages/contracts/mainnetDeployment/realDeploymentOutput/output14.txt#L19
+
 
     uint256 public totalValueDeployed; // total RFV deployed into lending pool
     uint256 public totalAmountDeployed; // Total amount of tokens deployed
@@ -179,6 +207,9 @@ contract LUSDAllocator is Ownable {
         address _treasury,
         address _lusdTokenAddress,
         address _stabilityPool,
+        address _sortedTrovesAddress,
+        address _hintHelpersAddress,
+        address _troveManagerAddress,
         address _frontEndAddress
     ) {
         require(_treasury != address(0), "treasury address cannot be 0x0");
@@ -190,6 +221,15 @@ contract LUSDAllocator is Ownable {
         require(_lusdTokenAddress != address(0), "LUSD token address cannot be 0x0");
         lusdTokenAddress = _lusdTokenAddress;
 
+        require(_sortedTrovesAddress != address(0), "SortedTrove token address cannot be 0x0");
+        sortedTroves = ISortedTroves(_sortedTrovesAddress);
+
+        require(_hintHelpersAddress != address(0), "HintHelper token address cannot be 0x0");
+        hintHelper = IHintHelpers(_hintHelpersAddress);
+
+        require(_troveManagerAddress != address(0), "TroveManager token address cannot be 0x0");
+        troveManager = ITroveManager(_troveManagerAddress);
+
         frontEndAddress = _frontEndAddress; // address can be 0
     }
 
@@ -199,9 +239,30 @@ contract LUSDAllocator is Ownable {
      *  @notice claims LQTY & ETH Rewards
      */
     function harvest() public returns (bool) {
-        // TODO need to harvest ETH rewards from LQTY stability pools that are sent to address(this)
-        // TODO need to harvest LQTY rewards
+
+        (address upperHint, address lowerHint) = getHints(address(this));
+
+        //This harvests both ETH and LQTY rewards
+        lusdStabilityPool.withdrawETHGainToTrove(upperHint, lowerHint);
+
         return true;
+    }
+
+    // Algorithm from https://github.com/liquity/dev/blob/main/README.md#adjusting-a-trove
+    // @return hints to use to call trove with - upperHint and lowerHints are needed to save gas on those calls
+    function getHints(address borrower) public view returns (address upperHint, address lowerHint){
+        (uint debt, uint coll, ,) = troveManager.getEntireDebtAndColl(borrower);
+
+        uint256 nicr = coll.mul(1 * 10 ** 20).div(debt);  //3.595383649313183e16
+        uint256 numTrials =  sortedTroves.getSize().mul(15); //size = 1213, so * 15 = 18195
+        if (numTrials > 5000){
+            numTrials = 5000; //Had problems with timeouts from infura and manually against etherscan.  Might wanna emit a log here or keep track of gas spent on txn using these hints
+        }
+        uint pseudoRandom = uint(keccak256(abi.encode(block.difficulty, block.timestamp)));  // From https://stackoverflow.com/a/67332959
+        (address hintAddress, , ) = hintHelper.getApproxHint(nicr, numTrials, pseudoRandom);
+
+        // Use the approximate hint to get the exact upper and lower hints from the deployed SortedTroves contract
+        return sortedTroves.findInsertPosition(nicr, hintAddress, hintAddress);
     }
 
     /* ======== POLICY FUNCTIONS ======== */

@@ -10,6 +10,9 @@ import {
   IStabilityPool,
   LUSDAllocator,
   LUSDAllocator__factory,
+  ISortedTroves,
+  IHintHelpers,
+  ITroveManager,
 } from '../../types';
 
 chai.use(smock.matchers);
@@ -23,6 +26,9 @@ describe("LUSDAllocator", () => {
   let bob: SignerWithAddress;
   let treasuryFake: FakeContract<ITreasury>;
   let stabilityPoolFake: FakeContract<IStabilityPool>;
+  let sortedTrovesFake: FakeContract<ISortedTroves>;
+  let hintHelpersFake: FakeContract<IHintHelpers>;
+  let troveManagerFake: FakeContract<ITroveManager>;
   let lusdTokenFake: FakeContract<IERC20>;
   let lusdAllocator: LUSDAllocator;
 
@@ -30,6 +36,9 @@ describe("LUSDAllocator", () => {
     [owner, other, alice, bob] = await ethers.getSigners();
     treasuryFake = await smock.fake<ITreasury>("ITreasury");
     stabilityPoolFake = await smock.fake<IStabilityPool>("IStabilityPool");
+    sortedTrovesFake = await smock.fake<ISortedTroves>("ISortedTroves");
+    hintHelpersFake = await smock.fake<IHintHelpers>("IHintHelpers");
+    troveManagerFake = await smock.fake<ITroveManager>("ITroveManager");    
     lusdTokenFake = await smock.fake<IERC20>("IERC20");
   });
 
@@ -39,6 +48,9 @@ describe("LUSDAllocator", () => {
         treasuryFake.address,
         lusdTokenFake.address,
         stabilityPoolFake.address,
+        sortedTrovesFake.address,
+        hintHelpersFake.address,
+        troveManagerFake.address,
         ZERO_ADDRESS
       );
       expect(await lusdAllocator.lusdTokenAddress()).to.equal(lusdTokenFake.address);
@@ -49,6 +61,9 @@ describe("LUSDAllocator", () => {
         ZERO_ADDRESS,
         lusdTokenFake.address,
         stabilityPoolFake.address,
+        sortedTrovesFake.address,
+        hintHelpersFake.address,
+        troveManagerFake.address,    
         ZERO_ADDRESS
       )).to.be.revertedWith("treasury address cannot be 0x0");
     });
@@ -58,6 +73,9 @@ describe("LUSDAllocator", () => {
         treasuryFake.address,
         lusdTokenFake.address,
         ZERO_ADDRESS,
+        sortedTrovesFake.address,
+        hintHelpersFake.address,
+        troveManagerFake.address,
         ZERO_ADDRESS
       )).to.be.revertedWith("stabilityPool address cannot be 0x0");
     });
@@ -67,9 +85,48 @@ describe("LUSDAllocator", () => {
         treasuryFake.address,
         ZERO_ADDRESS,
         stabilityPoolFake.address,
+        sortedTrovesFake.address,
+        hintHelpersFake.address,
+        troveManagerFake.address,
         ZERO_ADDRESS
       )).to.be.revertedWith("LUSD token address cannot be 0x0");
     });
+
+    it("does not allow SortedTroves address to be 0x0", async () => {
+      await expect((new LUSDAllocator__factory(owner)).deploy(
+        treasuryFake.address,
+        lusdTokenFake.address,
+        stabilityPoolFake.address,
+        ZERO_ADDRESS,
+        hintHelpersFake.address,
+        troveManagerFake.address,
+        ZERO_ADDRESS
+      )).to.be.revertedWith("SortedTrove token address cannot be 0x0");
+    });
+
+    it("does not allow HintHelper address to be 0x0", async () => {
+      await expect((new LUSDAllocator__factory(owner)).deploy(
+        treasuryFake.address,
+        lusdTokenFake.address,
+        stabilityPoolFake.address,
+        sortedTrovesFake.address,
+        ZERO_ADDRESS,
+        troveManagerFake.address,
+        ZERO_ADDRESS
+      )).to.be.revertedWith("HintHelper token address cannot be 0x0");
+    });
+
+    it("does not allow TroveManager address to be 0x0", async () => {
+      await expect((new LUSDAllocator__factory(owner)).deploy(
+        treasuryFake.address,
+        lusdTokenFake.address,
+        stabilityPoolFake.address,
+        sortedTrovesFake.address,
+        hintHelpersFake.address,
+        ZERO_ADDRESS,
+        ZERO_ADDRESS
+      )).to.be.revertedWith("TroveManager token address cannot be 0x0");
+    });        
   });
   
   describe("post-constructor", () => {
@@ -78,6 +135,9 @@ describe("LUSDAllocator", () => {
         treasuryFake.address,
         lusdTokenFake.address,
         stabilityPoolFake.address,
+        sortedTrovesFake.address,
+        hintHelpersFake.address,
+        troveManagerFake.address,
         ZERO_ADDRESS
       );
     });
