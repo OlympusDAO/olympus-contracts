@@ -65,16 +65,6 @@ describe("Treasury Token Migration", async function () {
         let newTreasuryContract = await ethers.getContractFactory("OlympusTreasury");
         newTreasury = await newTreasuryContract.deploy(ohm.address, 10, authority.address);
 
-        let newStakingContract = await ethers.getContractFactory("OlympusStaking");
-        newStaking = await newStakingContract.deploy(
-            ohm.address,
-            sOhm.address,
-            EPOCH_LEGNTH,
-            0,
-            0,
-            authority.address
-        );
-
         let tokenMigratorContract = await ethers.getContractFactory("OlympusTokenMigrator");
         olympusTokenMigrator = await tokenMigratorContract.deploy(
             OLD_OHM_ADDRESS,
@@ -92,16 +82,6 @@ describe("Treasury Token Migration", async function () {
         let gOhmContract = await ethers.getContractFactory("gOHM");
         gOhm = await gOhmContract.deploy(migratorAddress);
 
-        let newStakingContract = await ethers.getContractFactory("OlympusStaking");
-        newStaking = await newStakingContract.deploy(
-            ohm.address,
-            sOhm.address,
-            gOhm.address,
-            EPOCH_LEGNTH,
-            0,
-            0
-        );
-
         /**
          * Connect the contracts once they have been deployed
          * */
@@ -111,6 +91,16 @@ describe("Treasury Token Migration", async function () {
 
         // Setting the vault for new ohm:
         await ohm.connect(deployer).setVault(newTreasury.address);
+
+        let newStakingContract = await ethers.getContractFactory("OlympusStaking");
+        newStaking = await newStakingContract.deploy(
+            ohm.address,
+            sOhm.address,
+            gOhm.address,
+            EPOCH_LEGNTH,
+            0,
+            0
+        );
 
         // Initialize staking
         newStaking.connect(deployer).setWarmupLength(0);
