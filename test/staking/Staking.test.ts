@@ -2,7 +2,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import chai, { expect } from "chai";
 import { ethers } from "hardhat";
 const { BigNumber } = ethers;
-import { deployMockContract } from "ethereum-waffle";
 import { FakeContract, smock } from '@defi-wonderland/smock'
 import {
   IDistributor,
@@ -12,6 +11,7 @@ import {
   OlympusStaking,
   OlympusStaking__factory,
   OlympusAuthority,
+  OlympusAuthority__factory,
 } from '../../types';
 
 chai.use(smock.matchers);
@@ -41,17 +41,14 @@ describe("OlympusStaking", () => {
     ohmFake = await smock.fake<IOHM>("IOHM");
     gOHMFake = await smock.fake<IgOHM>("IgOHM");
     // need to be specific because IsOHM is also defined in OLD
-    sOHMFake = await smock.fake<IsOHM>("contracts/interfaces/IsOHM.sol:IsOHM");
+    sOHMFake = await smock.fake<IsOHM>("contracts/interfaces/OlympusV2Interface.sol:IsOHM");
     distributorFake = await smock.fake<IDistributor>("IDistributor");
-
-    const Authority = await ethers.getContractFactory("OlympusAuthority");
-    const authority = await Authority.deploy(
+    authority = await (new OlympusAuthority__factory(owner)).deploy(
         governor.address,
         guardian.address,
         owner.address,
         owner.address
     );
-    await authority.deployed();
   });
 
   describe("constructor", () => {
@@ -73,7 +70,7 @@ describe("OlympusStaking", () => {
       expect(epoch.number).to.equal(BigNumber.from(EPOCH_NUMBER));
       expect(epoch.endBlock).to.equal(BigNumber.from(FUTURE_END_BLOCK));
 
-      expect(await authority.governor()).to.equal(owner.address);
+      expect(await authority.governor()).to.equal(governor.address);
     });
 
     it("will not allow a 0x0 OHM address", async () => {
@@ -124,8 +121,6 @@ describe("OlympusStaking", () => {
         FUTURE_END_BLOCK,
         authority.address,
       );
-      await authority.connect(owner).pushGovernor(governor.address, false);
-      await authority.connect(governor).pullGovernor();
     });
 
     describe("setDistributor", () => {
@@ -174,8 +169,6 @@ describe("OlympusStaking", () => {
         nextRebaseBlock,
         authority.address,
       );
-      await authority.connect(owner).pushGovernor(governor.address, false);
-      await authority.connect(governor).pullGovernor();
       await staking.connect(governor).setDistributor(distributorFake.address);
     }
 

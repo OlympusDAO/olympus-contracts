@@ -3,12 +3,12 @@ import chai, { expect } from "chai";
 import { ethers } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import {
-    IStaking,
     ITreasury,
     IOHM,
     Distributor__factory,
     Distributor,
     OlympusAuthority,
+    OlympusAuthority__factory,
 } from "../../types";
 
 chai.use(smock.matchers);
@@ -30,15 +30,12 @@ describe("Distributor", () => {
         [owner, staking, governor, guardian, other] = await ethers.getSigners();
         treasuryFake = await smock.fake<ITreasury>("ITreasury");
         ohmFake = await smock.fake<IOHM>("IOHM");
-
-        const Authority = await ethers.getContractFactory("OlympusAuthority");
-        const authority = await Authority.deploy(
+        authority = await (new OlympusAuthority__factory(owner)).deploy(
             governor.address,
             guardian.address,
             owner.address,
             owner.address
         );
-        await authority.deployed();
     });
 
     describe("constructor", () => {
@@ -93,10 +90,6 @@ describe("Distributor", () => {
                 staking.address,
                 authority.address
             );
-            // await distributor.connect(owner).pushGovernor(governor.address);
-            // await distributor.connect(governor).pullGovernor();
-            // await distributor.connect(owner).pushGuardian(guardian.address);
-            // await distributor.connect(guardian).pullGuardian();
         });
 
         describe("distribute", () => {
@@ -337,12 +330,6 @@ describe("Distributor", () => {
                 expect(r0.rate).to.equal(0);
             });
 
-            it("will revert if address is incorrect", async () => {
-                await distributor.connect(governor).addRecipient(staking.address, 2975);
-                await expect(distributor.connect(governor).removeRecipient(0)).to.be
-                    .reverted;
-            });
-
             it("can be done by the guardian", async () => {
                 await distributor.connect(governor).addRecipient(staking.address, 2975);
                 await distributor.connect(guardian).removeRecipient(0);
@@ -359,155 +346,5 @@ describe("Distributor", () => {
                 ).to.be.revertedWith("Caller is not governor or guardian");
             });
         });
-      });
-
-      describe("setAdjustment", () => {
-          it("sets the adjustment at the given index", async () => {
-              await distributor.connect(governor).addRecipient(staking.address, 2975);
-
-              const index = 0;
-              const add = true;
-              const rate = 5;
-              const target = 2000;
-              await distributor.connect(governor).setAdjustment(index, add, rate, target);
-
-              let adjustment = await distributor.adjustments(index);
-              expect(adjustment.add).to.equal(add);
-              expect(adjustment.rate).to.equal(rate);
-              expect(adjustment.target).to.equal(target);
-          });
-
-          it("can only be done by governor or guardian", async () => {
-              await distributor.connect(governor).addRecipient(staking.address, 2975);
-
-              await expect(
-                  distributor.connect(other).setAdjustment(0, false, 5, 2000)
-              ).to.be.revertedWith("Caller is not governor or guardian");
-          });
-
-          it("allows governor to make large adjustments", async () => {
-              await distributor.connect(governor).addRecipient(staking.address, 2975);
-
-              const index = 0;
-              const add = false;
-              const rate = 2975;
-              const target = 0;
-              await distributor.connect(governor).setAdjustment(index, add, rate, target);
-
-              let adjustment = await distributor.adjustments(index);
-              expect(adjustment.add).to.equal(add);
-              expect(adjustment.rate).to.equal(rate);
-              expect(adjustment.target).to.equal(target);
-          });
-
-          it("allows guardian to make adjustments up to 2.5%", async () => {
-              await distributor.connect(governor).addRecipient(staking.address, 1000);
-
-              const index = 0;
-              const add = false;
-              const rate = 25;
-              const target = 0;
-              await distributor.connect(guardian).setAdjustment(index, add, rate, target);
-
-              let adjustment = await distributor.adjustments(index);
-              expect(adjustment.add).to.equal(add);
-              expect(adjustment.rate).to.equal(rate);
-              expect(adjustment.target).to.equal(target);
-          });
-
-          it("restricts guardian to from making adjustments over 2.5%", async () => {
-              await distributor.connect(governor).addRecipient(staking.address, 1000);
-
-              const rate = 26;
-              await expect(
-                  distributor.connect(guardian).setAdjustment(0, false, rate, 0)
-              ).to.be.revertedWith("Limiter: cannot adjust by >2.5%");
-          });
-      });
-
-      describe("nextRewardAt", () => {
-          it("returns the number of OHM to be distributed in the next epoch", async () => {
-              ohmFake.totalSupply.returns(3899568500546135);
-
-              const rate = 2975;
-              let reward = await distributor.nextRewardAt(rate);
-              expect(reward).to.equal(11601216289124);
-          });
-
-          it("returns zero when rate is zero", async () => {
-              ohmFake.totalSupply.returns(3899568500546135);
-
-              const rate = 0;
-              let reward = await distributor.nextRewardAt(rate);
-              expect(reward).to.equal(0);
-          });
-      });
-
-      describe("nextRewardFor", () => {
-          it("returns the number of OHM to be distributed to the given address in the next epoch", async () => {
-              const rate = 2975;
-              await distributor.connect(governor).addRecipient(staking.address, rate);
-              ohmFake.totalSupply.returns(3899568500546135);
-
-              let reward = await distributor.nextRewardFor(staking.address);
-              expect(reward).to.equal(11601216289124);
-          });
-
-          it("returns the 0 if the address is not a recipient", async () => {
-              ohmFake.totalSupply.returns(3899568500546135);
-
-              let reward = await distributor.nextRewardFor(other.address);
-              expect(reward).to.equal(0);
-          });
-      });
-
-      describe("addRecipient", () => {
-          it("will append a recipient to the list", async () => {
-              await distributor.connect(governor).addRecipient(staking.address, 2975);
-              await distributor.connect(governor).addRecipient(other.address, 1000);
-
-              let r0 = await distributor.info(0);
-              expect(r0.recipient).to.equal(staking.address);
-              expect(r0.rate).to.equal(2975);
-
-              let r1 = await distributor.info(1);
-              expect(r1.recipient).to.equal(other.address);
-              expect(r1.rate).to.equal(1000);
-          });
-
-          it("can only be done by governor", async () => {
-              await expect(distributor.connect(guardian).addRecipient(staking.address, 2975)).
-                to.be.reverted;
-
-              await expect(distributor.connect(other).addRecipient(staking.address, 2975)).
-                to.be.reverted;
-          });
-      });
-
-      describe("removeRecipeint", () => {
-          it("will set reciepent and rate to 0", async () => {
-              await distributor.connect(governor).addRecipient(staking.address, 2975);
-              await distributor.connect(governor).removeRecipient(0);
-
-              let r0 = await distributor.info(0);
-              expect(r0.recipient).to.equal(ZERO_ADDRESS);
-              expect(r0.rate).to.equal(0);
-          });
-
-          it("can be done by the guardian", async () => {
-              await distributor.connect(governor).addRecipient(staking.address, 2975);
-              await distributor.connect(guardian).removeRecipient(0);
-
-              let r0 = await distributor.info(0);
-              expect(r0.recipient).to.equal(ZERO_ADDRESS);
-              expect(r0.rate).to.equal(0);
-          });
-
-          it("must be done by either governor or guardian", async () => {
-              await distributor.connect(governor).addRecipient(staking.address, 2975);
-              await expect(
-                  distributor.connect(other).removeRecipient(0)
-              ).to.be.revertedWith("Caller is not governor or guardian");
-          });
       });
 });

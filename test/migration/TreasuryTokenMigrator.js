@@ -61,7 +61,7 @@ describe("Treasury Token Migration", async function () {
         ohm = await ohmContract.deploy(authority.address);
 
         let sOhmContract = await ethers.getContractFactory("sOlympus");
-        sOhm = await sOhmContract.connect(deployer).deploy(authority.address);
+        sOhm = await sOhmContract.connect(deployer).deploy();
 
         let newTreasuryContract = await ethers.getContractFactory("OlympusTreasury");
         newTreasury = await newTreasuryContract.deploy(ohm.address, 10, authority.address);
@@ -100,7 +100,8 @@ describe("Treasury Token Migration", async function () {
             gOhm.address,
             EPOCH_LEGNTH,
             0,
-            0
+            0,
+            
         );
 
         // Initialize staking
