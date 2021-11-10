@@ -188,8 +188,10 @@ contract sOlympus is IsOHM, ERC20Permit {
         address to,
         uint256 value
     ) public override(IERC20, ERC20) returns (bool) {
-        _allowedValue[from][msg.sender] = _allowedValue[from][msg.sender].sub(value);
-        emit Approval(from, msg.sender, _allowedValue[from][msg.sender]);
+        if(to != stakingContract) { // transfers to staking do not require approval. high gas saver.
+            _allowedValue[from][msg.sender] = _allowedValue[from][msg.sender].sub(value);
+            emit Approval(from, msg.sender, _allowedValue[from][msg.sender]);
+        }
 
         uint256 gonValue = gonsForBalance(value);
         _gonBalances[from] = _gonBalances[from].sub(gonValue);
