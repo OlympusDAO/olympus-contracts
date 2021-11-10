@@ -101,7 +101,7 @@ describe("Treasury Token Migration", async function () {
             EPOCH_LEGNTH,
             0,
             0,
-            
+            authority.address
         );
 
         // Initialize staking
