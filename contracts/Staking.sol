@@ -37,10 +37,10 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
 
     
     /* ========== CONSTRUCTOR ========== */
-    
-    constructor ( 
-        address _ohm, 
-        address _sOHM, 
+
+    constructor(
+        address _ohm,
+        address _sOHM,
         address _gOHM,
         uint256 _epochLength,
         uint256 _firstEpochNumber,
@@ -48,21 +48,14 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
         address _authority
     ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_ohm != address(0), "Zero address: OHM");
-        OHM = IERC20( _ohm );
+        OHM = IERC20(_ohm);
         require(_sOHM != address(0), "Zero address: sOHM");
-        sOHM = IsOHM( _sOHM );
+        sOHM = IsOHM(_sOHM);
         require(_gOHM != address(0), "Zero address: gOHM");
-        gOHM = IgOHM( _gOHM );
-        
-        epoch = Epoch({
-            length: _epochLength,
-            number: _firstEpochNumber,
-            endBlock: _firstEpochBlock,
-            distribute: 0
-        });
-    }
+        gOHM = IgOHM(_gOHM);
 
-    
+        epoch = Epoch({length: _epochLength, number: _firstEpochNumber, endBlock: _firstEpochBlock, distribute: 0});
+    }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
@@ -74,28 +67,32 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
      * @param _rebasing bool
      * @return uint256
      */
-    function stake( address _to, uint256 _amount, bool _rebasing, bool _claim ) external override returns (uint256) {
+    function stake(
+        address _to,
+        uint256 _amount,
+        bool _rebasing,
+        bool _claim
+    ) external override returns (uint256) {
         rebase();
 
-        OHM.safeTransferFrom( msg.sender, address(this), _amount );
+        OHM.safeTransferFrom(msg.sender, address(this), _amount);
 
-        if ( _claim && warmupPeriod == 0 ) {
-            return _send( _to, _amount, _rebasing );
-
+        if (_claim && warmupPeriod == 0) {
+            return _send(_to, _amount, _rebasing);
         } else {
-            Claim memory info = warmupInfo[ _to ];
-            if ( !info.lock ) {
-                require( _to == msg.sender, "External deposits for account are locked" );
+            Claim memory info = warmupInfo[_to];
+            if (!info.lock) {
+                require(_to == msg.sender, "External deposits for account are locked");
             }
 
-            warmupInfo[ _to ] = Claim ({
-                deposit: info.deposit.add( _amount ),
-                gons: info.gons.add( sOHM.gonsForBalance( _amount ) ),
-                expiry: epoch.number.add( warmupPeriod ),
+            warmupInfo[_to] = Claim({
+                deposit: info.deposit.add(_amount),
+                gons: info.gons.add(sOHM.gonsForBalance(_amount)),
+                expiry: epoch.number.add(warmupPeriod),
                 lock: info.lock
             });
 
-            gonsInWarmup = gonsInWarmup.add( sOHM.gonsForBalance( _amount ) );
+            gonsInWarmup = gonsInWarmup.add(sOHM.gonsForBalance(_amount));
 
             return _amount;
         }
@@ -107,19 +104,19 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
      * @param _rebasing bool
      * @return uint256
      */
-    function claim ( address _to, bool _rebasing ) public override returns (uint256) {
-        Claim memory info = warmupInfo[ _to ];
+    function claim(address _to, bool _rebasing) public override returns (uint256) {
+        Claim memory info = warmupInfo[_to];
 
-        if ( !info.lock ) {
-            require( _to == msg.sender, "External claims for account are locked" );
+        if (!info.lock) {
+            require(_to == msg.sender, "External claims for account are locked");
         }
 
-        if ( epoch.number >= info.expiry && info.expiry != 0 ) {
-            delete warmupInfo[ _to ];
+        if (epoch.number >= info.expiry && info.expiry != 0) {
+            delete warmupInfo[_to];
 
-            gonsInWarmup = gonsInWarmup.sub( info.gons );
+            gonsInWarmup = gonsInWarmup.sub(info.gons);
 
-            return _send( _to, sOHM.balanceForGons( info.gons ), _rebasing );
+            return _send(_to, sOHM.balanceForGons(info.gons), _rebasing);
         }
         return 0;
     }
@@ -129,12 +126,12 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
      * @return uint256
      */
     function forfeit() external override returns (uint256) {
-        Claim memory info = warmupInfo[ msg.sender ];
-        delete warmupInfo[ msg.sender ];
+        Claim memory info = warmupInfo[msg.sender];
+        delete warmupInfo[msg.sender];
 
-        gonsInWarmup = gonsInWarmup.sub( info.gons );
+        gonsInWarmup = gonsInWarmup.sub(info.gons);
 
-        OHM.safeTransfer( msg.sender, info.deposit );
+        OHM.safeTransfer(msg.sender, info.deposit);
 
         return info.deposit;
     }
@@ -143,31 +140,36 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
      * @notice prevent new deposits or claims from ext. address (protection from malicious activity)
      */
     function toggleLock() external override {
-        warmupInfo[ msg.sender ].lock = !warmupInfo[ msg.sender ].lock;
+        warmupInfo[msg.sender].lock = !warmupInfo[msg.sender].lock;
     }
 
     /**
-     * @notice redeem sOHM for OHM
+     * @notice redeem sOHM for OHMs
      * @param _to address
      * @param _amount uint256
      * @param _trigger bool
      * @param _rebasing bool
      * @return amount_ uint256
      */
-    function unstake( address _to, uint256 _amount, bool _trigger, bool _rebasing ) external override returns ( uint256 amount_ ) {
-        if ( _trigger ) {
+    function unstake(
+        address _to,
+        uint256 _amount,
+        bool _trigger,
+        bool _rebasing
+    ) external override returns (uint256 amount_) {
+        if (_trigger) {
             rebase();
         }
 
         amount_ = _amount;
-        if ( _rebasing ) {
-            sOHM.safeTransferFrom( msg.sender, address(this), _amount );
+        if (_rebasing) {
+            sOHM.safeTransferFrom(msg.sender, address(this), _amount);
         } else {
-            gOHM.burn( msg.sender, _amount ); // amount was given in gOHM terms
-            amount_ = gOHM.balanceFrom( _amount ); // convert amount to OHM terms
+            gOHM.burn(msg.sender, _amount); // amount was given in gOHM terms
+            amount_ = gOHM.balanceFrom(_amount); // convert amount to OHM terms
         }
-        
-        OHM.safeTransfer( _to, amount_ );
+
+        OHM.safeTransfer(_to, amount_);
     }
 
     /**
@@ -176,11 +178,11 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
      * @param _amount uint256
      * @return gBalance_ uint256
      */
-    function wrap( address _to, uint256 _amount ) external override returns ( uint256 gBalance_ ) {
-        sOHM.safeTransferFrom( msg.sender, address(this), _amount );
+    function wrap(address _to, uint256 _amount) external override returns (uint256 gBalance_) {
+        sOHM.safeTransferFrom(msg.sender, address(this), _amount);
 
-        gBalance_ = gOHM.balanceTo( _amount );
-        gOHM.mint( _to, gBalance_ );
+        gBalance_ = gOHM.balanceTo(_amount);
+        gOHM.mint(_to, gBalance_);
     }
 
     /**
@@ -189,31 +191,31 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
      * @param _amount uint256
      * @return sBalance_ uint256
      */
-    function unwrap( address _to, uint256 _amount ) external override returns ( uint256 sBalance_ ) {
-        gOHM.burn( msg.sender, _amount );
+    function unwrap(address _to, uint256 _amount) external override returns (uint256 sBalance_) {
+        gOHM.burn(msg.sender, _amount);
 
-        sBalance_ = gOHM.balanceFrom( _amount );
-        sOHM.safeTransfer( _to, sBalance_ );
+        sBalance_ = gOHM.balanceFrom(_amount);
+        sOHM.safeTransfer(_to, sBalance_);
     }
 
     /**
      * @notice trigger rebase if epoch over
      */
     function rebase() public override {
-        if( epoch.endBlock <= block.number ) {
-            sOHM.rebase( epoch.distribute, epoch.number );
+        if (epoch.endBlock <= block.number) {
+            sOHM.rebase(epoch.distribute, epoch.number);
 
-            epoch.endBlock = epoch.endBlock.add( epoch.length );
+            epoch.endBlock = epoch.endBlock.add(epoch.length);
             epoch.number++;
-            
-            if ( distributor != address(0) ) {
-                IDistributor( distributor ).distribute();
+
+            if (distributor != address(0)) {
+                IDistributor(distributor).distribute();
             }
 
-            if( contractBalance() <= totalStaked() ) {
+            if (contractBalance() <= totalStaked()) {
                 epoch.distribute = 0;
             } else {
-                epoch.distribute = contractBalance().sub( totalStaked() );
+                epoch.distribute = contractBalance().sub(totalStaked());
             }
         }
     }
@@ -226,17 +228,19 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
      * @param _amount uint256
      * @param _rebasing bool
      */
-    function _send( address _to, uint256 _amount, bool _rebasing ) internal returns (uint256) {
-        if ( _rebasing ) {
-            sOHM.safeTransfer( _to, _amount ); // send as sOHM (equal unit as OHM)
+    function _send(
+        address _to,
+        uint256 _amount,
+        bool _rebasing
+    ) internal returns (uint256) {
+        if (_rebasing) {
+            sOHM.safeTransfer(_to, _amount); // send as sOHM (equal unit as OHM)
             return _amount;
         } else {
-            gOHM.mint( _to, gOHM.balanceTo( _amount ) ); // send as gOHM (convert units from OHM)
-            return gOHM.balanceTo( _amount );
+            gOHM.mint(_to, gOHM.balanceTo(_amount)); // send as gOHM (convert units from OHM)
+            return gOHM.balanceTo(_amount);
         }
     }
-
-
 
     /* ========== VIEW FUNCTIONS ========== */
 
@@ -253,7 +257,7 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
      * @return uint256
      */
     function contractBalance() public override view returns (uint256) {
-        return OHM.balanceOf( address(this) );
+        return OHM.balanceOf(address(this));
     }
 
     /**
@@ -267,10 +271,8 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
      * @notice total supply in warmup
      */
     function supplyInWarmup() public override view returns (uint256) {
-        return sOHM.balanceForGons( gonsInWarmup );
+        return sOHM.balanceForGons(gonsInWarmup);
     }
-
-
 
     /* ========== MANAGERIAL FUNCTIONS ========== */
 
@@ -278,17 +280,17 @@ contract OlympusStaking is IStaking, OlympusAccessControlled {
      * @notice sets the contract address for LP staking
      * @param _distributor address
      */
-    function setDistributor( address _distributor ) external override onlyGovernor() {
+    function setDistributor(address _distributor) external override onlyGovernor {
         distributor = _distributor;
-        emit DistributorSet( _distributor );
+        emit DistributorSet(_distributor);
     }
-    
+
     /**
      * @notice set warmup period for new stakers
      * @param _warmupPeriod uint256
      */
-    function setWarmupLength( uint256 _warmupPeriod ) external override onlyGovernor() {
+    function setWarmupLength(uint256 _warmupPeriod) external override onlyGovernor {
         warmupPeriod = _warmupPeriod;
-        emit WarmupSet( _warmupPeriod );
+        emit WarmupSet(_warmupPeriod);
     }
 }
