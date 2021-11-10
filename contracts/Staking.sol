@@ -9,9 +9,9 @@ import "./interfaces/IsOHM.sol";
 import "./interfaces/IgOHM.sol";
 import "./interfaces/IDistributor.sol";
 
-import "./types/Governable.sol";
+import "./types/OlympusAccessControlled.sol";
 
-contract OlympusStaking is Governable {
+contract OlympusStaking is OlympusAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -62,8 +62,9 @@ contract OlympusStaking is Governable {
         address _gOHM,
         uint256 _epochLength,
         uint256 _firstEpochNumber,
-        uint256 _firstEpochBlock
-    ) {
+        uint256 _firstEpochBlock,
+        address _authority
+    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_ohm != address(0), "Zero address: OHM");
         OHM = IERC20(_ohm);
         require(_sOHM != address(0), "Zero address: sOHM");

@@ -7,15 +7,14 @@ import "./libraries/FixedPoint.sol";
 import "./libraries/Address.sol";
 import "./libraries/SafeERC20.sol";
 
-import "./types/Governable.sol";
-import "./types/Guardable.sol";
+import "./types/OlympusAccessControlled.sol";
 
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITeller.sol";
 import "./interfaces/IERC20Metadata.sol";
 
-contract OlympusBondDepository is Governable, Guardable {
+contract OlympusBondDepository is OlympusAccessControlled {
   using FixedPoint for *;
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
@@ -64,7 +63,11 @@ contract OlympusBondDepository is Governable, Guardable {
 
   /* ======== CONSTRUCTOR ======== */
 
-  constructor(address _OHM, address _treasury) {
+  constructor(
+    address _OHM, 
+    address _treasury, 
+    address _authority
+  ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
     require(_OHM != address(0));
     OHM = IERC20(_OHM);
     require(_treasury != address(0));
@@ -86,9 +89,27 @@ contract OlympusBondDepository is Governable, Guardable {
     uint256 _capacity,
     bool _capacityIsPayout
   ) external onlyGuardian returns (uint256 id_) {
-    Terms memory terms = Terms({controlVariable: 0, fixedTerm: false, vestingTerm: 0, expiration: 0, conclusion: 0, minimumPrice: 0, maxPayout: 0, maxDebt: 0});
+    Terms memory terms = Terms({
+      controlVariable: 0, 
+      fixedTerm: false, 
+      vestingTerm: 0, 
+      expiration: 0, 
+      conclusion: 0, 
+      minimumPrice: 0, 
+      maxPayout: 0, 
+      maxDebt: 0
+    });
 
-    bonds[IDs.length] = Bond({principal: IERC20(_principal), calculator: IBondingCalculator(_calculator), terms: terms, termsSet: false, totalDebt: 0, lastDecay: block.number, capacity: _capacity, capacityIsPayout: _capacityIsPayout});
+    bonds[IDs.length] = Bond({
+      principal: IERC20(_principal), 
+      calculator: IBondingCalculator(_calculator), 
+      terms: terms, 
+      termsSet: false, 
+      totalDebt: 0, 
+      lastDecay: block.number, 
+      capacity: _capacity, 
+      capacityIsPayout: _capacityIsPayout
+    });
 
     id_ = IDs.length;
     IDs.push(_principal);
@@ -121,7 +142,16 @@ contract OlympusBondDepository is Governable, Guardable {
   ) external onlyGuardian {
     require(!bonds[_id].termsSet, "Already set");
 
-    Terms memory terms = Terms({controlVariable: _controlVariable, fixedTerm: _fixedTerm, vestingTerm: _vestingTerm, expiration: _expiration, conclusion: _conclusion, minimumPrice: _minimumPrice, maxPayout: _maxPayout, maxDebt: _maxDebt});
+    Terms memory terms = Terms({
+      controlVariable: _controlVariable, 
+      fixedTerm: _fixedTerm, 
+      vestingTerm: _vestingTerm, 
+      expiration: _expiration, 
+      conclusion: _conclusion, 
+      minimumPrice: _minimumPrice, 
+      maxPayout: _maxPayout, 
+      maxDebt: _maxDebt
+    });
 
     bonds[_id].terms = terms;
     bonds[_id].totalDebt = _initialDebt;

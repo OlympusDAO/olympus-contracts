@@ -12,10 +12,10 @@ import "./interfaces/IsOHM.sol";
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITreasury.sol";
 
-import "./types/Ownable.sol";
+import "./types/OlympusAccessControlled.sol";
 
 
-contract OlympusTreasury is Ownable, ITreasury {
+contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -79,7 +79,11 @@ contract OlympusTreasury is Ownable, ITreasury {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _ohm, uint256 _timelock) {
+    constructor(
+        address _ohm, 
+        uint256 _timelock, 
+        address _authority
+    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_ohm != address(0), "Zero address: OHM");
         OHM = IOHM(_ohm);
 
@@ -239,7 +243,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         @notice takes inventory of all tracked assets
         @notice always consolidate to recognized reserves before audit
      */
-    function auditReserves() external onlyOwner {
+    function auditReserves() external onlyGovernor {
         uint256 reserves;
         address[] memory reserveToken = registry[STATUS.RESERVETOKEN];
         for (uint256 i = 0; i < reserveToken.length; i++) {
@@ -263,7 +267,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         STATUS _status,
         address _address,
         address _calculator
-    ) external onlyOwner {
+    ) external onlyGovernor {
         require(onChainGoverned, "OCG Not Enabled: Use queueTimelock");
         if (_status == STATUS.SOHM) {
             sOHM = IsOHM(_address);
@@ -313,7 +317,7 @@ contract OlympusTreasury is Ownable, ITreasury {
      *  @param _status STATUS
      *  @param _toDisable address
      */
-    function disable(STATUS _status, address _toDisable) external onlyOwner {
+    function disable(STATUS _status, address _toDisable) external onlyGovernor {
         permissions[_status][_toDisable] = false;
         emit Permissioned(_toDisable, _status, false);
     }
@@ -331,7 +335,7 @@ contract OlympusTreasury is Ownable, ITreasury {
         STATUS _status,
         address _address,
         address _calculator
-    ) external onlyOwner {
+    ) external onlyGovernor {
         require(_address != address(0));
         require(!onChainGoverned, "OCG Enabled: Use enable");
 
@@ -340,7 +344,14 @@ contract OlympusTreasury is Ownable, ITreasury {
             timelock = block.number.add(blocksNeededForQueue.mul(2));
         }
         permissionQueue.push(
-            Queue({managing: _status, toPermit: _address, calculator: _calculator, timelockEnd: timelock, nullify: false, executed: false})
+            Queue({
+                managing: _status, 
+                toPermit: _address, 
+                calculator: _calculator, 
+                timelockEnd: timelock, 
+                nullify: false, 
+                executed: false
+            })
         );
         emit PermissionQueued(_status, _address);
     }
@@ -392,14 +403,14 @@ contract OlympusTreasury is Ownable, ITreasury {
      * @notice cancel timelocked action
      * @param _index uint
      */
-    function nullify(uint256 _index) external onlyOwner {
+    function nullify(uint256 _index) external onlyGovernor {
         permissionQueue[_index].nullify = true;
     }
 
     /**
      * @notice disables timelocked functions
      */
-    function enableOnChainGovernance() external onlyOwner {
+    function enableOnChainGovernance() external onlyGovernor {
         require(!onChainGoverned, "OCG already enabled");
         if (onChainGovernanceTimelock != 0 && onChainGovernanceTimelock <= block.number) {
             onChainGoverned = true;
