@@ -13,6 +13,9 @@ import "./types/VaultOwned.sol";
 contract OlympusERC20Token is ERC20Permit, IOHM, VaultOwned {
     using SafeMath for uint256;
     mapping(address => address) public delegates;
+    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
+    event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
+
 
 
     constructor() ERC20("Olympus", "OHM", 9) ERC20Permit("Olympus") {}
