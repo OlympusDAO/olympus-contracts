@@ -33,4 +33,46 @@ contract OlympusERC20Token is ERC20Permit, IOHM, VaultOwned {
         _approve(account_, msg.sender, decreasedAllowance_);
         _burn(account_, amount_);
     }
+
+
+    function _mint(address account, uint256 amount) internal {
+        require(account != address(0), "ERC20: mint to the zero address");
+
+        _beforeTokenTransfer(address(0), account, amount);
+
+        totalSupply = totalSupply.add(amount);
+        _balances[account] = _balances[account].add(amount);
+        emit Transfer(address(0), account, amount);
+    }
+
+        function _beforeTokenTransfer(
+            address from,
+            address to,
+            uint256 amount
+        ) internal {
+            _moveDelegates(delegates[from], delegates[to], amount);
+        }
+
+
+        function transfer(address recipient, uint256 amount) external override returns (bool) {
+            _transfer(msg.sender, recipient, amount);
+        return true;
+        }
+
+        function _transfer(
+            address sender,
+            address recipient,
+            uint256 amount
+        ) internal {
+            require(sender != address(0), "ERC20: transfer from the zero address");
+            require(recipient != address(0), "ERC20: transfer to the zero address");
+
+            _beforeTokenTransfer(sender, recipient, amount);
+
+            _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
+            _balances[recipient] = _balances[recipient].add(amount);
+            emit Transfer(sender, recipient, amount);
+        }
+
+
 }
