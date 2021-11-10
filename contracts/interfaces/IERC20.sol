@@ -30,6 +30,19 @@ interface IERC20 {
    */
   function allowance(address owner, address spender) external view returns (uint256);
 
+
+
+  /**
+   * @dev mints new tokens
+   *
+   * 
+   */
+    function mint(address _to, uint256 _amount) external;
+
+
+
+
+
   /**
    * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
    *
