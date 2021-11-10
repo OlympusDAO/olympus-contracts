@@ -2,7 +2,11 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import { OlympusERC20Token, OlympusERC20Token__factory } from '../../types'
+import {
+  OlympusERC20Token,
+  OlympusERC20Token__factory,
+  OlympusAuthority__factory
+} from '../../types';
 
 describe("OlympusTest", () => {
   let deployer: SignerWithAddress;
@@ -14,8 +18,7 @@ describe("OlympusTest", () => {
   beforeEach(async () => {
     [deployer, vault, bob, alice] = await ethers.getSigners();
 
-    const Authority = await ethers.getContractFactory("OlympusAuthority");
-    const authority = await Authority.deploy(deployer, deployer, deployer, vault);
+    const authority = await (new OlympusAuthority__factory(deployer)).deploy(deployer.address, deployer.address, deployer.address, vault.address);
     await authority.deployed();
 
     ohm = await (new OlympusERC20Token__factory(deployer)).deploy(authority.address);
