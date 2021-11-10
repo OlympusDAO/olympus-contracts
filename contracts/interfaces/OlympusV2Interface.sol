@@ -41,6 +41,12 @@ interface IsOHM is IERC20 {
   function index() external view returns (uint256);
   function toG(uint256 amount) external view returns (uint256);
   function fromG(uint256 amount) external view returns (uint256);
+  function debtBalances(address who) external view returns (uint256);
+
+  /* ====== Treasury Only ====== */
+
+  function changeDebt(uint256 amount, address debtor, bool add) external;
+  
 }
 
 interface IgOHM is IERC20 {

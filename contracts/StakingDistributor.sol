@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.7.5;
 
-import "./libraries/SafeERC20.sol";
-import "./libraries/SafeMath.sol";
-
 import {ITreasury} from "./interfaces/OlympusV2Interface.sol";
 import {IDistributor} from "./interfaces/OlympusV2Interface.sol";
+
+import "./libraries/SafeERC20.sol";
+import "./libraries/SafeMath.sol";
 
 import "./types/OlympusAccessControlled.sol";
 
@@ -131,7 +131,11 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         @param _index uint256
      */
     function removeRecipient(uint256 _index) external override {
-        require(msg.sender == authority.governor() || msg.sender == authority.guardian(), "Caller is not governor or guardian");
+        require(
+            msg.sender == authority.governor() || 
+            msg.sender == authority.guardian(), 
+            "Caller is not governor or guardian"
+        );
         require(info[_index].recipient != address(0), "Recipient does not exist");
         info[_index].recipient = address(0);
         info[_index].rate = 0;
@@ -150,21 +154,21 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         uint256 _rate,
         uint256 _target
     ) external override {
-        require(msg.sender == authority.governor() || msg.sender == authority.guardian(), "Caller is not governor or guardian");
+        require(
+            msg.sender == authority.governor() || 
+            msg.sender == authority.guardian(), 
+            "Caller is not governor or guardian"
+        );
         require(info[_index].recipient != address(0), "Recipient does not exist");
 
         if (msg.sender == authority.guardian()) {
             require(_rate <= info[_index].rate.mul(25).div(1000), "Limiter: cannot adjust by >2.5%");
         }
 
-        if(!_add) {
+        if (!_add) {
             require(_rate <= info[_index].rate, "Cannot decrease rate by more than it already is");
         }
 
-        adjustments[_index] = Adjust({
-            add: _add,
-            rate: _rate,
-            target: _target
-        });
+        adjustments[_index] = Adjust({add: _add, rate: _rate, target: _target});
     }
 }

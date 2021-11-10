@@ -93,7 +93,11 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
     }
 
     // migrate OHMv1, sOHMv1, or wsOHM for OHMv2, sOHMv2, or gOHM
-    function migrate(uint256 _amount, TYPE _from, TYPE _to) external {
+    function migrate(
+        uint256 _amount,
+        TYPE _from,
+        TYPE _to
+    ) external {
         uint256 sAmount = _amount;
         uint256 wAmount = oldwsOHM.sOHMTowOHM(_amount);
 
@@ -115,23 +119,23 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         }
     }
 
-    // migrate all tokens held
+    // migrate all olympus tokens held
     function migrateAll(TYPE _to) external {
         uint256 ohmBal = oldOHM.balanceOf(msg.sender);
         uint256 sOHMBal = oldsOHM.balanceOf(msg.sender);
         uint256 wsOHMBal = oldwsOHM.balanceOf(msg.sender);
 
-        if(ohmBal > 0) {
+        if (ohmBal > 0) {
             oldOHM.safeTransferFrom(msg.sender, address(this), ohmBal);
         }
-        if(sOHMBal > 0) {
+        if (sOHMBal > 0) {
             oldsOHM.safeTransferFrom(msg.sender, address(this), sOHMBal);
         }
-        if(wsOHMBal > 0) {
+        if (wsOHMBal > 0) {
             oldwsOHM.safeTransferFrom(msg.sender, address(this), wsOHMBal);
         }
 
-        uint256 wAmount = wsOHMBal.add( oldwsOHM.sOHMTowOHM( ohmBal.add(sOHMBal) ) );
+        uint256 wAmount = wsOHMBal.add(oldwsOHM.sOHMTowOHM(ohmBal.add(sOHMBal)));
         if (ohmMigrated) {
             require(oldSupply >= oldOHM.totalSupply(), "OHMv1 minted");
             _send(wAmount, _to);
@@ -142,7 +146,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
 
     // send preferred token
     function _send(uint256 wAmount, TYPE _to) internal {
-        if(_to == TYPE.WRAPPED) {
+        if (_to == TYPE.WRAPPED) {
             gOHM.safeTransfer(msg.sender, wAmount);
         } else if (_to == TYPE.STAKED) {
             newStaking.unwrap(msg.sender, wAmount);

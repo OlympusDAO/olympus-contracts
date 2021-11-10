@@ -371,7 +371,6 @@ contract gOHM is IgOHM {
         uint256 oldVotes,
         uint256 newVotes
     ) internal {
-
         if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == block.number) {
             checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
         } else {

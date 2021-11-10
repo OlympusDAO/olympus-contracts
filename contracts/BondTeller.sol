@@ -97,11 +97,11 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         // store bond & stake payout
         bonderInfo[_bonder].push(
             Bond({
-                principal: _principal, 
-                principalPaid: _principalPaid, 
-                payout: sOHM.toG(_payout), 
-                vested: _expires, 
-                created: block.timestamp, 
+                principal: _principal,
+                principalPaid: _principalPaid,
+                payout: sOHM.toG(_payout),
+                vested: _expires,
+                created: block.timestamp,
                 redeemed: 0
             })
         );
@@ -205,7 +205,10 @@ contract BondTeller is ITeller, OlympusAccessControlled {
      * @param _indexes uint256[]
      * @return pending_ uint256
      */
-    function pendingForIndexes(address _bonder, uint256[] memory _indexes) public view override returns (uint256 pending_) {
+    function pendingForIndexes(
+        address _bonder, 
+        uint256[] memory _indexes
+    ) public view override returns (uint256 pending_) {
         for (uint256 i = 0; i < _indexes.length; i++) {
             pending_ = pending_.add(pendingFor(_bonder, i));
         }

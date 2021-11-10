@@ -12,11 +12,8 @@ import {
   SOlympus,
   SOlympus__factory,
   GOHM,
-  GOHM__factory,
-  OlympusStaking,
-  OlympusStaking__factory,
   OlympusAuthority__factory,
-  OlympusAuthority
+  ITreasury,
 } from '../../types';
 
 const TOTAL_GONS = 5000000000000000;
@@ -24,20 +21,21 @@ const ZERO_ADDRESS = ethers.utils.getAddress("0x00000000000000000000000000000000
 
 describe("sOhm", () => {
   let initializer: SignerWithAddress;
+  let treasury: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let ohm: OlympusERC20Token;
   let sOhm: SOlympus;
   let gOhmFake: FakeContract<GOHM>;
   let stakingFake: FakeContract<IStaking>;
+  let treasuryFake: FakeContract<ITreasury>;
 
   beforeEach(async () => {
     [initializer, alice, bob] = await ethers.getSigners();
     stakingFake = await smock.fake<IStaking>('IStaking');
+    treasuryFake = await smock.fake<ITreasury>('ITreasury');
     gOhmFake = await smock.fake<GOHM>('gOHM');
 
-
-    const Authority = await ethers.getContractFactory("OlympusAuthority");
     const authority = await (new OlympusAuthority__factory(initializer)).deploy(initializer.address, initializer.address, initializer.address, initializer.address);
     ohm = await (new OlympusERC20Token__factory(initializer)).deploy(authority.address);
     sOhm = await (new SOlympus__factory(initializer)).deploy();
@@ -83,23 +81,23 @@ describe("sOhm", () => {
 
     describe("initialize", () => {
       it("assigns TOTAL_GONS to the stakingFake contract's balance", async () => {
-        await sOhm.connect(initializer).initialize(stakingFake.address);
+        await sOhm.connect(initializer).initialize(stakingFake.address, treasuryFake.address);
         expect(await sOhm.balanceOf(stakingFake.address)).to.equal(TOTAL_GONS);
       });
 
       it("emits Transfer event", async () => {
-        await expect(sOhm.connect(initializer).initialize(stakingFake.address)).
+        await expect(sOhm.connect(initializer).initialize(stakingFake.address, treasuryFake.address)).
           to.emit(sOhm, "Transfer").withArgs(ZERO_ADDRESS, stakingFake.address, TOTAL_GONS);
       });
 
       it("emits LogStakingContractUpdated event", async () => {
-        await expect(sOhm.connect(initializer).initialize(stakingFake.address)).
+        await expect(sOhm.connect(initializer).initialize(stakingFake.address, treasuryFake.address)).
           to.emit(sOhm, "LogStakingContractUpdated").withArgs(stakingFake.address);
       });
 
       it("unsets the initializer, so it cannot be called again", async () => {
-        await sOhm.connect(initializer).initialize(stakingFake.address);
-        await expect(sOhm.connect(initializer).initialize(stakingFake.address)).to.be.reverted;
+        await sOhm.connect(initializer).initialize(stakingFake.address, treasuryFake.address);
+        await expect(sOhm.connect(initializer).initialize(stakingFake.address, treasuryFake.address)).to.be.reverted;
       });
     });
   });
@@ -108,7 +106,7 @@ describe("sOhm", () => {
     beforeEach(async () => {
       await sOhm.connect(initializer).setIndex(1);
       await sOhm.connect(initializer).setgOHM(gOhmFake.address);
-      await sOhm.connect(initializer).initialize(stakingFake.address);
+      await sOhm.connect(initializer).initialize(stakingFake.address, treasuryFake.address);
     });
 
     describe("approve", () => {
@@ -166,7 +164,7 @@ describe("sOhm", () => {
         await gOhmFake.totalSupply.returns(0);
         await gOhmFake.balanceFrom.returns(0);
 
-        let totalSupply = await sOhm.circulatingSupply();
+        const totalSupply = await sOhm.circulatingSupply();
         expect(totalSupply).to.equal(0);
       });
 
@@ -175,7 +173,7 @@ describe("sOhm", () => {
         await gOhmFake.totalSupply.returns(10);
         await gOhmFake.balanceFrom.returns(10);
 
-        let totalSupply = await sOhm.circulatingSupply();
+        const totalSupply = await sOhm.circulatingSupply();
         expect(totalSupply).to.equal(10);
       });
 
@@ -185,7 +183,7 @@ describe("sOhm", () => {
         await gOhmFake.totalSupply.returns(0);
         await gOhmFake.balanceFrom.returns(0);
 
-        let totalSupply = await sOhm.circulatingSupply();
+        const totalSupply = await sOhm.circulatingSupply();
         expect(totalSupply).to.equal(50);
       });
     });
