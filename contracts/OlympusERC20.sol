@@ -75,4 +75,39 @@ contract OlympusERC20Token is ERC20Permit, IOHM, VaultOwned {
         }
 
 
+
+    function _delegate(address delegator, address delegatee) internal {
+        address currentDelegate = delegates[delegator];
+        uint256 delegatorBalance = _balances[delegator];
+        delegates[delegator] = delegatee;
+
+        emit DelegateChanged(delegator, currentDelegate, delegatee);
+
+        _moveDelegates(currentDelegate, delegatee, delegatorBalance);
+    }
+
+    function _moveDelegates(
+        address srcRep,
+        address dstRep,
+        uint256 amount
+    ) internal {
+        if (srcRep != dstRep && amount > 0) {
+            if (srcRep != address(0)) {
+                uint256 srcRepNum = numCheckpoints[srcRep];
+                uint256 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
+                uint256 srcRepNew = srcRepOld.sub(amount);
+                _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
+            }
+
+            if (dstRep != address(0)) {
+                uint256 dstRepNum = numCheckpoints[dstRep];
+                uint256 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
+                uint256 dstRepNew = dstRepOld.add(amount);
+                _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
+            }
+        }
+    }
+
+
+
 }

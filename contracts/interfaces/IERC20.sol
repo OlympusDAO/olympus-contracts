@@ -42,7 +42,6 @@ interface IERC20 {
 
 
 
-
   /**
    * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
    *
