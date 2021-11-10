@@ -1,7 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { deployMockContract } from "ethereum-waffle";
 import { FakeContract, smock } from '@defi-wonderland/smock'
 
 import {
@@ -13,11 +12,7 @@ import {
   SOlympus,
   SOlympus__factory,
   GOHM,
-  GOHM__factory,
-  OlympusStaking,
-  OlympusStaking__factory,
-  OlympusTreasury,
-  OlympusTreasury__factory,
+  OlympusAuthority__factory,
   ITreasury,
 } from '../../types';
 
@@ -40,7 +35,9 @@ describe("sOhm", () => {
     stakingFake = await smock.fake<IStaking>('IStaking');
     treasuryFake = await smock.fake<ITreasury>('ITreasury');
     gOhmFake = await smock.fake<GOHM>('gOHM');
-    ohm = await (new OlympusERC20Token__factory(initializer)).deploy();
+
+    const authority = await (new OlympusAuthority__factory(initializer)).deploy(initializer.address, initializer.address, initializer.address, initializer.address);
+    ohm = await (new OlympusERC20Token__factory(initializer)).deploy(authority.address);
     sOhm = await (new SOlympus__factory(initializer)).deploy();
   });
 
