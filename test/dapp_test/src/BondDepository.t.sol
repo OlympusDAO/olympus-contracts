@@ -12,7 +12,7 @@ import "../../../contracts/Staking.sol";
 import "../../../contracts/OlympusERC20.sol";
 import "../../../contracts/sOlympusERC20.sol";
 import "../../../contracts/StandardBondingCalculator.sol";
-import "../../../contracts/interfaces/UniswapV2/IUniswapV2Pair.sol";
+import "../../../contracts/interfaces/IUniswapV2Pair.sol";
 import "../../../contracts/interfaces/IERC20Metadata.sol";
 import "../../../contracts/Treasury.sol";
 import "../../../contracts/BondDepository.sol";
@@ -71,7 +71,7 @@ contract BondDepositoryTest is DSTest {
         sohm.initialize(address(staking), address(treasury));
         gohm.migrate(address(staking), address(sohm));
 
-        bondDepository = new OlympusBondDepository(address(ohm), address(treasury), authority);
+        bondDepository = new OlympusBondDepository(address(ohm), address(treasury), address(authority));
 
         teller = new BondTeller(address(bondDepository), address(staking), address(treasury), address(ohm), address(sohm), address(authority));
         bondDepository.setTeller(address(teller));
