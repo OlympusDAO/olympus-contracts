@@ -12,6 +12,8 @@ import "./types/VaultOwned.sol";
 
 contract OlympusERC20Token is ERC20Permit, IOHM, VaultOwned {
     using SafeMath for uint256;
+    mapping(address => address) public delegates;
+
 
     constructor() ERC20("Olympus", "OHM", 9) ERC20Permit("Olympus") {}
 
@@ -26,6 +28,10 @@ contract OlympusERC20Token is ERC20Permit, IOHM, VaultOwned {
     function burnFrom(address account_, uint256 amount_) external override {
         _burnFrom(account_, amount_);
     }
+
+    function delegate(address delegatee) external {
+        return _delegate(msg.sender, delegatee);
+    }    
 
     function _burnFrom(address account_, uint256 amount_) internal {
         uint256 decreasedAllowance_ = allowance(account_, msg.sender).sub(amount_, "ERC20: burn amount exceeds allowance");
