@@ -11,9 +11,9 @@ import "./interfaces/IOwnable.sol";
 import "./interfaces/IsOHM.sol";
 import "./interfaces/ITeller.sol";
 
-import "./types/Ownable.sol";
+import "./types/OlympusAccessControlled.sol";
 
-contract BondTeller is ITeller, Ownable {
+contract BondTeller is ITeller, OlympusAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -65,8 +65,9 @@ contract BondTeller is ITeller, Ownable {
         address _staking,
         address _treasury,
         address _ohm,
-        address _sOHM
-    ) {
+        address _sOHM,
+        address _authority
+    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_depository != address(0), "Zero address: Depository");
         depository = _depository;
         require(_staking != address(0), "Zero address: Staking");
@@ -169,7 +170,7 @@ contract BondTeller is ITeller, Ownable {
     /* ========== OWNABLE FUNCTIONS ========== */
 
     // set reward for front end operator (4 decimals. 100 = 1%)
-    function setFEReward(uint256 reward) external override onlyOwner {
+    function setFEReward(uint256 reward) external override onlyPolicy {
         feReward = reward;
     }
 
