@@ -151,6 +151,22 @@ interface IStabilityPool {
     function getCompoundedFrontEndStake(address _frontEnd) external view returns (uint256);
 }
 
+// 
+interface ILQTYStaking {
+
+/*
+ sends _LQTYAmount from the caller to the staking contract, and increases their stake.
+ If the caller already has a non-zero stake, it pays out their accumulated ETH and LUSD gains from staking.
+ */
+    function stake(uint _LQTYamount) external;
+
+/**
+reduces the caller’s stake by _LQTYamount, up to a maximum of their entire stake. 
+It pays out their accumulated ETH and LUSD gains from staking.
+ */
+    function unstake(uint _LQTYamount) external;
+}
+
 /**
  *  Contract deploys reserves from treasury into the Aave lending pool,
  *  earning interest and $stkAAVE.
@@ -165,11 +181,14 @@ contract LUSDAllocator is Ownable {
     /* ======== STATE VARIABLES ======== */
 
     IStabilityPool immutable lusdStabilityPool;
+    ILQTYStaking immutable lqtyStaking;
     ITreasury immutable treasury; // Olympus Treasury
+
     // TODO(zx): I don't think we care about front-end because we're our own frontend.
     address public frontEndAddress; // frontEndAddress for potential liquity rewards
     address public lusdTokenAddress; // LUSD Address (0x5f98805A4E8be255a32880FDeC7F6728C6568bA0)
-
+    address public lqtyTokenAddress; // LQTY Address (0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D)  from https://github.com/liquity/dev/blob/a12f8b737d765bfee6e1bfcf8bf7ef155c814e1e/packages/contracts/mainnetDeployment/realDeploymentOutput/output14.txt#L61
+    
     uint256 public totalValueDeployed; // total RFV deployed into lending pool
     uint256 public totalAmountDeployed; // Total amount of tokens deployed
 
@@ -178,7 +197,9 @@ contract LUSDAllocator is Ownable {
     constructor(
         address _treasury,
         address _lusdTokenAddress,
+        address _lqtyTokenAddress,
         address _stabilityPool,
+        address _lqtyStaking,
         address _frontEndAddress
     ) {
         require(_treasury != address(0), "treasury address cannot be 0x0");
@@ -187,8 +208,14 @@ contract LUSDAllocator is Ownable {
         require(_stabilityPool != address(0), "stabilityPool address cannot be 0x0");
         lusdStabilityPool = IStabilityPool(_stabilityPool);
 
+        require(_lqtyStaking != address(0), "LQTY staking address cannot be 0x0");
+        lqtyStaking = ILQTYStaking(_lqtyStaking);
+
         require(_lusdTokenAddress != address(0), "LUSD token address cannot be 0x0");
         lusdTokenAddress = _lusdTokenAddress;
+
+        require(_lqtyTokenAddress != address(0), "LQTY token address cannot be 0x0");
+        lqtyTokenAddress = _lqtyTokenAddress;
 
         frontEndAddress = _frontEndAddress; // address can be 0
     }
@@ -199,8 +226,17 @@ contract LUSDAllocator is Ownable {
      *  @notice claims LQTY & ETH Rewards
      */
     function harvest() public returns (bool) {
-        // TODO need to harvest ETH rewards from LQTY stability pools that are sent to address(this)
-        // TODO need to harvest LQTY rewards
+        // withdraw 0 LUSD, but will trigger an event to harvest ETH and LQTY rewards
+         lusdStabilityPool.withdrawFromSP(0);
+        
+        uint256 balance = IERC20(lqtyTokenAddress).balanceOf(address(this)); // LQTY balance received from stability pool
+        if (balance > 0){  //TODO Should it be a little higher?  Don't want to pay for gas for staking a small amount
+            IERC20(lqtyTokenAddress).approve(address(lqtyStaking), balance); // approve to deposit into stability pool
+            lqtyStaking.stake(balance);  //Stake LQTY, also receives any prior ETH+LUSD rewards from prior staking TODO need to deposit this LUSD
+        }
+
+        //TODO what to do with the ETH rewards?
+        //TODO what to do with the LUSD rewards from staking LQTY?
         return true;
     }
 
