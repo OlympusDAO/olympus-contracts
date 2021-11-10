@@ -41,7 +41,7 @@ describe("OlympusStaking", () => {
     ohmFake = await smock.fake<IOHM>("IOHM");
     gOHMFake = await smock.fake<IgOHM>("IgOHM");
     // need to be specific because IsOHM is also defined in OLD
-    sOHMFake = await smock.fake<IsOHM>("contracts/interfaces/OlympusV2Interface.sol:IsOHM");
+    sOHMFake = await smock.fake<IsOHM>("contracts/interfaces/IsOHM.sol:IsOHM");
     distributorFake = await smock.fake<IDistributor>("IDistributor");
     authority = await (new OlympusAuthority__factory(owner)).deploy(
         governor.address,
