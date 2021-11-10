@@ -9,7 +9,7 @@ import "../interfaces/ITreasury.sol";
 import "../interfaces/IStaking.sol";
 import "../interfaces/IOwnable.sol";
 
-import "../types/Ownable.sol";
+import "../types/OlympusAccessControlled.sol";
 
 import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
@@ -49,7 +49,7 @@ interface IStakingV1 {
     function index() external view returns (uint256);
 }
 
-contract OlympusTokenMigrator is Ownable {
+contract OlympusTokenMigrator is OlympusAccessControlled {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IgOHM;
@@ -93,8 +93,9 @@ contract OlympusTokenMigrator is Ownable {
         address _oldwsOHM,
         address _sushi,
         address _uni,
-        uint256 _timelock
-    ) {
+        uint256 _timelock,
+        address _authority
+    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_oldOHM != address(0));
         oldOHM = IERC20(_oldOHM);
         require(_oldsOHM != address(0));
@@ -205,7 +206,7 @@ contract OlympusTokenMigrator is Ownable {
     /* ========== OWNABLE ========== */
 
     // withdraw backing of migrated OHM
-    function defund(address reserve) external onlyOwner {
+    function defund(address reserve) external onlyGovernor {
         require(ohmMigrated && timelockEnd < block.number && timelockEnd != 0);
         oldwsOHM.unwrap(oldwsOHM.balanceOf(address(this)));
 
@@ -226,14 +227,14 @@ contract OlympusTokenMigrator is Ownable {
     }
 
     // start timelock to send backing to new treasury
-    function startTimelock() external onlyOwner {
+    function startTimelock() external onlyGovernor {
         timelockEnd = block.number.add(timelockLength);
 
         emit TimelockStarted(block.number, timelockEnd);
     }
 
     // set gOHM address
-    function setgOHM(address _gOHM) external onlyOwner {
+    function setgOHM(address _gOHM) external onlyGovernor {
         require(address(gOHM) == address(0));
         require(_gOHM != address(0));
 
@@ -241,7 +242,7 @@ contract OlympusTokenMigrator is Ownable {
     }
 
     // call internal migrate token function
-    function migrateToken(address token) external onlyOwner {
+    function migrateToken(address token) external onlyGovernor {
         _migrateToken(token, false);
     }
 
@@ -252,7 +253,7 @@ contract OlympusTokenMigrator is Ownable {
         address pair,
         bool sushi,
         address token
-    ) external onlyOwner {
+    ) external onlyGovernor {
         uint256 oldLPAmount = IERC20(pair).balanceOf(address(oldTreasury));
         oldTreasury.manage(pair, oldLPAmount);
 
@@ -262,14 +263,31 @@ contract OlympusTokenMigrator is Ownable {
         }
 
         IERC20(pair).approve(address(router), oldLPAmount);
-        (uint256 amountA, uint256 amountB) = router.removeLiquidity(token, address(oldOHM), oldLPAmount, 0, 0, address(this), 1000000000000);
+        (uint256 amountA, uint256 amountB) = router.removeLiquidity(
+            token, 
+            address(oldOHM), 
+            oldLPAmount,
+            0, 
+            0, 
+            address(this), 
+            1000000000000
+        );
 
         newTreasury.mint(address(this), amountB);
 
         IERC20(token).approve(address(router), amountA);
         newOHM.approve(address(router), amountB);
 
-        router.addLiquidity(token, address(newOHM), amountA, amountB, amountA, amountB, address(newTreasury), 100000000000);
+        router.addLiquidity(
+            token, 
+            address(newOHM), 
+            amountA, 
+            amountB, 
+            amountA, 
+            amountB, 
+            address(newTreasury), 
+            100000000000
+        );
     }
 
     // Failsafe function to allow owner to withdraw funds sent directly to contract in case someone sends non-ohm tokens to the contract
@@ -277,7 +295,7 @@ contract OlympusTokenMigrator is Ownable {
         address tokenAddress,
         uint256 amount,
         address recipient
-    ) external onlyOwner {
+    ) external onlyGovernor {
         require(tokenAddress != address(0), "Token address cannot be 0x0");
         require(tokenAddress != address(gOHM), "Cannot withdraw: gOHM");
         require(tokenAddress != address(oldOHM), "Cannot withdraw: old-OHM");
@@ -304,7 +322,7 @@ contract OlympusTokenMigrator is Ownable {
         address _newOHM,
         address _newsOHM,
         address _reserve
-    ) external onlyOwner {
+    ) external onlyGovernor {
         ohmMigrated = true;
 
         require(_newTreasury != address(0));
