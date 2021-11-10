@@ -91,7 +91,7 @@ describe("Treasury Token Migration", async function () {
         await olympusTokenMigrator.connect(deployer).setgOHM(gOhm.address);
 
         // Setting the vault for new ohm:
-        await ohm.connect(deployer).setVault(newTreasury.address);
+        await authority.pushVault(newTreasury.address, true);
 
         let newStakingContract = await ethers.getContractFactory("OlympusStaking");
         newStaking = await newStakingContract.deploy(
