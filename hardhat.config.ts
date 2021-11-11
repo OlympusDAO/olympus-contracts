@@ -29,7 +29,7 @@ const mnemonic: string | undefined = process.env.MNEMONIC ?? "NO_MNEMONIC";
 const alchemyApiKey: string | undefined = process.env.ALCHEMY_API_KEY ?? "NO_ALCHEMY_API_KEY";
 
 function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
-  const url: string = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
+  const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
   return {
     accounts: {
       count: 10,
@@ -102,7 +102,16 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
-  }
+  },
+  namedAccounts: {
+      deployer: {
+          default: 0,
+      },
+      daoMultisig: {
+          // mainnet
+          1: "0x245cc372C84B3645Bf0Ffe6538620B04a217988B",
+      }
+  },
 };
 
 export default config;

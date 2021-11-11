@@ -1,17 +1,21 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { Contracts } from "../constants";
+import {
+    OlympusERC20Token,
+    OlympusERC20Token__factory
+} from "../types"
+import { CONTRACTS } from "./constants";
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-    const { deployments } = hre;
-    const [deployer] = await hre.ethers.getSigners();
+const func: DeployFunction = async ({ deployments, getNamedAccounts}: HardhatRuntimeEnvironment) => {
+
     const { deploy } = deployments;
+    const { deployer } = await getNamedAccounts();
 
-    // Deploy OHM
-    await deploy(Contracts.OHM, {
-        from: deployer.address,
+    await deploy(CONTRACTS.ohm, {
+        from: deployer,
+        log: true
     });
 };
 
 export default func;
-func.tags = [Contracts.OHM];
+func.tags = [CONTRACTS.ohm, "treasury", "staking", "tokens"];
