@@ -424,9 +424,7 @@ contract OlympusCVXBondDepository is Ownable {
 
     uint public totalDebt; // total value of outstanding bonds; used for pricing
     uint public lastDecay; // reference block for debt decay
-
-
-
+    
 
     /* ======== STRUCTS ======== */
 
@@ -455,8 +453,6 @@ contract OlympusCVXBondDepository is Ownable {
         uint buffer; // minimum length (in blocks) between adjustments
         uint lastBlock; // block when last adjustment made
     }
-
-
 
 
     /* ======== INITIALIZATION ======== */
@@ -672,7 +668,7 @@ contract OlympusCVXBondDepository is Ownable {
      */
     function stakeOrSend( address _recipient, bool _stake, uint _amount ) internal returns ( uint ) {
         if ( !_stake ) { // if user does not want to stake
-            IERC20( OHM ).transfer( _recipient, _amount ); // send payout
+            IERC20( OHM ).safeTransfer( _recipient, _amount ); // send payout
         } else { // if user wants to stake
             if ( useHelper ) { // use if staking warmup is 0
                 IERC20( OHM ).approve( stakingHelper, _amount );
