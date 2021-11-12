@@ -20,26 +20,25 @@ import "./util/Hevm.sol";
 import "../../../contracts/BondTeller.sol";
 import "../../../contracts/governance/gOHM.sol";
 import "./util/MockContract.sol";
+import "../../../contracts/allocators/LUSDAllocator.sol";
 
-contract BondDepositoryTest is DSTest {
+
+contract LUSDAllocatorTest is DSTest {
+
     using FixedPoint for *;
-    using SafeMath for uint256;
+    using SafeMath for uint;
     using SafeMath for uint112;
 
-    OlympusBondDepository internal bondDepository;
-    OlympusStaking internal staking;
-    OlympusBondingCalculator internal bondingCalculator;
+    LUSDAllocator internal allocator;
     OlympusTreasury internal treasury;
-    BondTeller internal teller;
+    MockContract internal troveManager = new MockContract();
+    MockContract internal sortedTroves = new MockContract();
+    MockContract internal hintHelper = new MockContract();
 
     OlympusERC20Token internal ohm;
-    sOlympus internal sohm;
-    gOHM internal gohm;
-
-    MockContract internal abcToken;
 
     /// @dev Hevm setup
-    Hevm internal constant hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+    Hevm constant internal hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     function setUp() public {
         // Start at timestamp
@@ -47,339 +46,71 @@ contract BondDepositoryTest is DSTest {
         hevm.roll(0);
 
         ohm = new OlympusERC20Token();
-        gohm = new gOHM(address(this));
-        sohm = new sOlympus();
-        sohm.setIndex(10);
-        sohm.setgOHM(address(gohm));
-
-        abcToken = new MockContract();
-        abcToken.givenMethodReturn(abi.encodeWithSelector(ERC20.name.selector), abi.encode("ABC DAO"));
-        abcToken.givenMethodReturn(abi.encodeWithSelector(ERC20.symbol.selector), abi.encode("ABC"));
-        abcToken.givenMethodReturnUint(abi.encodeWithSelector(ERC20.decimals.selector), 18);
-
-        bondingCalculator = new OlympusBondingCalculator(address(ohm));
         treasury = new OlympusTreasury(address(ohm), 1);
-
-        staking = new OlympusStaking(address(ohm), address(sohm), address(gohm), 8, 0, 0);
-
-        sohm.initialize(address(staking), address(treasury));
-        gohm.migrate(address(staking), address(sohm));
-        ohm.setVault(address(treasury));
-
-        bondDepository = new OlympusBondDepository(address(ohm), address(treasury));
-
-        teller = new BondTeller(address(bondDepository), address(staking), address(treasury), address(ohm), address(sohm));
-        bondDepository.setTeller(address(teller));
     }
 
-    // @dev Do not delete this!  Test driver generates paramters, so used to create our 'normal' tests
-    //    function test_createBond_deposit(
-    //    //        uint256 amount,
-    //        bool capacityIsPayout,
-    //        uint256 capacity)
-    //    public {
-    //        uint256 amount = 5 * 10 ** 16;
-    //    uint256 ohmMintAmount = 10 * 10 ** 18;
-    //        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({controlVariable : 2, fixedTerm : false, vestingTerm : 5, expiration : 6, conclusion : 6, minimumPrice : 10, maxPayout : 1, maxDebt : 10});
-    //        uint256 initialDebt = 0;
-    //
-    //        try  this.createBond_deposit(amount, ohmMintAmount, capacityIsPayout, capacity, terms, initialDebt){
-    //        } catch Error(string memory error) {
-    ////            assertEq("SafeERC20: ERC20 operation did not succeed", error);
-    //TODO use gnosis MockContract, this isn't a real error
-    //        }
-    //    }
+    // Point of this test is to ensure the parameters we make in our sequence of calls
+    // stays consistent.  If we change the underlying logic in the contract as one function call param changes,
+    // then this test will break.  That's good as once we're in prod this becomes a golden
+    // source of truth with interactions
+    function test_hints() public {
+        address borrower = address(this);
+        // Real one at 0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2 from https://github.com/liquity/dev/blob/ffed041cab7c8681018258724513bd5c96f959e5/packages/contracts/mainnetDeployment/realDeploymentOutput/output14.txt#L10
+        // From https://etherscan.io/address/0x66017D22b0f8556afDd19FC67041899Eb65a21bb
+        // using address  0x29D0cAb031DD0C4fb1adF98D56a7b0aD2d93Ca5F
+        //Got back:
+        //        [ getEntireDebtAndColl(address) method Response ]
+        //    debt   uint256 :  363407671459371026109145
+        //    coll   uint256 :  130659000000000000000
+        //    pendingLUSDDebtReward   uint256 :  0
+        //    pendingETHReward   uint256 :  0
+        uint256 debt = 363407671459371026109145;
+        uint256 coll = 130659000000000000000;
+        troveManager.givenMethodReturn(abi.encodeWithSignature("getEntireDebtAndColl(address)", borrower), // This effectively validates our function call parameters!
+            abi.encode(debt, coll, uint256(0), uint256(0)));
 
-    function test_vaultOwned() public {
-        ohm.setVault(address(0x0));
+        // Real one at 0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6 from https://github.com/liquity/dev/blob/ffed041cab7c8681018258724513bd5c96f959e5/packages/contracts/mainnetDeployment/realDeploymentOutput/output14.txt#L9
+        // From https://etherscan.io/address/0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6#readContract
+        //
+        // For getSize(), got back:
+        // 1230 uint256
+        sortedTroves.givenMethodReturnUint(abi.encodeWithSelector(ISortedTroves.getSize.selector), 1230);
 
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({
-            controlVariable: 2,
-            fixedTerm: false,
-            vestingTerm: 5,
-            expiration: 6,
-            conclusion: 16,
-            minimumPrice: 10,
-            maxPayout: 10000,
-            maxDebt: 10
-        });
-        uint256 initialDebt = 0;
-        uint256 ohmMintAmount = 11 * 10**18;
 
-        try this.createBond_deposit(5 * 10**16, ohmMintAmount, false, 9 * 10**20, terms, initialDebt, 1 * 10**9) {
-            fail();
-        } catch Error(string memory error) {
-            assertEq("VaultOwned: caller is not the Vault", error);
-        }
-    }
+        // From https://stackoverflow.com/a/67332959
+        // Real one at 0xE84251b93D9524E0d2e621Ba7dc7cb3579F997C0 from https://github.com/liquity/dev/blob/main/packages/contracts/mainnetDeployment/realDeploymentOutput/output14.txt#L17
+        // From https://etherscan.io/address/0xE84251b93D9524E0d2e621Ba7dc7cb3579F997C0#readContract
+        //
+        // For getApproxHint() with parameters:
+        //        nicr: 278134435025043070977999 //  log_named_uint("nicr", uint256(363407671459371026109145).mul(1 * 10 ** 20).div(uint256(130659000000000000000)));
+        //    numTrials: 18450  //  log_named_uint("numTrials", uint256(1230).mul(15));
+        //    pseudoRandom: 78338746147236970124700731725183845421594913511827187288591969170390706184117 //  log_named_uint("pseudoRandom", uint(keccak256(abi.encode(block.difficulty, block.timestamp))));
+        uint256 nicr = coll.mul(1 * 10 ** 20).div(debt);
+        uint256 numTrials = 5000;
+        uint pseudoRandom = uint(keccak256(abi.encode(block.difficulty, block.timestamp)));
+        address hintAddress = 0x6196d560051036b2011AEc3a7dD76D2e5C024166;
+        hintHelper.givenMethodReturn(abi.encodeWithSignature("getApproxHint(uint256,uint256,uint256)", nicr, numTrials, pseudoRandom), // This effectively validates our function call parameters!
+            abi.encode(hintAddress, uint256(278133163638282765156190), uint256(100355933811120983085532615102033542730297119242157052629869244010154446336574)));
 
-    function test_createBond_mulDiv() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({
-            controlVariable: 2,
-            fixedTerm: false,
-            vestingTerm: 5,
-            expiration: 6,
-            conclusion: 16,
-            minimumPrice: 10,
-            maxPayout: 1,
-            maxDebt: 10
-        });
-        uint256 initialDebt = 0;
-        uint256 ohmMintAmount = 10 * 10**18;
-        try
-            this.createBond_deposit(
-                2763957476737854671246564045522737104576123858413359401,
-                ohmMintAmount,
-                false,
-                9 * 10**20,
-                terms,
-                initialDebt,
-                1 * 10**9
-            )
-        {
-            fail();
-        } catch Error(string memory error) {
-            assertEq("FullMath: FULLDIV_OVERFLOW", error);
-        }
-    }
-
-    function test_createBond_mulOverflow() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({
-            controlVariable: 2,
-            fixedTerm: false,
-            vestingTerm: 5,
-            expiration: 6,
-            conclusion: 16,
-            minimumPrice: 10,
-            maxPayout: 1,
-            maxDebt: 10
-        });
-        uint256 initialDebt = 0;
-        uint256 ohmMintAmount = 10 * 10**18;
-        try
-            this.createBond_deposit(
-                75002556493819725874826918455844256653204641352000021311689657671948594686325,
-                ohmMintAmount,
-                false,
-                9 * 10**20,
-                terms,
-                initialDebt,
-                1 * 10**9
-            )
-        {
-            fail();
-        } catch Error(string memory error) {
-            assertEq("SafeMath: multiplication overflow", error);
-        }
-    }
-
-    function test_createBond_fixedPointFractionOverflow() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({
-            controlVariable: 2,
-            fixedTerm: false,
-            vestingTerm: 5,
-            expiration: 6,
-            conclusion: 16,
-            minimumPrice: 10,
-            maxPayout: 1,
-            maxDebt: 10
-        });
-        uint256 initialDebt = 0;
-        uint256 ohmMintAmount = 10 * 10**18;
-        try
-            this.createBond_deposit(
-                5136935571488474593545398400365374838660649282530,
-                ohmMintAmount,
-                false,
-                9 * 10**20,
-                terms,
-                initialDebt,
-                1 * 10**9
-            )
-        {
-            fail();
-        } catch Error(string memory error) {
-            assertEq("FixedPoint::fraction: overflow", error);
-        }
-    }
-
-    function test_createBond_happyPath() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({
-            controlVariable: 2,
-            fixedTerm: false,
-            vestingTerm: 5,
-            expiration: 6,
-            conclusion: 16,
-            minimumPrice: 10,
-            maxPayout: 10000,
-            maxDebt: 10
-        });
-        uint256 initialDebt = 0;
-        uint256 ohmMintAmount = 11 * 10**18;
-
-        this.createBond_deposit(5 * 10**16, ohmMintAmount, false, 9 * 10**20, terms, initialDebt, 1 * 10**9);
-    }
-
-    function test_createBond_insufficientReserves() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({
-            controlVariable: 2,
-            fixedTerm: false,
-            vestingTerm: 5,
-            expiration: 6,
-            conclusion: 16,
-            minimumPrice: 10,
-            maxPayout: 1 * 10**18,
-            maxDebt: 10
-        });
-        uint256 initialDebt = 0;
-        uint256 ohmMintAmount = 10 * 10**9;
-        try this.createBond_deposit(5 * 10**16, ohmMintAmount, false, 9 * 10**20, terms, initialDebt, 1) {
-            fail();
-        } catch Error(string memory error) {
-            assertEq("Insufficient reserves", error);
-        }
-    }
-
-    function test_createBond_bondTooLarge() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({
-            controlVariable: 2,
-            fixedTerm: false,
-            vestingTerm: 5,
-            expiration: 6,
-            conclusion: 16,
-            minimumPrice: 10,
-            maxPayout: 1 * 10**9,
-            maxDebt: 10
-        });
-        uint256 initialDebt = 0;
-        uint256 ohmMintAmount = 10 * 10**9;
-        try this.createBond_deposit(5 * 10**16, ohmMintAmount, false, 9 * 10**20, terms, initialDebt, 1) {
-            fail();
-        } catch Error(string memory error) {
-            assertEq("Bond too large", error);
-        }
-    }
-
-    function test_createBond_zeroAmount() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({
-            controlVariable: 2,
-            fixedTerm: false,
-            vestingTerm: 5,
-            expiration: 6,
-            conclusion: 16,
-            minimumPrice: 10,
-            maxPayout: 1,
-            maxDebt: 10
-        });
-        uint256 initialDebt = 0;
-        uint256 ohmMintAmount = 10 * 10**18;
-
-        try this.createBond_deposit(0, ohmMintAmount, false, 9 * 10**20, terms, initialDebt, 1 * 10**9) {
-            fail();
-        } catch Error(string memory error) {
-            assertEq("Bond too small", error);
-        }
-    }
-
-    function test_createBond_bondConcluded() public {
-        OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({
-            controlVariable: 2,
-            fixedTerm: false,
-            vestingTerm: 5,
-            expiration: 6,
-            conclusion: 2,
-            minimumPrice: 10,
-            maxPayout: 1,
-            maxDebt: 10
-        });
-        uint256 initialDebt = 0;
-        uint256 ohmMintAmount = 10 * 10**18;
-        try this.createBond_deposit(5 * 10**25, ohmMintAmount, false, 1 * 10**20, terms, initialDebt, 1 * 10**9) {
-            fail();
-        } catch Error(string memory error) {
-            assertEq("Bond concluded", error);
-        }
-    }
-
-    function createBond_deposit(
-        uint256 amount,
-        uint256 treasuryDeposit,
-        bool capacityIsPayout,
-        uint256 capacity,
-        OlympusBondDepository.Terms memory terms,
-        uint256 initialDebt,
-        uint256 profit
-    ) external {
-        //        log_named_uint("amount", amount);
-        //        log_named_uint("ohmMintAmount", treasuryDeposit);
-        //        log_named_uint("capacityIsPayout", capacityIsPayout ? 1 : 0);
-        //        log_named_uint("capacity", capacity);
-
-        //        ohm.mint(address(this), ohmMintAmount);
-        treasury.enableOnChainGovernance();
-        uint256 currentBlock = 8;
-        hevm.roll(currentBlock);
-        //7 day timelock TODO add test where it's not long enough
-        treasury.enableOnChainGovernance();
-        treasury.enable(OlympusTreasury.STATUS.REWARDMANAGER, address(teller), address(bondingCalculator));
-
-        treasury.enable(OlympusTreasury.STATUS.RESERVETOKEN, address(abcToken), address(bondingCalculator));
-        treasury.enable(OlympusTreasury.STATUS.RESERVEDEPOSITOR, address(this), address(bondingCalculator));
-
-        abcToken.givenMethodReturnBool(abi.encodeWithSelector(IERC20.transferFrom.selector), true);
-
-        treasury.deposit(treasuryDeposit, address(abcToken), profit);
-
-        MockContract pair = new MockContract();
-        //TODO this one is wild:  error StateChangeWhileStatic unless we comment out MockContract's call to abi.encodeWithSignature("updateInvocationCount(bytes4,bytes)"
-        pair.givenMethodReturnBool(abi.encodeWithSelector(IERC20.transfer.selector), true);
-
-        pair.givenMethodReturn(abi.encodeWithSelector(ERC20.name.selector), abi.encode("MockUniswapPair"));
-        pair.givenMethodReturn(abi.encodeWithSelector(ERC20.symbol.selector), abi.encode("MOCK"));
-        pair.givenMethodReturnUint(abi.encodeWithSelector(ERC20.decimals.selector), 18);
-
-        pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token0.selector), address(ohm));
-        pair.givenMethodReturnAddress(abi.encodeWithSelector(IUniswapV2Pair.token1.selector), address(abcToken));
-        pair.givenMethodReturn(
-            abi.encodeWithSelector(IUniswapV2Pair.getReserves.selector),
-            abi.encode(uint112(5 * 10**9), uint112(10 * 10**9), uint32(0))
+        // From https://etherscan.io/address/0x8FdD3fbFEb32b28fb73555518f8b361bCeA741A6#readContract
+        //
+        // For findInsertPosition with param:
+        // nicr: 278134435025043070977999
+        // prevId: 0x6196d560051036b2011AEc3a7dD76D2e5C024166
+        // nextId: 0x6196d560051036b2011AEc3a7dD76D2e5C024166
+        address lowerHintInput = address(0x0);
+        address upperHintInput = 0x6196d560051036b2011AEc3a7dD76D2e5C024166;
+        sortedTroves.givenMethodReturn(abi.encodeWithSignature("findInsertPosition(uint256,address,address)", nicr, hintAddress, hintAddress),
+            abi.encode(lowerHintInput, upperHintInput)
         );
 
-        uint256 bondId = bondDepository.addBond(address(pair), address(bondingCalculator), capacity, capacityIsPayout);
-        bondDepository.setTerms(
-            bondId,
-            terms.controlVariable,
-            terms.fixedTerm,
-            terms.vestingTerm,
-            terms.expiration,
-            terms.conclusion,
-            terms.minimumPrice,
-            terms.maxPayout,
-            terms.maxDebt,
-            initialDebt
+        allocator = new LUSDAllocator(address(treasury),
+            address(0x1), address(0x1), address(sortedTroves), address(hintHelper), address(troveManager),
+            address(0x0)
         );
 
-        address depositor = address(0x1);
-        address feo = address(0x2);
-
-        (uint256 payout, uint256 index) = bondDepository.deposit(amount, 200, depositor, bondId, feo);
-        assertEq(5 * 10**7, payout);
-        assertEq(0, index);
-
-        (address principal, address calculator, uint256 totalDebt, uint256 lastBondCreatedAt) = bondDepository.bondInfo(bondId);
-        assertEq(address(pair), principal);
-        assertEq(address(bondingCalculator), calculator);
-        assertEq(payout, totalDebt);
-        assertEq(currentBlock, lastBondCreatedAt);
-
-        assertEq(1_005_000_000, bondDepository.maxPayout(bondId));
-        assertEq(100_000_000_000_000_012_105, bondDepository.payoutFor(1 * 10**20, bondId));
-        assertEq(1 * 10**11, bondDepository.payoutForAmount(1 * 10**20, bondId));
-
-        assertEq(100, bondDepository.bondPrice(bondId));
-        assertEq(44_721_519_100_560, bondDepository.bondPriceInUSD(bondId));
-        assertEq(4_975_124, bondDepository.debtRatio(bondId));
-        assertEq(222_495_102_993, bondDepository.standardizedDebtRatio(bondId));
-        assertEq(payout, bondDepository.currentDebt(bondId));
+        (address lowerHint, address upperHint) = allocator.getHints(borrower);
+        assertEq(lowerHintInput, lowerHint);
+        assertEq(upperHintInput, upperHint);
     }
 }

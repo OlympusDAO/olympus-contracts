@@ -27,6 +27,7 @@ describe("LUSDAllocator", () => {
   let lqtyStakingFake: FakeContract<ILQTYStaking>;
   let lusdTokenFake: FakeContract<IERC20>;
   let lqtyTokenFake: FakeContract<IERC20>;
+  let wethTokenFake: FakeContract<IERC20>;
   let lusdAllocator: LUSDAllocator;
 
   beforeEach(async () => {
@@ -36,6 +37,7 @@ describe("LUSDAllocator", () => {
     lqtyStakingFake = await smock.fake<ILQTYStaking>("ILQTYStaking");
     lusdTokenFake = await smock.fake<IERC20>("IERC20");
     lqtyTokenFake = await smock.fake<IERC20>("IERC20");
+    wethTokenFake = await smock.fake<IERC20>("IERC20");
   });
 
   describe("constructor", () => {
@@ -46,7 +48,8 @@ describe("LUSDAllocator", () => {
         lqtyTokenFake.address,
         stabilityPoolFake.address,
         lqtyStakingFake.address,
-        ZERO_ADDRESS
+        ZERO_ADDRESS,
+        wethTokenFake.address
       );
       expect(await lusdAllocator.lusdTokenAddress()).to.equal(lusdTokenFake.address);
     });
@@ -58,7 +61,8 @@ describe("LUSDAllocator", () => {
         lqtyTokenFake.address,
         stabilityPoolFake.address,
         lqtyStakingFake.address,
-        ZERO_ADDRESS
+        ZERO_ADDRESS,
+        wethTokenFake.address
       )).to.be.revertedWith("treasury address cannot be 0x0");
     });
 
@@ -69,7 +73,8 @@ describe("LUSDAllocator", () => {
         lqtyTokenFake.address,
         ZERO_ADDRESS,
         lqtyStakingFake.address,
-        ZERO_ADDRESS
+        ZERO_ADDRESS,
+        wethTokenFake.address
       )).to.be.revertedWith("stabilityPool address cannot be 0x0");
     });
 
@@ -80,7 +85,8 @@ describe("LUSDAllocator", () => {
         lqtyTokenFake.address,
         stabilityPoolFake.address,
         lqtyStakingFake.address,
-        ZERO_ADDRESS
+        ZERO_ADDRESS,
+        wethTokenFake.address
       )).to.be.revertedWith("LUSD token address cannot be 0x0");
     });
 
@@ -91,7 +97,8 @@ describe("LUSDAllocator", () => {
         ZERO_ADDRESS,
         stabilityPoolFake.address,
         lqtyStakingFake.address,
-        ZERO_ADDRESS
+        ZERO_ADDRESS,
+        wethTokenFake.address
       )).to.be.revertedWith("LQTY token address cannot be 0x0");
     });
 
@@ -102,9 +109,23 @@ describe("LUSDAllocator", () => {
         lqtyTokenFake.address,
         stabilityPoolFake.address,
         ZERO_ADDRESS,
-        ZERO_ADDRESS
+        ZERO_ADDRESS,
+        wethTokenFake.address
       )).to.be.revertedWith("LQTY staking address cannot be 0x0");
+    });
+    
+    it("does not allow WETH token address to be 0x0", async () => {
+      await expect((new LUSDAllocator__factory(owner)).deploy(
+        treasuryFake.address,
+        lusdTokenFake.address,
+        lqtyTokenFake.address,
+        stabilityPoolFake.address,
+        lqtyStakingFake.address,
+        ZERO_ADDRESS,
+        ZERO_ADDRESS,
+      )).to.be.revertedWith("WETH token address cannot be 0x0");
     });    
+
   });
   
   describe("post-constructor", () => {
@@ -115,7 +136,8 @@ describe("LUSDAllocator", () => {
         lqtyTokenFake.address,
         stabilityPoolFake.address,
         lqtyStakingFake.address,
-        ZERO_ADDRESS
+        ZERO_ADDRESS,
+        wethTokenFake.address
       );
     });
 
