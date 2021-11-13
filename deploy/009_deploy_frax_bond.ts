@@ -70,7 +70,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     // await fraxContract.approve(fraxBond.address, largeApproval);
 };
 
-export default func;
 func.tags = ["FRAX_BOND"];
 func.dependencies = [
     Contracts.OHM,
@@ -79,3 +78,5 @@ func.dependencies = [
     // Contracts.OHM_BONDING_CALCULATOR,
     "FRAX_BOND",
 ];
+
+//export default func;

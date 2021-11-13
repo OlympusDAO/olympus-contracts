@@ -55,22 +55,21 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await sOhm.setgOHM(gOhm.address);
     await sOhm.initialize(staking.address, treasuryDeployment.address);
 
-
     // TODO: different than deployAll.js (uses initialIndex instead of 0)
     // doing this because the sohm contract has a require(index == 0)
     // TODO: this is leading to a revert
     // await sohmContract.setIndex(0);
 
-    // TODO: set distributor contract and warmup (doesn't exist) contract
-    await stakingContract.setContract("0", distributor.address);
+    await staking.setDistributor(distributor.address);
 
     // Add staking contract as distributor recipient
-    await distributorContract.addRecipient(staking.address, initialRewardRate);
+    await distributor.addRecipient(staking.address, INITIAL_REWARD_RATE);
 
-    // TODO: Approve staking and staking helper (doesn't exist anymore) contact to spend deployer's OHM
-    await ohmContract.approve(staking.address, largeApproval);
+    // Approve staking contact to spend deployer's OHM
+    await ohm.approve(staking.address, LARGE_APPROVAL);
 };
 
+func.tags = ["staking"];
+func.dependencies = [CONTRACTS.ohm, CONTRACTS.sOhm, CONTRACTS.gOhm];
+
 export default func;
-func.tags = [Contracts.OHM_STAKING];
-func.dependencies = [Contracts.OHM, Contracts.SOHM, Contracts.DISTRIBUTOR];

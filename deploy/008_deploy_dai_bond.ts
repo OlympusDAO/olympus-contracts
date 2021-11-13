@@ -66,7 +66,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     // await daiContract.approve(daiBond.address, largeApproval);
 };
 
-export default func;
 func.tags = ["DAI_BOND"];
 func.dependencies = [
     Contracts.OHM,
@@ -75,3 +74,5 @@ func.dependencies = [
     // Contracts.OHM_BONDING_CALCULATOR,
     "DAI_BOND",
 ];
+
+//export default func;
