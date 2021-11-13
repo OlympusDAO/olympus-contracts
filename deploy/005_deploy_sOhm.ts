@@ -7,7 +7,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deploy } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    await deploy(CONTRACTS.ohm, {
+    await deploy(CONTRACTS.sOhm, {
         from: deployer,
         log: true
     });

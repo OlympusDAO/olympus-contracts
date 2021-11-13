@@ -15,15 +15,15 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const ohm = await OlympusERC20Token__factory.connect(ohmDeployment.address, signer);
 
     // TODO: TIMELOCK SET TO 0 FOR NOW, CHANGE FOR ACTUAL DEPLOYMENT
-    const treasuryDeployed = await deploy(CONTRACTS.treasury, {
+    const treasuryDeployment = await deploy(CONTRACTS.treasury, {
         from: deployer,
         args: [
-            ohm.address,
+            ohmDeployment.address,
             TREASURY_TIMELOCK
         ],
     });
 
-    const treasury = await OlympusTreasury__factory.connect(treasuryDeployed.address, signer);
+    const treasury = await OlympusTreasury__factory.connect(treasuryDeployment.address, signer);
 
     // Set treasury for OHM token
     await ohm.setVault(treasury.address);
@@ -36,7 +36,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     // await treasuryContract.deposit("5000000000000000000000000", frax.address, "5000000000000000");
 };
 
-func.tags = [CONTRACTS.TREASURY, "treasury"];
+func.tags = [CONTRACTS.TREASURY, "staking"];
 func.dependencies = [CONTRACTS.ohm];
 
 export default func;
