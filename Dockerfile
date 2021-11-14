@@ -18,4 +18,5 @@ COPY hardhat.config.js .
 
 EXPOSE 8545
 
-# ENTRYPOINT
+# Run the node by default
+ENTRYPOINT npm run start
