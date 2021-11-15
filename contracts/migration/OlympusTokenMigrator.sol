@@ -361,7 +361,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         uint256 balance = IERC20(token).balanceOf(address(oldTreasury));
 
         uint256 excessReserves = oldTreasury.excessReserves();
-        uint256 tokenValue = newTreasury.tokenValue(token, balance);
+        uint256 tokenValue = oldTreasury.tokenValue(token, balance);
 
         if (tokenValue > excessReserves) {
             tokenValue = excessReserves;
