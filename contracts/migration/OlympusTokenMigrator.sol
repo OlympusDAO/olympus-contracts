@@ -232,6 +232,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
 
     // start timelock to send backing to new treasury
     function startTimelock() external onlyGovernor {
+        require(timelockEnd == 0, "Timelock set");
         timelockEnd = block.number.add(timelockLength);
 
         emit TimelockStarted(block.number, timelockEnd);
