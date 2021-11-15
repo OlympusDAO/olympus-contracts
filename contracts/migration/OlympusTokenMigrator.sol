@@ -102,7 +102,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
             oldOHM.safeTransferFrom(msg.sender, address(this), _amount);
         } else if (_from == TYPE.STAKED) {
             oldsOHM.safeTransferFrom(msg.sender, address(this), _amount);
-        } else if (_from == TYPE.WRAPPED) {
+        } else {
             oldwsOHM.safeTransferFrom(msg.sender, address(this), _amount);
             wAmount = _amount;
             sAmount = oldwsOHM.wOHMTosOHM(_amount);
