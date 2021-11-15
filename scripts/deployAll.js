@@ -186,7 +186,7 @@ async function main() {
     console.log( "Staking: " + staking.address );
     console.log( "sOHM: " + sOHM.address );
     console.log( "Distributor " + distributor.address);
-    console.log( "Staking Wawrmup " + stakingWarmup.address);
+    console.log( "Staking Warmup " + stakingWarmup.address);
     console.log( "Staking Helper " + stakingHelper.address);
     console.log("DAI Bond: " + daiBond.address);
     console.log("Frax Bond: " + fraxBond.address);
