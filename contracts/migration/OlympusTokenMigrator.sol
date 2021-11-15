@@ -8,46 +8,14 @@ import "../interfaces/IgOHM.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IStaking.sol";
 import "../interfaces/IOwnable.sol";
+import "../interfaces/IUniswapV2Router.sol";
+import "../interfaces/IStakingV1.sol";
 
 import "../types/OlympusAccessControlled.sol";
 
 import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 
-interface IUniswapV2Router {
-    function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint256 amountADesired,
-        uint256 amountBDesired,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline
-    )
-        external
-        returns (
-            uint256 amountA,
-            uint256 amountB,
-            uint256 liquidity
-        );
-
-    function removeLiquidity(
-        address tokenA,
-        address tokenB,
-        uint256 liquidity,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountA, uint256 amountB);
-}
-
-interface IStakingV1 {
-    function unstake(uint256 _amount, bool _trigger) external;
-
-    function index() external view returns (uint256);
-}
 
 contract OlympusTokenMigrator is OlympusAccessControlled {
     using SafeMath for uint256;
