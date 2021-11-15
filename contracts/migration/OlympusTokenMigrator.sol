@@ -216,7 +216,11 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
 
         uint256 balance = oldOHM.balanceOf(address(this));
 
-        oldSupply = oldSupply.sub(balance);
+        if(balance > oldSupply) {
+            oldSupply = 0;
+        } else {
+            oldSupply -= balance;
+        }
 
         uint256 amountToWithdraw = balance.mul(1e9);
         oldOHM.approve(address(oldTreasury), amountToWithdraw);
