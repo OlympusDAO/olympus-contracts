@@ -10,6 +10,7 @@ import "../interfaces/IStaking.sol";
 import "../interfaces/IOwnable.sol";
 import "../interfaces/IUniswapV2Router.sol";
 import "../interfaces/IStakingV1.sol";
+import "../interfaces/ITreasuryV1.sol";
 
 import "../types/OlympusAccessControlled.sol";
 
@@ -36,7 +37,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
     IERC20 public immutable oldOHM;
     IsOHM public immutable oldsOHM;
     IwsOHM public immutable oldwsOHM;
-    ITreasury public immutable oldTreasury;
+    ITreasuryV1 public immutable oldTreasury;
     IStakingV1 public immutable oldStaking;
 
     IUniswapV2Router public immutable sushiRouter;
@@ -69,7 +70,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         require(_oldsOHM != address(0), "Zero address: sOHM");
         oldsOHM = IsOHM(_oldsOHM);
         require(_oldTreasury != address(0), "Zero address: Treasury");
-        oldTreasury = ITreasury(_oldTreasury);
+        oldTreasury = ITreasuryV1(_oldTreasury);
         require(_oldStaking != address(0), "Zero address: Staking");
         oldStaking = IStakingV1(_oldStaking);
         require(_oldwsOHM != address(0), "Zero address: wsOHM");
@@ -336,7 +337,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         uint256 balance = IERC20(token).balanceOf(address(oldTreasury));
 
         uint256 excessReserves = oldTreasury.excessReserves();
-        uint256 tokenValue = oldTreasury.tokenValue(token, balance);
+        uint256 tokenValue = oldTreasury.valueOf(token, balance);
 
         if (tokenValue > excessReserves) {
             tokenValue = excessReserves;
