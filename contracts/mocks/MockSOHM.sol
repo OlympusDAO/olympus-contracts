@@ -2,17 +2,10 @@
 pragma solidity ^0.8.9;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
 import "hardhat/console.sol";
-
-interface IMockSOHM {
-    function rebase() external;
-    function setRebasePct(uint256 newRebasePct_) external;
-}
 
 /**
  * A mock version of sOHM, with an over-simplified rebase mechanism, for testing purposes only
- * TODO currently untested
  */
 contract MockSOHM is ERC20 {
 
@@ -86,6 +79,11 @@ contract MockSOHM is ERC20 {
         _rebasePct = newRebasePct_;
     }
 
+    function index() public view returns (uint256) {
+        return _index;
+    }
+
+    // Set index. Index has 9 decimal places.
     function setIndex(uint256 newIndex_) external {
         require(newIndex_ > 0, "new index must be greater than 0");
         _index = newIndex_;
@@ -93,8 +91,8 @@ contract MockSOHM is ERC20 {
 
     // Drip 100 sOHM to caller
     function drip() external {
-        require(nextBlockCanClaim[msg.sender] <= block.number, "Already claimed");
-        nextBlockCanClaim[msg.sender] += 3000;
+        //require(nextBlockCanClaim[msg.sender] <= block.number, "Already claimed");
+        //nextBlockCanClaim[msg.sender] += 3000;
         mint(msg.sender, 100000000000);
     }
 
