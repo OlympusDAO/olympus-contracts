@@ -65,6 +65,7 @@ const config: HardhatUserConfig = {
         // rinkeby: getChainConfig("rinkeby"),
         // ropsten: getChainConfig("ropsten"),
     },
+<<<<<<< HEAD
     paths: {
         artifacts: "./artifacts",
         cache: "./cache",
@@ -91,6 +92,35 @@ const config: HardhatUserConfig = {
                 version: "0.5.16",
             },
         ],
+=======
+    goerli: getChainConfig("goerli"),
+    kovan: getChainConfig("kovan"),
+    rinkeby: getChainConfig("rinkeby"),
+    ropsten: getChainConfig("ropsten"),
+  },
+  paths: {
+    artifacts: "./artifacts",
+    cache: "./cache",
+    sources: "./contracts",
+    tests: "./test",
+  },
+  solidity: {
+    compilers: [
+      {
+        version: "0.8.10",
+        settings: {
+          metadata: {
+            bytecodeHash: "none",
+          },
+          optimizer: {
+            enabled: true,
+            runs: 800,
+          },
+        },
+      },
+      {
+        version: "0.7.5",
+>>>>>>> 1f1f82b (move to new v2 branch. add mock sOHM contract)
         settings: {
             outputSelection: {
                 "*": {
