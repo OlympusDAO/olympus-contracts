@@ -246,7 +246,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
             0, 
             0, 
             address(this), 
-            block.timestamp + 15
+            block.timestamp
         );
 
         newTreasury.mint(address(this), amountB);
@@ -262,7 +262,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
             amountA, 
             amountB, 
             address(newTreasury), 
-            block.timestamp + 15
+            block.timestamp
         );
     }
 
