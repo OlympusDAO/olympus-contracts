@@ -177,20 +177,19 @@ contract YieldDirector is Ownable, IYieldDirector {
 
     /**
         @notice Get withdrawable sOHM amount for specific recipient
-        TODO should this allow choosing donor (not default to msg.sender)?
      */
-    function donationsTo(address _recipient) external override view returns ( uint256 ) {
-        int256 recipientIndex = _getRecipientIndex(msg.sender, _recipient);
+    function donationsTo(address donor_, address _recipient) external override view returns ( uint256 ) {
+        int256 recipientIndex = _getRecipientIndex(donor_, _recipient);
         require(recipientIndex >= 0, "No donations to recipient");
 
-        return donationInfo[msg.sender][uint256(recipientIndex)].amount;
+        return donationInfo[donor_][uint256(recipientIndex)].amount;
     }
 
     /**
         @notice Return total amount of user's sOHM being donated
      */
-    function totalDonations() external override view returns ( uint256 ) {
-        DonationInfo[] memory donations = donationInfo[msg.sender];
+    function totalDonations(address donor_) external override view returns ( uint256 ) {
+        DonationInfo[] memory donations = donationInfo[donor_];
         require(donations.length != 0, "User is not donating");
 
         uint256 total = 0;

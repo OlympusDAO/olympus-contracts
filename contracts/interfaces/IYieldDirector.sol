@@ -2,11 +2,11 @@
 pragma solidity >=0.7.5;
 
 interface IYieldDirector {
-	function deposit(uint _amount, address _recipient) external;
-	function withdraw(uint _amount, address _recipient) external;
+	function deposit(uint amount_, address recipient_) external;
+	function withdraw(uint amount_, address recipient_) external;
 	function withdrawAll() external;
-	function donationsTo(address _recipient) external view returns ( uint );
-	function totalDonations() external view returns ( uint );
+	function donationsTo(address donor_, address recipient_) external view returns ( uint256 );
+	function totalDonations(address donor_) external view returns ( uint256 );
 	function redeem() external;
-	function redeemableBalance(address _who) external view returns (uint);
+	function redeemableBalance(address recipient_) external view returns ( uint256 );
 }
