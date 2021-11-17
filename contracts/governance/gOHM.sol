@@ -1,21 +1,18 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.5;
+pragma solidity ^0.8.0;
 
-import "../libraries/SafeERC20.sol";
-import "../libraries/SafeMath.sol";
-import "../libraries/Address.sol";
-
-import "../interfaces/IERC20.sol";
-import "../interfaces/IsOHM.sol";
-import "../interfaces/IgOHM.sol";
 import "../types/ERC20.sol";
 
+import "../libraries/Address.sol";
+
+import "../interfaces/IsOHM.sol";
+import "../interfaces/IgOHM.sol";
+
 contract gOHM is IgOHM {
+
     /* ========== DEPENDENCIES ========== */
 
-    using SafeERC20 for IERC20;
     using Address for address;
-    using SafeMath for uint256;
 
     /* ========== MODIFIERS ========== */
 
@@ -46,6 +43,7 @@ contract gOHM is IgOHM {
 
     IsOHM public sOHM;
     address public approved; // minter
+    bool public migrated;
 
     mapping(address => mapping(uint256 => Checkpoint)) public checkpoints;
     mapping(address => uint256) public numCheckpoints;
@@ -55,12 +53,32 @@ contract gOHM is IgOHM {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _migrator) {
+    constructor(address _migrator, address _sOHM) {
         require(_migrator != address(0), "Zero address found");
         approved = _migrator;
+        require(_sOHM != address(0), "Zero address: sOHM");
+        sOHM = IsOHM(_sOHM); // enable index/balanceTo/balanceFrom
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
+
+    /**
+     * @notice transfer mint rights from migrator to staking
+     * @notice can only be done once, at the time of contract migration
+     * @param _staking address
+     * @param _sOHM address
+     */
+    function migrate(address _staking, address _sOHM) external override onlyApproved {
+        require(!migrated, "Migrated");
+        migrated = true;
+
+        require(_staking != approved, "Invalid argument");
+        require(_staking != address(0), "Zero address found");
+        approved = _staking;
+
+        require(_sOHM != address(0), "Zero address found");
+        sOHM = IsOHM(_sOHM);
+    }
 
     /**
      * @dev See {IERC20-approve}.
@@ -105,7 +123,7 @@ contract gOHM is IgOHM {
         uint256 amount
     ) external override returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        _approve(sender, recipient, _allowances[sender][recipient] - amount);
         return true;
     }
 
@@ -115,23 +133,6 @@ contract gOHM is IgOHM {
      */
     function delegate(address delegatee) external {
         return _delegate(msg.sender, delegatee);
-    }
-
-    /**
-     * @notice transfer mint rights from migrator to staking
-     * @notice can only be done once, at the time of contract migration
-     * @param _staking address
-     * @param _sOHM address
-     */
-    function migrate(address _staking, address _sOHM) external override onlyApproved {
-        require(_staking != approved, "Invalid argument");
-
-        require(_staking != address(0), "Zero address found");
-        approved = _staking;
-
-        require(address(sOHM) == address(0), "Cannot migrate twice");
-        require(_sOHM != address(0), "Zero address found");
-        sOHM = IsOHM(_sOHM);
     }
 
     /**
@@ -154,13 +155,17 @@ contract gOHM is IgOHM {
 
     /* ========== VIEW FUNCTIONS ========== */
 
+    function index() public view returns (uint256) {
+        return sOHM.index();
+    }
+
     /**
         @notice converts gOHM amount to OHM
         @param _amount uint
         @return uint
      */
     function balanceFrom(uint256 _amount) public view override returns (uint256) {
-        return _amount.mul(IsOHM(sOHM).index()).div(10**decimals);
+        return _amount * index() / (10**decimals);
     }
 
     /**
@@ -169,7 +174,7 @@ contract gOHM is IgOHM {
         @return uint
      */
     function balanceTo(uint256 _amount) public view override returns (uint256) {
-        return _amount.mul(10**decimals).div(IsOHM(sOHM).index());
+        return _amount * (10**decimals) / index();
     }
 
     /**
@@ -253,8 +258,8 @@ contract gOHM is IgOHM {
 
         _beforeTokenTransfer(address(0), account, amount);
 
-        totalSupply = totalSupply.add(amount);
-        _balances[account] = _balances[account].add(amount);
+        totalSupply += amount;
+        _balances[account] += amount;
         emit Transfer(address(0), account, amount);
     }
 
@@ -274,8 +279,8 @@ contract gOHM is IgOHM {
 
         _beforeTokenTransfer(account, address(0), amount);
 
-        _balances[account] = _balances[account].sub(amount, "ERC20: burn amount exceeds balance");
-        totalSupply = totalSupply.sub(amount);
+        _balances[account] -= amount;
+        totalSupply -= amount;
         emit Transfer(account, address(0), amount);
     }
 
@@ -328,8 +333,8 @@ contract gOHM is IgOHM {
 
         _beforeTokenTransfer(sender, recipient, amount);
 
-        _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
-        _balances[recipient] = _balances[recipient].add(amount);
+        _balances[sender] -= amount;
+        _balances[recipient] += amount;
         emit Transfer(sender, recipient, amount);
     }
 
@@ -352,14 +357,14 @@ contract gOHM is IgOHM {
             if (srcRep != address(0)) {
                 uint256 srcRepNum = numCheckpoints[srcRep];
                 uint256 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-                uint256 srcRepNew = srcRepOld.sub(amount);
+                uint256 srcRepNew = srcRepOld - amount;
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
 
             if (dstRep != address(0)) {
                 uint256 dstRepNum = numCheckpoints[dstRep];
                 uint256 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-                uint256 dstRepNew = dstRepOld.add(amount);
+                uint256 dstRepNew = dstRepOld + amount;
                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
             }
         }
