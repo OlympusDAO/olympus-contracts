@@ -19,7 +19,7 @@ contract MockSOHM is ERC20 {
 
 
     constructor(uint256 initialIndex_, uint256 rebasePct_)
-        ERC20("Staked OHM", "sOHM")
+        ERC20("Mock sOHM", "sOHM")
     {
         require(initialIndex_ > 0, "initial index must be greater than 0");
         require(rebasePct_ > 0, "rebase percentage must be greater than 0");
@@ -40,7 +40,7 @@ contract MockSOHM is ERC20 {
 
     function mint(address to_, uint256 amount_) public returns (uint256) {
         uint256 scaledAmount = amount_ / _index;
-        _agnosticAmount[msg.sender] += scaledAmount;
+        _agnosticAmount[to_] += scaledAmount;
         _mint(to_, scaledAmount);
         return scaledAmount;
     }
