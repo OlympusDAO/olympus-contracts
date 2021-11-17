@@ -81,7 +81,7 @@ describe("Treasury Token Migration", async function () {
         const migratorAddress = olympusTokenMigrator.address;
 
         let gOhmContract = await ethers.getContractFactory("gOHM");
-        gOhm = await gOhmContract.deploy(migratorAddress);
+        gOhm = await gOhmContract.deploy(migratorAddress, OLD_SOHM_ADDRESS);
 
         /**
          *  Connect the contracts once they have been deployed
