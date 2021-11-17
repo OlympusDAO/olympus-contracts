@@ -46,7 +46,10 @@ contract MockSOHM is ERC20 {
     }
 
     function transfer(address to_, uint256 value_) public override returns (bool) {
-        return transferFrom(msg.sender, to_, value_);
+        require(to_ != address(0), "ERC20: transfer to the zero address");
+
+        _transfer(msg.sender, to_, value_);
+        return true;
     }
 
     function transferFrom(address from_, address to_, uint256 value_) public override returns (bool) {
@@ -54,14 +57,17 @@ contract MockSOHM is ERC20 {
         require(to_ != address(0), "ERC20: transfer to the zero address");
 
         _allowedValue[from_][to_] -= value_;
+        _transfer(from_, to_, value_);
+        return true;
+    }
 
+    function _transfer(address from_, address to_, uint256 value_) internal override {
         uint256 amount = value_ / _index;
 
         _agnosticAmount[from_] -= amount;
         _agnosticAmount[to_] += amount;
 
         emit Transfer(from_, to_, amount);
-        return true;
     }
 
     function balanceOf(address owner_) public view override returns (uint256) {

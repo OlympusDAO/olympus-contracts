@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { ethers } from "hardhat";
 import { MockSOHM__factory, MockSOHM } from '../../types';
 
-describe("Mock sOhm Tests", () => {
+describe.only("Mock sOhm Tests", () => {
 
     // 100 sOHM
     const INITIAL_AMOUNT = "100000000000";

@@ -49,6 +49,7 @@
     "format": "prettier --check \"**/*.{ts,js,sol}\"",
     "format:fix": "prettier --write \"**/*.{ts,js,sol}\"",
     "compile": "hardhat compile",
+    "clean": "hardhat clean",
     "void:deploy": "hardhat deploy",
     "test": "hardhat test",
     "gas": "REPORT_GAS=true hardhat test",
