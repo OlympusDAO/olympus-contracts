@@ -8,10 +8,10 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IDistributor.sol";
 
-import "./types/Governable.sol";
-import "./types/Guardable.sol";
+import "./types/OlympusAccessControlled.sol";
 
-contract Distributor is IDistributor, Governable, Guardable {
+
+contract Distributor is IDistributor, OlympusAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -46,8 +46,9 @@ contract Distributor is IDistributor, Governable, Guardable {
     constructor(
         address _treasury,
         address _ohm,
-        address _staking
-    ) {
+        address _staking, 
+        address _authority
+    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_treasury != address(0), "Zero address: Treasury");
         treasury = ITreasury(_treasury);
         require(_ohm != address(0), "Zero address: OHM");
@@ -143,7 +144,7 @@ contract Distributor is IDistributor, Governable, Guardable {
         @param _index uint
      */
     function removeRecipient(uint256 _index) external override {
-        require(msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian");
+        require(msg.sender == authority.governor() || msg.sender == authority.guardian(), "Caller is not governor or guardian");
         require(info[_index].recipient != address(0), "Recipient does not exist");
         info[_index].recipient = address(0);
         info[_index].rate = 0;
@@ -162,10 +163,10 @@ contract Distributor is IDistributor, Governable, Guardable {
         uint256 _rate,
         uint256 _target
     ) external override {
-        require(msg.sender == governor() || msg.sender == guardian(), "Caller is not governor or guardian");
+        require(msg.sender == authority.governor() || msg.sender == authority.guardian(), "Caller is not governor or guardian");
         require(info[_index].recipient != address(0), "Recipient does not exist");
 
-        if (msg.sender == guardian()) {
+        if (msg.sender == authority.guardian()) {
             require(_rate <= info[_index].rate.mul(25).div(1000), "Limiter: cannot adjust by >2.5%");
         }
 

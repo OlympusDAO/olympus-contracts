@@ -2,7 +2,11 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import { OlympusERC20Token, OlympusERC20Token__factory } from '../../types'
+import {
+  OlympusERC20Token,
+  OlympusERC20Token__factory,
+  OlympusAuthority__factory
+} from '../../types';
 
 describe("OlympusTest", () => {
   let deployer: SignerWithAddress;
@@ -14,8 +18,11 @@ describe("OlympusTest", () => {
   beforeEach(async () => {
     [deployer, vault, bob, alice] = await ethers.getSigners();
 
-    ohm = await (new OlympusERC20Token__factory(deployer)).deploy();
-    await ohm.setVault(vault.address);
+    const authority = await (new OlympusAuthority__factory(deployer)).deploy(deployer.address, deployer.address, deployer.address, vault.address);
+    await authority.deployed();
+
+    ohm = await (new OlympusERC20Token__factory(deployer)).deploy(authority.address);
+
   });
 
   it("correctly constructs an ERC20", async () => {
@@ -27,7 +34,7 @@ describe("OlympusTest", () => {
   describe("mint", () => {
     it("must be done by vault", async () => {
       await expect(ohm.connect(deployer).mint(bob.address, 100)).
-        to.be.revertedWith("VaultOwned: caller is not the Vault");
+        to.be.revertedWith("UNAUTHORIZED");
     });
 
     it("increases total supply", async () => {
