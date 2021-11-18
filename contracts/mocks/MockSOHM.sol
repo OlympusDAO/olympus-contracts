@@ -13,7 +13,7 @@ contract MockSOHM is ERC20 {
     uint256 public _index; // 9 decimals
     uint256 public _rebasePct; // 9 decimals
 
-    mapping(address => uint256) public _agnosticAmount;
+    mapping(address => uint256) public _agnosticBalance;
     mapping(address => mapping(address => uint256)) public _allowedValue;
     mapping(address => uint) public nextBlockCanClaim;
 
@@ -39,10 +39,11 @@ contract MockSOHM is ERC20 {
     }
 
     function mint(address to_, uint256 amount_) public returns (uint256) {
-        uint256 scaledAmount = amount_ / _index;
-        _agnosticAmount[to_] += scaledAmount;
-        _mint(to_, scaledAmount);
-        return scaledAmount;
+        uint256 amount = amount_ * DECIMALS / _index;
+
+        _agnosticBalance[to_] += amount;
+        _mint(to_, amount);
+        return amount;
     }
 
     function transfer(address to_, uint256 value_) public override returns (bool) {
@@ -62,16 +63,16 @@ contract MockSOHM is ERC20 {
     }
 
     function _transfer(address from_, address to_, uint256 value_) internal override {
-        uint256 amount = value_ / _index;
+        uint256 amount = value_ * DECIMALS / _index;
 
-        _agnosticAmount[from_] -= amount;
-        _agnosticAmount[to_] += amount;
+        _agnosticBalance[from_] -= amount;
+        _agnosticBalance[to_] += amount;
 
         emit Transfer(from_, to_, amount);
     }
 
     function balanceOf(address owner_) public view override returns (uint256) {
-        return _agnosticAmount[owner_] * _index;
+        return _agnosticBalance[owner_] * _index / DECIMALS;
     }
 
     // Rebase all balances by rebase percentage
