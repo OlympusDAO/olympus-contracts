@@ -2,7 +2,11 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { CONTRACTS, LARGE_APPROVAL, TREASURY_TIMELOCK } from "./constants";
 //import { DAI, FRAX, OlympusERC20Token, OlympusTreasury } from "../types";
-import { OlympusTreasury__factory, OlympusERC20Token__factory } from "../types";
+import {
+    OlympusTreasury__factory,
+    // OlympusERC20Token__factory,
+    OlympusAuthority__factory,
+} from "../types";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts, ethers } = hre;
@@ -12,21 +16,25 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const signer = await ethers.provider.getSigner(deployer);
 
     const ohmDeployment = await deployments.get(CONTRACTS.ohm);
-    const ohm = await OlympusERC20Token__factory.connect(ohmDeployment.address, signer);
+
+    // const ohm = await OlympusERC20Token__factory.connect(ohmDeployment.address, signer);
+    const authorityDeployment = await deployments.get(CONTRACTS.authority);
+    const authorityContract = await OlympusAuthority__factory.connect(
+        authorityDeployment.address,
+        signer
+    );
 
     // TODO: TIMELOCK SET TO 0 FOR NOW, CHANGE FOR ACTUAL DEPLOYMENT
     const treasuryDeployment = await deploy(CONTRACTS.treasury, {
         from: deployer,
-        args: [
-            ohmDeployment.address,
-            TREASURY_TIMELOCK
-        ],
+        args: [ohmDeployment.address, TREASURY_TIMELOCK, authorityDeployment.address],
     });
 
     const treasury = await OlympusTreasury__factory.connect(treasuryDeployment.address, signer);
 
     // Set treasury for OHM token
-    await ohm.setVault(treasury.address);
+    await authorityContract.pushVault(treasury.address, true);
+    // await ohm.pushVault(treasury.address);
 
     // TODO: These two functions are causing a revert
     // Deposit 9,000,000 DAI to treasury, 600,000 OHM gets minted to deployer and 8,400,000 are in treasury as excesss reserves

@@ -8,6 +8,8 @@ export const CONTRACTS: Record<string, string> = {
     bondDepo: "OlympusBondDepository",
     teller: "BondTeller",
     bondingCalculator: "OlympusBondingCalculator",
+    authority: "OlympusAuthority",
+    migrator: "OlympusTokenMigrator",
 };
 
 // Constructor Arguments

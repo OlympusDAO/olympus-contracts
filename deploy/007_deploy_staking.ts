@@ -7,14 +7,14 @@ import {
     FIRST_EPOCH_BLOCK,
     FIRST_EPOCH_NUMBER,
     INITIAL_REWARD_RATE,
-    INITIAL_INDEX
+    INITIAL_INDEX,
 } from "./constants";
 import {
     Distributor__factory,
     OlympusERC20Token__factory,
     OlympusStaking__factory,
     SOlympus__factory,
-    GOHM__factory
+    GOHM__factory,
 } from "../types";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
@@ -42,7 +42,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
             gOhm.address,
             EPOCH_LENGTH_IN_BLOCKS,
             FIRST_EPOCH_NUMBER,
-            FIRST_EPOCH_BLOCK
+            FIRST_EPOCH_BLOCK,
         ],
     });
     const staking = OlympusStaking__factory.connect(stakingDeployment.address, signer);
@@ -69,7 +69,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await ohm.approve(staking.address, LARGE_APPROVAL);
 };
 
-func.tags = ["staking"];
+func.tags = [CONTRACTS.staking, "staking"];
 func.dependencies = [CONTRACTS.ohm, CONTRACTS.sOhm, CONTRACTS.gOhm];
 
 export default func;
