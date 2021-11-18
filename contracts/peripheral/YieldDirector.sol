@@ -176,9 +176,9 @@ contract YieldDirector is Ownable, IYieldDirector {
     }
 
     /**
-        @notice Get withdrawable sOHM amount for specific recipient
+        @notice Get deposited sOHM amount for specific recipient
      */
-    function donationsTo(address donor_, address _recipient) external override view returns ( uint256 ) {
+    function depositsTo(address donor_, address _recipient) external override view returns ( uint256 ) {
         int256 recipientIndex = _getRecipientIndex(donor_, _recipient);
         require(recipientIndex >= 0, "No donations to recipient");
 
@@ -186,9 +186,9 @@ contract YieldDirector is Ownable, IYieldDirector {
     }
 
     /**
-        @notice Return total amount of user's sOHM being donated
+        @notice Return total amount of donor's sOHM deposited
      */
-    function totalDonations(address donor_) external override view returns ( uint256 ) {
+    function totalDeposits(address donor_) external override view returns ( uint256 ) {
         DonationInfo[] memory donations = donationInfo[donor_];
         require(donations.length != 0, "User is not donating");
 
@@ -199,6 +199,8 @@ contract YieldDirector is Ownable, IYieldDirector {
         return total;
     }
 
+    // TODO function to return total amount of sOHM donated (not deposits)
+    // agnosticValue of deposit - agnosticValue of 
 
     /************************
     * Recipient Functions
