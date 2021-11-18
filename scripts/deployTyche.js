@@ -4,7 +4,7 @@ async function main() {
     // v1 sOHM contract
     const sOhmMainnet = '0x73CFE79A66D7Ca687081A489A269e22974B7e3E2';
 
-    const mockSohmDeployment = "0xD12Ca288c54453684645EeaA079cB328B8eA2DD5";
+    const mockSohmDeployment = "0x22C0b7Dc53a4caa95fEAbb05ea0729995a10D727";
 
     const yieldDirectorFactory = await ethers.getContractFactory('YieldDirector');
     //const yieldDirector = await yieldDirectorFactory.deploy(mockSOhm.address);
