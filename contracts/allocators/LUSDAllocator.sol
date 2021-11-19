@@ -210,17 +210,17 @@ contract LUSDAllocator is Ownable {
         require(_treasury != address(0), "treasury address cannot be 0x0");
         treasury = ITreasury(_treasury);
 
-        require(_stabilityPool != address(0), "stabilityPool address cannot be 0x0");
-        lusdStabilityPool = IStabilityPool(_stabilityPool);
-
-        require(_lqtyStaking != address(0), "LQTY staking address cannot be 0x0");
-        lqtyStaking = ILQTYStaking(_lqtyStaking);
-
         require(_lusdTokenAddress != address(0), "LUSD token address cannot be 0x0");
         lusdTokenAddress = _lusdTokenAddress;
 
         require(_lqtyTokenAddress != address(0), "LQTY token address cannot be 0x0");
         lqtyTokenAddress = _lqtyTokenAddress;
+
+        require(_stabilityPool != address(0), "stabilityPool address cannot be 0x0");
+        lusdStabilityPool = IStabilityPool(_stabilityPool);
+
+        require(_lqtyStaking != address(0), "LQTY staking address cannot be 0x0");
+        lqtyStaking = ILQTYStaking(_lqtyStaking);
 
         frontEndAddress = _frontEndAddress; // address can be 0
 
@@ -242,18 +242,17 @@ contract LUSDAllocator is Ownable {
         uint256 stabilityPoolEthRewards = getETHRewards();
         uint256 stabilityPoolLqtyRewards = getLQTYRewards();
 
-        //TODO a mininum?
         if (stabilityPoolEthRewards == 0 && stabilityPoolLqtyRewards == 0) {
             return false;
         }
         // 1.  Harvest from LUSD StabilityPool to get ETH+LQTY rewards
-        lusdStabilityPool.withdrawFromSP(0);
+        lusdStabilityPool.withdrawFromSP(0);  //Passing 0 b/c we don't want to withdraw from the pool but harvest - see https://discord.com/channels/700620821198143498/818895484956835912/908031137010581594
 
         // 2.  Stake LQTY rewards from #1.  This txn will also give out any outstanding ETH+LUSD rewards from prior staking
         uint256 balanceLqty = IERC20(lqtyTokenAddress).balanceOf(address(this)); // LQTY balance received from stability pool
+        
         uint stakingEthRewards = 0;
         uint stakingLUSDRewards = 0;
-        //TODO a mininum?
         if (balanceLqty > 0) {
             stakingEthRewards = lqtyStaking.getPendingETHGain(address(this));
             stakingLUSDRewards = lqtyStaking.getPendingLUSDGain(address(this));
@@ -263,7 +262,6 @@ contract LUSDAllocator is Ownable {
         }
 
         // 3.  Deposit LUSD from #2 into StabilityPool
-        //TODO a mininum?
         if (stakingLUSDRewards > 0) {
             IERC20(lusdTokenAddress).approve(address(lusdStabilityPool), stakingLUSDRewards); // approve to deposit into stability pool
             lusdStabilityPool.provideToSP(stakingLUSDRewards, frontEndAddress);
@@ -271,7 +269,6 @@ contract LUSDAllocator is Ownable {
 
 
         // 4.  Move ETH from #1 and #2 to treasury 
-        //TODO a mininum?   
        if (stabilityPoolEthRewards > 0 || stakingEthRewards > 0) {            
             uint256 totalEthRewards = stabilityPoolEthRewards + stakingEthRewards;            
             weth.approve(address(treasury), totalEthRewards);

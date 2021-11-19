@@ -22,20 +22,22 @@ import "../../../contracts/governance/gOHM.sol";
 import "./util/MockContract.sol";
 import "../../../contracts/allocators/LUSDAllocator.sol";
 
-
 contract LUSDAllocatorTest is DSTest {
-
     using FixedPoint for *;
-    using SafeMath for uint;
+    using SafeMath for uint256;
     using SafeMath for uint112;
 
     LUSDAllocator internal allocator;
-    OlympusTreasury internal treasury;
+    OlympusTreasury internal treasury;    
     OlympusERC20Token internal ohm;
+    MockContract internal lusdTokenAddress = new MockContract();
     MockContract internal wethContract = new MockContract();
+    MockContract internal lqtyTokenAddress = new MockContract();
+    MockContract internal stabilityPool = new MockContract();
+    MockContract internal lqtyStaking = new MockContract();
 
     /// @dev Hevm setup
-    Hevm constant internal hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+    Hevm internal constant hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     function setUp() public {
         // Start at timestamp
@@ -50,17 +52,27 @@ contract LUSDAllocatorTest is DSTest {
     // stays consistent.  If we change the underlying logic in the contract as one function call param changes,
     // then this test will break.  That's good as once we're in prod this becomes a golden
     // source of truth with interactions
-    function test_hints() public {
-      
-        // allocator = new LUSDAllocator(address(treasury),
-        //     address(treasury), 
-        //     address(0x1), address(0x1), 
-        //     address(0x1), address(0x1), 
-        //     address(wethContract.address)
-        // );
+    function test_harvest() public {
+        
+        allocator = new LUSDAllocator(
+            address(treasury),                        
+            address(lusdTokenAddress),
+            address(lqtyTokenAddress),
+            address(stabilityPool),
+            address(lqtyStaking),
+            address(0x1),
+            address(wethContract)
+        );
 
-        // allocator.harvest();
-        // assertEq(lowerHintInput, lowerHint);
-        // assertEq(upperHintInput, upperHint);
+        assertTrue(!allocator.harvest());
+
+        stabilityPool.givenMethodReturnUint(abi.encodeWithSelector(IStabilityPool.getDepositorETHGain.selector), 5 * 10**18);
+        stabilityPool.givenMethodReturnUint(abi.encodeWithSelector(IStabilityPool.getDepositorLQTYGain.selector), 6 * 10**18);
+        lqtyTokenAddress.givenMethodReturnUint(abi.encodeWithSelector(IERC20.balanceOf.selector), 7);
+        lqtyStaking.givenMethodReturnUint(abi.encodeWithSelector(ILQTYStaking.getPendingETHGain.selector), 8 * 10**18);
+        lqtyStaking.givenMethodReturnUint(abi.encodeWithSelector(ILQTYStaking.getPendingLUSDGain.selector), 9);
+        wethContract.givenMethodReturnBool(abi.encodeWithSelector(IERC20.transferFrom.selector), true);
+
+        assertTrue(allocator.harvest());
     }
 }
