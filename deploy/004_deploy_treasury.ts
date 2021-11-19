@@ -28,6 +28,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const treasuryDeployment = await deploy(CONTRACTS.treasury, {
         from: deployer,
         args: [ohmDeployment.address, TREASURY_TIMELOCK, authorityDeployment.address],
+        log: true,
     });
 
     const treasury = await OlympusTreasury__factory.connect(treasuryDeployment.address, signer);
@@ -44,7 +45,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     // await treasuryContract.deposit("5000000000000000000000000", frax.address, "5000000000000000");
 };
 
-func.tags = [CONTRACTS.TREASURY, "staking"];
+func.tags = [CONTRACTS.treasury, "staking"];
 func.dependencies = [CONTRACTS.ohm];
 
 export default func;

@@ -1,25 +1,17 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import {
-    CONTRACTS,
-    LARGE_APPROVAL,
-    EPOCH_LENGTH_IN_BLOCKS,
-    FIRST_EPOCH_BLOCK,
-    FIRST_EPOCH_NUMBER,
-    INITIAL_REWARD_RATE,
-    INITIAL_INDEX,
-} from "./constants";
+import { CONTRACTS, LARGE_APPROVAL, INITIAL_REWARD_RATE, INITIAL_INDEX } from "./constants";
 import {
     Distributor__factory,
     OlympusERC20Token__factory,
     OlympusStaking__factory,
     SOlympus__factory,
     GOHM__factory,
+    OlympusTreasury__factory,
 } from "../types";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts, ethers } = hre;
-    const { deploy } = deployments;
     const { deployer } = await getNamedAccounts();
     const signer = await ethers.provider.getSigner(deployer);
 
@@ -28,27 +20,18 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const gOhmDeployment = await deployments.get(CONTRACTS.gOhm);
     const distributorDeployment = await deployments.get(CONTRACTS.distributor);
     const treasuryDeployment = await deployments.get(CONTRACTS.treasury);
+    const stakingDeployment = await deployments.get(CONTRACTS.staking);
 
     const ohm = OlympusERC20Token__factory.connect(ohmDeployment.address, signer);
     const sOhm = SOlympus__factory.connect(sOhmDeployment.address, signer);
     const gOhm = GOHM__factory.connect(gOhmDeployment.address, signer);
     const distributor = Distributor__factory.connect(distributorDeployment.address, signer);
-
-    const stakingDeployment = await deploy(CONTRACTS.staking, {
-        from: deployer,
-        args: [
-            ohm.address,
-            sOhm.address,
-            gOhm.address,
-            EPOCH_LENGTH_IN_BLOCKS,
-            FIRST_EPOCH_NUMBER,
-            FIRST_EPOCH_BLOCK,
-        ],
-    });
     const staking = OlympusStaking__factory.connect(stakingDeployment.address, signer);
+    const treasury = OlympusTreasury__factory.connect(treasuryDeployment.address, signer);
 
     // Set staking and sOhm contract as trusted
-    await gOhm.migrate(staking.address, sOhm.address);
+    //  Does this need to happen?
+    //await gOhm.migrate(staking.address, sOhm.address);
 
     // Initialize sOHM and set the index
     await sOhm.setIndex(INITIAL_INDEX); // TODO
@@ -67,9 +50,17 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     // Approve staking contact to spend deployer's OHM
     await ohm.approve(staking.address, LARGE_APPROVAL);
+
+    // Do we do this in a different way?
+    // queue and toggle reward manager
+    await treasury.queueTimelock("8", distributor.address, deployer);
+    // queue and toggle deployer reserve depositor
+    await treasury.queueTimelock("0", deployer, deployer);
+    // queue and toggle liquidity depositor
+    await treasury.queueTimelock("4", deployer, deployer);
 };
 
-func.tags = [CONTRACTS.staking, "staking"];
+func.tags = ["setup"];
 func.dependencies = [CONTRACTS.ohm, CONTRACTS.sOhm, CONTRACTS.gOhm];
 
 export default func;

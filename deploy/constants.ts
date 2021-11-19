@@ -1,7 +1,8 @@
+import { DeployFunction } from "hardhat-deploy/types";
 export const CONTRACTS: Record<string, string> = {
     ohm: "OlympusERC20Token",
     sOhm: "sOlympus",
-    gOhm: "gOlympus",
+    gOhm: "gOHM",
     staking: "OlympusStaking",
     distributor: "Distributor",
     treasury: "OlympusTreasury",
@@ -10,6 +11,8 @@ export const CONTRACTS: Record<string, string> = {
     bondingCalculator: "OlympusBondingCalculator",
     authority: "OlympusAuthority",
     migrator: "OlympusTokenMigrator",
+    FRAX: "Frax",
+    DAI: "dai",
 };
 
 // Constructor Arguments
@@ -22,3 +25,11 @@ export const FIRST_EPOCH_BLOCK = 0;
 export const FIRST_EPOCH_NUMBER = 0;
 export const INITIAL_REWARD_RATE = 0;
 export const INITIAL_INDEX = 0;
+export const INITIAL_MINT = 69;
+
+const func: DeployFunction = async () => {};
+
+export default func;
+func.skip = async () => {
+    return true;
+};
