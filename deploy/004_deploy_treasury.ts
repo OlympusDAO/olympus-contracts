@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { CONTRACTS, LARGE_APPROVAL, TREASURY_TIMELOCK } from "./constants";
+import { CONTRACTS, TREASURY_TIMELOCK } from "./constants";
 //import { DAI, FRAX, OlympusERC20Token, OlympusTreasury } from "../types";
 import {
     OlympusTreasury__factory,
