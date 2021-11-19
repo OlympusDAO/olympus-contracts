@@ -370,8 +370,8 @@ contract MockContract is MockInterface {
 		}
 
 		// Record invocation as separate call so we don't rollback in case we are called with STATICCALL
-		// (, bytes memory r) = address(this).call{gas: 100000}(abi.encodeWithSignature("updateInvocationCount(bytes4,bytes)", methodId, msg.data));
-		// assert(r.length == 0);
+//		(, bytes memory r) = address(this).call{gas: 100000}(abi.encodeWithSignature("updateInvocationCount(bytes4,bytes)", methodId, msg.data));
+//		assert(r.length == 0);
 
 		assembly {
 			return(add(0x20, result), mload(result))
