@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { CONTRACTS, LARGE_APPROVAL, INITIAL_REWARD_RATE, INITIAL_INDEX } from "./constants";
+import { CONTRACTS, LARGE_APPROVAL, INITIAL_REWARD_RATE, INITIAL_INDEX } from "../constants";
 import {
     Distributor__factory,
     OlympusERC20Token__factory,
@@ -8,7 +8,7 @@ import {
     SOlympus__factory,
     GOHM__factory,
     OlympusTreasury__factory,
-} from "../types";
+} from "../../types";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts, ethers } = hre;

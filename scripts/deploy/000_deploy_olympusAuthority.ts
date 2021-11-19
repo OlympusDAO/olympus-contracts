@@ -1,17 +1,19 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { CONTRACTS } from "./constants";
+import { CONTRACTS } from "../constants";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-    const { deployments, getNamedAccounts} = hre;
+    const { deployments, getNamedAccounts } = hre;
     const { deploy } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    await deploy(CONTRACTS.sOhm, {
+    await deploy(CONTRACTS.authority, {
         from: deployer,
-        log: true
+        args: [deployer, deployer, deployer, deployer],
+        log: true,
     });
 };
 
-func.tags = [CONTRACTS.ohm, "staking", "tokens"];
+func.tags = [CONTRACTS.authority, "olympusAuthority"];
+
 export default func;

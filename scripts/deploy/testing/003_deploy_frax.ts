@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { CONTRACTS, INITIAL_MINT } from "../constants";
-import { FRAX } from "../../types";
+import { CONTRACTS, INITIAL_MINT } from "../../constants";
+import { FRAX } from "../../../types";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments } = hre;

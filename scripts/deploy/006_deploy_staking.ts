@@ -5,7 +5,7 @@ import {
     EPOCH_LENGTH_IN_BLOCKS,
     FIRST_EPOCH_BLOCK,
     FIRST_EPOCH_NUMBER,
-} from "./constants";
+} from "../constants";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts } = hre;

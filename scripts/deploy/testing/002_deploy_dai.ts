@@ -1,8 +1,8 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { DAI } from "../../types";
+import { DAI } from "../../../types";
 
-import { CONTRACTS, INITIAL_MINT } from "../constants";
+import { CONTRACTS, INITIAL_MINT } from "../../constants";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts } = hre;

@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { CONTRACTS } from "./constants";
+import { CONTRACTS } from "../constants";
 
 // Mainnet Addresses addresses
 const oldOHM = "0xC0b491daBf3709Ee5Eb79E603D73289Ca6060932";
