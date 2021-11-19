@@ -8,8 +8,6 @@ interface IgOHM is IERC20 {
 
   function burn(address _from, uint256 _amount) external;
 
-  function index() external view returns (uint256);
-
   function balanceFrom(uint256 _amount) external view returns (uint256);
 
   function balanceTo(uint256 _amount) external view returns (uint256);

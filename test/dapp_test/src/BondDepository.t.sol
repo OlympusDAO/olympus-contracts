@@ -53,7 +53,7 @@ contract BondDepositoryTest is DSTest {
         authority = new OlympusAuthority(address(this), address(this), address(this), address(this));
 
         ohm = new OlympusERC20Token(address(authority));
-        gohm = new gOHM(address(this), address(this));
+        gohm = new gOHM(address(this));
         sohm = new sOlympus();
         sohm.setIndex(10);
         sohm.setgOHM(address(gohm));

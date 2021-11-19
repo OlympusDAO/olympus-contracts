@@ -46,7 +46,6 @@ contract gOHM is IgOHM {
 
     IsOHM public sOHM;
     address public approved; // minter
-    bool public migrated;
 
     mapping(address => mapping(uint256 => Checkpoint)) public checkpoints;
     mapping(address => uint256) public numCheckpoints;
@@ -56,32 +55,12 @@ contract gOHM is IgOHM {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _migrator, address _sOHM) {
-        require(_migrator != address(0), "Zero address: Migrator");
+    constructor(address _migrator) {
+        require(_migrator != address(0), "Zero address found");
         approved = _migrator;
-        require(_sOHM != address(0), "Zero address: sOHM");
-        sOHM = IsOHM(_sOHM);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
-
-    /**
-     * @notice transfer mint rights from migrator to staking
-     * @notice can only be done once, at the time of contract migration
-     * @param _staking address
-     * @param _sOHM address
-     */
-    function migrate(address _staking, address _sOHM) external override onlyApproved {
-        require(!migrated, "Migrated");
-        migrated = true;
-
-        require(_staking != approved, "Invalid argument");
-        require(_staking != address(0), "Zero address found");
-        approved = _staking;
-
-        require(_sOHM != address(0), "Zero address found");
-        sOHM = IsOHM(_sOHM);
-    }
 
     /**
      * @dev See {IERC20-approve}.
@@ -126,7 +105,7 @@ contract gOHM is IgOHM {
         uint256 amount
     ) external override returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, recipient, _allowances[sender][recipient].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
     }
 
@@ -136,6 +115,23 @@ contract gOHM is IgOHM {
      */
     function delegate(address delegatee) external {
         return _delegate(msg.sender, delegatee);
+    }
+
+    /**
+     * @notice transfer mint rights from migrator to staking
+     * @notice can only be done once, at the time of contract migration
+     * @param _staking address
+     * @param _sOHM address
+     */
+    function migrate(address _staking, address _sOHM) external override onlyApproved {
+        require(_staking != approved, "Invalid argument");
+
+        require(_staking != address(0), "Zero address found");
+        approved = _staking;
+
+        require(address(sOHM) == address(0), "Cannot migrate twice");
+        require(_sOHM != address(0), "Zero address found");
+        sOHM = IsOHM(_sOHM);
     }
 
     /**
@@ -159,19 +155,12 @@ contract gOHM is IgOHM {
     /* ========== VIEW FUNCTIONS ========== */
 
     /**
-     * @notice pull index from sOHM token
-     */
-    function index() public view override returns (uint256) {
-        return sOHM.index();
-    }
-
-    /**
         @notice converts gOHM amount to OHM
         @param _amount uint
         @return uint
      */
     function balanceFrom(uint256 _amount) public view override returns (uint256) {
-        return _amount.mul(index()).div(10**decimals);
+        return _amount.mul(IsOHM(sOHM).index()).div(10**decimals);
     }
 
     /**
@@ -180,7 +169,7 @@ contract gOHM is IgOHM {
         @return uint
      */
     function balanceTo(uint256 _amount) public view override returns (uint256) {
-        return _amount.mul(10**decimals).div(index());
+        return _amount.mul(10**decimals).div(IsOHM(sOHM).index());
     }
 
     /**
