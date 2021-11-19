@@ -81,7 +81,7 @@ describe("Treasury Token Migration", async function () {
         const migratorAddress = olympusTokenMigrator.address;
 
         let gOhmContract = await ethers.getContractFactory("gOHM");
-        gOhm = await gOhmContract.deploy(migratorAddress);
+        gOhm = await gOhmContract.deploy(migratorAddress, OLD_SOHM_ADDRESS);
 
         /**
          *  Connect the contracts once they have been deployed
@@ -455,6 +455,9 @@ describe("Treasury Token Migration", async function () {
 
     describe("Defund", async () => {
         it("Should defund", async () => {
+            await olympusTokenMigrator.connect(deployer).startTimelock();
+            await advance(2);
+
             let dai = treasury_tokens.find((token) => token.name === "dai");
 
             const v2TreasuryBalanceOld = await dai.contract
@@ -493,8 +496,6 @@ describe("Treasury Token Migration", async function () {
             const convert_ohm_to_dai_decimal =
                 (olympus_token_migrator_total_ohm * 10 ** 18) / 10 ** 9;
 
-            await olympusTokenMigrator.connect(deployer).startTimelock();
-            await advance(2);
             await olympusTokenMigrator.connect(deployer).defund(DAI_ADDRESS);
 
             const v2TreasuryBalanceNew = await dai.contract
