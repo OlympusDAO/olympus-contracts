@@ -230,4 +230,15 @@ contract gOHM is IgOHM, ERC20 {
 
         emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
     }
+
+    /**
+        @notice Ensure delegation moves when token is transferred.
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        _moveDelegates(delegates[from], delegates[to], amount);
+    }
 }
