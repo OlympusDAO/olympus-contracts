@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.8.0;
 
-import "./interfaces/IERC20.sol";
-import "./interfaces/IOwnable.sol";
-import "./types/Ownable.sol";
+import "../interfaces/IERC20.sol";
+import "../interfaces/IOwnable.sol";
+import "../types/Ownable.sol";
 
 contract Migrate is Ownable {
     IERC20 internal immutable wsOHM; // v1 token
