@@ -181,7 +181,7 @@ describe("Treasury Token Migration", async function () {
         await expect(
             olympusTokenMigrator
                 .connect(user1)
-                .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0)
+                .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0, 0, 0)
         ).to.revertedWith("UNAUTHORIZED");
     });
 
@@ -365,7 +365,7 @@ describe("Treasury Token Migration", async function () {
             // console.log("migrating", lpToken.name);
             await olympusTokenMigrator
                 .connect(deployer)
-                .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0);
+                .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0, 0, 0);
         });
 
         await treasury_tokens.forEach(async (token) => {
