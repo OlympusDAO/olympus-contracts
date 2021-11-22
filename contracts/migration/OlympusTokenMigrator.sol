@@ -168,7 +168,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         } else if (_to == TYPE.STAKED) {
             oldsOHM.safeTransfer(msg.sender, amount);
         } else if (_to == TYPE.WRAPPED) {
-            oldwsOHM.transfer(msg.sender, _amount);
+            oldwsOHM.safeTransfer(msg.sender, _amount);
         }
     }
 
@@ -228,7 +228,9 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
     function migrateLP(
         address pair,
         bool sushi,
-        address token
+        address token,
+        uint256 _minA,
+        uint256 _minB
     ) external onlyGovernor {
         uint256 oldLPAmount = IERC20(pair).balanceOf(address(oldTreasury));
         oldTreasury.manage(pair, oldLPAmount);
@@ -243,8 +245,8 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
             token, 
             address(oldOHM), 
             oldLPAmount,
-            0, 
-            0, 
+            _minA, 
+            _minB, 
             address(this), 
             block.timestamp
         );
@@ -299,6 +301,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         address _newsOHM,
         address _reserve
     ) external onlyGovernor {
+        require(!ohmMigrated, "Already migrated");
         ohmMigrated = true;
 
         require(_newTreasury != address(0), "Zero address: Treasury");
@@ -314,7 +317,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
 
         _migrateToken(_reserve, true); // will deposit tokens into new treasury so reserves can be accounted for
 
-        fund(oldsOHM.circulatingSupply()); // fund with current staked supply for token migration
+        _fund(oldsOHM.circulatingSupply()); // fund with current staked supply for token migration
 
         emit Migrated(_newStaking, _newTreasury);
     }
@@ -322,7 +325,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
     /* ========== INTERNAL FUNCTIONS ========== */
 
     // fund contract with gOHM
-    function fund(uint256 _amount) internal {
+    function _fund(uint256 _amount) internal {
         newTreasury.mint(address(this), _amount);
         newOHM.approve(address(newStaking), _amount);
         newStaking.stake(address(this), _amount, false, true); // stake and claim gOHM
@@ -350,7 +353,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
             IERC20(token).safeApprove(address(newTreasury), balance);
             newTreasury.deposit(balance, token, tokenValue);
         } else {
-            IERC20(token).transfer(address(newTreasury), balance);
+            IERC20(token).safeTransfer(address(newTreasury), balance);
         }
     }
 }

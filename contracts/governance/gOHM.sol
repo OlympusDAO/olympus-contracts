@@ -9,6 +9,7 @@ import "../interfaces/IgOHM.sol";
 import "../types/ERC20.sol";
 
 contract gOHM is IgOHM, ERC20 {
+
     /* ========== DEPENDENCIES ========== */
 
     using Address for address;
@@ -75,7 +76,6 @@ contract gOHM is IgOHM, ERC20 {
         sOHM = IsOHM(_sOHM);
     }
 
-
     /**
      * @notice Delegate votes from `msg.sender` to `delegatee`
      * @param delegatee The address to delegate votes to
@@ -128,7 +128,6 @@ contract gOHM is IgOHM, ERC20 {
     function balanceTo(uint256 _amount) public view override returns (uint256) {
         return _amount.mul(10**decimals()).div(index());
     }
-
 
     /**
      * @notice Gets the current votes balance for `account`
