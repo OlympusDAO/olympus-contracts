@@ -247,11 +247,15 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         uint256 reserves;
         address[] memory reserveToken = registry[STATUS.RESERVETOKEN];
         for (uint256 i = 0; i < reserveToken.length; i++) {
-            reserves = reserves.add(tokenValue(reserveToken[i], IERC20(reserveToken[i]).balanceOf(address(this))));
+            if(permissions[STATUS.RESERVETOKEN][reserveToken[i]]) {
+                reserves = reserves.add(tokenValue(reserveToken[i], IERC20(reserveToken[i]).balanceOf(address(this))));
+            }
         }
         address[] memory liquidityToken = registry[STATUS.LIQUIDITYTOKEN];
         for (uint256 i = 0; i < liquidityToken.length; i++) {
-            reserves = reserves.add(tokenValue(liquidityToken[i], IERC20(liquidityToken[i]).balanceOf(address(this))));
+            if(permissions[STATUS.LIQUIDITYTOKEN][liquidityToken[i]]) {
+                reserves = reserves.add(tokenValue(liquidityToken[i], IERC20(liquidityToken[i]).balanceOf(address(this))));
+            }
         }
         totalReserves = reserves;
         emit ReservesAudited(reserves);
