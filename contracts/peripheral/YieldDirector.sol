@@ -36,7 +36,10 @@ contract YieldDirector is Ownable, IYieldDirector {
 
     struct DonationInfo {
         address recipient;
-        uint256 amount; // Total non-agnostic amount deposited
+        uint256 deposit; // Total non-agnostic amount deposited
+        uint256 agnosticDeposit; // Total agnostic amount deposited
+        uint256 carry; // Amount of sOHM carried over on deposit/withdraw
+        uint256 indexAtLastChange; // Index of last deposit/withdraw
     }
 
     struct RecipientInfo {
@@ -85,25 +88,32 @@ contract YieldDirector is Ownable, IYieldDirector {
 
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), _amount);
 
+        uint256 index = IsOHM(sOHM).index();
+
         // Record donors's issued debt to recipient address
-        DonationInfo[] storage info = donationInfo[msg.sender];
+        DonationInfo[] storage donations = donationInfo[msg.sender];
         int256 recipientIndex = _getRecipientIndex(msg.sender, _recipient);
 
         if(recipientIndex == -1) {
-            info.push(DonationInfo({
+            donations.push(DonationInfo({
                 recipient: _recipient,
-                amount: _amount
+                deposit: _amount,
+                agnosticDeposit: _toAgnostic(_amount),
+                carry: 0,
+                indexAtLastChange: index
             }));
         } else {
-            info[uint256(recipientIndex)].amount += _amount;
+            DonationInfo storage donation = donations[uint256(recipientIndex)];
+            donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
+            donation.deposit += _amount;
+            donation.agnosticDeposit = _toAgnostic(donation.deposit);
+            donation.indexAtLastChange = index;
         }
 
         RecipientInfo storage recipient = recipientInfo[_recipient];
 
         // Calculate value carried over since last change
-        uint256 index = IsOHM(sOHM).index();
-
-        recipient.carry = redeemableBalance(_recipient);
+        recipient.carry += _getAccumulatedValue(recipient.agnosticAmount, recipient.indexAtLastChange);
         recipient.totalDebt += _amount;
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
         recipient.indexAtLastChange = index;
@@ -114,30 +124,33 @@ contract YieldDirector is Ownable, IYieldDirector {
 
     /**
         @notice Withdraw donor's sOHM from vault and subtracts debt from recipient
-        @param _amount sOHM amount to withdraw
-        @param _recipient Recipient address
      */
     function withdraw(uint256 _amount, address _recipient) external override {
         require(disableWithdaws == false, "Withdraws currently disabled");
-        DonationInfo[] storage donations = donationInfo[msg.sender];
-        int256 recipientIndexSigned = _getRecipientIndex(msg.sender, _recipient);
 
+        int256 recipientIndexSigned = _getRecipientIndex(msg.sender, _recipient);
         require(recipientIndexSigned >= 0, "No donations to recipient");
 
-        uint256 recipientIndex = uint256(recipientIndexSigned);
-        require(donations[recipientIndex].amount >= _amount, "Amount to withdraw is greater than deposited");
+        uint256 index = IsOHM(sOHM).index();
 
-        donations[recipientIndex].amount -= _amount;
+        // Donor accounting
+        DonationInfo storage donation = donationInfo[msg.sender][uint256(recipientIndexSigned)];
 
-        if(donations[recipientIndex].amount == 0) {
-            delete donations[recipientIndex];
+        if(donation.deposit <= _amount) {
+            delete donationInfo[msg.sender];
+        } else {
+            donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
+            donation.deposit -= _amount;
+            donation.agnosticDeposit = _toAgnostic(donation.deposit);
+            donation.indexAtLastChange = index;
         }
 
+        // Recipient accounting
         RecipientInfo storage recipient = recipientInfo[_recipient];
-        recipient.carry = redeemableBalance(_recipient);
+        recipient.carry += _getAccumulatedValue(recipient.agnosticAmount, recipient.indexAtLastChange);
         recipient.totalDebt -= _amount;
         recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
-        recipient.indexAtLastChange = IsOHM(sOHM).index();
+        recipient.indexAtLastChange = index;
 
         IERC20(sOHM).safeTransfer(msg.sender, _amount);
 
@@ -158,11 +171,11 @@ contract YieldDirector is Ownable, IYieldDirector {
 
         for (uint256 index = 0; index < donations.length; index++) {
             DonationInfo memory donation = donations[index];
-            total += donation.amount;
+            total += donation.deposit;
 
             RecipientInfo storage recipient = recipientInfo[donation.recipient];
-            recipient.carry = redeemableBalance(donation.recipient);
-            recipient.totalDebt -= donation.amount;
+            recipient.carry += _getAccumulatedValue(recipient.agnosticAmount, recipient.indexAtLastChange);
+            recipient.totalDebt -= donation.deposit;
             recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
             recipient.indexAtLastChange = sohmIndex;
         }
@@ -182,7 +195,7 @@ contract YieldDirector is Ownable, IYieldDirector {
         int256 recipientIndex = _getRecipientIndex(donor_, _recipient);
         require(recipientIndex >= 0, "No donations to recipient");
 
-        return donationInfo[donor_][uint256(recipientIndex)].amount;
+        return donationInfo[donor_][uint256(recipientIndex)].deposit;
     }
 
     /**
@@ -194,13 +207,40 @@ contract YieldDirector is Ownable, IYieldDirector {
 
         uint256 total = 0;
         for (uint256 index = 0; index < donations.length; index++) {
-            total += donations[index].amount;
+            total += donations[index].deposit;
         }
         return total;
     }
 
-    // TODO function to return total amount of sOHM donated (not deposits)
-    // agnosticValue of deposit - agnosticValue of 
+    /**
+        @notice Return total amount of sOHM donated to recipient
+     */
+    function totalDonatedTo(address donor_, address recipient_) external override view returns (uint256) {
+        DonationInfo[] memory donations = donationInfo[donor_];
+        int256 recipientIndexSigned = _getRecipientIndex(donor_, recipient_);
+        require(recipientIndexSigned >= 0, "No donations to recipient");
+
+        DonationInfo memory donation = donations[uint256(recipientIndexSigned)];
+        //return donations[uint256(recipientIndexSigned)].deposit + donations[uint256(recipientIndexSigned)].carry;
+        return donation.carry
+            + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
+
+    }
+
+    /**
+        @notice Return total amount of sOHM donated from donor
+     */
+    function totalDonated(address donor_) external override view returns (uint256) {
+        DonationInfo[] memory donations = donationInfo[donor_];
+        uint256 total = 0;
+
+        for (uint256 index = 0; index < donations.length; index++) {
+            DonationInfo memory donation = donations[index];
+            total += donation.carry + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
+        }
+
+        return total;
+    }
 
     /************************
     * Recipient Functions
@@ -209,14 +249,10 @@ contract YieldDirector is Ownable, IYieldDirector {
     /**
         @notice Get redeemable sOHM balance of a recipient address
      */
-    function redeemableBalance(address _who) public override view returns (uint256) {
-        RecipientInfo memory recipient = recipientInfo[_who];
-
-        uint256 redeemable = _fromAgnostic(recipient.agnosticAmount)
-            - _fromAgnosticAtIndex(recipient.agnosticAmount, recipient.indexAtLastChange)
-            + recipient.carry;
-
-        return redeemable;
+    function redeemableBalance(address _recipient) public override view returns (uint256) {
+        RecipientInfo memory recipient = recipientInfo[_recipient];
+        return recipient.carry
+            + _getAccumulatedValue(recipient.agnosticAmount, recipient.indexAtLastChange);
     }
 
     /**
@@ -244,6 +280,13 @@ contract YieldDirector is Ownable, IYieldDirector {
     /************************
     * Utility Functions
     ************************/
+
+    /**
+        @notice Get accumulated sOHM since last time agnostic value changed.
+     */
+    function _getAccumulatedValue(uint256 gAmount_, uint256 indexAtLastChange_) internal view returns (uint256) {
+        return _fromAgnostic(gAmount_) - _fromAgnosticAtIndex(gAmount_, indexAtLastChange_);
+    }
 
     /**
         @notice Get array index of a particular recipient in a donor's donationInfo array.
