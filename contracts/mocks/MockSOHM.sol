@@ -15,7 +15,6 @@ contract MockSOHM is ERC20 {
 
     mapping(address => uint256) public _agnosticBalance;
     mapping(address => mapping(address => uint256)) public _allowedValue;
-    mapping(address => uint) public nextBlockCanClaim;
 
 
     constructor(uint256 initialIndex_, uint256 rebasePct_)
@@ -98,8 +97,6 @@ contract MockSOHM is ERC20 {
 
     // Drip 100 sOHM to caller
     function drip() external {
-        //require(nextBlockCanClaim[msg.sender] <= block.number, "Already claimed");
-        //nextBlockCanClaim[msg.sender] += 3000;
         mint(msg.sender, 100000000000);
     }
 
