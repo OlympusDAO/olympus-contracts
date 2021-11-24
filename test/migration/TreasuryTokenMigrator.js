@@ -189,7 +189,7 @@ describe("Treasury Token Migration", async function () {
         await sendETH(deployer, NON_TOKEN_HOLDER);
         const user = await impersonate(NON_TOKEN_HOLDER);
         // Using safeTransferFrom so generic safeERC20 error message
-        await expect(olympusTokenMigrator.connect(user).migrate(1000000, 0, 2)).to.revertedWith(
+        await expect(olympusTokenMigrator.connect(user).migrate(1000000, 1, 2)).to.revertedWith(
             "TRANSFER_FROM_FAILED"
         );
     });
@@ -277,7 +277,7 @@ describe("Treasury Token Migration", async function () {
                 await sendETH(deployer, wallet);
             }
         });
-
+/** 
         it("should migrate ohm", async () => {
             const token = olympus_tokens.find((token) => token.name === "ohm");
             const { oldTokenBalance, newgOhmBalance } = await performMigration(token);
@@ -287,7 +287,7 @@ describe("Treasury Token Migration", async function () {
 
             assert.equal(gohmBalanceOld, gohmBalanceNew);
         });
-
+*/
         it("should migrate sohm", async () => {
             const token = olympus_tokens.find((token) => token.name === "sohm");
             const { oldTokenBalance, newgOhmBalance } = await performMigration(token);
