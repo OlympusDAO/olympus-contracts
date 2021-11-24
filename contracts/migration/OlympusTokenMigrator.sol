@@ -315,6 +315,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
     ) external onlyGovernor {
         require(!ohmMigrated, "Already migrated");
         ohmMigrated = true;
+        shutdown = false;
 
         require(_newTreasury != address(0), "Zero address: Treasury");
         newTreasury = ITreasury(_newTreasury);
