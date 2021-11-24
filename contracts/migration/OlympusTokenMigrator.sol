@@ -49,6 +49,8 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
     IERC20 public newOHM;
 
     bool public ohmMigrated;
+    bool public shutdown;
+
     uint256 public immutable timelockLength;
     uint256 public timelockEnd;
 
@@ -96,17 +98,18 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         TYPE _from,
         TYPE _to
     ) external {
-        uint256 sAmount = _amount;
+        require(!shutdown, "Shut down");
+
         uint256 wAmount = oldwsOHM.sOHMTowOHM(_amount);
 
         if (_from == TYPE.UNSTAKED) {
+            require(ohmMigrated, "Only staked until migration");
             oldOHM.safeTransferFrom(msg.sender, address(this), _amount);
         } else if (_from == TYPE.STAKED) {
             oldsOHM.safeTransferFrom(msg.sender, address(this), _amount);
         } else {
             oldwsOHM.safeTransferFrom(msg.sender, address(this), _amount);
             wAmount = _amount;
-            sAmount = oldwsOHM.wOHMTosOHM(_amount);
         }
 
         if (ohmMigrated) {
@@ -119,11 +122,14 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
 
     // migrate all olympus tokens held
     function migrateAll(TYPE _to) external {
-        uint256 ohmBal = oldOHM.balanceOf(msg.sender);
+        require(!shutdown, "Shut down");
+
+        uint256 ohmBal = 0;
         uint256 sOHMBal = oldsOHM.balanceOf(msg.sender);
         uint256 wsOHMBal = oldwsOHM.balanceOf(msg.sender);
 
-        if (ohmBal > 0) {
+        if (oldOHM.balanceOf(msg.sender) > 0 && ohmMigrated) {
+            ohmBal = oldOHM.balanceOf(msg.sender);
             oldOHM.safeTransferFrom(msg.sender, address(this), ohmBal);
         }
         if (sOHMBal > 0) {
@@ -173,6 +179,12 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
     }
 
     /* ========== OWNABLE ========== */
+
+    // halt migrations (but not bridging back)
+    function halt() external onlyPolicy {
+        require(!ohmMigrated, "Migration has occurred");
+        shutdown = !shutdown;
+    }
 
     // withdraw backing of migrated OHM
     function defund(address reserve) external onlyGovernor {
@@ -303,6 +315,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
     ) external onlyGovernor {
         require(!ohmMigrated, "Already migrated");
         ohmMigrated = true;
+        shutdown = false;
 
         require(_newTreasury != address(0), "Zero address: Treasury");
         newTreasury = ITreasury(_newTreasury);
