@@ -12,6 +12,7 @@ contract MockSOHM is ERC20 {
     uint256 public immutable DECIMALS;
     uint256 public _index; // 9 decimals
     uint256 public _rebasePct; // 9 decimals
+    uint256 public _totalAgnosticSupply;
 
     mapping(address => uint256) public _agnosticBalance;
     mapping(address => mapping(address => uint256)) public _allowedValue;
@@ -42,6 +43,7 @@ contract MockSOHM is ERC20 {
 
         _agnosticBalance[to_] += amount;
         _mint(to_, amount);
+        _totalAgnosticSupply += amount;
         return amount;
     }
 
@@ -72,6 +74,10 @@ contract MockSOHM is ERC20 {
 
     function balanceOf(address owner_) public view override returns (uint256) {
         return _agnosticBalance[owner_] * _index / DECIMALS;
+    }
+
+    function totalSupply() public view override returns (uint256) {
+        return _totalAgnosticSupply * _index / DECIMALS;
     }
 
     // Rebase all balances by rebase percentage
