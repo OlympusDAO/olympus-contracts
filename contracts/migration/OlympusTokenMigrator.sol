@@ -100,6 +100,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         uint256 wAmount = oldwsOHM.sOHMTowOHM(_amount);
 
         if (_from == TYPE.UNSTAKED) {
+            require(ohmMigrated, "Only staked until migration");
             oldOHM.safeTransferFrom(msg.sender, address(this), _amount);
         } else if (_from == TYPE.STAKED) {
             oldsOHM.safeTransferFrom(msg.sender, address(this), _amount);
@@ -119,11 +120,12 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
 
     // migrate all olympus tokens held
     function migrateAll(TYPE _to) external {
-        uint256 ohmBal = oldOHM.balanceOf(msg.sender);
+        uint256 ohmBal = 0;
         uint256 sOHMBal = oldsOHM.balanceOf(msg.sender);
         uint256 wsOHMBal = oldwsOHM.balanceOf(msg.sender);
 
-        if (ohmBal > 0) {
+        if (ohmBal > 0 && ohmMigrated) {
+            ohmBal = oldOHM.balanceOf(msg.sender);
             oldOHM.safeTransferFrom(msg.sender, address(this), ohmBal);
         }
         if (sOHMBal > 0) {
