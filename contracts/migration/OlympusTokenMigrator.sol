@@ -128,7 +128,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         uint256 sOHMBal = oldsOHM.balanceOf(msg.sender);
         uint256 wsOHMBal = oldwsOHM.balanceOf(msg.sender);
 
-        if (ohmBal > 0 && ohmMigrated) {
+        if (oldOHM.balanceOf(msg.sender) > 0 && ohmMigrated) {
             ohmBal = oldOHM.balanceOf(msg.sender);
             oldOHM.safeTransferFrom(msg.sender, address(this), ohmBal);
         }
