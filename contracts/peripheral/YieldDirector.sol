@@ -11,13 +11,6 @@ import {IgOHM} from "../interfaces/IgOHM.sol";
 //import {ERC20} from "../types/ERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-//interface IgOHM {
-//  function mint(address _to, uint256 amount_) external;
-//  function burn(address _from, uint256 amount_) external;
-//  function balanceFrom(uint256 amount_) external view returns (uint256);
-//  function balanceTo(uint256 amount_) external view returns (uint256);
-//}
-
 /**
     @title YieldDirector (codename Tyche) 
     @notice This contract allows donors to deposit their sOHM and donate their rebases
