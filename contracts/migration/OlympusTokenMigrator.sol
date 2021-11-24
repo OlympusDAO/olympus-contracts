@@ -49,6 +49,8 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
     IERC20 public newOHM;
 
     bool public ohmMigrated;
+    bool public shutdown;
+
     uint256 public immutable timelockLength;
     uint256 public timelockEnd;
 
@@ -96,7 +98,8 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         TYPE _from,
         TYPE _to
     ) external {
-        uint256 sAmount = _amount;
+        require(!shutdown, "Shut down");
+
         uint256 wAmount = oldwsOHM.sOHMTowOHM(_amount);
 
         if (_from == TYPE.UNSTAKED) {
@@ -107,7 +110,6 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         } else {
             oldwsOHM.safeTransferFrom(msg.sender, address(this), _amount);
             wAmount = _amount;
-            sAmount = oldwsOHM.wOHMTosOHM(_amount);
         }
 
         if (ohmMigrated) {
@@ -120,6 +122,8 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
 
     // migrate all olympus tokens held
     function migrateAll(TYPE _to) external {
+        require(!shutdown, "Shut down");
+
         uint256 ohmBal = 0;
         uint256 sOHMBal = oldsOHM.balanceOf(msg.sender);
         uint256 wsOHMBal = oldwsOHM.balanceOf(msg.sender);
@@ -175,6 +179,12 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
     }
 
     /* ========== OWNABLE ========== */
+
+    // halt migrations (but not bridging back)
+    function halt() external onlyPolicy {
+        require(!ohmMigrated, "Migration has occurred");
+        shutdown = !shutdown;
+    }
 
     // withdraw backing of migrated OHM
     function defund(address reserve) external onlyGovernor {
