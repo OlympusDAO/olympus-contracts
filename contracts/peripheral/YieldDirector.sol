@@ -12,10 +12,10 @@ import {IgOHM} from "../interfaces/IgOHM.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 //interface IgOHM {
-//  function mint(address _to, uint256 _amount) external;
-//  function burn(address _from, uint256 _amount) external;
-//  function balanceFrom(uint256 _amount) external view returns (uint256);
-//  function balanceTo(uint256 _amount) external view returns (uint256);
+//  function mint(address _to, uint256 amount_) external;
+//  function burn(address _from, uint256 amount_) external;
+//  function balanceFrom(uint256 amount_) external view returns (uint256);
+//  function balanceTo(uint256 amount_) external view returns (uint256);
 //}
 
 /**
@@ -38,33 +38,31 @@ contract YieldDirector is Ownable, IYieldDirector {
         address recipient;
         uint256 deposit; // Total non-agnostic amount deposited
         uint256 agnosticDeposit; // Total agnostic amount deposited
-        uint256 carry; // Amount of sOHM carried over on deposit/withdraw
+        uint256 carry; // Amount of sOHM accumulated over on deposit/withdraw
         uint256 indexAtLastChange; // Index of last deposit/withdraw
     }
 
     struct RecipientInfo {
         uint256 totalDebt; // Non-agnostic debt
         uint256 carry; // Total non-agnostic value donating to recipient
-        uint256 agnosticAmount; // Total agnostic value of carry + debt
+        uint256 agnosticDebt; // Total agnostic value of carry + debt
         uint256 indexAtLastChange; // Index when agnostic value changed
     }
 
     mapping(address => DonationInfo[]) public donationInfo;
     mapping(address => RecipientInfo) public recipientInfo;
 
-    event Deposited(address _donor, address _recipient, uint256 _amount);
-    event Withdrawn(address _donor, address _recipient, uint256 _amount);
-    event AllWithdrawn(address _donor, uint256 _amount);
-    event Redeemed(address _recipient, uint256 _amount);
-    event EmergencyShutdown(bool active);
+    event Deposited(address donor_, address recipient_, uint256 amount_);
+    event Withdrawn(address donor_, address recipient_, uint256 amount_);
+    event AllWithdrawn(address donor_, uint256 amount_);
+    event Redeemed(address recipient_, uint256 amount_);
+    event EmergencyShutdown(bool active_);
 
-    constructor (
-        address _sOHM
-    ) {
-        require(_sOHM != address(0));
+    constructor (address sOhm_) {
+        require(sOhm_ != address(0), "Invalid address for sOHM");
 
-        sOHM = _sOHM;
-        DECIMALS = ERC20(_sOHM).decimals();
+        sOHM = sOhm_;
+        DECIMALS = ERC20(sOhm_).decimals();
 
         disableDeposits = false;
         disableWithdaws = false;
@@ -77,58 +75,65 @@ contract YieldDirector is Ownable, IYieldDirector {
 
     /**
         @notice Deposit sOHM, records sender address and assign rebases to recipient
-        @param _amount Amount of sOHM debt issued from donor to recipient
-        @param _recipient Address to direct staking yield and vault shares to
+        @param amount_ Amount of sOHM debt issued from donor to recipient
+        @param recipient_ Address to direct staking yield and vault shares to
     */
-    function deposit(uint256 _amount, address _recipient) external override {
+    function deposit(uint256 amount_, address recipient_) external override {
         require(disableDeposits == false, "Deposits currently disabled");
-        require(_amount > 0, "Invalid deposit amount");
-        require(_recipient != address(0), "Invalid recipient address");
-        require(IERC20(sOHM).balanceOf(msg.sender) >= _amount, "Not enough sOHM");
+        require(amount_ > 0, "Invalid deposit amount");
+        require(recipient_ != address(0), "Invalid recipient address");
+        require(IERC20(sOHM).balanceOf(msg.sender) >= amount_, "Not enough sOHM");
 
-        IERC20(sOHM).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
 
         uint256 index = IsOHM(sOHM).index();
 
         // Record donors's issued debt to recipient address
         DonationInfo[] storage donations = donationInfo[msg.sender];
-        int256 recipientIndex = _getRecipientIndex(msg.sender, _recipient);
+        int256 recipientIndex = _getRecipientIndex(msg.sender, recipient_);
 
         if(recipientIndex == -1) {
-            donations.push(DonationInfo({
-                recipient: _recipient,
-                deposit: _amount,
-                agnosticDeposit: _toAgnostic(_amount),
-                carry: 0,
-                indexAtLastChange: index
-            }));
+            donations.push(
+                DonationInfo({
+                    recipient: recipient_,
+                    deposit: amount_,
+                    agnosticDeposit: _toAgnostic(amount_),
+                    carry: 0,
+                    indexAtLastChange: index
+                })
+            );
         } else {
             DonationInfo storage donation = donations[uint256(recipientIndex)];
-            donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
-            donation.deposit += _amount;
+
+            // Only update carry if there was a previous deposit
+            if(donation.deposit != 0) {
+                donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
+            }
+
+            donation.deposit += amount_;
             donation.agnosticDeposit = _toAgnostic(donation.deposit);
             donation.indexAtLastChange = index;
         }
 
-        RecipientInfo storage recipient = recipientInfo[_recipient];
+        RecipientInfo storage recipient = recipientInfo[recipient_];
 
         // Calculate value carried over since last change
-        recipient.carry += _getAccumulatedValue(recipient.agnosticAmount, recipient.indexAtLastChange);
-        recipient.totalDebt += _amount;
-        recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
+        recipient.carry += _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange);
+        recipient.totalDebt += amount_;
+        recipient.agnosticDebt = _toAgnostic(recipient.totalDebt + recipient.carry);
         recipient.indexAtLastChange = index;
 
-        emit Deposited(msg.sender, _recipient, _amount);
+        emit Deposited(msg.sender, recipient_, amount_);
     }
 
 
     /**
         @notice Withdraw donor's sOHM from vault and subtracts debt from recipient
      */
-    function withdraw(uint256 _amount, address _recipient) external override {
+    function withdraw(uint256 amount_, address recipient_) external override {
         require(disableWithdaws == false, "Withdraws currently disabled");
 
-        int256 recipientIndexSigned = _getRecipientIndex(msg.sender, _recipient);
+        int256 recipientIndexSigned = _getRecipientIndex(msg.sender, recipient_);
         require(recipientIndexSigned >= 0, "No donations to recipient");
 
         uint256 index = IsOHM(sOHM).index();
@@ -136,25 +141,23 @@ contract YieldDirector is Ownable, IYieldDirector {
         // Donor accounting
         DonationInfo storage donation = donationInfo[msg.sender][uint256(recipientIndexSigned)];
 
-        if(donation.deposit <= _amount) {
-            delete donationInfo[msg.sender];
-        } else {
-            donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
-            donation.deposit -= _amount;
-            donation.agnosticDeposit = _toAgnostic(donation.deposit);
-            donation.indexAtLastChange = index;
-        }
+        require(donation.deposit >= amount_, "Not enough sOHM to withdraw");
+
+        donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
+        donation.deposit -= amount_;
+        donation.agnosticDeposit = _toAgnostic(donation.deposit);
+        donation.indexAtLastChange = index;
 
         // Recipient accounting
-        RecipientInfo storage recipient = recipientInfo[_recipient];
-        recipient.carry += _getAccumulatedValue(recipient.agnosticAmount, recipient.indexAtLastChange);
-        recipient.totalDebt -= _amount;
-        recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
+        RecipientInfo storage recipient = recipientInfo[recipient_];
+        recipient.carry += _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange);
+        recipient.totalDebt -= amount_;
+        recipient.agnosticDebt = _toAgnostic(recipient.totalDebt + recipient.carry);
         recipient.indexAtLastChange = index;
 
-        IERC20(sOHM).safeTransfer(msg.sender, _amount);
+        IERC20(sOHM).safeTransfer(msg.sender, amount_);
 
-        emit Withdrawn(msg.sender, _recipient, _amount);
+        emit Withdrawn(msg.sender, recipient_, amount_);
     }
 
     /**
@@ -166,18 +169,25 @@ contract YieldDirector is Ownable, IYieldDirector {
         DonationInfo[] storage donations = donationInfo[msg.sender];
         require(donations.length != 0, "User not donating to anything");
 
-        uint256 sohmIndex = IsOHM(sOHM).index();
+        uint256 sOhmIndex = IsOHM(sOHM).index();
         uint256 total = 0;
 
         for (uint256 index = 0; index < donations.length; index++) {
-            DonationInfo memory donation = donations[index];
+            DonationInfo storage donation = donations[index];
+
             total += donation.deposit;
 
             RecipientInfo storage recipient = recipientInfo[donation.recipient];
-            recipient.carry += _getAccumulatedValue(recipient.agnosticAmount, recipient.indexAtLastChange);
+            recipient.carry += _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange);
             recipient.totalDebt -= donation.deposit;
-            recipient.agnosticAmount = _toAgnostic(recipient.totalDebt + recipient.carry);
-            recipient.indexAtLastChange = sohmIndex;
+            recipient.agnosticDebt = _toAgnostic(recipient.totalDebt + recipient.carry);
+            recipient.indexAtLastChange = sOhmIndex;
+
+            // Clear out donation
+            donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
+            donation.deposit = 0;
+            donation.agnosticDeposit = 0;
+            donation.indexAtLastChange = index;
         }
 
         // Delete donor's entire donations array
@@ -191,8 +201,8 @@ contract YieldDirector is Ownable, IYieldDirector {
     /**
         @notice Get deposited sOHM amount for specific recipient
      */
-    function depositsTo(address donor_, address _recipient) external override view returns ( uint256 ) {
-        int256 recipientIndex = _getRecipientIndex(donor_, _recipient);
+    function depositsTo(address donor_, address recipient_) external override view returns ( uint256 ) {
+        int256 recipientIndex = _getRecipientIndex(donor_, recipient_);
         require(recipientIndex >= 0, "No donations to recipient");
 
         return donationInfo[donor_][uint256(recipientIndex)].deposit;
@@ -215,7 +225,7 @@ contract YieldDirector is Ownable, IYieldDirector {
     /**
         @notice Return total amount of sOHM donated to recipient
      */
-    function totalDonatedTo(address donor_, address recipient_) external override view returns (uint256) {
+    function donatedTo(address donor_, address recipient_) external override view returns (uint256) {
         DonationInfo[] memory donations = donationInfo[donor_];
         int256 recipientIndexSigned = _getRecipientIndex(donor_, recipient_);
         require(recipientIndexSigned >= 0, "No donations to recipient");
@@ -249,10 +259,10 @@ contract YieldDirector is Ownable, IYieldDirector {
     /**
         @notice Get redeemable sOHM balance of a recipient address
      */
-    function redeemableBalance(address _recipient) public override view returns (uint256) {
-        RecipientInfo memory recipient = recipientInfo[_recipient];
+    function redeemableBalance(address recipient_) public override view returns (uint256) {
+        RecipientInfo memory recipient = recipientInfo[recipient_];
         return recipient.carry
-            + _getAccumulatedValue(recipient.agnosticAmount, recipient.indexAtLastChange);
+            + _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange);
     }
 
     /**
@@ -268,7 +278,7 @@ contract YieldDirector is Ownable, IYieldDirector {
         require(redeemable > 0, "No redeemable balance");
 
         RecipientInfo storage recipient = recipientInfo[msg.sender];
-        recipient.agnosticAmount = _toAgnostic(recipient.totalDebt);
+        recipient.agnosticDebt = _toAgnostic(recipient.totalDebt);
         recipient.carry = 0;
         recipient.indexAtLastChange = IsOHM(sOHM).index();
 
@@ -292,12 +302,12 @@ contract YieldDirector is Ownable, IYieldDirector {
         @notice Get array index of a particular recipient in a donor's donationInfo array.
         @return Array index of recipient address. If not present, return -1.
      */
-    function _getRecipientIndex(address _donor, address _recipient) internal view returns (int256) {
-        DonationInfo[] storage info = donationInfo[_donor];
+    function _getRecipientIndex(address donor_, address recipient_) internal view returns (int256) {
+        DonationInfo[] storage info = donationInfo[donor_];
 
         int256 existingIndex = -1;
         for (uint256 i = 0; i < info.length; i++) {
-            if(info[i].recipient == _recipient) {
+            if(info[i].recipient == recipient_) {
                 existingIndex = int256(i);
                 break;
             }
@@ -310,8 +320,8 @@ contract YieldDirector is Ownable, IYieldDirector {
         @notice Convert flat sOHM value to agnostic value at current index
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index
      */
-    function _toAgnostic(uint256 _amount) internal view returns ( uint256 ) {
-        return _amount
+    function _toAgnostic(uint256 amount_) internal view returns ( uint256 ) {
+        return amount_
             * (10 ** DECIMALS)
             / (IsOHM(sOHM).index());
     }
@@ -320,8 +330,8 @@ contract YieldDirector is Ownable, IYieldDirector {
         @notice Convert agnostic value at current index to flat sOHM value
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index
      */
-    function _fromAgnostic(uint256 _amount) internal view returns ( uint256 ) {
-        return _amount
+    function _fromAgnostic(uint256 amount_) internal view returns ( uint256 ) {
+        return amount_
             * (IsOHM(sOHM).index())
             / (10 ** DECIMALS);
     }
@@ -330,9 +340,9 @@ contract YieldDirector is Ownable, IYieldDirector {
         @notice Convert flat sOHM value to agnostic value at a given index value
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index
      */
-    function _fromAgnosticAtIndex(uint256 _amount, uint256 _index) internal view returns ( uint256 ) {
-        return _amount
-            * _index
+    function _fromAgnosticAtIndex(uint256 amount_, uint256 index_) internal view returns ( uint256 ) {
+        return amount_
+            * index_
             / (10 ** DECIMALS);
     }
 
@@ -340,22 +350,22 @@ contract YieldDirector is Ownable, IYieldDirector {
     * Emergency Functions
     ************************/
 
-    function emergencyShutdown(bool _active) external onlyOwner {
-        disableDeposits = _active;
-        disableWithdaws = _active;
-        disableRedeems = _active;
-        emit EmergencyShutdown(_active);
+    function emergencyShutdown(bool active_) external onlyOwner {
+        disableDeposits = active_;
+        disableWithdaws = active_;
+        disableRedeems = active_;
+        emit EmergencyShutdown(active_);
     }
 
-    function shutdownDeposits(bool _active) external onlyOwner {
-        disableDeposits = _active;
+    function shutdownDeposits(bool active_) external onlyOwner {
+        disableDeposits = active_;
     }
 
-    function shutdownWithdrawals(bool _active) external onlyOwner {
-        disableWithdaws = _active;
+    function shutdownWithdrawals(bool active_) external onlyOwner {
+        disableWithdaws = active_;
     }
 
-    function shutdownRedeems(bool _active) external onlyOwner {
-        disableRedeems = _active;
+    function shutdownRedeems(bool active_) external onlyOwner {
+        disableRedeems = active_;
     }
 }

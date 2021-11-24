@@ -7,7 +7,7 @@ interface IYieldDirector {
 	function withdrawAll() external;
 	function depositsTo(address donor_, address recipient_) external view returns ( uint256 );
 	function totalDeposits(address donor_) external view returns ( uint256 );
-	function totalDonatedTo(address donor_, address recipient_) external view returns ( uint256 );
+	function donatedTo(address donor_, address recipient_) external view returns ( uint256 );
 	function totalDonated(address donor_) external view returns ( uint256 );
 	function redeem() external;
 	function redeemableBalance(address recipient_) external view returns ( uint256 );
