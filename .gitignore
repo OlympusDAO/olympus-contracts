@@ -13,6 +13,7 @@ types/
 node_modules/
 .env
 yarn-error.log
+.package-lock.json
 
 .yalc
 yalc.lock
