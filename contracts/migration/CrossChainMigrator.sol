@@ -8,12 +8,9 @@ import "../libraries/SafeERC20.sol";
 
 contract Migrate is Ownable {
     using SafeERC20 for IERC20;
-    
+
     IERC20 internal immutable wsOHM; // v1 token
     IERC20 internal immutable gOHM; // v2 token
-
-    uint256 public immutable timelockLength = 300000; // approx 3.5 days
-    uint256 public timelockEnd; // timestamp when contract can be cleared
 
     constructor(address _wsOHM, address _gOHM) {
         require(_wsOHM != address(0), "Zero address: wsOHM");
@@ -28,16 +25,13 @@ contract Migrate is Ownable {
         gOHM.safeTransfer(msg.sender, amount);
     }
 
-    // start timelock
-    function startTimelock() external onlyOwner {
-        require(timelockEnd == 0, "Timelock set");
-        timelockEnd = block.timestamp + timelockLength;
+    // withdraw wsOHM so it can be bridged on ETH and returned as more gOHM
+    function replenish() external onlyOwner {
+        wsOHM.safeTransfer(msg.sender, wsOHM.balanceOf(address(this)));
     }
 
-    // withdraw migrated wsOHM and unmigrated gOHM after timelock
+    // withdraw migrated wsOHM and unmigrated gOHM
     function clear() external onlyOwner {
-        require(block.timestamp >= timelockEnd, "Timelock");
-        require(timelockEnd != 0, "Timelock not set");
         wsOHM.safeTransfer(msg.sender, wsOHM.balanceOf(address(this)));
         gOHM.safeTransfer(msg.sender, gOHM.balanceOf(address(this)));
     }
