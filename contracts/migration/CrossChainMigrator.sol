@@ -6,7 +6,7 @@ import "../interfaces/IOwnable.sol";
 import "../types/Ownable.sol";
 import "../libraries/SafeERC20.sol";
 
-contract Migrate is Ownable {
+contract CrossChainMigrator is Ownable {
     using SafeERC20 for IERC20;
 
     IERC20 internal immutable wsOHM; // v1 token
