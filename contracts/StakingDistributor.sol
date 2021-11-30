@@ -24,7 +24,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
     address private immutable staking;
 
     mapping(uint256 => Adjust) public adjustments;
-    uint256 public bounty;
+    uint256 public override bounty;
 
     uint256 private immutable rateDenominator = 1_000_000;
 
