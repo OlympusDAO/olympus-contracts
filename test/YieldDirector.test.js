@@ -516,4 +516,17 @@ describe.only('YieldDirectorBackup', async () => {
         await triggerRebase();
         await expect(await tyche.totalDonated(deployer.address)).is.equal(accumulated);
     });
+
+    it('should get all deposited positions', async () => {
+        const principal = "100000000000";
+        await tyche.deposit(principal, bob.address);
+        await tyche.deposit(principal, alice.address);
+        await triggerRebase();
+        
+        const allDeposits = await tyche.getAllDeposits(deployer.address);
+        console.log(allDeposits)
+        await expect(allDeposits.length).is.equal(2);
+        await expect(allDeposits[0][0]).is.equal(bob.address);
+        await expect(allDeposits[1][0]).is.equal(principal);
+    });
 });
