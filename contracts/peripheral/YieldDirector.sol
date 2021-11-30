@@ -7,9 +7,7 @@ import {SafeERC20} from "../libraries/SafeERC20.sol";
 import {IYieldDirector} from "../interfaces/IYieldDirector.sol";
 import {Ownable} from "../types/Ownable.sol";
 import {IgOHM} from "../interfaces/IgOHM.sol";
-
-//import {ERC20} from "../types/ERC20.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 
 /**
     @title YieldDirector (codename Tyche) 
@@ -17,11 +15,11 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
             to any address. Donors will be able to withdraw their principal
             sOHM at any time. Donation recipients can also redeem accrued rebases at any time.
  */
-contract YieldDirector is Ownable, IYieldDirector {
+contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     using SafeERC20 for IERC20;
 
     address public immutable sOHM;
-    uint256 public immutable DECIMALS; // Decimals of OHM and sOHM
+    uint256 public constant DECIMALS = 18; // Decimals of gOHM
 
     bool public depositDisabled;
     bool public withdrawDisabled;
@@ -51,11 +49,12 @@ contract YieldDirector is Ownable, IYieldDirector {
     event Redeemed(address recipient_, uint256 amount_);
     event EmergencyShutdown(bool active_);
 
-    constructor (address sOhm_) {
+    constructor (address sOhm_, address authority_)
+        OlympusAccessControlled(IOlympusAuthority(authority_))
+    {
         require(sOhm_ != address(0), "Invalid address for sOHM");
 
         sOHM = sOhm_;
-        DECIMALS = ERC20(sOhm_).decimals();
 
         depositDisabled = false;
         withdrawDisabled = false;
@@ -351,7 +350,7 @@ contract YieldDirector is Ownable, IYieldDirector {
         @notice Convert flat sOHM value to agnostic value at a given index value
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index
      */
-    function _fromAgnosticAtIndex(uint256 amount_, uint256 index_) internal view returns ( uint256 ) {
+    function _fromAgnosticAtIndex(uint256 amount_, uint256 index_) internal pure returns ( uint256 ) {
         return amount_
             * index_
             / (10 ** DECIMALS);
@@ -361,22 +360,22 @@ contract YieldDirector is Ownable, IYieldDirector {
     * Emergency Functions
     ************************/
 
-    function emergencyShutdown(bool active_) external onlyOwner {
+    function emergencyShutdown(bool active_) external onlyGovernor {
         depositDisabled = active_;
         withdrawDisabled = active_;
         redeemDisabled = active_;
         emit EmergencyShutdown(active_);
     }
 
-    function disableDeposits(bool active_) external onlyOwner {
+    function disableDeposits(bool active_) external onlyGovernor {
         depositDisabled = active_;
     }
 
-    function disableWithdrawals(bool active_) external onlyOwner {
+    function disableWithdrawals(bool active_) external onlyGovernor {
         withdrawDisabled = active_;
     }
 
-    function disableRedeems(bool active_) external onlyOwner {
+    function disableRedeems(bool active_) external onlyGovernor {
         redeemDisabled = active_;
     }
 }
