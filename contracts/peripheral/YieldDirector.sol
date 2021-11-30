@@ -23,9 +23,9 @@ contract YieldDirector is Ownable, IYieldDirector {
     address public immutable sOHM;
     uint256 public immutable DECIMALS; // Decimals of OHM and sOHM
 
-    bool public disableDeposits;
-    bool public disableWithdaws;
-    bool public disableRedeems;
+    bool public depositDisabled;
+    bool public withdrawDisabled;
+    bool public redeemDisabled;
 
     struct DonationInfo {
         address recipient;
@@ -57,9 +57,9 @@ contract YieldDirector is Ownable, IYieldDirector {
         sOHM = sOhm_;
         DECIMALS = ERC20(sOhm_).decimals();
 
-        disableDeposits = false;
-        disableWithdaws = false;
-        disableRedeems = false;
+        depositDisabled = false;
+        withdrawDisabled = false;
+        redeemDisabled = false;
     }
 
     /************************
@@ -72,10 +72,9 @@ contract YieldDirector is Ownable, IYieldDirector {
         @param recipient_ Address to direct staking yield and vault shares to
     */
     function deposit(uint256 amount_, address recipient_) external override {
-        require(disableDeposits == false, "Deposits currently disabled");
+        require(!depositDisabled, "Deposits currently disabled");
         require(amount_ > 0, "Invalid deposit amount");
         require(recipient_ != address(0), "Invalid recipient address");
-        require(IERC20(sOHM).balanceOf(msg.sender) >= amount_, "Not enough sOHM");
 
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
 
@@ -124,7 +123,7 @@ contract YieldDirector is Ownable, IYieldDirector {
         @notice Withdraw donor's sOHM from vault and subtracts debt from recipient
      */
     function withdraw(uint256 amount_, address recipient_) external override {
-        require(disableWithdaws == false, "Withdraws currently disabled");
+        require(!withdrawDisabled, "Withdraws currently disabled");
 
         int256 recipientIndexSigned = _getRecipientIndex(msg.sender, recipient_);
         require(recipientIndexSigned >= 0, "No donations to recipient");
@@ -157,7 +156,7 @@ contract YieldDirector is Ownable, IYieldDirector {
         @notice Withdraw from all donor positions
      */
     function withdrawAll() external override {
-        require(disableWithdaws == false, "Withdraws currently disabled");
+        require(!withdrawDisabled, "Withdraws currently disabled");
 
         DonationInfo[] storage donations = donationInfo[msg.sender];
         require(donations.length != 0, "User not donating to anything");
@@ -212,7 +211,28 @@ contract YieldDirector is Ownable, IYieldDirector {
         for (uint256 index = 0; index < donations.length; index++) {
             total += donations[index].deposit;
         }
+
         return total;
+    }
+    
+    /**
+        @notice Return arrays of donor's recipients and deposit amounts, matched by index
+     */
+    function getAllDeposits(address donor_) external override view returns ( address[] memory, uint256[] memory ) {
+        DonationInfo[] memory donations = donationInfo[donor_];
+        require(donations.length != 0, "User is not donating");
+
+        uint256 len = donations.length;
+
+        address[] memory addresses = new address[](len);
+        uint256[] memory deposits = new uint256[](len);
+
+        for (uint256 index = 0; index < len; index++) {
+            addresses[index] = donations[index].recipient;
+            deposits[index] = donations[index].deposit;
+        }
+
+        return (addresses, deposits);
     }
 
     /**
@@ -224,10 +244,8 @@ contract YieldDirector is Ownable, IYieldDirector {
         require(recipientIndexSigned >= 0, "No donations to recipient");
 
         DonationInfo memory donation = donations[uint256(recipientIndexSigned)];
-        //return donations[uint256(recipientIndexSigned)].deposit + donations[uint256(recipientIndexSigned)].carry;
         return donation.carry
             + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
-
     }
 
     /**
@@ -265,7 +283,7 @@ contract YieldDirector is Ownable, IYieldDirector {
              be accounted for with a subsequent redeem or a withdrawal by the specific donor.
      */
     function redeem() external override {
-        require(disableRedeems == false, "Redeems currently disabled");
+        require(!redeemDisabled, "Redeems currently disabled");
 
         uint256 redeemable = redeemableBalance(msg.sender);
         require(redeemable > 0, "No redeemable balance");
@@ -344,21 +362,21 @@ contract YieldDirector is Ownable, IYieldDirector {
     ************************/
 
     function emergencyShutdown(bool active_) external onlyOwner {
-        disableDeposits = active_;
-        disableWithdaws = active_;
-        disableRedeems = active_;
+        depositDisabled = active_;
+        withdrawDisabled = active_;
+        redeemDisabled = active_;
         emit EmergencyShutdown(active_);
     }
 
-    function shutdownDeposits(bool active_) external onlyOwner {
-        disableDeposits = active_;
+    function disableDeposits(bool active_) external onlyOwner {
+        depositDisabled = active_;
     }
 
-    function shutdownWithdrawals(bool active_) external onlyOwner {
-        disableWithdaws = active_;
+    function disableWithdrawals(bool active_) external onlyOwner {
+        withdrawDisabled = active_;
     }
 
-    function shutdownRedeems(bool active_) external onlyOwner {
-        disableRedeems = active_;
+    function disableRedeems(bool active_) external onlyOwner {
+        redeemDisabled = active_;
     }
 }
