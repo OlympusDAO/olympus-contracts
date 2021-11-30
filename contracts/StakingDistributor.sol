@@ -73,7 +73,9 @@ contract Distributor is IDistributor, OlympusAccessControlled {
                 adjust(i); // check for adjustment
             }
         }
-        treasury.mint(staking, bounty);
+        if (bounty != 0) {
+            treasury.mint(staking, bounty);
+        }
     }
 
     /* ====== INTERNAL FUNCTIONS ====== */
