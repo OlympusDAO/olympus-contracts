@@ -177,16 +177,17 @@ contract OlympusStaking is OlympusAccessControlled {
         bool _rebasing
     ) external returns (uint256 amount_) {
         amount_ = _amount;
+        uint256 bounty;
         if (_trigger) {
             if (rebase()) {
-                amount_ += distributor.bounty();
+                bounty = distributor.bounty();
             }
         }
         if (_rebasing) {
             sOHM.safeTransferFrom(msg.sender, address(this), _amount);
         } else {
             gOHM.burn(msg.sender, _amount); // amount was given in gOHM terms
-            amount_ = gOHM.balanceFrom(amount_); // convert amount to OHM terms
+            amount_ = gOHM.balanceFrom(amount_).add(bounty); // convert amount to OHM terms
         }
         OHM.safeTransfer(_to, amount_);
     }
