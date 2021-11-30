@@ -27,16 +27,16 @@ contract OlympusStaking is OlympusAccessControlled {
     /* ========== DATA STRUCTURES ========== */
 
     struct Epoch {
-        uint256 length;
-        uint256 number;
-        uint256 endBlock;
-        uint256 distribute;
+        uint256 length; // in seconds
+        uint256 number; // since inception
+        uint256 end; // timestamp
+        uint256 distribute; // amount
     }
 
     struct Claim {
-        uint256 deposit;
-        uint256 gons;
-        uint256 expiry;
+        uint256 deposit; // if forfeiting
+        uint256 gons; // staked balance
+        uint256 expiry; // end of warmup period
         bool lock; // prevents malicious delays for claim
     }
 
@@ -62,7 +62,7 @@ contract OlympusStaking is OlympusAccessControlled {
         address _gOHM,
         uint256 _epochLength,
         uint256 _firstEpochNumber,
-        uint256 _firstEpochBlock,
+        uint256 _firstEpochTime,
         address _authority
     ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_ohm != address(0), "Zero address: OHM");
@@ -72,7 +72,7 @@ contract OlympusStaking is OlympusAccessControlled {
         require(_gOHM != address(0), "Zero address: gOHM");
         gOHM = IgOHM(_gOHM);
 
-        epoch = Epoch({length: _epochLength, number: _firstEpochNumber, endBlock: _firstEpochBlock, distribute: 0});
+        epoch = Epoch({length: _epochLength, number: _firstEpochNumber, end: _firstEpochTime, distribute: 0});
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -217,14 +217,14 @@ contract OlympusStaking is OlympusAccessControlled {
 
     /**
      * @notice trigger rebase if epoch over
-     * @return brrr_ bool
+     * @return rebased_ bool
      */
-    function rebase() public  returns (bool brrr_) {
-        brrr_ = epoch.endBlock <= block.number;
-        if (brrr_) {
+    function rebase() public  returns (bool rebased_) {
+        rebased_ = epoch.end <= block.timestamp;
+        if (rebased_) {
             sOHM.rebase(epoch.distribute, epoch.number);
 
-            epoch.endBlock = epoch.endBlock.add(epoch.length);
+            epoch.end = epoch.end.add(epoch.length);
             epoch.number++;
 
             if (address(distributor) != address(0)) {
