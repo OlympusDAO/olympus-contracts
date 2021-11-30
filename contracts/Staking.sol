@@ -48,7 +48,7 @@ contract OlympusStaking is OlympusAccessControlled {
 
     Epoch public epoch;
 
-    address public distributor;
+    IDistributor public distributor;
 
     mapping(address => Claim) public warmupInfo;
     uint256 public warmupPeriod;
@@ -91,10 +91,11 @@ contract OlympusStaking is OlympusAccessControlled {
         bool _rebasing,
         bool _claim
     ) external returns (uint256) {
-        rebase();
-
         OHM.safeTransferFrom(msg.sender, address(this), _amount);
 
+        if (rebase()) {
+            _amount += distributor.bounty();
+        }
         if (_claim && warmupPeriod == 0) {
             return _send(_to, _amount, _rebasing);
         } else {
@@ -175,18 +176,18 @@ contract OlympusStaking is OlympusAccessControlled {
         bool _trigger,
         bool _rebasing
     ) external returns (uint256 amount_) {
-        if (_trigger) {
-            rebase();
-        }
-
         amount_ = _amount;
+        if (_trigger) {
+            if (rebase()) {
+                amount_ += distributor.bounty();
+            }
+        }
         if (_rebasing) {
             sOHM.safeTransferFrom(msg.sender, address(this), _amount);
         } else {
             gOHM.burn(msg.sender, _amount); // amount was given in gOHM terms
-            amount_ = gOHM.balanceFrom(_amount); // convert amount to OHM terms
+            amount_ = gOHM.balanceFrom(amount_); // convert amount to OHM terms
         }
-
         OHM.safeTransfer(_to, amount_);
     }
 
@@ -198,7 +199,6 @@ contract OlympusStaking is OlympusAccessControlled {
      */
     function wrap(address _to, uint256 _amount) external returns (uint256 gBalance_) {
         sOHM.safeTransferFrom(msg.sender, address(this), _amount);
-
         gBalance_ = gOHM.balanceTo(_amount);
         gOHM.mint(_to, gBalance_);
     }
@@ -211,23 +211,24 @@ contract OlympusStaking is OlympusAccessControlled {
      */
     function unwrap(address _to, uint256 _amount) external returns (uint256 sBalance_) {
         gOHM.burn(msg.sender, _amount);
-
         sBalance_ = gOHM.balanceFrom(_amount);
         sOHM.safeTransfer(_to, sBalance_);
     }
 
     /**
      * @notice trigger rebase if epoch over
+     * @return brrr_ bool
      */
-    function rebase() public {
-        if (epoch.endBlock <= block.number) {
+    function rebase() public  returns (bool brrr_) {
+        brrr_ = epoch.endBlock <= block.number;
+        if (brrr_) {
             sOHM.rebase(epoch.distribute, epoch.number);
 
             epoch.endBlock = epoch.endBlock.add(epoch.length);
             epoch.number++;
 
-            if (distributor != address(0)) {
-                IDistributor(distributor).distribute();
+            if (address(distributor) != address(0)) {
+                distributor.distribute();
             }
 
             if (contractBalance() <= totalStaked()) {
@@ -299,7 +300,8 @@ contract OlympusStaking is OlympusAccessControlled {
      * @param _distributor address
      */
     function setDistributor(address _distributor) external onlyGovernor {
-        distributor = _distributor;
+        require(_distributor != address(0));
+        distributor = IDistributor(_distributor);
         emit DistributorSet(_distributor);
     }
 
