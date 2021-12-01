@@ -5,6 +5,7 @@ import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
+import "./interfaces/IOHM.sol";
 import "./interfaces/IsOHM.sol";
 import "./interfaces/IgOHM.sol";
 import "./interfaces/IDistributor.sol";
@@ -15,7 +16,7 @@ contract OlympusStaking is OlympusAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IOHM;
     using SafeERC20 for IsOHM;
     using SafeERC20 for IgOHM;
 
@@ -42,7 +43,7 @@ contract OlympusStaking is OlympusAccessControlled {
 
     /* ========== STATE VARIABLES ========== */
 
-    IERC20 public immutable OHM;
+    IOHM public immutable OHM;
     IsOHM public immutable sOHM;
     IgOHM public immutable gOHM;
 
@@ -66,7 +67,7 @@ contract OlympusStaking is OlympusAccessControlled {
         address _authority
     ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_ohm != address(0), "Zero address: OHM");
-        OHM = IERC20(_ohm);
+        OHM = IOHM(_ohm);
         require(_sOHM != address(0), "Zero address: sOHM");
         sOHM = IsOHM(_sOHM);
         require(_gOHM != address(0), "Zero address: gOHM");
@@ -310,5 +311,18 @@ contract OlympusStaking is OlympusAccessControlled {
     function setWarmupLength(uint256 _warmupPeriod) external onlyGovernor {
         warmupPeriod = _warmupPeriod;
         emit WarmupSet(_warmupPeriod);
+    }
+
+    /**
+     * @notice require OHM and sOHM to be approved to interact with staking
+     * @dev by default, staking does not need approvals
+     * @param _ohm bool
+     */
+    function requireApproval(bool _ohm) external onlyGovernor {
+        if (_ohm) {
+            OHM.requireApproveStaking();
+        } else {
+            sOHM.requireApproveStaking();
+        }
     }
 }

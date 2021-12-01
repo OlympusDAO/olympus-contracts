@@ -13,6 +13,9 @@ import "./types/OlympusAccessControlled.sol";
 contract OlympusERC20Token is ERC20Permit, IOHM, OlympusAccessControlled {
     using SafeMath for uint256;
 
+    address public staking;
+    bool public approveStaking; // does user need to approve to stake
+
     constructor(address _authority) 
     ERC20("Olympus", "OHM", 9) 
     ERC20Permit("Olympus") 
@@ -35,5 +38,28 @@ contract OlympusERC20Token is ERC20Permit, IOHM, OlympusAccessControlled {
 
         _approve(account_, msg.sender, decreasedAllowance_);
         _burn(account_, amount_);
+    }
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public override(IERC20, ERC20) returns (bool) {
+        _transfer(sender, recipient, amount);
+        if (msg.sender != staking || !approveStaking) {
+            _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        }
+        return true;
+    }
+
+    function setStaking(address _staking) external onlyGovernor {
+        require(staking == address(0));
+        require(_staking != address(0));
+        staking = _staking;
+    }
+
+    function requireApproveStaking() external override {
+        require(msg.sender == staking);
+        approveStaking = false;
     }
 }

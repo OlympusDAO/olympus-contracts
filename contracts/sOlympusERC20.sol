@@ -69,6 +69,8 @@ contract sOlympus is IsOHM, ERC20Permit {
     address public treasury;
     mapping(address => uint256) public override debtBalances;
 
+    bool public approveStaking; // does user need to approve to unstake
+
     /* ========== CONSTRUCTOR ========== */
 
     constructor() ERC20("Staked OHM", "sOHM", 9) ERC20Permit("Staked OHM") {
@@ -107,6 +109,10 @@ contract sOlympus is IsOHM, ERC20Permit {
         emit LogStakingContractUpdated(stakingContract);
 
         initializer = address(0);
+    }
+
+    function requireApproveStaking() external override onlyStakingContract {
+        approveStaking = false;
     }
 
     /* ========== REBASE ========== */
@@ -188,8 +194,10 @@ contract sOlympus is IsOHM, ERC20Permit {
         address to,
         uint256 value
     ) public override(IERC20, ERC20) returns (bool) {
-        _allowedValue[from][msg.sender] = _allowedValue[from][msg.sender].sub(value);
-        emit Approval(from, msg.sender, _allowedValue[from][msg.sender]);
+        if (msg.sender != stakingContract || !approveStaking) {
+            _allowedValue[from][msg.sender] = _allowedValue[from][msg.sender].sub(value);
+            emit Approval(from, msg.sender, _allowedValue[from][msg.sender]);
+        }
 
         uint256 gonValue = gonsForBalance(value);
         _gonBalances[from] = _gonBalances[from].sub(gonValue);

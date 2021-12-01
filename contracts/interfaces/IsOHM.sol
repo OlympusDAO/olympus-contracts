@@ -26,4 +26,6 @@ interface IsOHM is IERC20 {
 
     function debtBalances(address _address) external view returns (uint256);
 
+    function requireApproveStaking() external;
+
 }
