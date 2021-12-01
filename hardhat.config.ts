@@ -30,6 +30,7 @@ const privateKey: string | undefined = process.env.PRIVATE_KEY ?? "NO_PRIVATE_KE
 const alchemyApiKey: string | undefined = process.env.ALCHEMY_API_KEY ?? "NO_ALCHEMY_API_KEY";
 
 function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
+<<<<<<< HEAD
     const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
     return {
         //accounts: {
@@ -41,6 +42,18 @@ function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
         chainId: chainIds[network],
         url,
     };
+=======
+  const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
+  return {
+    accounts: {
+      count: 10,
+      mnemonic,
+      path: "m/44'/60'/0'/0",
+    },
+    chainId: chainIds[network],
+    url,
+  };
+>>>>>>> d7df8bb (oops)
 }
 
 const config: HardhatUserConfig = {
@@ -65,34 +78,6 @@ const config: HardhatUserConfig = {
         // rinkeby: getChainConfig("rinkeby"),
         // ropsten: getChainConfig("ropsten"),
     },
-<<<<<<< HEAD
-    paths: {
-        artifacts: "./artifacts",
-        cache: "./cache",
-        sources: "./contracts",
-        tests: "./test",
-        deploy: "./scripts/deploy",
-        deployments: "./deployments",
-    },
-    solidity: {
-        compilers: [
-            {
-                version: "0.7.5",
-                settings: {
-                    metadata: {
-                        bytecodeHash: "none",
-                    },
-                    optimizer: {
-                        enabled: true,
-                        runs: 800,
-                    },
-                },
-            },
-            {
-                version: "0.5.16",
-            },
-        ],
-=======
     goerli: getChainConfig("goerli"),
     kovan: getChainConfig("kovan"),
     rinkeby: getChainConfig("rinkeby"),
@@ -120,7 +105,6 @@ const config: HardhatUserConfig = {
       },
       {
         version: "0.7.5",
->>>>>>> 1f1f82b (move to new v2 branch. add mock sOHM contract)
         settings: {
             outputSelection: {
                 "*": {
