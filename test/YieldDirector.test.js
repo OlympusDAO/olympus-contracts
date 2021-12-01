@@ -6,7 +6,7 @@ const {
     utils,
 } = require("ethers");
 
-describe.only('YieldDirectorBackup', async () => {
+describe.only('YieldDirector', async () => {
 
     const LARGE_APPROVAL = '100000000000000000000000000000000';
     const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -92,7 +92,7 @@ describe.only('YieldDirectorBackup', async () => {
         staking = await stakingFactory.deploy(ohm.address, sOhm.address, gOhm.address, "10", "1", "9", auth.address);
         treasury = await treasuryFactory.deploy(ohm.address, "0", auth.address);
         distributor = await distributorFactory.deploy(treasury.address, ohm.address, staking.address, auth.address);
-        tyche = await tycheFactory.deploy(sOhm.address);
+        tyche = await tycheFactory.deploy(sOhm.address, auth.address);
 
         // Setup for each component
 
@@ -524,7 +524,6 @@ describe.only('YieldDirectorBackup', async () => {
         await triggerRebase();
         
         const allDeposits = await tyche.getAllDeposits(deployer.address);
-        console.log(allDeposits)
         await expect(allDeposits.length).is.equal(2);
         await expect(allDeposits[0][0]).is.equal(bob.address);
         await expect(allDeposits[1][0]).is.equal(principal);

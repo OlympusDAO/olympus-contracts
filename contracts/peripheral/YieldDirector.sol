@@ -19,7 +19,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     using SafeERC20 for IERC20;
 
     address public immutable sOHM;
-    uint256 public constant DECIMALS = 18; // Decimals of gOHM
+    uint256 public constant DECIMALS = 9; // Decimals of gOHM
 
     bool public depositDisabled;
     bool public withdrawDisabled;
