@@ -88,13 +88,20 @@ contract Distributor is IDistributor, OlympusAccessControlled {
                 if (info[_index].rate >= adjustment.target) {
                     // if target met
                     adjustments[_index].rate = 0; // turn off adjustment
+                    info[_index].rate = adjustment.target; // set to target
                 }
             } else {
                 // if rate should decrease
-                info[_index].rate = info[_index].rate.sub(adjustment.rate); // lower rate
+                if (info[_index].rate > adjustment.rate) { // protect from underflow
+                    info[_index].rate = info[_index].rate.sub(adjustment.rate); // lower rate
+                } else {
+                    info[_index].rate = 0;
+                }
+                
                 if (info[_index].rate <= adjustment.target) {
                     // if target met
                     adjustments[_index].rate = 0; // turn off adjustment
+                    info[_index].rate = adjustment.target; // set to target
                 }
             }
         }
