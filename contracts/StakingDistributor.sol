@@ -24,7 +24,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
     address private immutable staking;
 
     mapping(uint256 => Adjust) public adjustments;
-    uint256 public bounty;
+    uint256 public override bounty;
 
     uint256 private immutable rateDenominator = 1_000_000;
 
@@ -63,7 +63,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
     /**
         @notice send epoch reward to staking contract
      */
-    function distribute() external override {
+    function distribute() external override returns (uint256) {
         require(msg.sender == staking, "Only staking");
 
         // distribute rewards to each recipient
@@ -76,6 +76,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         if (bounty != 0) {
             treasury.mint(staking, bounty);
         }
+        return bounty;
     }
 
     /* ====== INTERNAL FUNCTIONS ====== */

@@ -93,7 +93,7 @@ contract OlympusStaking is OlympusAccessControlled {
     ) external returns (uint256) {
         OHM.safeTransferFrom(msg.sender, address(this), _amount);
 
-        if (rebase()) {
+        if (rebase() && address(distributor) != address(0)) {
             _amount += distributor.bounty();
         }
         if (_claim && warmupPeriod == 0) {
@@ -228,14 +228,16 @@ contract OlympusStaking is OlympusAccessControlled {
             epoch.end = epoch.end.add(epoch.length);
             epoch.number++;
 
+            uint256 bounty;
             if (address(distributor) != address(0)) {
-                distributor.distribute();
+                
+                bounty = distributor.distribute();
             }
 
             if (contractBalance() <= totalStaked()) {
                 epoch.distribute = 0;
             } else {
-                epoch.distribute = contractBalance().sub(totalStaked());
+                epoch.distribute = contractBalance().sub(totalStaked()).sub(bounty);
             }
         }
     }
