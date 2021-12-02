@@ -12,7 +12,7 @@ import "../interfaces/ICrvDepositor.sol";
 import "../interfaces/IOlympusAuthority.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IDistributor.sol";
-import "../interfaces/IOlympusTokenMIgrator.sol";
+import "../interfaces/IOlympusTokenMigrator.sol";
 
 //Basic functionality to integrate with locking cvx
 contract BasicCvxHolder is OlympusAccessControlled {
