@@ -34,7 +34,7 @@ describe("OlympusStaking", () => {
 
   const EPOCH_LENGTH = 2200;
   const EPOCH_NUMBER = 1;
-  const FUTURE_END_BLOCK = 1022010000; // an arbitrary future block timestamp
+  const FUTURE_END_TIME = 1022010000; // an arbitrary future block timestamp
 
   beforeEach(async () => {
     [owner, governor, guardian, alice, bob, other] = await ethers.getSigners();
@@ -59,7 +59,7 @@ describe("OlympusStaking", () => {
         gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
-        FUTURE_END_BLOCK,
+        FUTURE_END_TIME,
         authority.address,
       );
 
@@ -68,7 +68,7 @@ describe("OlympusStaking", () => {
       let epoch = await staking.epoch();
       expect((epoch as any)._length).to.equal(BigNumber.from(EPOCH_LENGTH));
       expect(epoch.number).to.equal(BigNumber.from(EPOCH_NUMBER));
-      expect(epoch.end).to.equal(BigNumber.from(FUTURE_END_BLOCK));
+      expect(epoch.end).to.equal(BigNumber.from(FUTURE_END_TIME));
 
       expect(await authority.governor()).to.equal(governor.address);
     });
@@ -80,7 +80,7 @@ describe("OlympusStaking", () => {
         gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
-        FUTURE_END_BLOCK,
+        FUTURE_END_TIME,
         authority.address,
       )).to.be.reverted;
     });
@@ -92,7 +92,7 @@ describe("OlympusStaking", () => {
         gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
-        FUTURE_END_BLOCK,
+        FUTURE_END_TIME,
         authority.address,
       )).to.be.reverted;
     });
@@ -104,7 +104,7 @@ describe("OlympusStaking", () => {
         ZERO_ADDRESS,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
-        FUTURE_END_BLOCK,
+        FUTURE_END_TIME,
         authority.address,
       )).to.be.reverted;
     });
@@ -118,7 +118,7 @@ describe("OlympusStaking", () => {
         gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
-        FUTURE_END_BLOCK,
+        FUTURE_END_TIME,
         authority.address,
       );
     });
