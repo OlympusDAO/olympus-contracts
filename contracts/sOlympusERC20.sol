@@ -42,9 +42,9 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     /* ========== STATE VARIABLES ========== */
 
-    address initializer;
+    address internal initializer;
 
-    uint256 INDEX; // Index Gons - tracks rebase growth
+    uint256 internal INDEX; // Index Gons - tracks rebase growth
 
     address public stakingContract; // balance used to calc rebase
     IgOHM public gOHM; // additional staked supply (governance token)
