@@ -19,6 +19,11 @@ contract OlympusBondDepository {
 
   event BeforeBond(uint256 index, uint256 price, uint256 internalPrice, uint256 debtRatio);
   event CreateBond(uint256 index, uint256 payout, uint256 expires);
+  event BondAdded(uint16 bid);
+  event BondEnabled(uint16 bid);
+  event BondDeprecated(uint16 bid);
+  event GlobalSet(uint256 decayRate, uint256 maxPayout);
+  event FeedSet(address oracle);
 
   modifier onlyController() {
     require(msg.sender == controller, "Only controller");
@@ -215,6 +220,7 @@ contract OlympusBondDepository {
   function setGlobal(uint48 _decayRate, uint48 _maxPayout) external onlyController {
     global.decayRate = _decayRate;
     global.maxPayout = _maxPayout;
+    emit GlobalSet(_decayRate, _maxPayout);
   }
 
   /**
@@ -224,6 +230,7 @@ contract OlympusBondDepository {
   function setController(address _controller) external onlyController {
     require(_controller != address(0), "Zero address: Controller");
     controller = _controller;
+    emit ControllerSet(_controller);
   }
 
   /**
@@ -232,6 +239,7 @@ contract OlympusBondDepository {
   function setFeed(address _oracle) external onlyController {
     require(_oracle != address(0), "Zero address: Oracle");
     feed = IOracle(_oracle);
+    emit FeedSet(_oracle);
   }
 
   /**
@@ -255,6 +263,7 @@ contract OlympusBondDepository {
   function enableBond(uint16 _bid) external onlyController {
     bonds[_bid].enabled = true;
     bonds[_bid].last = uint48(block.timestamp);
+    emit BondEnabled(_bid);
   }
 
   /**
@@ -263,6 +272,7 @@ contract OlympusBondDepository {
    */
   function deprecateBond(uint16 _bid) external onlyController {
     bonds[_bid].capacity = 0;
+    emit BondDeprecated(_bid);
   }
 
   /**
@@ -312,6 +322,7 @@ contract OlympusBondDepository {
     id_ = uint16(ids.length);
     bonds[id_] = bond;
     ids.push(address(_principal));
+    emit BondAdded(_bid);
   }
 
   /**

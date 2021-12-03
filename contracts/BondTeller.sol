@@ -28,6 +28,12 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         _;
     }
 
+    /* ========== EVENTS ========== */
+
+    event FrontEndRewardChanged(uint256 newReward);
+    event BondRedeemed(address redeemer, uint256 payout);
+    event RewardClaimed(address claimant, uint256 amount);
+
     /* ========== STRUCTS ========== */
 
     // Info for bond holder
@@ -141,7 +147,9 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         for (uint256 i = 0; i < _indexes.length; i++) {
             if (vested(_bonder, _indexes[i])) {
                 info[_indexes[i]].redeemed = uint48(block.timestamp); // mark as redeemed
-                dues += info[_indexes[i]].payout;
+                uint256 payout = nfo[_indexes[i]].payout;
+                dues += payout;
+                emit BondRedeemed(_bonder, payout);
             }
         }
         dues = sOHM.fromG(dues);
@@ -155,6 +163,7 @@ contract BondTeller is ITeller, OlympusAccessControlled {
      */
     function getReward() external override {
         ohm.safeTransfer(msg.sender, rewards[msg.sender]);
+        emit RewardClaimed(msg.sender, rewards[msg.sender]);
         rewards[msg.sender] = 0;
     }
 
@@ -212,6 +221,7 @@ contract BondTeller is ITeller, OlympusAccessControlled {
     function setReward(bool _fe, uint256 _reward) external override onlyPolicy {
         if (_fe) {
             reward[0] = _reward;
+            emit FrontEndRewardChanged(_reward);
         } else {
             reward[1] = _reward;
         }
