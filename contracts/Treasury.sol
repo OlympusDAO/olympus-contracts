@@ -43,9 +43,10 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         LIQUIDITYDEPOSITOR,
         LIQUIDITYTOKEN,
         LIQUIDITYMANAGER,
-        DEBTOR,
+        RESERVEDEBTOR,
         REWARDMANAGER,
-        SOHM
+        SOHM,
+        OHMDEBTOR
     }
 
     struct Queue {
@@ -149,22 +150,27 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         @param _token address
      */
     function incurDebt(uint256 _amount, address _token) external override {
-        require(permissions[STATUS.DEBTOR][msg.sender], "Not approved");
-        require(permissions[STATUS.RESERVETOKEN][_token], "Not accepted");
-
-        uint256 value = tokenValue(_token, _amount);
+        uint256 value;
+        if (_token == address(OHM)) {
+            require(permissions[STATUS.OHMDEBTOR][msg.sender], "Debt: not approved");
+            require(_token == address(OHM), "Only OHM");
+            value = _amount;
+        } else {
+            require(permissions[STATUS.RESERVEDEBTOR][msg.sender], "Debt: not approved");
+            require(permissions[STATUS.RESERVETOKEN][_token], "Not reserve");
+            value = tokenValue(_token, _amount);
+        }
         require(value != 0, "Invalid output token");
-
-        uint256 availableDebt = sOHM.balanceOf(msg.sender).sub(sOHM.debtBalances(msg.sender));
-        require(value <= availableDebt, "Exceeds debt limit");
 
         sOHM.changeDebt(value, msg.sender, true);
         totalDebt = totalDebt.add(value);
-
-        totalReserves = totalReserves.sub(value);
-
-        IERC20(_token).safeTransfer(msg.sender, _amount);
-
+        
+        if (_token == address(OHM)) {
+            OHM.mint(msg.sender, value);
+        } else {
+            totalReserves = totalReserves.sub(value);
+            IERC20(_token).safeTransfer(msg.sender, _amount);
+        }
         emit CreateDebt(msg.sender, _token, _amount, value);
     }
 
@@ -174,17 +180,17 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         @param _token address
      */
     function repayDebtWithReserve(uint256 _amount, address _token) external override {
-        require(permissions[STATUS.DEBTOR][msg.sender], "Not approved");
+        require(
+            permissions[STATUS.RESERVEDEBTOR][msg.sender] ||
+            permissions[STATUS.OHMDEBTOR][msg.sender], 
+            "Not approved"
+        );
         require(permissions[STATUS.RESERVETOKEN][_token], "Not accepted");
-
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
-
         uint256 value = tokenValue(_token, _amount);
         sOHM.changeDebt(value, msg.sender, false);
         totalDebt = totalDebt.sub(value);
-
         totalReserves = totalReserves.add(value);
-
         emit RepayDebt(msg.sender, _token, _amount, value);
     }
 
@@ -193,13 +199,14 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         @param _amount uint
      */
     function repayDebtWithOHM(uint256 _amount) external {
-        require(permissions[STATUS.DEBTOR][msg.sender], "Not approved");
-
+        require(
+            permissions[STATUS.RESERVEDEBTOR][msg.sender] ||
+            permissions[STATUS.OHMDEBTOR][msg.sender], 
+            "Not approved"
+        );
         OHM.burnFrom(msg.sender, _amount);
-
         sOHM.changeDebt(_amount, msg.sender, false);
         totalDebt = totalDebt.sub(_amount);
-
         emit RepayDebt(msg.sender, address(OHM), _amount, _amount);
     }
 
@@ -219,9 +226,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
             require(value <= excessReserves(), "Insufficient reserves");
             totalReserves = totalReserves.sub(value);
         } 
-
         IERC20(_token).safeTransfer(msg.sender, _amount);
-
         emit Managed(_token, _amount);
     }
 
@@ -231,9 +236,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     function mint(address _recipient, uint256 _amount) external override {
         require(permissions[STATUS.REWARDMANAGER][msg.sender], "Not approved");
         require(_amount <= excessReserves(), "Insufficient reserves");
-
         OHM.mint(_recipient, _amount);
-
         emit Minted(msg.sender, _recipient, _amount);
     }
 
@@ -303,6 +306,20 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     }
 
     /**
+     *  @notice disable permission from address
+     *  @param _status STATUS
+     *  @param _toDisable address
+     */
+    function disable(STATUS _status, address _toDisable) external {
+        require(
+            msg.sender == authority.governor() || msg.sender == authority.guardian(), 
+            "Only governor or guardian"
+        );
+        permissions[_status][_toDisable] = false;
+        emit Permissioned(_toDisable, _status, false);
+    }
+
+    /**
      * @notice check if registry contains address
      * @return uint
      */
@@ -314,16 +331,6 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
             }
         }
         return (false, 0);
-    }
-
-    /**
-     *  @notice disable permission from address
-     *  @param _status STATUS
-     *  @param _toDisable address
-     */
-    function disable(STATUS _status, address _toDisable) external onlyGovernor {
-        permissions[_status][_toDisable] = false;
-        emit Permissioned(_toDisable, _status, false);
     }
 
     /* ========== TIMELOCKED FUNCTIONS ========== */
@@ -365,7 +372,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      *  @param _index uint
      */
     function execute(uint256 _index) external {
-        require(!onChainGoverned);
+        require(!onChainGoverned, "OCG Enabled");
 
         Queue memory info = permissionQueue[_index];
 
