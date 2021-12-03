@@ -231,6 +231,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         } else {
             debtBalances[debtor] = debtBalances[debtor].sub(amount);
         }
+        require(debtBalances[debtor] <= balanceOf(debtor), "Exceeds debt limit");
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
@@ -266,7 +267,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         return gOHM.balanceFrom(amount);
     }
 
-    // Staking contract holds excess rOHM
+    // Staking contract holds excess sOHM
     function circulatingSupply() public view override returns (uint256) {
         return
             _totalSupply.sub(balanceOf(stakingContract)).add(gOHM.balanceFrom(IERC20(address(gOHM)).totalSupply())).add(
