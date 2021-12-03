@@ -32,10 +32,10 @@ contract BondTeller is ITeller, OlympusAccessControlled {
 
     // Info for bond holder
     struct Bond {
-        uint256 bondId; // ID of bond in depository
-        uint256 payout; // sOHM remaining to be paid. gOHM balance
-        uint256 vested; // time when bond is vested
-        uint256 redeemed; // time when bond was redeemed (0 if unredeemed)
+        uint16 bondId; // ID of bond in depository
+        uint48 vested; // time when bond is vested
+        uint48 redeemed; // time when bond was redeemed (0 if unredeemed)
+        uint128 payout; // sOHM remaining to be paid. gOHM balance
     }
 
     /* ========== STATE VARIABLES ========== */
@@ -50,7 +50,7 @@ contract BondTeller is ITeller, OlympusAccessControlled {
     mapping(address => Bond[]) public bonderInfo; // user data
 
     mapping(address => uint256) public rewards; // front end operator rewards
-    uint256[] public reward; // reward to [front end operator, dao] (9 decimals)
+    uint64[] public reward; // reward to [front end operator, dao] (9 decimals)
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -81,20 +81,20 @@ contract BondTeller is ITeller, OlympusAccessControlled {
 
     /**
      * @notice add new bond payout to user data
-     * @param _bonder address
-     * @param _bid uint256
      * @param _payout uint256
-     * @param _expires uint256
+     * @param _bid uint16
+     * @param _expires uint48
+     * @param _bonder address
      * @param _feo address
-     * @return index_ uint256
+     * @return index_ uint16
      */
     function newBond(
-        address _bonder,
-        uint256 _bid,
         uint256 _payout,
-        uint256 _expires,
+        uint16 _bid,
+        uint48 _expires,
+        address _bonder,
         address _feo
-    ) external override onlyDepository returns (uint256 index_) {
+    ) external override onlyDepository returns (uint16 index_) {
         uint256 toFEO = _payout * reward[0] / 1e9;
         uint256 toDAO = _payout * reward[1] / 1e9;
 
@@ -104,13 +104,13 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         rewards[_feo] += toFEO; // front end operator reward
         rewards[dao] += toDAO; // dao reward
 
-        index_ = bonderInfo[_bonder].length;
+        index_ = uint16(bonderInfo[_bonder].length);
 
         // store bond & stake payout
         bonderInfo[_bonder].push(
             Bond({
                 bondId: _bid,
-                payout: sOHM.toG(_payout),
+                payout: uint128(sOHM.toG(_payout)),
                 vested: _expires,
                 redeemed: 0
             })
@@ -134,14 +134,13 @@ contract BondTeller is ITeller, OlympusAccessControlled {
      *  @param _indexes calldata uint256[]
      *  @return uint256
      */
-    function redeem(address _bonder, uint256[] memory _indexes) public override returns (uint256) {
+    function redeem(address _bonder, uint16[] memory _indexes) public override returns (uint256) {
         Bond[] storage info = bonderInfo[_bonder];
         uint256 dues;
         for (uint256 i = 0; i < _indexes.length; i++) {
-            uint256 index = _indexes[i];
-            if (vested(_bonder, index)) {
-                info[index].redeemed = block.timestamp; // mark as redeemed
-                dues += info[index].payout;
+            if (vested(_bonder, _indexes[i])) {
+                info[_indexes[i]].redeemed = uint48(block.timestamp); // mark as redeemed
+                dues += info[_indexes[i]].payout;
             }
         }
         dues = sOHM.fromG(dues);
@@ -160,46 +159,32 @@ contract BondTeller is ITeller, OlympusAccessControlled {
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    // INDEXES
-
     /**
      * @notice all un-redeemed indexes for address
      * @param _bonder address
      * @return indexes_ uint256[] memory
      */
-    function indexesFor(address _bonder) public view override returns (uint256[] memory indexes_) {
+    function indexesFor(address _bonder) public view override returns (uint16[] memory indexes_) {
         Bond[] memory info = bonderInfo[_bonder];
-        for (uint256 i = 0; i < info.length; i++) {
+        for (uint16 i = 0; i < info.length; i++) {
             if (info[i].redeemed == 0) {
                 indexes_[indexes_.length - 1] = i;
             }
         }
     }
 
-    // PAYOUT
-
-    /**
-     * @notice calculate amount of OHM available for claim for single bond
-     * @param _bonder address
-     * @param _index uint256
-     * @return uint256
-     */
-    function vested(address _bonder, uint256 _index) public view override returns (bool) {
+    // check if bonder's bond is claimable
+    function vested(address _bonder, uint16 _index) public view override returns (bool) {
         if (bonderInfo[_bonder][_index].redeemed == 0 && bonderInfo[_bonder][_index].vested <= block.number) {
             return true;
         }
         return false;
     }
 
-    /**
-     * @notice calculate amount of OHM available for claim for array of bonds
-     * @param _bonder address
-     * @param _indexes uint256[]
-     * @return pending_ uint256
-     */
+    // calculate amount of OHM available for claim for array of bonds
     function pendingForIndexes(
         address _bonder, 
-        uint256[] memory _indexes
+        uint16[] memory _indexes
     ) public view override returns (uint256 pending_) {
         for (uint256 i = 0; i < _indexes.length; i++) {
             if (vested(_bonder, _indexes[i])) {
@@ -209,16 +194,12 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         pending_ = sOHM.fromG(pending_);
     }
 
-    /**
-     *  @notice total pending on all bonds for bonder
-     *  @param _bonder address
-     *  @return pending_ uint256
-     */
+    // get total ohm available for claim by bonder
     function totalPendingFor(address _bonder) public view override returns (uint256 pending_) {
-        Bond[] memory info = bonderInfo[_bonder];
-        for (uint256 i = 0; i < info.length; i++) {
-            if (vested(_bonder, i)) {
-                pending_ += info[i].payout;
+        uint16[] memory indexes = indexesFor(_bonder);
+        for (uint256 i = 0; i < indexes.length; i++) {
+            if (vested(_bonder, indexes[i])) {
+                pending_ += bonderInfo[_bonder][i].payout;
             }
         }
         pending_ = sOHM.fromG(pending_);
@@ -227,7 +208,7 @@ contract BondTeller is ITeller, OlympusAccessControlled {
     /* ========== OWNABLE FUNCTIONS ========== */
 
     // set reward for front end operator (9 decimals)
-    function setReward(bool _fe, uint256 _reward) external override onlyPolicy {
+    function setReward(bool _fe, uint64 _reward) external override onlyPolicy {
         if (_fe) {
             reward[0] = _reward;
         } else {
