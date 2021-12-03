@@ -115,7 +115,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         @return uint
      */
     function nextRewardAt(uint256 _rate) public view override returns (uint256) {
-        return ohm.totalSupply().mul(_rate).div(rateDenominator);
+        return treasury.baseSupply().mul(_rate).div(rateDenominator);
     }
 
     /**

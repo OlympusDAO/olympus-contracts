@@ -446,4 +446,12 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
             value_ = IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);
         }
     }
+
+    /**
+     * @notice returns supply metric that cannot be manipulated by debt
+     * @dev use this any time you need to query supply
+     */
+    function baseSupply() external view override returns (uint256) {
+        return OHM.totalSupply() - totalDebt;
+    }
 }

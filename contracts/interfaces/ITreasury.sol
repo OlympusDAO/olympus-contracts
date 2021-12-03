@@ -21,4 +21,6 @@ interface ITreasury {
     function repayDebtWithReserve(uint256 amount_, address token_) external;
 
     function excessReserves() external view returns (uint256);
+
+    function baseSupply() external view returns (uint256);
 }
