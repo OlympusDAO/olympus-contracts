@@ -239,6 +239,7 @@ describe.only('Bonds', async () => {
     });
 
     it("should set capacity to zero after rising above max debt", async () => {
+        // to do
     });
 
     it("should not allow redemption before vested", async () => {
@@ -316,4 +317,11 @@ describe.only('Bonds', async () => {
         expect(await ohm.balanceOf(bob.address)).to.not.equal(bobBalance);
         expect(await ohm.balanceOf(carol.address)).to.not.equal(daoBalance);
     });
+
+    // test deprecation
+    // test going above max payout
+    // test redeemAll()
+    // test that bond concludes on time if price remains flat and discount is 2% for each bond
+        // compute time interval between each so that decay takes price to 2% discount
+        // deposit on each interval and see when capacity is breached (or if bond offering expires first)
 });
