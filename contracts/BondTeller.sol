@@ -50,7 +50,7 @@ contract BondTeller is ITeller, OlympusAccessControlled {
     mapping(address => Bond[]) public bonderInfo; // user data
 
     mapping(address => uint256) public rewards; // front end operator rewards
-    uint64[] public reward; // reward to [front end operator, dao] (9 decimals)
+    uint256[2] public reward; // reward to [front end operator, dao] (9 decimals)
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -95,10 +95,11 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         address _bonder,
         address _feo
     ) external override onlyDepository returns (uint16 index_) {
-        uint256 toFEO = _payout * reward[0] / 1e9;
-        uint256 toDAO = _payout * reward[1] / 1e9;
+        uint256 toFEO = _payout.mul(reward[0]).div(1e9);
+        uint256 toDAO = _payout.mul(reward[1]).div(1e9);
 
         treasury.mint(address(this), _payout.add(toFEO.add(toDAO)));
+        ohm.approve(address(staking), _payout);
         staking.stake(address(this), _payout, true, true);
 
         rewards[_feo] += toFEO; // front end operator reward
@@ -175,7 +176,7 @@ contract BondTeller is ITeller, OlympusAccessControlled {
 
     // check if bonder's bond is claimable
     function vested(address _bonder, uint16 _index) public view override returns (bool) {
-        if (bonderInfo[_bonder][_index].redeemed == 0 && bonderInfo[_bonder][_index].vested <= block.number) {
+        if (bonderInfo[_bonder][_index].redeemed == 0 && bonderInfo[_bonder][_index].vested <= block.timestamp) {
             return true;
         }
         return false;
@@ -208,7 +209,7 @@ contract BondTeller is ITeller, OlympusAccessControlled {
     /* ========== OWNABLE FUNCTIONS ========== */
 
     // set reward for front end operator (9 decimals)
-    function setReward(bool _fe, uint64 _reward) external override onlyPolicy {
+    function setReward(bool _fe, uint256 _reward) external override onlyPolicy {
         if (_fe) {
             reward[0] = _reward;
         } else {

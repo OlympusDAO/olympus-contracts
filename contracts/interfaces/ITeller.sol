@@ -12,7 +12,7 @@ interface ITeller {
     function redeemAll(address _bonder) external returns (uint256);
     function redeem(address _bonder, uint16[] memory _indexes) external returns (uint256);
     function getReward() external;
-    function setReward(bool _fe, uint64 _reward) external;
+    function setReward(bool _fe, uint256 _reward) external;
     function vested(address _bonder, uint16 _index) external view returns (bool);
     function pendingForIndexes(address _bonder, uint16[] memory _indexes) external view returns (uint256 pending_);
     function totalPendingFor(address _bonder) external view returns (uint256 pending_);

@@ -262,51 +262,35 @@ contract OlympusStaking is OlympusAccessControlled {
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    /**
-     * @notice returns the sOHM index, which tracks rebase growth
-     * @return uint
-     */
+    // the sOHM index, which tracks rebase growth
     function index() public view returns (uint256) {
         return sOHM.index();
     }
 
-    /**
-     * @notice returns contract OHM holdings, including bonuses provided
-     * @return uint
-     */
-    function contractBalance() public view returns (uint256) {
+    // OHM held in contract
+    function contractBalance() internal view returns (uint256) {
         return OHM.balanceOf(address(this));
     }
 
-    /**
-     * @notice total supply staked
-     */
+    // total supply staked
     function totalStaked() public view returns (uint256) {
         return sOHM.circulatingSupply();
     }
 
-    /**
-     * @notice total supply in warmup
-     */
+    // total supply in warmup
     function supplyInWarmup() public view returns (uint256) {
         return sOHM.balanceForGons(gonsInWarmup);
     }
 
     /* ========== MANAGERIAL FUNCTIONS ========== */
 
-    /**
-     * @notice sets the contract address for LP staking
-     * @param _distributor address
-     */
+    // sets the reward distributor to be called each epoch
     function setDistributor(address _distributor) external onlyGovernor {
         distributor = _distributor;
         emit DistributorSet(_distributor);
     }
 
-    /**
-     * @notice set warmup period for new stakers
-     * @param _warmupPeriod uint
-     */
+    // sets the warmup length, in epochs, for new stakers
     function setWarmupLength(uint256 _warmupPeriod) external onlyGovernor {
         warmupPeriod = _warmupPeriod;
         emit WarmupSet(_warmupPeriod);

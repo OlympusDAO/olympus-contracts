@@ -154,7 +154,7 @@ contract OlympusBondDepository {
 
   // maximum ohm paid in single bond
   function maxPayout() public view returns (uint256) {
-    return treasury.baseSupply() * global.maxPayout / 1e9;
+    return ohm.totalSupply() * global.maxPayout / 1e9;
   }
 
   // payout for principal of given bond id
@@ -174,7 +174,7 @@ contract OlympusBondDepository {
 
   // undecayed debt for bond divided by ohm total supply
   function debtRatio(uint16 _bid) public view returns (uint256) {
-    return currentDebt(_bid) * 1e9 / treasury.baseSupply();
+    return currentDebt(_bid) * 1e9 / ohm.totalSupply();
   }
 
   // debt including decay since last bond
@@ -224,6 +224,14 @@ contract OlympusBondDepository {
   function setController(address _controller) external onlyController {
     require(_controller != address(0), "Zero address: Controller");
     controller = _controller;
+  }
+
+  /**
+   * @notice set price feed for USD conversion
+   */
+  function setFeed(address _oracle) external onlyController {
+    require(_oracle != address(0), "Zero address: Oracle");
+    feed = IOracle(_oracle);
   }
 
   /**
@@ -337,13 +345,13 @@ contract OlympusBondDepository {
 
     targetDebt_ = capacity * global.decayRate / _length;
     uint256 discountedPrice = _oracle.getLatestPrice() * 98 / 100; // assume average discount of 2%
-    bcv_ = uint48(discountedPrice * treasury.baseSupply() / targetDebt_);
+    bcv_ = uint48(discountedPrice * ohm.totalSupply() / targetDebt_);
     targetDebt_ = targetDebt_ * 102 / 100; // adjust back up to start at market price
   }
   
   // ensure bond times are appropriate
   function _checkLengths(uint48 _length, uint48 _vesting, bool _fixedTerm) internal pure {
-    require(_length >= 5e6, "Program must run longer than 6 days");
+    require(_length >= 5e5, "Program must run longer than 6 days");
     if (!_fixedTerm) {
       require(_vesting >= _length, "Bond must conclude before expiration");
     } else {
