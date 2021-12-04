@@ -24,6 +24,7 @@ contract OlympusBondDepository {
   event BondDeprecated(uint16 bid);
   event GlobalSet(uint256 decayRate, uint256 maxPayout);
   event FeedSet(address oracle);
+  event ControllerSet(address controller);
 
   modifier onlyController() {
     require(msg.sender == controller, "Only controller");
@@ -322,7 +323,7 @@ contract OlympusBondDepository {
     id_ = uint16(ids.length);
     bonds[id_] = bond;
     ids.push(address(_principal));
-    emit BondAdded(_bid);
+    emit BondAdded(id_);
   }
 
   /**

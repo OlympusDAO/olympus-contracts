@@ -147,7 +147,7 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         for (uint256 i = 0; i < _indexes.length; i++) {
             if (vested(_bonder, _indexes[i])) {
                 info[_indexes[i]].redeemed = uint48(block.timestamp); // mark as redeemed
-                uint256 payout = nfo[_indexes[i]].payout;
+                uint256 payout = info[_indexes[i]].payout;
                 dues += payout;
                 emit BondRedeemed(_bonder, payout);
             }
