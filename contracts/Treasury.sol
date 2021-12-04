@@ -67,7 +67,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     mapping(STATUS => mapping(address => bool)) public permissions;
     mapping(address => address) public bondCalculator;
 
-    mapping(address => uint256) public debtLimit;
+    mapping(address => uint256) public debtorBalance;
 
     uint256 public totalReserves;
     uint256 public totalDebt;
@@ -163,7 +163,6 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         require(value != 0, "Invalid output token");
 
         sOHM.changeDebt(value, msg.sender, true);
-        require(sOHM.debtBalances(msg.sender) <= debtLimit(msg.sender), "Exceeds limit");
         totalDebt = totalDebt.add(value);
         
         if (_token == address(OHM)) {
@@ -270,13 +269,11 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      * @param _status STATUS
      * @param _address address
      * @param _calculator address
-     * @param _input uint128
      */
     function enable(
         STATUS _status,
         address _address,
-        address _calculator,
-        uint256 _input
+        address _calculator
     ) external onlyGovernor {
         require(onChainGoverned, "OCG Not Enabled: Use queueTimelock");
         if (_status == STATUS.SOHM) {
@@ -286,18 +283,21 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
             if (_status == STATUS.LIQUIDITYTOKEN) {
                 bondCalculator[_address] = _calculator;
-            } else if (_status == STATUS.OHMDEBTOR) {
-                debtLimit[_address] = _input;
             }
 
             (bool registered, ) = indexInRegistry(_address, _status);
             if (!registered) {
                 registry[_status].push(_address);
 
-                if (_status == STATUS.LIQUIDITYTOKEN || _status == STATUS.RESERVETOKEN) {
-                    (bool reg, uint256 index) = indexInRegistry(_address, _status);
+                if (_status == STATUS.LIQUIDITYTOKEN) {
+                    (bool reg, uint256 index) = indexInRegistry(_address, STATUS.RESERVETOKEN);
                     if (reg) {
-                        delete registry[_status][index];
+                        delete registry[STATUS.RESERVETOKEN][index];
+                    }
+                } else if (_status == STATUS.RESERVETOKEN) {
+                    (bool reg, uint256 index) = indexInRegistry(_address, STATUS.LIQUIDITYTOKEN);
+                    if (reg) {
+                        delete registry[STATUS.LIQUIDITYTOKEN][index];
                     }
                 }
             }
