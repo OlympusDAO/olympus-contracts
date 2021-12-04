@@ -15,6 +15,8 @@ describe.only('Treasury', async () => {
     const initialMint = '10000000000000000000000000';
     // Reward rate of .1%
     const initialRewardRate = "1000";
+    // Debt limit of 10
+    const debtLimit = "10000000000";
 
     const mineBlock = async () => {
         await network.provider.request({
@@ -140,8 +142,8 @@ describe.only('Treasury', async () => {
         await ohm.approve(staking.address, sohmAmount);
         await staking.stake(deployer.address, sohmAmount, true, true);
 
-        // Transfer 100 sOHM to alice for testing
-        await sOhm.transfer(alice.address, "100000000000");
+        // Transfer 10 sOHM to alice for testing
+        await sOhm.transfer(alice.address, debtLimit);
     });
 
     it("should not have debt logged for alice", async () => {
@@ -157,8 +159,20 @@ describe.only('Treasury', async () => {
         expect(await treasury.permissions(7, alice.address)).to.equal(true);
     });
 
+    it("should have debt limit as zero", async () => {
+        await treasury.enable(7, alice.address, alice.address);
+        expect(await treasury.debtLimit(alice.address)).to.equal(0);
+    });
+
+    it("should set debt limit", async () => {
+        await treasury.enable(7, alice.address, alice.address);
+        await treasury.setDebtLimit(alice.address, debtLimit);
+        expect(await treasury.debtLimit(alice.address)).to.equal(debtLimit);
+    });
+
     it("should allow alice to borrow", async () => {
         await treasury.enable(7, alice.address, ZERO_ADDRESS);
+        await treasury.setDebtLimit(alice.address, debtLimit);
         await treasury.connect(alice).incurDebt(1e9, dai.address);
         expect(await sOhm.debtBalances(alice.address)).to.equal(1);
     });
@@ -166,6 +180,7 @@ describe.only('Treasury', async () => {
     it("should allow alice to borrow up to her balance in dai", async () => {
         let staked = await sOhm.balanceOf(alice.address);
         await treasury.enable(7, alice.address, ZERO_ADDRESS);
+        await treasury.setDebtLimit(alice.address, debtLimit);
         await treasury.connect(alice).incurDebt(String(staked * 1000000000), dai.address);
         expect(await sOhm.debtBalances(alice.address)).to.equal(staked);
     });
@@ -173,27 +188,40 @@ describe.only('Treasury', async () => {
     it("should not allow alice to borrow more than her balance in dai", async () => {
         let staked = await sOhm.balanceOf(alice.address);
         await treasury.enable(7, alice.address, ZERO_ADDRESS);
-        // reverts but test fails, not sure how to handle revert message
-        // expect(await treasury.connect(alice).incurDebt(String((staked * 1000000000) + 1000000000), dai.address)).to.reverted();
+        await treasury.setDebtLimit(alice.address, debtLimit);
+        await expect(treasury.connect(alice).incurDebt(String((staked * 1000000000) + 1000000000), dai.address))
+            .to.be.revertedWith("");
     });
 
     it("should allow alice to borrow up to her balance in ohm", async () => {
         let staked = await sOhm.balanceOf(alice.address);
         await treasury.enable(10, alice.address, ZERO_ADDRESS);
+        await treasury.setDebtLimit(alice.address, debtLimit);
         await treasury.connect(alice).incurDebt(staked, ohm.address);
         expect(await sOhm.debtBalances(alice.address)).to.equal(staked);
     });
 
-    it("should not allow alice to borrow more than her balance in ohm", async () => {
+    it("should not allow alice to borrow more than her balance in sOhm", async () => {
         let staked = await sOhm.balanceOf(alice.address);
         await treasury.enable(10, alice.address, ZERO_ADDRESS);
-        // reverts but test fails, not sure how to handle revert message
-        // expect(await treasury.connect(alice).incurDebt(String(staked + 1), ohm.address)).to.reverted();
+        await treasury.setDebtLimit(alice.address, debtLimit * 2);
+        await expect(treasury.connect(alice).incurDebt(String(staked + 1), ohm.address))
+            .to.be.revertedWith("sOHM: insufficient balance");
+    });
+
+    it("should not allow alice to borrow more than her debt limit", async () => {
+        sOhm.transfer(alice.address, debtLimit);
+        let staked = await sOhm.balanceOf(alice.address);
+        await treasury.enable(10, alice.address, ZERO_ADDRESS);
+        await treasury.setDebtLimit(alice.address, debtLimit);
+        await expect(treasury.connect(alice).incurDebt(staked, ohm.address))
+            .to.be.revertedWith("Treasury: exceeds limit");
     });
 
     it("should allow alice to repay in dai", async () => {
         let staked = await sOhm.balanceOf(alice.address);
         await treasury.enable(7, alice.address, ZERO_ADDRESS);
+        await treasury.setDebtLimit(alice.address, debtLimit);
         await treasury.connect(alice).incurDebt(String(staked * 1e9), dai.address);
         await dai.connect(alice).approve(treasury.address, String(staked * 1e9));
         await treasury.connect(alice).repayDebtWithReserve(String(staked * 1e9), dai.address);
@@ -203,6 +231,7 @@ describe.only('Treasury', async () => {
     it("should allow alice to repay her debt in ohm", async () => {
         let staked = await sOhm.balanceOf(alice.address);
         await treasury.enable(10, alice.address, ZERO_ADDRESS);
+        await treasury.setDebtLimit(alice.address, debtLimit);
         await treasury.connect(alice).incurDebt(staked, ohm.address);
         await ohm.connect(alice).approve(treasury.address, staked);
         await treasury.connect(alice).repayDebtWithOHM(staked);

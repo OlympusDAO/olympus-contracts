@@ -231,7 +231,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         } else {
             debtBalances[debtor] = debtBalances[debtor].sub(amount);
         }
-        require(debtBalances[debtor] <= balanceOf(debtor), "Exceeds debt limit");
+        require(debtBalances[debtor] <= balanceOf(debtor), "sOHM: insufficient balance");
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
