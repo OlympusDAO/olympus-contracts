@@ -116,7 +116,7 @@ describe.only('Bonds', async () => {
         await dai.mint(deployer.address, initialMint);
         await dai.approve(treasury.address, LARGE_APPROVAL);
         // test coins
-        await dai.mint(alice.address, "1000000000000000000000");
+        await dai.mint(alice.address, "1000000000000000000000000");
 
         // Needed to spend deployer's OHM
         await ohm.approve(staking.address, LARGE_APPROVAL);
@@ -182,8 +182,10 @@ describe.only('Bonds', async () => {
         );
     });
 
-    it("should add a bond", async () => {
-        expect(await depository.ids(0)).to.equal(dai.address);
+    describe('addBond()', () => {
+        it("should add a bond", async () => {
+            expect(await depository.ids(0)).to.equal(dai.address);
+        });
     });
 
     describe("enableBond()", () => {
@@ -218,25 +220,64 @@ describe.only('Bonds', async () => {
             )).to.be.revertedWith("Slippage limit: more than max price");
             
         });
-    });
 
-    it("should set capacity to zero after falling below min debt", async () => {
-        await depository.enableBond(0);
-        await moveTimestamp(1000000000);
-        await dai.connect(alice).approve(depository.address, "100000000000000000000");
-        
-        await expect(depository.connect(alice).deposit(
-            alice.address,
-            0,
-            "100000000000000000000",
-            "1000000000000",
-            bob.address
-        )).to.be.revertedWith("Bond concluded");
-        
-    });
+        it("should set capacity to zero after falling below min debt", async () => {
+            await depository.enableBond(0);
+            await moveTimestamp(1000000000);
+            await dai.connect(alice).approve(depository.address, "100000000000000000000");
+            
+            await expect(depository.connect(alice).deposit(
+                alice.address,
+                0,
+                "100000000000000000000",
+                "1000000000000",
+                bob.address
+            )).to.be.revertedWith("Bond concluded");
+        });
 
-    it("should set capacity to zero after rising above max debt", async () => {
-        // to do
+        it("should set capacity to zero after rising above max debt", async () => {
+            await depository.addBond(
+                dai.address,
+                oracle.address,
+                "10000000000",
+                false,
+                1000000,
+                true,
+                700000
+            );
+    
+            await depository.enableBond(1);
+            let infoBefore = await depository.bonds('1');
+    
+            expect(infoBefore.capacity.toString()).to.equal('10000000000');
+    
+                await dai.connect(alice).approve(depository.address, "100000000000000000000000");
+                await depository.connect(alice).deposit(
+                    alice.address,
+                    1,
+                    "700000000000000000000",
+                    "1000000000000",
+                    bob.address
+                );
+    
+                let infoAfter = await depository.bonds('1');
+    
+                expect(infoAfter.capacity.toString()).to.equal('0');
+        });
+
+        it("should NOT let user purhcase bond above max payout", async () => {
+            await depository.enableBond(0);
+            await depository.setGlobal("500000", "1");
+            let amount = "1000000000000000000";
+            await dai.connect(alice).approve(depository.address, amount);
+            await expect(depository.connect(alice).deposit(
+                alice.address,
+                0,
+                amount,
+                "1000000000000",
+                bob.address
+            )).to.be.revertedWith("Bond too large");
+        });
     });
 
 
@@ -346,20 +387,6 @@ describe.only('Bonds', async () => {
             await expect(depository.connect(alice).deprecateBond('0')).to.be.revertedWith('Only controller');
         });
     })
-
-    it("should NOT let user purhcase bond above max payout", async () => {
-        await depository.enableBond(0);
-        await depository.setGlobal("500000", "1");
-        let amount = "1000000000000000000";
-        await dai.connect(alice).approve(depository.address, amount);
-        await expect(depository.connect(alice).deposit(
-            alice.address,
-            0,
-            amount,
-            "1000000000000",
-            bob.address
-        )).to.be.revertedWith("Bond too large");
-    });
 
     describe("redeemAll()", () => {
         it("should let user redeem all", async () => {
