@@ -186,34 +186,38 @@ describe.only('Bonds', async () => {
         expect(await depository.ids(0)).to.equal(dai.address);
     });
 
-    it("should enable a bond", async () => {
-        await depository.enableBond(0);
+    describe("enableBond()", () => {
+        it("should enable a bond", async () => {
+            await depository.enableBond(0);
+        });
     });
 
-    it("should allow a deposit", async () => {
-        await depository.enableBond(0);
-        await dai.connect(alice).approve(depository.address, "100000000000000000000");
-        await depository.connect(alice).deposit(
-            alice.address,
-            0,
-            "100000000000000000000",
-            "1000000000000",
-            bob.address
-        );
-    });
-
-    it("should not allow a deposit when price > maxPrice", async () => {
-        await depository.enableBond(0);
-        await dai.connect(alice).approve(depository.address, "100000000000000000000");
-        
-        await expect(depository.connect(alice).deposit(
-            alice.address,
-            0,
-            "100000000000000000000",
-            "10000000",
-            bob.address
-        )).to.be.revertedWith("Slippage limit: more than max price");
-        
+    describe("deposit()", () => {
+        it("should allow a deposit", async () => {
+            await depository.enableBond(0);
+            await dai.connect(alice).approve(depository.address, "100000000000000000000");
+            await depository.connect(alice).deposit(
+                alice.address,
+                0,
+                "100000000000000000000",
+                "1000000000000",
+                bob.address
+            );
+        });
+    
+        it("should not allow a deposit when price > maxPrice", async () => {
+            await depository.enableBond(0);
+            await dai.connect(alice).approve(depository.address, "100000000000000000000");
+            
+            await expect(depository.connect(alice).deposit(
+                alice.address,
+                0,
+                "100000000000000000000",
+                "10000000",
+                bob.address
+            )).to.be.revertedWith("Slippage limit: more than max price");
+            
+        });
     });
 
     it("should set capacity to zero after falling below min debt", async () => {
@@ -235,105 +239,113 @@ describe.only('Bonds', async () => {
         // to do
     });
 
-    it("should not allow redemption before vested", async () => {
-        await depository.enableBond(0);
-        await dai.connect(alice).approve(depository.address, "100000000000000000000");
-        await depository.connect(alice).deposit(
-            alice.address,
-            0,
-            "100000000000000000000",
-            "1000000000000",
-            bob.address
-        );
 
-        await expect(teller.redeem(alice.address, [0])).to.be. revertedWith('Zero redemption error');
+    describe("redeem()", () => {
+
+        it("should not allow redemption before vested", async () => {
+            await depository.enableBond(0);
+            await dai.connect(alice).approve(depository.address, "100000000000000000000");
+            await depository.connect(alice).deposit(
+                alice.address,
+                0,
+                "100000000000000000000",
+                "1000000000000",
+                bob.address
+            );
+    
+            await expect(teller.redeem(alice.address, [0])).to.be. revertedWith('Zero redemption error');
+        });
+
+        it("should allow redemption after vested", async () => {
+            await depository.enableBond(0);
+            let amount = "100000000000000000000";
+    
+            await dai.connect(alice).approve(depository.address, amount);
+            let deposit = await depository.connect(alice).deposit(
+                alice.address,
+                0,
+                amount,
+                "1000000000000",
+                bob.address
+            );
+    
+            // GETTING AN EVENT ARGUMENT
+            let receipt = await ethers.provider.getTransactionReceipt(deposit.hash);
+            const interface = new ethers.utils.Interface(["event CreateBond(uint256 index, uint256 payout, uint256 expires)"]);
+            let data = receipt.logs[1].data;
+            let topics = receipt.logs[1].topics;
+            let event = interface.decodeEventLog("CreateBond", data, topics);
+            let payout = event[1].toString();
+            //
+    
+            let balanceBefore = await sOhm.balanceOf(alice.address);
+            await moveTimestamp(1000000000);
+            await teller.redeem(alice.address, [0]);
+    
+            let balanceAfter = await sOhm.balanceOf(alice.address);
+    
+            expect(balanceBefore).to.equal(balanceAfter - payout);
+        });
+    
+        it("should redeem multiple after vested", async () => {
+            await depository.enableBond(0);
+            let amount = "100000000000000000000";
+            let payout = await depository.payoutFor(amount, 0);
+            await dai.connect(alice).approve(depository.address, amount);
+            await depository.connect(alice).deposit(
+                alice.address,
+                0,
+                amount,
+                "1000000000000",
+                bob.address
+            );
+            payout += await depository.payoutFor(amount, 0);
+            await dai.connect(alice).approve(depository.address, amount);
+            await depository.connect(alice).deposit(
+                alice.address,
+                0,
+                amount,
+                "1000000000000",
+                bob.address
+            );
+            await moveTimestamp(1000000000);
+            let redeemed = await teller.redeem(alice.address, [0, 1]);
+            //console.log(redeemed.toString());
+            // expect().to.equal(String(payout));
+        });
     });
 
-    it("should allow redemption after vested", async () => {
-        await depository.enableBond(0);
-        let amount = "100000000000000000000";
-
-        await dai.connect(alice).approve(depository.address, amount);
-        let deposit = await depository.connect(alice).deposit(
-            alice.address,
-            0,
-            amount,
-            "1000000000000",
-            bob.address
-        );
-
-        // GETTING AN EVENT ARGUMENT
-        let receipt = await ethers.provider.getTransactionReceipt(deposit.hash);
-        const interface = new ethers.utils.Interface(["event CreateBond(uint256 index, uint256 payout, uint256 expires)"]);
-        let data = receipt.logs[1].data;
-        let topics = receipt.logs[1].topics;
-        let event = interface.decodeEventLog("CreateBond", data, topics);
-        let payout = event[1].toString();
-        //
-
-        let balanceBefore = await sOhm.balanceOf(alice.address);
-        await moveTimestamp(1000000000);
-        await teller.redeem(alice.address, [0]);
-
-        let balanceAfter = await sOhm.balanceOf(alice.address);
-
-        expect(balanceBefore).to.equal(balanceAfter - payout);
+    describe("getReward()", () => {
+        it("should pay front end operator and dao a reward", async () => {
+            await depository.enableBond(0);
+            let bobBalance = await ohm.balanceOf(bob.address);
+            let daoBalance = await ohm.balanceOf(carol.address);
+            await dai.connect(alice).approve(depository.address, "100000000000000000000");
+            await depository.connect(alice).deposit(
+                alice.address,
+                0,
+                "100000000000000000000",
+                "1000000000000",
+                bob.address
+            );
+            await teller.connect(bob).getReward();
+            await teller.connect(carol).getReward();
+            expect(await ohm.balanceOf(bob.address)).to.not.equal(bobBalance);
+            expect(await ohm.balanceOf(carol.address)).to.not.equal(daoBalance);
+        });
     });
 
-    it("should redeem multiple after vested", async () => {
-        await depository.enableBond(0);
-        let amount = "100000000000000000000";
-        let payout = await depository.payoutFor(amount, 0);
-        await dai.connect(alice).approve(depository.address, amount);
-        await depository.connect(alice).deposit(
-            alice.address,
-            0,
-            amount,
-            "1000000000000",
-            bob.address
-        );
-        payout += await depository.payoutFor(amount, 0);
-        await dai.connect(alice).approve(depository.address, amount);
-        await depository.connect(alice).deposit(
-            alice.address,
-            0,
-            amount,
-            "1000000000000",
-            bob.address
-        );
-        await moveTimestamp(1000000000);
-        let redeemed = await teller.redeem(alice.address, [0, 1]);
-        //console.log(redeemed.toString());
-        // expect().to.equal(String(payout));
-    });
-
-    it("should pay front end operator and dao a reward", async () => {
-        await depository.enableBond(0);
-        let bobBalance = await ohm.balanceOf(bob.address);
-        let daoBalance = await ohm.balanceOf(carol.address);
-        await dai.connect(alice).approve(depository.address, "100000000000000000000");
-        await depository.connect(alice).deposit(
-            alice.address,
-            0,
-            "100000000000000000000",
-            "1000000000000",
-            bob.address
-        );
-        await teller.connect(bob).getReward();
-        await teller.connect(carol).getReward();
-        expect(await ohm.balanceOf(bob.address)).to.not.equal(bobBalance);
-        expect(await ohm.balanceOf(carol.address)).to.not.equal(daoBalance);
-    });
-
-    it("should let controller deprecate bond", async () => {
-        await depository.enableBond(0);
-        await depository.deprecateBond(0);
-    });
-
-    it("should NOT let non controller deprecate bond", async () => {
-        await depository.enableBond(0);
-        await expect(depository.connect(alice).deprecateBond('0')).to.be.revertedWith('Only controller');
-    });
+    describe("deprecateBond()", () => {
+        it("should let controller deprecate bond", async () => {
+            await depository.enableBond(0);
+            await depository.deprecateBond(0);
+        });
+    
+        it("should NOT let non controller deprecate bond", async () => {
+            await depository.enableBond(0);
+            await expect(depository.connect(alice).deprecateBond('0')).to.be.revertedWith('Only controller');
+        });
+    })
 
     it("should NOT let user purhcase bond above max payout", async () => {
         await depository.enableBond(0);
@@ -349,59 +361,77 @@ describe.only('Bonds', async () => {
         )).to.be.revertedWith("Bond too large");
     });
 
-    it("should let user redeem all", async () => {
+    describe("redeemAll()", () => {
+        it("should let user redeem all", async () => {
 
-        let amount = "1000000000000000000";
-        let approve = "10000000000000000000";
-        await dai.connect(alice).approve(depository.address, approve);
-
-        await depository.addBond(
-            dai.address,
-            oracle.address,
-            "100000000000",
-            false,
-            1000000,
-            true,
-            700000
-        );
-
-        await depository.enableBond(0);
-        await depository.enableBond(1);
-
-        let payout1 = await depository.payoutFor(amount, 0);
-        let payout2 = await depository.payoutFor(amount, 0);
-
-        let expectedBalanceAfter = await sOhm.balanceOf(alice.address) + payout1 + payout2;
-        console.log(expectedBalanceAfter.toString())
-
-        expect(await sOhm.balanceOf(alice.address)).to.equal('100000000000');
-
-        const deposit1 = await depository.connect(alice).deposit(
-            alice.address,
-            0,
-            amount,
-            "1000000000000",
-            alice.address
-        );
-
-        const deposit2 = await depository.connect(alice).deposit(
-            alice.address,
-            1,
-            amount,
-            "1000000000000",
-            alice.address
-        );
-
-        let receipt1 = await deposit1.wait();
-        let receipt2 = await deposit2.wait();
-
-        await moveTimestamp(1000000000);
-
-        await teller.totalPendingFor(alice.address);
-
+            let amount = "1000000000000000000";
+            let approve = "10000000000000000000";
+            await dai.connect(alice).approve(depository.address, approve);
+    
+            await depository.addBond(
+                dai.address,
+                oracle.address,
+                "100000000000",
+                false,
+                1000000,
+                true,
+                700000
+            );
+    
+            await depository.enableBond(0);
+            await depository.enableBond(1);
+    
+            expect(await sOhm.balanceOf(alice.address)).to.equal('100000000000');
+            let balanceBefore = await sOhm.balanceOf(alice.address);
+    
+            const deposit1 = await depository.connect(alice).deposit(
+                alice.address,
+                0,
+                amount,
+                "1000000000000",
+                alice.address
+            );
+    
+            const deposit2 = await depository.connect(alice).deposit(
+                alice.address,
+                1,
+                amount,
+                "1000000000000",
+                alice.address
+            );
+    
+            // GETTING AN EVENT ARGUMENT
+            const interface = new ethers.utils.Interface(["event CreateBond(uint256 index, uint256 payout, uint256 expires)"]);
+    
+            let receipt1 = await ethers.provider.getTransactionReceipt(deposit1.hash);
+            let receipt2 = await ethers.provider.getTransactionReceipt(deposit2.hash);
+    
+            let data1 = receipt1.logs[1].data;
+            let data2 = receipt2.logs[1].data;
+    
+            let topics1 = receipt1.logs[1].topics;
+            let topics2 = receipt2.logs[1].topics;
+            
+            let event1 = interface.decodeEventLog("CreateBond", data1, topics1);
+            let event2 = interface.decodeEventLog("CreateBond", data2, topics2);
+    
+            let payout1 = event1[1].toString();
+            let payout2 = event2[1].toString();
+            //
+    
+            let expectedBalanceAfter = +balanceBefore + +payout1 + +payout2;
+    
+            await moveTimestamp(1000000000);
+    
+            await teller.redeemAll(alice.address);
+    
+            let balanceAfter = await sOhm.balanceOf(alice.address);
+            expect(expectedBalanceAfter.toString()).to.equal(balanceAfter.toString());
+    
+        });
 
     });
-
+    
     // test deprecation - done
     // test going above max payout - done
     // test redeemAll() - done
