@@ -14,16 +14,12 @@ import "./interfaces/ITeller.sol";
 import "./types/OlympusAccessControlled.sol";
 
 contract BondTeller is ITeller, OlympusAccessControlled {
+
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IsOHM;
-
-    /* ========== EVENTS =========== */
-
-    event BondCreated(address indexed bonder, uint256 payout, uint256 expires);
-    event Redeemed(address indexed bonder, uint256 payout);
 
     /* ========== MODIFIERS ========== */
 
@@ -32,16 +28,20 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         _;
     }
 
+    /* ========== EVENTS ========== */
+
+    event FrontEndRewardChanged(uint256 newReward);
+    event BondRedeemed(address redeemer, uint256 payout);
+    event RewardClaimed(address claimant, uint256 amount);
+
     /* ========== STRUCTS ========== */
 
     // Info for bond holder
     struct Bond {
-        address principal; // token used to pay for bond
-        uint256 principalPaid; // amount of principal token paid for bond
-        uint256 payout; // sOHM remaining to be paid. agnostic balance
-        uint256 vested; // Block when bond is vested
-        uint256 created; // time bond was created
-        uint256 redeemed; // time bond was redeemed
+        uint16 bondId; // ID of bond in depository
+        uint48 vested; // time when bond is vested
+        uint48 redeemed; // time when bond was redeemed (0 if unredeemed)
+        uint128 payout; // sOHM remaining to be paid. gOHM balance
     }
 
     /* ========== STATE VARIABLES ========== */
@@ -49,14 +49,14 @@ contract BondTeller is ITeller, OlympusAccessControlled {
     address internal immutable depository; // contract where users deposit bonds
     IStaking internal immutable staking; // contract to stake payout
     ITreasury internal immutable treasury;
-    IERC20 internal immutable OHM;
+    IERC20 internal immutable ohm;
     IsOHM internal immutable sOHM; // payment token
+    address public immutable dao; 
 
     mapping(address => Bond[]) public bonderInfo; // user data
-    mapping(address => uint256[]) public indexesFor; // user bond indexes
 
-    mapping(address => uint256) public FERs; // front end operator rewards
-    uint256 public feReward;
+    mapping(address => uint256) public rewards; // front end operator rewards
+    uint256[2] public reward; // reward to [front end operator, dao] (9 decimals)
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -66,6 +66,7 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         address _treasury,
         address _ohm,
         address _sOHM,
+        address _dao,
         address _authority
     ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_depository != address(0), "Zero address: Depository");
@@ -75,55 +76,55 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         require(_treasury != address(0), "Zero address: Treasury");
         treasury = ITreasury(_treasury);
         require(_ohm != address(0), "Zero address: OHM");
-        OHM = IERC20(_ohm);
+        ohm = IERC20(_ohm);
         require(_sOHM != address(0), "Zero address: sOHM");
         sOHM = IsOHM(_sOHM);
+        require(_dao != address(0), "Zero address: DAO");
+        dao = _dao;
     }
 
-    /* ========== DEPOSITORY FUNCTIONS ========== */
+    /* ========== DEPOSITORY ========== */
 
     /**
      * @notice add new bond payout to user data
-     * @param _bonder address
-     * @param _principal address
-     * @param _principalPaid uint256
      * @param _payout uint256
-     * @param _expires uint256
+     * @param _bid uint16
+     * @param _expires uint48
+     * @param _bonder address
      * @param _feo address
-     * @return index_ uint256
+     * @return index_ uint16
      */
     function newBond(
-        address _bonder,
-        address _principal,
-        uint256 _principalPaid,
         uint256 _payout,
-        uint256 _expires,
+        uint16 _bid,
+        uint48 _expires,
+        address _bonder,
         address _feo
-    ) external override onlyDepository returns (uint256 index_) {
-        uint256 reward = _payout.mul(feReward).div(10_000);
-        treasury.mint(address(this), _payout.add(reward));
+    ) external override onlyDepository returns (uint16 index_) {
+        uint256 toFEO = _payout.mul(reward[0]).div(1e9);
+        uint256 toDAO = _payout.mul(reward[1]).div(1e9);
 
-        OHM.approve(address(staking), _payout);
+        treasury.mint(address(this), _payout.add(toFEO.add(toDAO)));
+        ohm.approve(address(staking), _payout);
         staking.stake(address(this), _payout, true, true);
 
-        FERs[_feo] = FERs[_feo].add(reward); // front end operator reward
+        rewards[_feo] += toFEO; // front end operator reward
+        rewards[dao] += toDAO; // dao reward
 
-        index_ = bonderInfo[_bonder].length;
+        index_ = uint16(bonderInfo[_bonder].length);
 
         // store bond & stake payout
         bonderInfo[_bonder].push(
             Bond({
-                principal: _principal,
-                principalPaid: _principalPaid,
-                payout: sOHM.toG(_payout),
+                bondId: _bid,
+                payout: uint128(sOHM.toG(_payout)),
                 vested: _expires,
-                created: block.timestamp,
                 redeemed: 0
             })
         );
     }
 
-    /* ========== INTERACTABLE FUNCTIONS ========== */
+    /* ========== MUTABLE FUNCTIONS ========== */
 
     /**
      *  @notice redeems all redeemable bonds
@@ -131,130 +132,99 @@ contract BondTeller is ITeller, OlympusAccessControlled {
      *  @return uint256
      */
     function redeemAll(address _bonder) external override returns (uint256) {
-        updateIndexesFor(_bonder);
-        return redeem(_bonder, indexesFor[_bonder]);
+        return redeem(_bonder, indexesFor(_bonder));
     }
 
     /**
-     *  @notice redeem bond for user
+     *  @notice redeem bonds for user
      *  @param _bonder address
      *  @param _indexes calldata uint256[]
      *  @return uint256
      */
-    function redeem(address _bonder, uint256[] memory _indexes) public override returns (uint256) {
+    function redeem(address _bonder, uint16[] memory _indexes) public override returns (uint256) {
+        Bond[] storage info = bonderInfo[_bonder];
         uint256 dues;
         for (uint256 i = 0; i < _indexes.length; i++) {
-            Bond memory info = bonderInfo[_bonder][_indexes[i]];
-
-            if (pendingFor(_bonder, _indexes[i]) != 0) {
-                bonderInfo[_bonder][_indexes[i]].redeemed = block.timestamp; // mark as redeemed
-
-                dues = dues.add(info.payout);
+            if (vested(_bonder, _indexes[i])) {
+                info[_indexes[i]].redeemed = uint48(block.timestamp); // mark as redeemed
+                uint256 payout = info[_indexes[i]].payout;
+                dues += payout;
+                emit BondRedeemed(_bonder, payout);
             }
         }
-
         dues = sOHM.fromG(dues);
-
-        emit Redeemed(_bonder, dues);
-        pay(_bonder, dues);
+        require(dues > 0, "Teller: zero redemption");
+        sOHM.safeTransfer(_bonder, dues);
         return dues;
     }
 
-    // pay reward to front end operator
-    function getReward() external override {
-        uint256 reward = FERs[msg.sender];
-        FERs[msg.sender] = 0;
-        OHM.safeTransfer(msg.sender, reward);
-    }
-
-    /* ========== OWNABLE FUNCTIONS ========== */
-
-    // set reward for front end operator (4 decimals. 100 = 1%)
-    function setFEReward(uint256 reward) external override onlyPolicy {
-        feReward = reward;
-    }
-
-    /* ========== INTERNAL FUNCTIONS ========== */
-
     /**
-     *  @notice send payout
-     *  @param _amount uint256
+     * @notice pay reward to front end operator
      */
-    function pay(address _bonder, uint256 _amount) internal {
-        sOHM.safeTransfer(_bonder, _amount);
+    function getReward() external override {
+        uint256 amount = rewards[msg.sender];
+        ohm.safeTransfer(msg.sender, amount);
+        rewards[msg.sender] = 0;
+        emit RewardClaimed(msg.sender, amount);
     }
 
     /* ========== VIEW FUNCTIONS ========== */
 
     /**
-     *  @notice returns indexes of live bonds
-     *  @param _bonder address
+     * @notice all un-redeemed indexes for address
+     * @param _bonder address
+     * @return indexes_ uint256[] memory
      */
-    function updateIndexesFor(address _bonder) public override {
+    function indexesFor(address _bonder) public view override returns (uint16[] memory indexes_) {
         Bond[] memory info = bonderInfo[_bonder];
-        delete indexesFor[_bonder];
-        for (uint256 i = 0; i < info.length; i++) {
+        for (uint16 i = 0; i < info.length; i++) {
             if (info[i].redeemed == 0) {
-                indexesFor[_bonder].push(i);
+                indexes_[indexes_.length - 1] = i;
             }
         }
     }
 
-    // PAYOUT
-
-    /**
-     * @notice calculate amount of OHM available for claim for single bond
-     * @param _bonder address
-     * @param _index uint256
-     * @return uint256
-     */
-    function pendingFor(address _bonder, uint256 _index) public view override returns (uint256) {
-        if (bonderInfo[_bonder][_index].redeemed == 0 && bonderInfo[_bonder][_index].vested <= block.number) {
-            return bonderInfo[_bonder][_index].payout;
+    // check if bonder's bond is claimable
+    function vested(address _bonder, uint16 _index) public view override returns (bool) {
+        if (bonderInfo[_bonder][_index].redeemed == 0 && bonderInfo[_bonder][_index].vested <= block.timestamp) {
+            return true;
         }
-        return 0;
+        return false;
     }
 
-    /**
-     * @notice calculate amount of OHM available for claim for array of bonds
-     * @param _bonder address
-     * @param _indexes uint256[]
-     * @return pending_ uint256
-     */
-    function pendingForIndexes(address _bonder, uint256[] memory _indexes) public view override returns (uint256 pending_) {
+    // calculate amount of OHM available for claim for array of bonds
+    function pendingForIndexes(
+        address _bonder, 
+        uint16[] memory _indexes
+    ) public view override returns (uint256 pending_) {
         for (uint256 i = 0; i < _indexes.length; i++) {
-            pending_ = pending_.add(pendingFor(_bonder, i));
+            if (vested(_bonder, _indexes[i])) {
+                pending_ += bonderInfo[_bonder][_indexes[i]].payout;
+            }
         }
         pending_ = sOHM.fromG(pending_);
     }
 
-    /**
-     *  @notice total pending on all bonds for bonder
-     *  @param _bonder address
-     *  @return pending_ uint256
-     */
+    // get total ohm available for claim by bonder
     function totalPendingFor(address _bonder) public view override returns (uint256 pending_) {
-        Bond[] memory info = bonderInfo[_bonder];
-        for (uint256 i = 0; i < info.length; i++) {
-            pending_ = pending_.add(pendingFor(_bonder, i));
+        uint16[] memory indexes = indexesFor(_bonder);
+        for (uint256 i = 0; i < indexes.length; i++) {
+            if (vested(_bonder, indexes[i])) {
+                pending_ += bonderInfo[_bonder][i].payout;
+            }
         }
         pending_ = sOHM.fromG(pending_);
     }
 
-    // VESTING
+    /* ========== OWNABLE FUNCTIONS ========== */
 
-    /**
-     * @notice calculate how far into vesting a depositor is
-     * @param _bonder address
-     * @param _index uint256
-     * @return percentVested_ uint256
-     */
-    function percentVestedFor(address _bonder, uint256 _index) public view override returns (uint256 percentVested_) {
-        Bond memory bond = bonderInfo[_bonder][_index];
-
-        uint256 timeSince = block.timestamp.sub(bond.created);
-        uint256 term = bond.vested.sub(bond.created);
-
-        percentVested_ = timeSince.mul(1e9).div(term);
+    // set reward for front end operator (9 decimals)
+    function setReward(bool _fe, uint256 _reward) external override onlyPolicy {
+        if (_fe) {
+            reward[0] = _reward;
+            emit FrontEndRewardChanged(_reward);
+        } else {
+            reward[1] = _reward;
+        }
     }
 }
