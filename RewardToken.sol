@@ -429,7 +429,7 @@ contract RewardToken is ERC20("LP Reward Token", "LPR", 18), Ownable {
 
     // redemption value of amount of reward tokens
     function valueOf(uint256 amount) external view returns (uint256[] memory) {
-        uint256[] memory array;
+        uint256[] memory array = new uint256[](tokens.length);
         for(uint256 i = 0; i < tokens.length; i++) {
             array[i] = _getAmount(i, amount);
         }
