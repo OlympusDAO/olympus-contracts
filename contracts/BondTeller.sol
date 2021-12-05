@@ -175,13 +175,23 @@ contract BondTeller is ITeller, OlympusAccessControlled {
      * @param _bonder address
      * @return indexes_ uint256[] memory
      */
-    function indexesFor(address _bonder) public view override returns (uint16[] memory indexes_) {
+    function indexesFor(address _bonder) public view override returns (uint16[] memory) {
         Bond[] memory info = bonderInfo[_bonder];
+        uint16 unRedeemed;
         for (uint16 i = 0; i < info.length; i++) {
             if (info[i].redeemed == 0) {
-                indexes_[indexes_.length - 1] = i;
+               unRedeemed++; 
             }
         }
+        uint16[] memory indexes_ = new uint16[](unRedeemed);
+        for (uint16 i = 0; i < info.length; i++) {
+            uint16 n;
+            if (info[i].redeemed == 0) {
+                indexes_[n] = i;
+                n++;
+            }
+        }
+        return indexes_;
     }
 
     // check if bonder's bond is claimable
