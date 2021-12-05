@@ -1,9 +1,0 @@
-export/
-deployments/
-artifacts/
-cache/
-coverage/
-node_modules/
-package.json
-typechain/
-dapp_test/test.sol
