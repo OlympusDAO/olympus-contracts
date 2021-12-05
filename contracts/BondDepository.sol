@@ -103,27 +103,28 @@ contract OlympusBondDepository is OlympusAccessControlled {
     uint256 _maxPrice,
     address _feo
   ) external returns (uint256 payout_, uint16 index_) {
-    require(_depositor != address(0), "Invalid address");
-    require(_maxPrice >= bondPrice(_bid), "Slippage limit: more than max price");
+    require(_depositor != address(0), "Depository: invalid address");
+    require(_maxPrice >= bondPrice(_bid), "Depository: more than max price");
 
     BondMetadata memory info = bonds[_bid];
     _beforeBond(info, _bid);
 
-    payout_ = in18Decimals(_amount, _bid) / bondPrice(_bid); 
+    payout_ = _in18Decimals(_amount, _bid) / bondPrice(_bid); 
 
     uint256 cap = payout_;
     if (info.capacityInPrincipal) { // capacity is in principal terms
       cap = _amount; 
     } 
-    require(info.capacity >= cap, "Amount exceeds capacity"); // ensure there is remaining capacity
-    bonds[_bid].capacity -= cap;
+    require(info.capacity >= cap, "Depository: exceeds capacity"); // ensure there is remaining capacity
+
+    if (bonds[_bid].totalDebt < info.terms.minDebt || bonds[_bid].totalDebt + payout_ > info.terms.maxDebt) {
+      bonds[_bid].capacity = 0; // disable bond if debt above max or below min bound
+    } else {
+      bonds[_bid].capacity -= cap; // lower future capacity
+      bonds[_bid].totalDebt += payout_; // increase total debt
+    }
 
     _payoutWithinBounds(payout_);
-
-    if (info.totalDebt < info.terms.minDebt || info.totalDebt + payout_ > info.terms.maxDebt) {
-      bonds[_bid].capacity = 0; // disable bond if debt above max or below min bound
-    }
-    info.totalDebt += payout_; // increase total debt
 
     uint256 expiration = info.terms.vesting;
     if (info.terms.fixedTerm) {
@@ -140,8 +141,8 @@ contract OlympusBondDepository is OlympusAccessControlled {
 
   // checks and event before bond
   function _beforeBond(BondMetadata memory _info, uint16 _bid) internal {
-    require(block.timestamp < _info.terms.conclusion, "Bond concluded");
-    require(_info.enabled, "bond not enabled");
+    require(block.timestamp < _info.terms.conclusion, "Depository: bond concluded");
+    require(_info.enabled, "Depository: bond not enabled");
     _decayDebt(_bid);
     emit BeforeBond(_bid, bondPriceInUSD(_bid), bondPrice(_bid), debtRatio(_bid));
   }
@@ -154,8 +155,8 @@ contract OlympusBondDepository is OlympusAccessControlled {
 
   // ensure payout is not too large or small
   function _payoutWithinBounds(uint256 _payout) public view {
-    require(_payout >= 1e7, "Bond too small"); // must be > 0.01 OHM ( underflow protection )
-    require(_payout <= maxPayout(), "Bond too large"); // global max bond size
+    require(_payout >= 1e7, "Depository: bond too small"); // must be > 0.01 OHM ( underflow protection )
+    require(_payout <= maxPayout(), "Depository: bond too large"); // global max bond size
   }
 
   /* ======== VIEW FUNCTIONS ======== */
@@ -167,7 +168,7 @@ contract OlympusBondDepository is OlympusAccessControlled {
 
   // payout for principal of given bond id
   function payoutFor(uint256 _amount, uint16 _bid) external view returns (uint256) {
-    return in18Decimals(_amount, _bid) / bondPrice(_bid);
+    return _in18Decimals(_amount, _bid) / bondPrice(_bid);
   }
 
   // internal price of bond principal token in ohm
@@ -224,19 +225,19 @@ contract OlympusBondDepository is OlympusAccessControlled {
    * @param _input uint128
    */
   function set(SETTER _setter, address _address, uint128 _input) external onlyPolicy {
-    if (_setter == SETTER.TELLER) {
+    if (_setter == SETTER.TELLER) { // 0
       require(address(teller) == address(0), "Teller is set");
       require(_address != address(0), "Zero address");
       teller = ITeller(_address);
-    } else if (_setter == SETTER.CONTROLLER) {
+    } else if (_setter == SETTER.CONTROLLER) { // 1
       require(_address != address(0), "Zero address");
       controller = _address;
-    } else if (_setter == SETTER.FEED) {
+    } else if (_setter == SETTER.FEED) { // 2
       require(_address != address(0), "Zero address");
       feed = IOracle(_address);
-    } else if (_setter == SETTER.DECAY) {
+    } else if (_setter == SETTER.DECAY) { // 3
       global.decayRate = _input;
-    } else if (_setter == SETTER.PAYOUT) {
+    } else if (_setter == SETTER.PAYOUT) { // 4
       global.maxPayout = _input;
     }
     emit Set(_setter, _address, _input);
@@ -361,13 +362,14 @@ contract OlympusBondDepository is OlympusAccessControlled {
   
   /**
    * @notice amount converted to 18 decimal balance
-   * @param _amount uint256
+   * @param _amt uint256
    * @param _bid uint16
    * @return uint256
    */
-  function in18Decimals(uint256 _amount, uint16 _bid) internal view returns (uint256) {
-    uint8 ohmDecimals = IERC20Metadata(address(ohm)).decimals();
-    uint8 principalDecimals = IERC20Metadata(address(bonds[_bid].principal)).decimals();
-    return _amount * 1e9 * (10 ** ohmDecimals) / (10 ** principalDecimals);
+  function _in18Decimals(uint256 _amt, uint16 _bid) internal view returns (uint256) {
+    return _amt * 
+            1e9 * 
+            10 ** IERC20Metadata(address(ohm)).decimals() / 
+            10 ** IERC20Metadata(address(bonds[_bid].principal)).decimals();
   }
 }

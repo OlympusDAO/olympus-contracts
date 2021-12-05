@@ -105,7 +105,7 @@ describe.only('Bonds', async () => {
         staking = await stakingFactory.deploy(ohm.address, sOhm.address, gOhm.address, "10", "1", "9", auth.address);
         treasury = await treasuryFactory.deploy(ohm.address, "0", auth.address);
         distributor = await distributorFactory.deploy(treasury.address, ohm.address, staking.address, auth.address);
-        depository = await depositoryFactory.deploy(ohm.address, treasury.address);
+        depository = await depositoryFactory.deploy(ohm.address, treasury.address, auth.address);
         teller = await tellerFactory.deploy(depository.address, staking.address, treasury.address, ohm.address, sOhm.address, carol.address, auth.address);
         oracle = await oracleFactory.deploy();
 
@@ -157,9 +157,10 @@ describe.only('Bonds', async () => {
         await sOhm.transfer(alice.address, "100000000000");
 
         // initialize depository
-        await depository.setTeller(teller.address);
-        await depository.setGlobal("500000", "10000000");
-        await depository.setFeed(oracle.address);
+        await depository.set(0, teller.address, 0);
+        await depository.set(2, oracle.address, 0);
+        await depository.set(3, ZERO_ADDRESS, "500000");
+        await depository.set(4, ZERO_ADDRESS, "10000000");
 
         // set mock oracle price
         await oracle.setPrice("100000000000");
@@ -205,37 +206,33 @@ describe.only('Bonds', async () => {
     it("should not allow a deposit when price > maxPrice", async () => {
         await depository.enableBond(0);
         await dai.connect(alice).approve(depository.address, "100000000000000000000");
-        /*
-        expect(await depository.connect(alice).deposit(
+        await expect(depository.connect(alice).deposit(
             alice.address,
             0,
             "100000000000000000000",
             "10000000",
             bob.address
-        )).to.be.revertedWith("Slippage limit: more than max price");
-        */
+        )).to.be.revertedWith("Depository: more than max price");
     });
 
     it("should set capacity to zero after falling below min debt", async () => {
         await depository.enableBond(0);
-        await moveTimestamp(1000000000);
-        await dai.connect(alice).approve(depository.address, "100000000000000000000");
-        /*
+        await moveTimestamp(360000);
+        await dai.connect(alice).approve(depository.address, "1000000000000000000000");
         await depository.connect(alice).deposit(
             alice.address,
             0,
-            "100000000000000000000",
+            "1000000000000000000",
             "1000000000000",
             bob.address
         );
-        expect(await depository.connect(alice).deposit(
+        await expect(depository.connect(alice).deposit(
             alice.address,
             0,
             "100000000000000000000",
             "1000000000000",
             bob.address
-        )).to.be.revertedWith("Bond concluded");
-        */
+        )).to.be.revertedWith("Depository: exceeds capacity");
     });
 
     it("should set capacity to zero after rising above max debt", async () => {
@@ -252,8 +249,7 @@ describe.only('Bonds', async () => {
             "1000000000000",
             bob.address
         );
-        // reverts as expected
-        // expect(await teller.redeem(alice.address, [0])).to.revertedWith("Zero redemption error");
+        await expect(teller.redeem(alice.address, [0])).to.revertedWith("Zero redemption error");
     });
 
     it("should allow redemption after vested", async () => {
@@ -270,7 +266,7 @@ describe.only('Bonds', async () => {
         );
         let balance = await sOhm.balanceOf(alice.address);
         await moveTimestamp(1000000000);
-        //expect(await teller.redeem(alice.address, [0])).to.equal(String(payout));
+        // await expect(teller.redeem(alice.address, [0])).to.equal(String(payout));
     });
 
     it("should redeem multiple after vested", async () => {
@@ -296,7 +292,6 @@ describe.only('Bonds', async () => {
         );
         await moveTimestamp(1000000000);
         let redeemed = await teller.redeem(alice.address, [0, 1]);
-        console.log(Number(redeemed));
         // expect().to.equal(String(payout));
     });
 
