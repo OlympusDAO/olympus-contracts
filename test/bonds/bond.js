@@ -249,7 +249,7 @@ describe.only('Bonds', async () => {
             "1000000000000",
             bob.address
         );
-        await expect(teller.redeem(alice.address, [0])).to.revertedWith("Zero redemption error");
+        await expect(teller.redeem(alice.address, [0])).to.revertedWith("Teller: zero redemption");
     });
 
     it("should allow redemption after vested", async () => {

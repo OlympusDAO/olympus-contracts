@@ -153,7 +153,7 @@ contract BondTeller is ITeller, OlympusAccessControlled {
             }
         }
         dues = sOHM.fromG(dues);
-        require(dues > 0, "Zero redemption error");
+        require(dues > 0, "Teller: zero redemption");
         sOHM.safeTransfer(_bonder, dues);
         return dues;
     }
@@ -162,9 +162,10 @@ contract BondTeller is ITeller, OlympusAccessControlled {
      * @notice pay reward to front end operator
      */
     function getReward() external override {
-        ohm.safeTransfer(msg.sender, rewards[msg.sender]);
-        emit RewardClaimed(msg.sender, rewards[msg.sender]);
+        uint256 amount = rewards[msg.sender];
+        ohm.safeTransfer(msg.sender, amount);
         rewards[msg.sender] = 0;
+        emit RewardClaimed(msg.sender, amount);
     }
 
     /* ========== VIEW FUNCTIONS ========== */
