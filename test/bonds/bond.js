@@ -331,28 +331,53 @@ describe.only('Bonds', async () => {
         it("should redeem multiple after vested", async () => {
             await depository.enableBond(0);
             let amount = "100000000000000000000";
-            let payout = await depository.payoutFor(amount, 0);
+
+            let balanceBefore = await sOhm.balanceOf(alice.address);
+
             await dai.connect(alice).approve(depository.address, amount);
-            await depository.connect(alice).deposit(
+            let deposit1 = await depository.connect(alice).deposit(
                 alice.address,
                 0,
                 amount,
                 "1000000000000",
                 bob.address
             );
-            payout += await depository.payoutFor(amount, 0);
+            
             await dai.connect(alice).approve(depository.address, amount);
-            await depository.connect(alice).deposit(
+            let deposit2 = await depository.connect(alice).deposit(
                 alice.address,
                 0,
                 amount,
                 "1000000000000",
                 bob.address
             );
+
+            // GETTING AN EVENT ARGUMENT
+            const interface = new ethers.utils.Interface(["event CreateBond(uint256 index, uint256 payout, uint256 expires)"]);
+    
+            let receipt1 = await ethers.provider.getTransactionReceipt(deposit1.hash);
+            let receipt2 = await ethers.provider.getTransactionReceipt(deposit2.hash);
+    
+            let data1 = receipt1.logs[1].data;
+            let data2 = receipt2.logs[1].data;
+    
+            let topics1 = receipt1.logs[1].topics;
+            let topics2 = receipt2.logs[1].topics;
+            
+            let event1 = interface.decodeEventLog("CreateBond", data1, topics1);
+            let event2 = interface.decodeEventLog("CreateBond", data2, topics2);
+    
+            let payout1 = event1[1].toString();
+            let payout2 = event2[1].toString();
+            //
+
+            let expectedBalanceAfter = +balanceBefore + +payout1 + +payout2;
+
             await moveTimestamp(1000000000);
-            let redeemed = await teller.redeem(alice.address, [0, 1]);
-            //console.log(redeemed.toString());
-            // expect().to.equal(String(payout));
+            await teller.redeem(alice.address, [0, 1]);
+            
+            let balanceAfter = await sOhm.balanceOf(alice.address);
+            expect(expectedBalanceAfter.toString()).to.equal(balanceAfter.toString());
         });
     });
 
