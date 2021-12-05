@@ -2,16 +2,19 @@
 pragma solidity ^0.7.5;
 pragma abicoder v2;
 
+import "./types/OlympusAccessControlled.sol";
+
 import "./libraries/SafeMath.sol";
 import "./libraries/Address.sol";
 import "./libraries/SafeERC20.sol";
 
+import "./interfaces/IOlympusAuthority.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ITeller.sol";
 import "./interfaces/IERC20Metadata.sol";
 
-contract OlympusBondDepository {
+contract OlympusBondDepository is OlympusAccessControlled {
   using SafeERC20 for IERC20;
   using SafeMath for uint256;
 
@@ -22,9 +25,7 @@ contract OlympusBondDepository {
   event BondAdded(uint16 bid);
   event BondEnabled(uint16 bid);
   event BondDeprecated(uint16 bid);
-  event GlobalSet(uint256 decayRate, uint256 maxPayout);
-  event FeedSet(address oracle);
-  event ControllerSet(address controller);
+  event Set(SETTER _setter, address _address, uint128 _input);
 
   modifier onlyController() {
     require(msg.sender == controller, "Only controller");
@@ -55,8 +56,8 @@ contract OlympusBondDepository {
   }
 
   struct Global {
-    uint48 decayRate; // time in seconds to decay debt to zero.
-    uint48 maxPayout; // percentage total supply. 9 decimals.
+    uint128 decayRate; // time in seconds to decay debt to zero.
+    uint128 maxPayout; // percentage total supply. 9 decimals.
   }
 
   /* ======== STATE VARIABLES ======== */
@@ -74,7 +75,8 @@ contract OlympusBondDepository {
 
   /* ======== CONSTRUCTOR ======== */
 
-  constructor(address _ohm, address _treasury) {
+  constructor(address _ohm, address _treasury, address _authority)
+  OlympusAccessControlled(IOlympusAuthority(_authority)) {
     require(_ohm != address(0), "Zero address: OHM");
     ohm = IERC20(_ohm);
     require(_treasury != address(0), "Zero address: Treasury");
@@ -213,34 +215,31 @@ contract OlympusBondDepository {
 
   /* ======== POLICY FUNCTIONS ======== */
 
+  enum SETTER {TELLER, CONTROLLER, FEED, DECAY, PAYOUT}
+
   /**
    * @notice set global variables
-   * @param _decayRate uint256
-   * @param _maxPayout uint256
+   * @param _setter SETTER
+   * @param _address address
+   * @param _input uint128
    */
-  function setGlobal(uint48 _decayRate, uint48 _maxPayout) external onlyController {
-    global.decayRate = _decayRate;
-    global.maxPayout = _maxPayout;
-    emit GlobalSet(_decayRate, _maxPayout);
-  }
-
-  /**
-   * @notice sets address that creates/disables bonds
-   * @param _controller address
-   */
-  function setController(address _controller) external onlyController {
-    require(_controller != address(0), "Zero address: Controller");
-    controller = _controller;
-    emit ControllerSet(_controller);
-  }
-
-  /**
-   * @notice set price feed for USD conversion
-   */
-  function setFeed(address _oracle) external onlyController {
-    require(_oracle != address(0), "Zero address: Oracle");
-    feed = IOracle(_oracle);
-    emit FeedSet(_oracle);
+  function set(SETTER _setter, address _address, uint128 _input) external onlyPolicy {
+    if (_setter == SETTER.TELLER) {
+      require(address(teller) == address(0), "Teller is set");
+      require(_address != address(0), "Zero address");
+      teller = ITeller(_address);
+    } else if (_setter == SETTER.CONTROLLER) {
+      require(_address != address(0), "Zero address");
+      controller = _address;
+    } else if (_setter == SETTER.FEED) {
+      require(_address != address(0), "Zero address");
+      feed = IOracle(_address);
+    } else if (_setter == SETTER.DECAY) {
+      global.decayRate = _input;
+    } else if (_setter == SETTER.PAYOUT) {
+      global.maxPayout = _input;
+    }
+    emit Set(_setter, _address, _input);
   }
 
   /**
@@ -324,17 +323,6 @@ contract OlympusBondDepository {
     bonds[id_] = bond;
     ids.push(address(_principal));
     emit BondAdded(id_);
-  }
-
-  /**
-   * @notice set teller contract
-   * @dev initialization function
-   * @param _teller address
-   */
-  function setTeller(address _teller) external onlyController {
-    require(address(teller) == address(0), "Teller is set");
-    require(_teller != address(0), "Zero address: Teller");
-    teller = ITeller(_teller);
   }
 
   /* ========== INTERNAL VIEW ========== */
