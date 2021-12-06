@@ -80,6 +80,8 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
     string internal notAccepted = "Treasury: not accepted";
     string internal notApproved = "Treasury: not approved";
+    string internal invalidToken = "Treasury: invalid token";
+    string internal insufficientReserves = "Treasury: insufficient reserves";
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -113,7 +115,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         } else if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             require(permissions[STATUS.LIQUIDITYDEPOSITOR][msg.sender], notApproved);
         } else {
-            revert("Treasury: invalid token");
+            revert(invalidToken);
         }
 
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
@@ -162,7 +164,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
             require(permissions[STATUS.RESERVETOKEN][_token], notAccepted);
             value = tokenValue(_token, _amount);
         }
-        require(value != 0, "Treasury: invalid token");
+        require(value != 0, invalidToken);
 
         sOHM.changeDebt(value, msg.sender, true);
         require(sOHM.debtBalances(msg.sender) <= debtLimit[msg.sender], "Treasury: exceeds limit");
@@ -226,7 +228,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         }
         if( permissions[STATUS.RESERVETOKEN][_token] || permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             uint256 value = tokenValue(_token, _amount);
-            require(value <= excessReserves(), "Treasury: insufficient reserves");
+            require(value <= excessReserves(), insufficientReserves);
             totalReserves = totalReserves.sub(value);
         } 
         IERC20(_token).safeTransfer(msg.sender, _amount);
@@ -238,7 +240,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      */
     function mint(address _recipient, uint256 _amount) external override {
         require(permissions[STATUS.REWARDMANAGER][msg.sender], notApproved);
-        require(_amount <= excessReserves(), "Treasury: insufficient reserves");
+        require(_amount <= excessReserves(), insufficientReserves);
         OHM.mint(_recipient, _amount);
         emit Minted(msg.sender, _recipient, _amount);
     }
