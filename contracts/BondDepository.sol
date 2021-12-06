@@ -318,7 +318,7 @@ contract OlympusBondDepository is OlympusAccessControlled {
    * @return uint
    */
   function maxPayout(uint256 _BID) public view returns (uint256) {
-    return OHM.totalSupply().mul(bonds[_BID].terms.maxPayout).div(100000);
+    return treasury.baseSupply().mul(bonds[_BID].terms.maxPayout).div(100000);
   }
 
   /**
@@ -392,7 +392,7 @@ contract OlympusBondDepository is OlympusAccessControlled {
    * @return debtRatio_ uint
    */
   function debtRatio(uint256 _BID) public view returns (uint256 debtRatio_) {
-    debtRatio_ = FixedPoint.fraction(currentDebt(_BID).mul(1e9), OHM.totalSupply()).decode112with18().div(1e18);
+    debtRatio_ = FixedPoint.fraction(currentDebt(_BID).mul(1e9), treasury.baseSupply()).decode112with18().div(1e18); 
   }
 
   /**
