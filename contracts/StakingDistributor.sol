@@ -63,7 +63,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
     /**
         @notice send epoch reward to staking contract
      */
-    function distribute() external override returns (uint256) {
+    function distribute() external override {
         require(msg.sender == staking, "Only staking");
         // distribute rewards to each recipient
         for (uint256 i = 0; i < info.length; i++) {
@@ -76,7 +76,6 @@ contract Distributor is IDistributor, OlympusAccessControlled {
                 adjust(i); // check for adjustment
             }
         }
-        return bounty;
     }
 
     /* ====== INTERNAL FUNCTIONS ====== */
