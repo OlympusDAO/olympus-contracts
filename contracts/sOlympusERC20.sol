@@ -220,6 +220,9 @@ contract sOlympus is IsOHM, ERC20Permit {
         return true;
     }
 
+    // this function is called by the treasury, and informs sOHM of changes to debt.
+    // note that addresses with debt balances cannot transfer collateralized sOHM
+    // until the debt has been repaid.
     function changeDebt(
         uint256 amount,
         address debtor,

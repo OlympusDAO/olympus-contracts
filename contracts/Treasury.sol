@@ -150,6 +150,46 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     }
 
     /**
+        @notice allow approved address to withdraw assets
+        @param _token address
+        @param _amount uint
+     */
+    function manage(address _token, uint256 _amount) external override {
+        if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
+            require(permissions[STATUS.LIQUIDITYMANAGER][msg.sender], notApproved);
+        } else {
+            require(permissions[STATUS.RESERVEMANAGER][msg.sender], notApproved);
+        }
+        if( permissions[STATUS.RESERVETOKEN][_token] || permissions[STATUS.LIQUIDITYTOKEN][_token]) {
+            uint256 value = tokenValue(_token, _amount);
+            require(value <= excessReserves(), insufficientReserves);
+            totalReserves = totalReserves.sub(value);
+        } 
+        IERC20(_token).safeTransfer(msg.sender, _amount);
+        emit Managed(_token, _amount);
+    }
+
+    /**
+        @notice mint new OHM using excess reserves
+     */
+    function mint(address _recipient, uint256 _amount) external override {
+        require(permissions[STATUS.REWARDMANAGER][msg.sender], notApproved);
+        require(_amount <= excessReserves(), insufficientReserves);
+        OHM.mint(_recipient, _amount);
+        emit Minted(msg.sender, _recipient, _amount);
+    }
+
+    /**
+     * DEBT: The debt functions allow approved addresses to borrow treasury assets
+     * or OHM from the treasury, using sOHM as collateral. This might allow an 
+     * sOHM holder to provide OHM liquidity without taking on the opportunity cost
+     * of unstaking, or alter their backing without imposing risk onto the treasury.
+     * Many of these use cases are yet to be defined, but they appear promising. 
+     * However, we urge the community to think critically and move slowly upon
+     * proposals to acquire these permissions.
+     */
+
+    /**
         @notice allow approved address to borrow reserves
         @param _amount uint
         @param _token address
@@ -213,36 +253,6 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         sOHM.changeDebt(_amount, msg.sender, false);
         totalDebt = totalDebt.sub(_amount);
         emit RepayDebt(msg.sender, address(OHM), _amount, _amount);
-    }
-
-    /**
-        @notice allow approved address to withdraw assets
-        @param _token address
-        @param _amount uint
-     */
-    function manage(address _token, uint256 _amount) external override {
-        if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
-            require(permissions[STATUS.LIQUIDITYMANAGER][msg.sender], notApproved);
-        } else {
-            require(permissions[STATUS.RESERVEMANAGER][msg.sender], notApproved);
-        }
-        if( permissions[STATUS.RESERVETOKEN][_token] || permissions[STATUS.LIQUIDITYTOKEN][_token]) {
-            uint256 value = tokenValue(_token, _amount);
-            require(value <= excessReserves(), insufficientReserves);
-            totalReserves = totalReserves.sub(value);
-        } 
-        IERC20(_token).safeTransfer(msg.sender, _amount);
-        emit Managed(_token, _amount);
-    }
-
-    /**
-        @notice mint new OHM using excess reserves
-     */
-    function mint(address _recipient, uint256 _amount) external override {
-        require(permissions[STATUS.REWARDMANAGER][msg.sender], notApproved);
-        require(_amount <= excessReserves(), insufficientReserves);
-        OHM.mint(_recipient, _amount);
-        emit Minted(msg.sender, _recipient, _amount);
     }
 
     /* ========== MANAGERIAL FUNCTIONS ========== */
