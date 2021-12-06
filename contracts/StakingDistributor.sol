@@ -68,7 +68,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         // distribute rewards to each recipient
         for (uint256 i = 0; i < info.length; i++) {
             if (info[i].rate > 0) {
-                if (info[i].recipient == staking && bounty != 0) {
+                if (info[i].recipient == staking) {
                     treasury.mint(info[i].recipient, nextRewardAt(info[i].rate).add(bounty)); // mint and send with bounty
                 } else {
                     treasury.mint(info[i].recipient, nextRewardAt(info[i].rate)); // mint and send tokens
