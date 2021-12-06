@@ -105,36 +105,21 @@ contract OlympusBondDepository is OlympusAccessControlled {
   ) external returns (uint256 payout_, uint16 index_) {
     require(_depositor != address(0), "Depository: invalid address");
     require(_maxPrice >= bondPrice(_bid), "Depository: more than max price");
-
     BondMetadata memory info = bonds[_bid];
     _beforeBond(info, _bid);
 
     payout_ = _in18Decimals(_amount, _bid) / bondPrice(_bid); 
-
-    uint256 cap = payout_;
-    if (info.capacityInPrincipal) { // capacity is in principal terms
-      cap = _amount; 
-    } 
-    require(info.capacity >= cap, "Depository: exceeds capacity"); // ensure there is remaining capacity
-
-    if (bonds[_bid].totalDebt < info.terms.minDebt || bonds[_bid].totalDebt + payout_ > info.terms.maxDebt) {
-      bonds[_bid].capacity = 0; // disable bond if debt above max or below min bound
-    } else {
-      bonds[_bid].capacity -= cap; // lower future capacity
-      bonds[_bid].totalDebt += payout_; // increase total debt
-    }
-
+    _checkCapacity(info, payout_, _amount, _bid);
     _payoutWithinBounds(payout_);
 
     uint256 expiration = info.terms.vesting;
     if (info.terms.fixedTerm) {
       expiration += block.timestamp;
     }
-
-    emit CreateBond(_bid, payout_, expiration);
     // user info stored with teller
     index_ = teller.newBond(payout_, _bid, uint48(expiration), _depositor, _feo);
     info.principal.safeTransferFrom(msg.sender, address(treasury), _amount);
+    emit CreateBond(_bid, payout_, expiration);
   }
 
   /* ======== INTERNAL FUNCTIONS ======== */
@@ -151,6 +136,23 @@ contract OlympusBondDepository is OlympusAccessControlled {
   function _decayDebt(uint16 _bid) internal {
     bonds[_bid].totalDebt -= debtDecay(_bid);
     bonds[_bid].last = uint48(block.timestamp);
+  }
+
+  // checks if there is capacity for bond, subtracts capacity used by bond, and adds to total debt
+  // note if debt has fallen below or risen above max/min debt, capacity is set to 0
+  function _checkCapacity(BondMetadata memory _info, uint256 _payout, uint256 _amount, uint16 _bid) internal {
+    uint256 cap = _payout;
+    if (_info.capacityInPrincipal) { // capacity is in principal terms
+      cap = _amount; 
+    } 
+    require(_info.capacity >= cap, "Depository: exceeds capacity"); // ensure there is remaining capacity
+
+    if (bonds[_bid].totalDebt < _info.terms.minDebt || bonds[_bid].totalDebt + _payout > _info.terms.maxDebt) {
+      bonds[_bid].capacity = 0; // disable bond if debt above max or below min bound
+    } else {
+      bonds[_bid].capacity -= cap; // lower future capacity
+      bonds[_bid].totalDebt += _payout; // increase total debt
+    }
   }
 
   // ensure payout is not too large or small
@@ -195,9 +197,7 @@ contract OlympusBondDepository is OlympusAccessControlled {
   function debtDecay(uint16 _bid) public view returns (uint256 decay_) {
     BondMetadata memory bond = bonds[_bid];
     uint48 timeSinceLast = uint48(block.timestamp) - bond.last;
-
     decay_ = bond.totalDebt * timeSinceLast / global.decayRate;
-
     if (decay_ > bond.totalDebt) {
       decay_ = bond.totalDebt;
     }
@@ -343,7 +343,6 @@ contract OlympusBondDepository is OlympusAccessControlled {
     if (_inPrincipal) {
       capacity = _capacity * _oracle.getLatestPrice() / 1e8;
     }
-
     targetDebt_ = capacity * global.decayRate / _length;
     uint256 discountedPrice = _oracle.getLatestPrice() * 98 / 100; // assume average discount of 2%
     bcv_ = uint48(discountedPrice * ohm.totalSupply() / targetDebt_);
