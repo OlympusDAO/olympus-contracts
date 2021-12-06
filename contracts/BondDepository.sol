@@ -110,16 +110,15 @@ contract OlympusBondDepository is OlympusAccessControlled {
 
     payout_ = _in18Decimals(_amount, _bid) / bondPrice(_bid); 
     _checkCapacity(info, payout_, _amount, _bid);
-    _payoutWithinBounds(payout_);
 
     uint256 expiration = info.terms.vesting;
     if (info.terms.fixedTerm) {
       expiration += block.timestamp;
     }
+    emit CreateBond(_bid, payout_, expiration);
     // user info stored with teller
     index_ = teller.newBond(payout_, _bid, uint48(expiration), _depositor, _feo);
     info.principal.safeTransferFrom(msg.sender, address(treasury), _amount);
-    emit CreateBond(_bid, payout_, expiration);
   }
 
   /* ======== INTERNAL FUNCTIONS ======== */
@@ -153,10 +152,11 @@ contract OlympusBondDepository is OlympusAccessControlled {
       bonds[_bid].capacity -= cap; // lower future capacity
       bonds[_bid].totalDebt += _payout; // increase total debt
     }
+    _payoutWithinBounds(_payout);
   }
 
   // ensure payout is not too large or small
-  function _payoutWithinBounds(uint256 _payout) public view {
+  function _payoutWithinBounds(uint256 _payout) internal view {
     require(_payout >= 1e7, "Depository: bond too small"); // must be > 0.01 OHM ( underflow protection )
     require(_payout <= maxPayout(), "Depository: bond too large"); // global max bond size
   }
