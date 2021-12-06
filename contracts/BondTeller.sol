@@ -184,8 +184,8 @@ contract BondTeller is ITeller, OlympusAccessControlled {
             }
         }
         uint16[] memory indexes_ = new uint16[](unRedeemed);
+        uint16 n;
         for (uint16 i = 0; i < info.length; i++) {
-            uint16 n;
             if (info[i].redeemed == 0) {
                 indexes_[n] = i;
                 n++;
