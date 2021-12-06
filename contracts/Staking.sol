@@ -91,7 +91,8 @@ contract OlympusStaking is OlympusAccessControlled {
         bool _rebasing,
         bool _claim
     ) external returns (uint256) {
-        if (rebase() && address(distributor) != address(0)) {
+        rebase();
+        if (address(distributor) != address(0)) {
             _amount += distributor.bounty(); // add bounty to stake
         }
         OHM.safeTransferFrom(msg.sender, address(this), _amount);
@@ -178,7 +179,8 @@ contract OlympusStaking is OlympusAccessControlled {
         amount_ = _amount;
         uint256 bounty;
         if (_trigger) {
-            if (rebase() && address(distributor) != address(0)) {
+            rebase();
+            if (address(distributor) != address(0)) {
                 bounty = distributor.bounty();
             }
         }
@@ -232,11 +234,12 @@ contract OlympusStaking is OlympusAccessControlled {
                 distributor.distribute();
                 bounty = distributor.bounty();
             }
-
-            if (contractBalance() <= totalStaked().add(bounty)) {
+            uint256 balance = OHM.balanceOf(address(this));
+            uint256 staked = sOHM.circulatingSupply();
+            if (balance <= staked.add(bounty)) {
                 epoch.distribute = 0;
             } else {
-                epoch.distribute = contractBalance().sub(totalStaked()).sub(bounty);
+                epoch.distribute = balance.sub(staked).sub(bounty);
             }
         }
     }
@@ -271,21 +274,6 @@ contract OlympusStaking is OlympusAccessControlled {
      */
     function index() public view returns (uint256) {
         return sOHM.index();
-    }
-
-    /**
-     * @notice returns contract OHM holdings, including bonuses provided
-     * @return uint
-     */
-    function contractBalance() public view returns (uint256) {
-        return OHM.balanceOf(address(this));
-    }
-
-    /**
-     * @notice total supply staked
-     */
-    function totalStaked() public view returns (uint256) {
-        return sOHM.circulatingSupply();
     }
 
     /**
