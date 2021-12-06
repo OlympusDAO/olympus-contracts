@@ -229,7 +229,8 @@ contract OlympusStaking is OlympusAccessControlled {
 
             uint256 bounty;
             if (address(distributor) != address(0)) {
-                bounty = distributor.distribute();
+                distributor.distribute();
+                bounty = distributor.bounty();
             }
 
             if (contractBalance() <= totalStaked().add(bounty)) {
