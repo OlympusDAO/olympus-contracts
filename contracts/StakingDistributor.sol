@@ -24,6 +24,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
     address private immutable staking;
 
     mapping(uint256 => Adjust) public adjustments;
+    uint256 public override bounty;
 
     uint256 private immutable rateDenominator = 1_000_000;
 
@@ -64,11 +65,14 @@ contract Distributor is IDistributor, OlympusAccessControlled {
      */
     function distribute() external override {
         require(msg.sender == staking, "Only staking");
-
         // distribute rewards to each recipient
         for (uint256 i = 0; i < info.length; i++) {
             if (info[i].rate > 0) {
-                treasury.mint(info[i].recipient, nextRewardAt(info[i].rate)); // mint and send from treasury
+                if (info[i].recipient == staking) {
+                    treasury.mint(info[i].recipient, nextRewardAt(info[i].rate).add(bounty)); // mint and send with bounty
+                } else {
+                    treasury.mint(info[i].recipient, nextRewardAt(info[i].rate)); // mint and send tokens
+                }
                 adjust(i); // check for adjustment
             }
         }
@@ -134,6 +138,15 @@ contract Distributor is IDistributor, OlympusAccessControlled {
     }
 
     /* ====== POLICY FUNCTIONS ====== */
+
+    /**
+     * @notice set bounty to incentivize keepers
+     * @param _bounty uint256
+     */
+    function setBounty(uint256 _bounty) external override onlyGovernor {
+        require(_bounty <= 2e9, "Too much");
+        bounty = _bounty;
+    }
 
     /**
         @notice adds recipient for distributions

@@ -470,9 +470,6 @@ describe("Treasury Token Migration", async function () {
             const token1 = olympus_tokens.find((token) => token.name === "sohm");
             await performMigration(token1);
 
-            const token2 = olympus_tokens.find((token) => token.name === "ohm");
-            await performMigration(token2);
-
             const olympus_token_migrator_wsohm_balance = await olympus_tokens[0].contract.balanceOf(
                 olympusTokenMigrator.address
             );
