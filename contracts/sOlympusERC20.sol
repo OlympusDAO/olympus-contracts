@@ -220,6 +220,9 @@ contract sOlympus is IsOHM, ERC20Permit {
         return true;
     }
 
+    // this function is called by the treasury, and informs sOHM of changes to debt.
+    // note that addresses with debt balances cannot transfer collateralized sOHM
+    // until the debt has been repaid.
     function changeDebt(
         uint256 amount,
         address debtor,
@@ -231,6 +234,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         } else {
             debtBalances[debtor] = debtBalances[debtor].sub(amount);
         }
+        require(debtBalances[debtor] <= balanceOf(debtor), "sOHM: insufficient balance");
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
@@ -266,7 +270,7 @@ contract sOlympus is IsOHM, ERC20Permit {
         return gOHM.balanceFrom(amount);
     }
 
-    // Staking contract holds excess rOHM
+    // Staking contract holds excess sOHM
     function circulatingSupply() public view override returns (uint256) {
         return
             _totalSupply.sub(balanceOf(stakingContract)).add(gOHM.balanceFrom(IERC20(address(gOHM)).totalSupply())).add(
