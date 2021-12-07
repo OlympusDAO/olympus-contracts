@@ -219,7 +219,7 @@ contract BondDepositoryTest is DSTest {
         try this.createBond_deposit(5 * 10**16, ohmMintAmount, false, 9 * 10**20, terms, initialDebt, 1) {
             fail();
         } catch Error(string memory error) {
-            assertEq("Insufficient reserves", error);
+            assertEq("Treasury: insufficient reserves", error);
         }
     }
 
