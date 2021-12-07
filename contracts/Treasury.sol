@@ -71,6 +71,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
     uint256 public totalReserves;
     uint256 public totalDebt;
+    uint256 public ohmDebt;
 
     Queue[] public permissionQueue;
     uint256 public immutable blocksNeededForQueue;
@@ -212,6 +213,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         
         if (_token == address(OHM)) {
             OHM.mint(msg.sender, value);
+            ohmDebt = ohmDebt.add(value);
         } else {
             totalReserves = totalReserves.sub(value);
             IERC20(_token).safeTransfer(msg.sender, _amount);
@@ -225,11 +227,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         @param _token address
      */
     function repayDebtWithReserve(uint256 _amount, address _token) external override {
-        require(
-            permissions[STATUS.RESERVEDEBTOR][msg.sender] ||
-            permissions[STATUS.OHMDEBTOR][msg.sender], 
-            notApproved
-        );
+        require(permissions[STATUS.RESERVEDEBTOR][msg.sender], notApproved);
         require(permissions[STATUS.RESERVETOKEN][_token], notAccepted);
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
         uint256 value = tokenValue(_token, _amount);
@@ -252,6 +250,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         OHM.burnFrom(msg.sender, _amount);
         sOHM.changeDebt(_amount, msg.sender, false);
         totalDebt = totalDebt.sub(_amount);
+        ohmDebt = ohmDebt.sub(_amount);
         emit RepayDebt(msg.sender, address(OHM), _amount, _amount);
     }
 
@@ -469,5 +468,13 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             value_ = IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);
         }
+    }
+
+    /**
+     * @notice returns supply metric that cannot be manipulated by debt
+     * @dev use this any time you need to query supply
+     */
+    function baseSupply() external view override returns (uint256) {
+        return OHM.totalSupply() - ohmDebt;
     }
 }
