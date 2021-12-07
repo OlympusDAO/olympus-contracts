@@ -27,16 +27,16 @@ contract OlympusStaking is OlympusAccessControlled {
     /* ========== DATA STRUCTURES ========== */
 
     struct Epoch {
-        uint256 length;
-        uint256 number;
-        uint256 endBlock;
-        uint256 distribute;
+        uint256 length; // in seconds
+        uint256 number; // since inception
+        uint256 end; // timestamp
+        uint256 distribute; // amount
     }
 
     struct Claim {
-        uint256 deposit;
-        uint256 gons;
-        uint256 expiry;
+        uint256 deposit; // if forfeiting
+        uint256 gons; // staked balance
+        uint256 expiry; // end of warmup period
         bool lock; // prevents malicious delays for claim
     }
 
@@ -48,7 +48,7 @@ contract OlympusStaking is OlympusAccessControlled {
 
     Epoch public epoch;
 
-    address public distributor;
+    IDistributor public distributor;
 
     mapping(address => Claim) public warmupInfo;
     uint256 public warmupPeriod;
@@ -62,7 +62,7 @@ contract OlympusStaking is OlympusAccessControlled {
         address _gOHM,
         uint256 _epochLength,
         uint256 _firstEpochNumber,
-        uint256 _firstEpochBlock,
+        uint256 _firstEpochTime,
         address _authority
     ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_ohm != address(0), "Zero address: OHM");
@@ -72,7 +72,7 @@ contract OlympusStaking is OlympusAccessControlled {
         require(_gOHM != address(0), "Zero address: gOHM");
         gOHM = IgOHM(_gOHM);
 
-        epoch = Epoch({length: _epochLength, number: _firstEpochNumber, endBlock: _firstEpochBlock, distribute: 0});
+        epoch = Epoch({length: _epochLength, number: _firstEpochNumber, end: _firstEpochTime, distribute: 0});
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -92,9 +92,10 @@ contract OlympusStaking is OlympusAccessControlled {
         bool _claim
     ) external returns (uint256) {
         rebase();
-
+        if (address(distributor) != address(0)) {
+            _amount = _amount.add(distributor.bounty()); // add bounty to stake
+        }
         OHM.safeTransferFrom(msg.sender, address(this), _amount);
-
         if (_claim && warmupPeriod == 0) {
             return _send(_to, _amount, _rebasing);
         } else {
@@ -175,18 +176,20 @@ contract OlympusStaking is OlympusAccessControlled {
         bool _trigger,
         bool _rebasing
     ) external returns (uint256 amount_) {
+        amount_ = _amount;
+        uint256 bounty;
         if (_trigger) {
             rebase();
+            if (address(distributor) != address(0)) {
+                bounty = distributor.bounty();
+            }
         }
-
-        amount_ = _amount;
         if (_rebasing) {
             sOHM.safeTransferFrom(msg.sender, address(this), _amount);
         } else {
             gOHM.burn(msg.sender, _amount); // amount was given in gOHM terms
-            amount_ = gOHM.balanceFrom(_amount); // convert amount to OHM terms
+            amount_ = gOHM.balanceFrom(amount_).add(bounty); // convert amount to OHM terms & add bounty
         }
-
         OHM.safeTransfer(_to, amount_);
     }
 
@@ -198,7 +201,6 @@ contract OlympusStaking is OlympusAccessControlled {
      */
     function wrap(address _to, uint256 _amount) external returns (uint256 gBalance_) {
         sOHM.safeTransferFrom(msg.sender, address(this), _amount);
-
         gBalance_ = gOHM.balanceTo(_amount);
         gOHM.mint(_to, gBalance_);
     }
@@ -211,29 +213,33 @@ contract OlympusStaking is OlympusAccessControlled {
      */
     function unwrap(address _to, uint256 _amount) external returns (uint256 sBalance_) {
         gOHM.burn(msg.sender, _amount);
-
         sBalance_ = gOHM.balanceFrom(_amount);
         sOHM.safeTransfer(_to, sBalance_);
     }
 
     /**
      * @notice trigger rebase if epoch over
+     * @return rebased_ bool
      */
-    function rebase() public {
-        if (epoch.endBlock <= block.number) {
+    function rebase() public  returns (bool rebased_) {
+        rebased_ = epoch.end <= block.timestamp;
+        if (rebased_) {
             sOHM.rebase(epoch.distribute, epoch.number);
 
-            epoch.endBlock = epoch.endBlock.add(epoch.length);
+            epoch.end = epoch.end.add(epoch.length);
             epoch.number++;
 
-            if (distributor != address(0)) {
-                IDistributor(distributor).distribute();
+            uint256 bounty;
+            if (address(distributor) != address(0)) {
+                distributor.distribute();
+                bounty = distributor.bounty();
             }
-
-            if (contractBalance() <= totalStaked()) {
+            uint256 balance = OHM.balanceOf(address(this));
+            uint256 staked = sOHM.circulatingSupply();
+            if (balance <= staked.add(bounty)) {
                 epoch.distribute = 0;
             } else {
-                epoch.distribute = contractBalance().sub(totalStaked());
+                epoch.distribute = balance.sub(staked).sub(bounty);
             }
         }
     }
@@ -271,21 +277,6 @@ contract OlympusStaking is OlympusAccessControlled {
     }
 
     /**
-     * @notice returns contract OHM holdings, including bonuses provided
-     * @return uint
-     */
-    function contractBalance() public view returns (uint256) {
-        return OHM.balanceOf(address(this));
-    }
-
-    /**
-     * @notice total supply staked
-     */
-    function totalStaked() public view returns (uint256) {
-        return sOHM.circulatingSupply();
-    }
-
-    /**
      * @notice total supply in warmup
      */
     function supplyInWarmup() public view returns (uint256) {
@@ -299,7 +290,8 @@ contract OlympusStaking is OlympusAccessControlled {
      * @param _distributor address
      */
     function setDistributor(address _distributor) external onlyGovernor {
-        distributor = _distributor;
+        require(_distributor != address(0));
+        distributor = IDistributor(_distributor);
         emit DistributorSet(_distributor);
     }
 

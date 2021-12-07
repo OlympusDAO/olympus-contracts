@@ -34,7 +34,7 @@ describe("OlympusStaking", () => {
 
   const EPOCH_LENGTH = 2200;
   const EPOCH_NUMBER = 1;
-  const FUTURE_END_BLOCK = 102201; // an arbitrary future block number
+  const FUTURE_END_TIME = 1022010000; // an arbitrary future block timestamp
 
   beforeEach(async () => {
     [owner, governor, guardian, alice, bob, other] = await ethers.getSigners();
@@ -59,7 +59,7 @@ describe("OlympusStaking", () => {
         gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
-        FUTURE_END_BLOCK,
+        FUTURE_END_TIME,
         authority.address,
       );
 
@@ -68,7 +68,7 @@ describe("OlympusStaking", () => {
       let epoch = await staking.epoch();
       expect((epoch as any)._length).to.equal(BigNumber.from(EPOCH_LENGTH));
       expect(epoch.number).to.equal(BigNumber.from(EPOCH_NUMBER));
-      expect(epoch.endBlock).to.equal(BigNumber.from(FUTURE_END_BLOCK));
+      expect(epoch.end).to.equal(BigNumber.from(FUTURE_END_TIME));
 
       expect(await authority.governor()).to.equal(governor.address);
     });
@@ -80,7 +80,7 @@ describe("OlympusStaking", () => {
         gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
-        FUTURE_END_BLOCK,
+        FUTURE_END_TIME,
         authority.address,
       )).to.be.reverted;
     });
@@ -92,7 +92,7 @@ describe("OlympusStaking", () => {
         gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
-        FUTURE_END_BLOCK,
+        FUTURE_END_TIME,
         authority.address,
       )).to.be.reverted;
     });
@@ -104,7 +104,7 @@ describe("OlympusStaking", () => {
         ZERO_ADDRESS,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
-        FUTURE_END_BLOCK,
+        FUTURE_END_TIME,
         authority.address,
       )).to.be.reverted;
     });
@@ -118,7 +118,7 @@ describe("OlympusStaking", () => {
         gOHMFake.address,
         EPOCH_LENGTH,
         EPOCH_NUMBER,
-        FUTURE_END_BLOCK,
+        FUTURE_END_TIME,
         authority.address,
       );
     });
@@ -195,9 +195,10 @@ describe("OlympusStaking", () => {
         expect(await staking.supplyInWarmup()).to.equal(amount);
         expect(await staking.warmupPeriod()).to.equal(0);
         let warmupInfo = await staking.warmupInfo(alice.address);
+        let epochInfo = await staking.epoch();
         expect(warmupInfo.deposit).to.equal(amount);
         expect(warmupInfo.gons).to.equal(gons);
-        expect(warmupInfo.expiry).to.equal(EPOCH_NUMBER);
+        expect(warmupInfo.expiry).to.equal(epochInfo.number);
         expect(warmupInfo.lock).to.equal(false);
       });
 
@@ -246,9 +247,10 @@ describe("OlympusStaking", () => {
 
         expect(await staking.supplyInWarmup()).to.equal(amount);
         let warmupInfo = await staking.warmupInfo(alice.address);
+        let epochInfo = await staking.epoch();
         expect(warmupInfo.deposit).to.equal(amount);
         expect(warmupInfo.gons).to.equal(gons);
-        expect(warmupInfo.expiry).to.equal(EPOCH_NUMBER + 1);
+        expect(warmupInfo.expiry).to.equal(Number(epochInfo.number) + 1);
         expect(warmupInfo.lock).to.equal(false);
       });
 
@@ -474,7 +476,7 @@ describe("OlympusStaking", () => {
       it("does nothing if the block is before the epoch end block", async () => {
         let currentBlock = await ethers.provider.send("eth_blockNumber", []);
         let epoch = await staking.epoch();
-        expect(BigNumber.from(currentBlock)).to.be.lt(BigNumber.from(epoch.endBlock));
+        expect(BigNumber.from(currentBlock)).to.be.lt(BigNumber.from(epoch.end));
 
         await staking.connect(alice).rebase();
       });
@@ -485,20 +487,20 @@ describe("OlympusStaking", () => {
         await deployStaking(currentBlock);
 
         let epoch = await staking.epoch();
-        expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.endBlock));
+        expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.end));
 
         await staking.connect(alice).rebase();
 
         let nextEpoch = await staking.epoch();
         expect(BigNumber.from(nextEpoch.number)).to.equal(BigNumber.from(epoch.number).add(1));
-        expect(BigNumber.from(nextEpoch.endBlock)).to.equal(BigNumber.from(currentBlock).add(EPOCH_LENGTH));
+        expect(BigNumber.from(nextEpoch.end)).to.equal(BigNumber.from(currentBlock).add(EPOCH_LENGTH));
       });
 
       it("when the OHM balance of the staking contract equals sOHM supply, distribute zero", async () => {
         let currentBlock = await ethers.provider.send("eth_blockNumber", []);
         await deployStaking(currentBlock);
         let epoch = await staking.epoch();
-        expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.endBlock));
+        expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.end));
 
         ohmFake.balanceOf.whenCalledWith(staking.address).returns(10);
         sOHMFake.circulatingSupply.returns(10);
@@ -512,7 +514,7 @@ describe("OlympusStaking", () => {
         let currentBlock = await ethers.provider.send("eth_blockNumber", []);
         await deployStaking(currentBlock);
         let epoch = await staking.epoch();
-        expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.endBlock));
+        expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.end));
 
         ohmFake.balanceOf.whenCalledWith(staking.address).returns(10);
         sOHMFake.circulatingSupply.returns(5);
@@ -526,7 +528,7 @@ describe("OlympusStaking", () => {
         let currentBlock = await ethers.provider.send("eth_blockNumber", []);
         await deployStaking(currentBlock);
         let epoch = await staking.epoch();
-        expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.endBlock));
+        expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.end));
 
         await staking.connect(alice).rebase();
 
