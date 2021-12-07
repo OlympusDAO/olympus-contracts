@@ -93,7 +93,7 @@ contract OlympusStaking is OlympusAccessControlled {
     ) external returns (uint256) {
         rebase();
         if (address(distributor) != address(0)) {
-            _amount += distributor.bounty(); // add bounty to stake
+            _amount = _amount.add(distributor.bounty()); // add bounty to stake
         }
         OHM.safeTransferFrom(msg.sender, address(this), _amount);
         if (_claim && warmupPeriod == 0) {
