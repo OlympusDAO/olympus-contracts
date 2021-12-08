@@ -262,10 +262,12 @@ contract sOlympus is IsOHM, ERC20Permit {
         return gons.div(_gonsPerFragment);
     }
 
+    // toG converts an sOHM balance to gOHM terms. gOHM is an 18 decimal token. balance given is in 18 decimal format.
     function toG(uint256 amount) external view override returns (uint256) {
         return gOHM.balanceTo(amount);
     }
 
+    // fromG converts a gOHM balance to sOHM terms. sOHM is a 9 decimal token. balance given is in 9 decimal format.
     function fromG(uint256 amount) external view override returns (uint256) {
         return gOHM.balanceFrom(amount);
     }

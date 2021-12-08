@@ -475,6 +475,6 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      * @dev use this any time you need to query supply
      */
     function baseSupply() external view override returns (uint256) {
-        return OHM.totalSupply() - totalDebt;
+        return OHM.totalSupply() - ohmDebt;
     }
 }
