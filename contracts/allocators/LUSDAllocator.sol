@@ -151,6 +151,25 @@ interface IStabilityPool {
     function getCompoundedFrontEndStake(address _frontEnd) external view returns (uint256);
 }
 
+//
+interface ILQTYStaking {
+    /*
+        sends _LQTYAmount from the caller to the staking contract, and increases their stake.
+        If the caller already has a non-zero stake, it pays out their accumulated ETH and LUSD gains from staking.
+    */
+    function stake(uint256 _LQTYamount) external;
+
+    /**
+        reduces the caller’s stake by _LQTYamount, up to a maximum of their entire stake. 
+        It pays out their accumulated ETH and LUSD gains from staking.
+    */
+    function unstake(uint256 _LQTYamount) external;
+
+    function getPendingETHGain(address _user) external view returns (uint);
+
+    function getPendingLUSDGain(address _user) external view returns (uint);
+}
+
 /**
  *  Contract deploys reserves from treasury into the Aave lending pool,
  *  earning interest and $stkAAVE.
@@ -165,10 +184,14 @@ contract LUSDAllocator is Ownable {
     /* ======== STATE VARIABLES ======== */
 
     IStabilityPool immutable lusdStabilityPool;
+    ILQTYStaking immutable lqtyStaking;
     ITreasury immutable treasury; // Olympus Treasury
+    IERC20 immutable weth;  // WETH9 address (0xb603cEa165119701B58D56d10D2060fBFB3efad8)
+
     // TODO(zx): I don't think we care about front-end because we're our own frontend.
     address public frontEndAddress; // frontEndAddress for potential liquity rewards
     address public lusdTokenAddress; // LUSD Address (0x5f98805A4E8be255a32880FDeC7F6728C6568bA0)
+    address public lqtyTokenAddress; // LQTY Address (0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D)  from https://github.com/liquity/dev/blob/a12f8b737d765bfee6e1bfcf8bf7ef155c814e1e/packages/contracts/mainnetDeployment/realDeploymentOutput/output14.txt#L61
 
     uint256 public totalValueDeployed; // total RFV deployed into lending pool
     uint256 public totalAmountDeployed; // Total amount of tokens deployed
@@ -178,29 +201,80 @@ contract LUSDAllocator is Ownable {
     constructor(
         address _treasury,
         address _lusdTokenAddress,
+        address _lqtyTokenAddress,
         address _stabilityPool,
-        address _frontEndAddress
+        address _lqtyStaking,
+        address _frontEndAddress,
+        address _wethAddress
     ) {
         require(_treasury != address(0), "treasury address cannot be 0x0");
         treasury = ITreasury(_treasury);
 
-        require(_stabilityPool != address(0), "stabilityPool address cannot be 0x0");
-        lusdStabilityPool = IStabilityPool(_stabilityPool);
-
         require(_lusdTokenAddress != address(0), "LUSD token address cannot be 0x0");
         lusdTokenAddress = _lusdTokenAddress;
 
+        require(_lqtyTokenAddress != address(0), "LQTY token address cannot be 0x0");
+        lqtyTokenAddress = _lqtyTokenAddress;
+
+        require(_stabilityPool != address(0), "stabilityPool address cannot be 0x0");
+        lusdStabilityPool = IStabilityPool(_stabilityPool);
+
+        require(_lqtyStaking != address(0), "LQTY staking address cannot be 0x0");
+        lqtyStaking = ILQTYStaking(_lqtyStaking);
+
         frontEndAddress = _frontEndAddress; // address can be 0
+
+        require(_wethAddress != address(0), "WETH token address cannot be 0x0");
+        weth = IERC20(_wethAddress);
     }
 
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
      *  @notice claims LQTY & ETH Rewards
+
+        1.  Harvest from LUSD StabilityPool to get ETH+LQTY rewards
+        2.  Stake LQTY rewards from #1.  This txn will also give out any outstanding ETH+LUSD rewards from prior staking
+        3.  Deposit LUSD from #2 into StabilityPool
+        4.  Move ETH from #1 and #2 to treasury 
      */
     function harvest() public returns (bool) {
-        // TODO need to harvest ETH rewards from LQTY stability pools that are sent to address(this)
-        // TODO need to harvest LQTY rewards
+        uint256 stabilityPoolEthRewards = getETHRewards();
+        uint256 stabilityPoolLqtyRewards = getLQTYRewards();
+
+        if (stabilityPoolEthRewards == 0 && stabilityPoolLqtyRewards == 0) {
+            return false;
+        }
+        // 1.  Harvest from LUSD StabilityPool to get ETH+LQTY rewards
+        lusdStabilityPool.withdrawFromSP(0);  //Passing 0 b/c we don't want to withdraw from the pool but harvest - see https://discord.com/channels/700620821198143498/818895484956835912/908031137010581594
+
+        // 2.  Stake LQTY rewards from #1.  This txn will also give out any outstanding ETH+LUSD rewards from prior staking
+        uint256 balanceLqty = IERC20(lqtyTokenAddress).balanceOf(address(this)); // LQTY balance received from stability pool
+        
+        uint stakingEthRewards = 0;
+        uint stakingLUSDRewards = 0;
+        if (balanceLqty > 0) {
+            stakingEthRewards = lqtyStaking.getPendingETHGain(address(this));
+            stakingLUSDRewards = lqtyStaking.getPendingLUSDGain(address(this));
+            //Stake
+            IERC20(lqtyTokenAddress).approve(address(lqtyStaking), balanceLqty); // approve to deposit into stability pool
+            lqtyStaking.stake(balanceLqty); //Stake LQTY, also receives any prior ETH+LUSD rewards from prior staking TODO need to deposit this LUSD
+        }
+
+        // 3.  Deposit LUSD from #2 into StabilityPool
+        if (stakingLUSDRewards > 0) {
+            IERC20(lusdTokenAddress).approve(address(lusdStabilityPool), stakingLUSDRewards); // approve to deposit into stability pool
+            lusdStabilityPool.provideToSP(stakingLUSDRewards, frontEndAddress);
+        }
+
+
+        // 4.  Move ETH from #1 and #2 to treasury 
+       if (stabilityPoolEthRewards > 0 || stakingEthRewards > 0) {            
+            uint256 totalEthRewards = stabilityPoolEthRewards + stakingEthRewards;            
+            weth.approve(address(treasury), totalEthRewards);
+            weth.safeTransferFrom(address(this), address(treasury), totalEthRewards);
+       }
+
         return true;
     }
 
