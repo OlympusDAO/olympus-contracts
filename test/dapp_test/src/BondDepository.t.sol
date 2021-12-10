@@ -22,8 +22,6 @@ import "../../../contracts/BondTeller.sol";
 import "../../../contracts/governance/gOHM.sol";
 import "./util/MockContract.sol";
 
-
-
 contract BondDepositoryTest is DSTest {
     using FixedPoint for *;
     using SafeMath for uint256;
@@ -94,7 +92,6 @@ contract BondDepositoryTest is DSTest {
     //TODO use gnosis MockContract, this isn't a real error
     //        }
     //    }
-
 
     function test_createBond_mulDiv() public {
         OlympusBondDepository.Terms memory terms = OlympusBondDepository.Terms({
@@ -299,22 +296,23 @@ contract BondDepositoryTest is DSTest {
         //        log_named_uint("capacity", capacity);
 
         //        ohm.mint(address(this), ohmMintAmount);
-        treasury.enableOnChainGovernance();
+        // treasury.enableOnChainGovernance();
         uint256 currentBlock = 8;
-        hevm.roll(currentBlock);
+        // hevm.roll(currentBlock);
         //7 day timelock TODO add test where it's not long enough
-        treasury.enableOnChainGovernance();
+        // Timelock is disabled before initializtion
         treasury.enable(OlympusTreasury.STATUS.REWARDMANAGER, address(teller), address(bondingCalculator));
 
         treasury.enable(OlympusTreasury.STATUS.RESERVETOKEN, address(abcToken), address(bondingCalculator));
         treasury.enable(OlympusTreasury.STATUS.RESERVEDEPOSITOR, address(this), address(bondingCalculator));
+        treasury.initialize();
 
         abcToken.givenMethodReturnBool(abi.encodeWithSelector(IERC20.transferFrom.selector), true);
 
         treasury.deposit(treasuryDeposit, address(abcToken), profit);
 
         MockContract pair = new MockContract();
-        // TODO this one is wild:  error StateChangeWhileStatic unless 
+        // TODO this one is wild:  error StateChangeWhileStatic unless
         // we comment out MockContract's call to abi.encodeWithSignature("updateInvocationCount(bytes4,bytes)"
         pair.givenMethodReturnBool(abi.encodeWithSelector(IERC20.transfer.selector), true);
 
@@ -350,13 +348,7 @@ contract BondDepositoryTest is DSTest {
         assertEq(5 * 10**7, payout);
         assertEq(0, index);
 
-        (   
-            address principal, 
-            address calculator, 
-            uint256 totalDebt, 
-            uint256 lastBondCreatedAt
-            
-        ) = bondDepository.bondInfo(bondId);
+        (address principal, address calculator, uint256 totalDebt, uint256 lastBondCreatedAt) = bondDepository.bondInfo(bondId);
 
         assertEq(address(pair), principal);
         assertEq(address(bondingCalculator), calculator);
