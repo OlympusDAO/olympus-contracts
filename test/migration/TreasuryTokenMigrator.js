@@ -150,10 +150,7 @@ describe("Treasury Token Migration", async function () {
         await old_treasury.connect(manager).toggle(6, migratorAddress, migratorAddress);
         await old_treasury.connect(manager).toggle(2, lp_token_1[0], lp_token_1[0]);
 
-        // Enables onchain governance, needs two calls. :odd:
-        await newTreasury.connect(deployer).enableOnChainGovernance();
-        await advance(1000);
-        await newTreasury.connect(deployer).enableOnChainGovernance();
+        // Timelock is disabled by default so no longer need to "enable" on chain governance
 
         // Give migrator access  to the new treasury
         // 0 = RESERVEDEPOSITOR
@@ -277,7 +274,7 @@ describe("Treasury Token Migration", async function () {
                 await sendETH(deployer, wallet);
             }
         });
-/** 
+        /** 
         it("should migrate ohm", async () => {
             const token = olympus_tokens.find((token) => token.name === "ohm");
             const { oldTokenBalance, newgOhmBalance } = await performMigration(token);

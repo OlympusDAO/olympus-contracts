@@ -14,7 +14,6 @@ import "./interfaces/ITreasury.sol";
 
 import "./types/OlympusAccessControlled.sol";
 
-
 contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /* ========== DEPENDENCIES ========== */
 
@@ -76,7 +75,9 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     Queue[] public permissionQueue;
     uint256 public immutable blocksNeededForQueue;
 
-    bool public onChainGoverned;
+    bool public timelockEnabled;
+    bool public initialized;
+
     uint256 public onChainGovernanceTimelock;
 
     string internal notAccepted = "Treasury: not accepted";
@@ -87,13 +88,14 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
-        address _ohm, 
-        uint256 _timelock, 
+        address _ohm,
+        uint256 _timelock,
         address _authority
     ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_ohm != address(0), "Zero address: OHM");
         OHM = IOHM(_ohm);
 
+        timelockEnabled = false;
         blocksNeededForQueue = _timelock;
     }
 
@@ -161,11 +163,11 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         } else {
             require(permissions[STATUS.RESERVEMANAGER][msg.sender], notApproved);
         }
-        if( permissions[STATUS.RESERVETOKEN][_token] || permissions[STATUS.LIQUIDITYTOKEN][_token]) {
+        if (permissions[STATUS.RESERVETOKEN][_token] || permissions[STATUS.LIQUIDITYTOKEN][_token]) {
             uint256 value = tokenValue(_token, _amount);
             require(value <= excessReserves(), insufficientReserves);
             totalReserves = totalReserves.sub(value);
-        } 
+        }
         IERC20(_token).safeTransfer(msg.sender, _amount);
         emit Managed(_token, _amount);
     }
@@ -182,10 +184,10 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
     /**
      * DEBT: The debt functions allow approved addresses to borrow treasury assets
-     * or OHM from the treasury, using sOHM as collateral. This might allow an 
+     * or OHM from the treasury, using sOHM as collateral. This might allow an
      * sOHM holder to provide OHM liquidity without taking on the opportunity cost
      * of unstaking, or alter their backing without imposing risk onto the treasury.
-     * Many of these use cases are yet to be defined, but they appear promising. 
+     * Many of these use cases are yet to be defined, but they appear promising.
      * However, we urge the community to think critically and move slowly upon
      * proposals to acquire these permissions.
      */
@@ -210,7 +212,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         sOHM.changeDebt(value, msg.sender, true);
         require(sOHM.debtBalances(msg.sender) <= debtLimit[msg.sender], "Treasury: exceeds limit");
         totalDebt = totalDebt.add(value);
-        
+
         if (_token == address(OHM)) {
             OHM.mint(msg.sender, value);
             ohmDebt = ohmDebt.add(value);
@@ -242,11 +244,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         @param _amount uint
      */
     function repayDebtWithOHM(uint256 _amount) external {
-        require(
-            permissions[STATUS.RESERVEDEBTOR][msg.sender] ||
-            permissions[STATUS.OHMDEBTOR][msg.sender], 
-            notApproved
-        );
+        require(permissions[STATUS.RESERVEDEBTOR][msg.sender] || permissions[STATUS.OHMDEBTOR][msg.sender], notApproved);
         OHM.burnFrom(msg.sender, _amount);
         sOHM.changeDebt(_amount, msg.sender, false);
         totalDebt = totalDebt.sub(_amount);
@@ -264,13 +262,13 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         uint256 reserves;
         address[] memory reserveToken = registry[STATUS.RESERVETOKEN];
         for (uint256 i = 0; i < reserveToken.length; i++) {
-            if(permissions[STATUS.RESERVETOKEN][reserveToken[i]]) {
+            if (permissions[STATUS.RESERVETOKEN][reserveToken[i]]) {
                 reserves = reserves.add(tokenValue(reserveToken[i], IERC20(reserveToken[i]).balanceOf(address(this))));
             }
         }
         address[] memory liquidityToken = registry[STATUS.LIQUIDITYTOKEN];
         for (uint256 i = 0; i < liquidityToken.length; i++) {
-            if(permissions[STATUS.LIQUIDITYTOKEN][liquidityToken[i]]) {
+            if (permissions[STATUS.LIQUIDITYTOKEN][liquidityToken[i]]) {
                 reserves = reserves.add(tokenValue(liquidityToken[i], IERC20(liquidityToken[i]).balanceOf(address(this))));
             }
         }
@@ -296,7 +294,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         address _address,
         address _calculator
     ) external onlyGovernor {
-        require(onChainGoverned, "OCG Not Enabled: Use queueTimelock");
+        require(timelockEnabled == false, "Use queueTimelock");
         if (_status == STATUS.SOHM) {
             sOHM = IsOHM(_address);
         } else {
@@ -327,10 +325,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      *  @param _toDisable address
      */
     function disable(STATUS _status, address _toDisable) external {
-        require(
-            msg.sender == authority.governor() || msg.sender == authority.guardian(), 
-            "Only governor or guardian"
-        );
+        require(msg.sender == authority.governor() || msg.sender == authority.guardian(), "Only governor or guardian");
         permissions[_status][_toDisable] = false;
         emit Permissioned(_toDisable, _status, false);
     }
@@ -364,21 +359,14 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         address _calculator
     ) external onlyGovernor {
         require(_address != address(0));
-        require(!onChainGoverned, "OCG Enabled: Use enable");
+        require(timelockEnabled == true, "Timelock is disabled, use enable");
 
         uint256 timelock = block.number.add(blocksNeededForQueue);
         if (_status == STATUS.RESERVEMANAGER || _status == STATUS.LIQUIDITYMANAGER) {
             timelock = block.number.add(blocksNeededForQueue.mul(2));
         }
         permissionQueue.push(
-            Queue({
-                managing: _status, 
-                toPermit: _address, 
-                calculator: _calculator, 
-                timelockEnd: timelock, 
-                nullify: false, 
-                executed: false
-            })
+            Queue({managing: _status, toPermit: _address, calculator: _calculator, timelockEnd: timelock, nullify: false, executed: false})
         );
         emit PermissionQueued(_status, _address);
     }
@@ -388,7 +376,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      *  @param _index uint
      */
     function execute(uint256 _index) external {
-        require(!onChainGoverned, "OCG Enabled");
+        require(timelockEnabled == true, "Timelock is disabled, use enable");
 
         Queue memory info = permissionQueue[_index];
 
@@ -437,10 +425,10 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /**
      * @notice disables timelocked functions
      */
-    function enableOnChainGovernance() external onlyGovernor {
-        require(!onChainGoverned, "OCG already enabled");
+    function enableTimelock() external onlyGovernor {
+        require(timelockEnabled == true, "timelock already enabled");
         if (onChainGovernanceTimelock != 0 && onChainGovernanceTimelock <= block.number) {
-            onChainGoverned = true;
+            timelockEnabled = true;
         } else {
             onChainGovernanceTimelock = block.number.add(blocksNeededForQueue.mul(7)); // 7-day timelock
         }
