@@ -96,6 +96,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         OHM = IOHM(_ohm);
 
         timelockEnabled = false;
+        initialized = false;
         blocksNeededForQueue = _timelock;
     }
 
@@ -425,13 +426,22 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /**
      * @notice disables timelocked functions
      */
-    function enableTimelock() external onlyGovernor {
-        require(timelockEnabled == true, "timelock already enabled");
+    function disableTimelock() external onlyGovernor {
+        require(timelockEnabled == false, "timelock already disabled");
         if (onChainGovernanceTimelock != 0 && onChainGovernanceTimelock <= block.number) {
-            timelockEnabled = true;
+            timelockEnabled = false;
         } else {
             onChainGovernanceTimelock = block.number.add(blocksNeededForQueue.mul(7)); // 7-day timelock
         }
+    }
+
+    /**
+        @notice enables timelocks after initilization
+     */
+    function initialize() external onlyGovernor {
+        require(initialized == false, "Already initialized");
+        timelockEnabled = true;
+        initialized = true;
     }
 
     /* ========== VIEW FUNCTIONS ========== */
