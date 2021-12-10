@@ -298,7 +298,7 @@ contract BondDepositoryTest is DSTest {
         //        ohm.mint(address(this), ohmMintAmount);
         // treasury.enableOnChainGovernance();
         uint256 currentBlock = 8;
-        // hevm.roll(currentBlock);
+        hevm.roll(currentBlock);
         //7 day timelock TODO add test where it's not long enough
         // Timelock is disabled before initializtion
         treasury.enable(OlympusTreasury.STATUS.REWARDMANAGER, address(teller), address(bondingCalculator));
