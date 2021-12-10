@@ -5,7 +5,7 @@ const { expect } = require("chai");
 const { utils } = require("ethers");
 const { advanceBlock } = require("../utils/advancement");
 
-describe.only("Treasury", async () => {
+describe("Treasury", async () => {
     const LARGE_APPROVAL = "100000000000000000000000000000000";
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
     // Initial mint for Frax and DAI (10,000,000)
@@ -56,6 +56,10 @@ describe.only("Treasury", async () => {
     let treasury;
     let distributor;
 
+    /**
+     * Everything in this block is only run once before all tests.
+     * This is the home for setup methodss
+     */
     before(async () => {
         [deployer, alice, bob, carol] = await ethers.getSigners();
 
@@ -74,7 +78,8 @@ describe.only("Treasury", async () => {
         distributorFactory = await ethers.getContractFactory("Distributor");
     });
 
-    before(async () => {
+    // These should not be in beforeEach.
+    beforeEach(async () => {
         //dai = await smock.fake(erc20Factory);
         //lpToken = await smock.fake(erc20Factory);
         dai = await erc20Factory.deploy(0);
