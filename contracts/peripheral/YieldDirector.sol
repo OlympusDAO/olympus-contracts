@@ -16,6 +16,8 @@ import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccess
 contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     using SafeERC20 for IERC20;
 
+    uint256 private constant MAX_UINT256 = type(uint256).max;
+
     address public immutable sOHM;
 
     bool public depositDisabled;
@@ -75,9 +77,9 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
         // Record donors's issued debt to recipient address
         DonationInfo[] storage donations = donationInfo[msg.sender];
-        int256 recipientIndex = _getRecipientIndex(msg.sender, recipient_);
+        uint256 recipientIndex = _getRecipientIndex(msg.sender, recipient_);
 
-        if(recipientIndex == -1) {
+        if(recipientIndex == MAX_UINT256) {
             donations.push(
                 DonationInfo({
                     recipient: recipient_,
@@ -88,7 +90,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
                 })
             );
         } else {
-            DonationInfo storage donation = donations[uint256(recipientIndex)];
+            DonationInfo storage donation = donations[recipientIndex];
 
             donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
             donation.deposit += amount_;
@@ -115,18 +117,12 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         require(!withdrawDisabled, "Withdraws currently disabled");
         require(amount_ > 0, "Invalid withdraw amount");
 
-        int256 recipientIndexSigned = _getRecipientIndex(msg.sender, recipient_);
-        require(recipientIndexSigned >= 0, "No donations to recipient");
-
         uint256 index = IsOHM(sOHM).index();
 
         // Donor accounting
+        uint256 recipientIndex = _getRecipientIndex(msg.sender, recipient_);
+        require(recipientIndex != MAX_UINT256, "No donations to recipient");
 
-        uint256 recipientIndex;
-        unchecked {
-            // Already checked if negative
-            recipientIndex = uint256(recipientIndexSigned);
-        }
         DonationInfo storage donation = donationInfo[msg.sender][recipientIndex];
 
         if(amount_ >= donation.deposit) {
@@ -205,11 +201,11 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @notice Get deposited sOHM amount for specific recipient
      */
     function depositsTo(address donor_, address recipient_) external override view returns ( uint256 ) {
-        int256 recipientIndex = _getRecipientIndex(donor_, recipient_);
-        require(recipientIndex >= 0, "No donations to recipient");
+        uint256 recipientIndex = _getRecipientIndex(msg.sender, recipient_);
+        require(recipientIndex != MAX_UINT256, "No donations to recipient");
 
         unchecked {
-            return donationInfo[donor_][uint256(recipientIndex)].deposit;
+            return donationInfo[donor_][recipientIndex].deposit;
         }
     }
 
@@ -253,16 +249,17 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
      */
     function donatedTo(address donor_, address recipient_) external override view returns (uint256) {
         DonationInfo[] storage donations = donationInfo[donor_];
-        int256 recipientIndexSigned = _getRecipientIndex(donor_, recipient_);
-        require(recipientIndexSigned >= 0, "No donations to recipient");
 
-        DonationInfo storage donation = donations[uint256(recipientIndexSigned)];
+        uint256 recipientIndex = _getRecipientIndex(msg.sender, recipient_);
+        require(recipientIndex != MAX_UINT256, "No donations to recipient");
+
+        DonationInfo storage donation = donations[recipientIndex];
         return donation.carry
             + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
     }
 
     /**
-        @notice Return total amount of sOHM donated from donor
+        @notice Return total amount of sOHM donated from donor since last full withdrawal
      */
     function totalDonated(address donor_) external override view returns (uint256) {
         DonationInfo[] storage donations = donationInfo[donor_];
@@ -324,15 +321,15 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
     /**
         @notice Get array index of a particular recipient in a donor's donationInfo array.
-        @return Array index of recipient address. If not present, return -1.
+        @return Array index of recipient address. If recipient not present, returns max uint256 value.
      */
-    function _getRecipientIndex(address donor_, address recipient_) internal view returns (int256) {
+    function _getRecipientIndex(address donor_, address recipient_) internal view returns (uint256) {
         DonationInfo[] storage info = donationInfo[donor_];
 
-        int256 existingIndex = -1;
+        uint256 existingIndex = MAX_UINT256;
         for (uint256 i = 0; i < info.length; i++) {
             if(info[i].recipient == recipient_) {
-                existingIndex = int256(i);
+                existingIndex = i;
                 break;
             }
         }
