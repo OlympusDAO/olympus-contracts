@@ -427,7 +427,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      * @notice disables timelocked functions
      */
     function disableTimelock() external onlyGovernor {
-        require(timelockEnabled == false, "timelock already disabled");
+        require(timelockEnabled == true, "timelock already disabled");
         if (onChainGovernanceTimelock != 0 && onChainGovernanceTimelock <= block.number) {
             timelockEnabled = false;
         } else {
