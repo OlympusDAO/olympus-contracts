@@ -103,11 +103,11 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     /**
-        @notice allow approved address to deposit an asset for OHM
-        @param _amount uint
-        @param _token address
-        @param _profit uint
-        @return send_ uint
+     * @notice allow approved address to deposit an asset for OHM
+     * @param _amount uint256
+     * @param _token address
+     * @param _profit uint256
+     * @return send_ uint256
      */
     function deposit(
         uint256 _amount,
@@ -135,9 +135,9 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     }
 
     /**
-        @notice allow approved address to burn OHM for reserves
-        @param _amount uint
-        @param _token address
+     * @notice allow approved address to burn OHM for reserves
+     * @param _amount uint256
+     * @param _token address
      */
     function withdraw(uint256 _amount, address _token) external override {
         require(permissions[STATUS.RESERVETOKEN][_token], notAccepted); // Only reserves can be used for redemptions
@@ -154,9 +154,9 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     }
 
     /**
-        @notice allow approved address to withdraw assets
-        @param _token address
-        @param _amount uint
+     * @notice allow approved address to withdraw assets
+     * @param _token address
+     * @param _amount uint256
      */
     function manage(address _token, uint256 _amount) external override {
         if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
@@ -174,7 +174,9 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     }
 
     /**
-        @notice mint new OHM using excess reserves
+     * @notice mint new OHM using excess reserves
+     * @param _recipient address
+     * @param _amount uint256
      */
     function mint(address _recipient, uint256 _amount) external override {
         require(permissions[STATUS.REWARDMANAGER][msg.sender], notApproved);
@@ -194,9 +196,9 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      */
 
     /**
-        @notice allow approved address to borrow reserves
-        @param _amount uint
-        @param _token address
+     * @notice allow approved address to borrow reserves
+     * @param _amount uint256
+     * @param _token address
      */
     function incurDebt(uint256 _amount, address _token) external override {
         uint256 value;
@@ -225,9 +227,9 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     }
 
     /**
-        @notice allow approved address to repay borrowed reserves with reserves
-        @param _amount uint
-        @param _token address
+     * @notice allow approved address to repay borrowed reserves with reserves
+     * @param _amount uint256
+     * @param _token address
      */
     function repayDebtWithReserve(uint256 _amount, address _token) external override {
         require(permissions[STATUS.RESERVEDEBTOR][msg.sender], notApproved);
@@ -241,8 +243,8 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     }
 
     /**
-        @notice allow approved address to repay borrowed reserves with OHM
-        @param _amount uint
+     * @notice allow approved address to repay borrowed reserves with OHM
+     * @param _amount uint256
      */
     function repayDebtWithOHM(uint256 _amount) external {
         require(permissions[STATUS.RESERVEDEBTOR][msg.sender] || permissions[STATUS.OHMDEBTOR][msg.sender], notApproved);
@@ -256,8 +258,8 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /* ========== MANAGERIAL FUNCTIONS ========== */
 
     /**
-        @notice takes inventory of all tracked assets
-        @notice always consolidate to recognized reserves before audit
+     * @notice takes inventory of all tracked assets
+     * @notice always consolidate to recognized reserves before audit
      */
     function auditReserves() external onlyGovernor {
         uint256 reserves;
@@ -279,6 +281,8 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
     /**
      * @notice set max debt for address
+     * @param _address address
+     * @param _limit uint256
      */
     function setDebtLimit(address _address, uint256 _limit) external onlyGovernor {
         debtLimit[_address] = _limit;
@@ -333,7 +337,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
     /**
      * @notice check if registry contains address
-     * @return uint
+     * @return (bool, uint256)
      */
     function indexInRegistry(address _address, STATUS _status) public view returns (bool, uint256) {
         address[] memory entries = registry[_status];
@@ -350,9 +354,10 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     // functions are used prior to enabling on-chain governance
 
     /**
-        @notice queue address to receive permission
-        @param _status STATUS
-        @param _address address
+     * @notice queue address to receive permission
+     * @param _status STATUS
+     * @param _address address
+     * @param _calculator address
      */
     function queueTimelock(
         STATUS _status,
@@ -374,7 +379,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
     /**
      *  @notice enable queued permission
-     *  @param _index uint
+     *  @param _index uint256
      */
     function execute(uint256 _index) external {
         require(timelockEnabled == true, "Timelock is disabled, use enable");
@@ -417,7 +422,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
     /**
      * @notice cancel timelocked action
-     * @param _index uint
+     * @param _index uint256
      */
     function nullify(uint256 _index) external onlyGovernor {
         permissionQueue[_index].nullify = true;
@@ -436,7 +441,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     }
 
     /**
-        @notice enables timelocks after initilization
+     * @notice enables timelocks after initilization
      */
     function initialize() external onlyGovernor {
         require(initialized == false, "Already initialized");
@@ -447,18 +452,18 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /* ========== VIEW FUNCTIONS ========== */
 
     /**
-        @notice returns excess reserves not backing tokens
-        @return uint
+     * @notice returns excess reserves not backing tokens
+     * @return uint
      */
     function excessReserves() public view override returns (uint256) {
         return totalReserves.sub(OHM.totalSupply().sub(totalDebt));
     }
 
     /**
-        @notice returns OHM valuation of asset
-        @param _token address
-        @param _amount uint
-        @return value_ uint
+     * @notice returns OHM valuation of asset
+     * @param _token address
+     * @param _amount uint256
+     * @return value_ uint256
      */
     function tokenValue(address _token, uint256 _amount) public view override returns (uint256 value_) {
         value_ = _amount.mul(10**IERC20Metadata(address(OHM)).decimals()).div(10**IERC20Metadata(_token).decimals());
@@ -471,6 +476,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /**
      * @notice returns supply metric that cannot be manipulated by debt
      * @dev use this any time you need to query supply
+     * @return uint256
      */
     function baseSupply() external view override returns (uint256) {
         return OHM.totalSupply() - ohmDebt;
