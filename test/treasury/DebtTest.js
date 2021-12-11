@@ -1,18 +1,15 @@
-const { ethers, waffle, network } = require("hardhat")
+const { ethers, waffle, network } = require("hardhat");
 const { expect } = require("chai");
 //const { FakeContract, smock } = require("@defi-wonderland/smock");
 
-const {
-    utils,
-} = require("ethers");
+const { utils } = require("ethers");
 const { advanceBlock } = require("../utils/advancement");
 
-describe.only('Treasury', async () => {
-
-    const LARGE_APPROVAL = '100000000000000000000000000000000';
-    const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+describe("Treasury", async () => {
+    const LARGE_APPROVAL = "100000000000000000000000000000000";
+    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
     // Initial mint for Frax and DAI (10,000,000)
-    const initialMint = '10000000000000000000000000';
+    const initialMint = "10000000000000000000000000";
     // Reward rate of .1%
     const initialRewardRate = "1000";
     // Debt limit of 10
@@ -20,10 +17,10 @@ describe.only('Treasury', async () => {
 
     const mineBlock = async () => {
         await network.provider.request({
-          method: "evm_mine",
-          params: [],
+            method: "evm_mine",
+            params: [],
         });
-    }
+    };
 
     // Calculate index after some number of epochs. Takes principal and rebase rate.
     // TODO verify this works
@@ -36,7 +33,7 @@ describe.only('Treasury', async () => {
         await staking.rebase();
 
         return await sOhm.index();
-    }
+    };
 
     let deployer, alice, bob, carol;
     let erc20Factory;
@@ -59,25 +56,29 @@ describe.only('Treasury', async () => {
     let treasury;
     let distributor;
 
+    /**
+     * Everything in this block is only run once before all tests.
+     * This is the home for setup methodss
+     */
     before(async () => {
         [deployer, alice, bob, carol] = await ethers.getSigners();
-        
+
         //owner = await ethers.getSigner("0x763a641383007870ae96067818f1649e5586f6de")
 
         //erc20Factory = await ethers.getContractFactory('MockERC20');
         // TODO use dai as erc20 for now
-        authFactory = await ethers.getContractFactory('OlympusAuthority');
-        erc20Factory = await ethers.getContractFactory('DAI');
+        authFactory = await ethers.getContractFactory("OlympusAuthority");
+        erc20Factory = await ethers.getContractFactory("DAI");
 
-        stakingFactory = await ethers.getContractFactory('OlympusStaking');
-        ohmFactory = await ethers.getContractFactory('OlympusERC20Token');
-        sOhmFactory = await ethers.getContractFactory('sOlympus');
-        gOhmFactory = await ethers.getContractFactory('gOHM');
-        treasuryFactory = await ethers.getContractFactory('OlympusTreasury');
-        distributorFactory = await ethers.getContractFactory('Distributor');
+        stakingFactory = await ethers.getContractFactory("OlympusStaking");
+        ohmFactory = await ethers.getContractFactory("OlympusERC20Token");
+        sOhmFactory = await ethers.getContractFactory("sOlympus");
+        gOhmFactory = await ethers.getContractFactory("gOHM");
+        treasuryFactory = await ethers.getContractFactory("OlympusTreasury");
+        distributorFactory = await ethers.getContractFactory("Distributor");
+    });
 
-    })
-
+    // These should not be in beforeEach.
     beforeEach(async () => {
         //dai = await smock.fake(erc20Factory);
         //lpToken = await smock.fake(erc20Factory);
@@ -85,13 +86,31 @@ describe.only('Treasury', async () => {
         lpToken = await erc20Factory.deploy(0);
 
         // TODO use promise.all
-        auth = await authFactory.deploy(deployer.address, deployer.address, deployer.address, deployer.address); // TODO
+        auth = await authFactory.deploy(
+            deployer.address,
+            deployer.address,
+            deployer.address,
+            deployer.address
+        ); // TODO
         ohm = await ohmFactory.deploy(auth.address);
         sOhm = await sOhmFactory.deploy();
         gOhm = await gOhmFactory.deploy(sOhm.address, sOhm.address); // Call migrate immediately
-        staking = await stakingFactory.deploy(ohm.address, sOhm.address, gOhm.address, "10", "1", "9", auth.address);
+        staking = await stakingFactory.deploy(
+            ohm.address,
+            sOhm.address,
+            gOhm.address,
+            "10",
+            "1",
+            "9",
+            auth.address
+        );
         treasury = await treasuryFactory.deploy(ohm.address, "0", auth.address);
-        distributor = await distributorFactory.deploy(treasury.address, ohm.address, staking.address, auth.address);
+        distributor = await distributorFactory.deploy(
+            treasury.address,
+            ohm.address,
+            staking.address,
+            auth.address
+        );
 
         // Setup for each component
 
@@ -104,7 +123,7 @@ describe.only('Treasury', async () => {
         await ohm.approve(staking.address, LARGE_APPROVAL);
 
         // To get past OHM contract guards
-        await auth.pushVault(treasury.address, true)
+        await auth.pushVault(treasury.address, true);
 
         // Initialization for sOHM contract.
         // Set index to 10
@@ -115,30 +134,29 @@ describe.only('Treasury', async () => {
         // Set distributor staking contract
         await staking.setDistributor(distributor.address);
 
-        // enable on chain governance to avoid queue
-        await treasury.enableOnChainGovernance();
-        await advanceBlock(1);
-        await treasury.enableOnChainGovernance();
+        // Don't need to disable timelock because disabled by default.
 
         // toggle reward manager
-        await treasury.enable('8', distributor.address, ZERO_ADDRESS);
+        await treasury.enable("8", distributor.address, ZERO_ADDRESS);
         // toggle deployer reserve depositor
-        await treasury.enable('0', deployer.address, ZERO_ADDRESS);
+        await treasury.enable("0", deployer.address, ZERO_ADDRESS);
         // toggle liquidity depositor
-        await treasury.enable('4', deployer.address, ZERO_ADDRESS);
+        await treasury.enable("4", deployer.address, ZERO_ADDRESS);
         // toggle DAI as reserve token
-        await treasury.enable('2', dai.address, ZERO_ADDRESS);
+        await treasury.enable("2", dai.address, ZERO_ADDRESS);
         // set sOHM
-        await treasury.enable('9', sOhm.address, ZERO_ADDRESS);
+        await treasury.enable("9", sOhm.address, ZERO_ADDRESS);
 
         // Deposit 10,000 DAI to treasury, 1,000 OHM gets minted to deployer with 9000 as excess reserves (ready to be minted)
-        await treasury.connect(deployer).deposit('10000000000000000000000', dai.address, '9000000000000');
+        await treasury
+            .connect(deployer)
+            .deposit("10000000000000000000000", dai.address, "9000000000000");
 
         // Add staking as recipient of distributor with a test reward rate
         await distributor.addRecipient(staking.address, initialRewardRate);
 
         // Get sOHM in deployer wallet
-        const sohmAmount = "1000000000000"
+        const sohmAmount = "1000000000000";
         await ohm.approve(staking.address, sohmAmount);
         await staking.stake(deployer.address, sohmAmount, true, true);
 
@@ -189,8 +207,9 @@ describe.only('Treasury', async () => {
         let staked = await sOhm.balanceOf(alice.address);
         await treasury.enable(7, alice.address, ZERO_ADDRESS);
         await treasury.setDebtLimit(alice.address, debtLimit);
-        await expect(treasury.connect(alice).incurDebt(String((staked * 1000000000) + 1000000000), dai.address))
-            .to.be.revertedWith("");
+        await expect(
+            treasury.connect(alice).incurDebt(String(staked * 1000000000 + 1000000000), dai.address)
+        ).to.be.revertedWith("");
     });
 
     it("should allow alice to borrow up to her balance in ohm", async () => {
@@ -205,8 +224,9 @@ describe.only('Treasury', async () => {
         let staked = await sOhm.balanceOf(alice.address);
         await treasury.enable(10, alice.address, ZERO_ADDRESS);
         await treasury.setDebtLimit(alice.address, debtLimit * 2);
-        await expect(treasury.connect(alice).incurDebt(String(staked + 1), ohm.address))
-            .to.be.revertedWith("sOHM: insufficient balance");
+        await expect(
+            treasury.connect(alice).incurDebt(String(staked + 1), ohm.address)
+        ).to.be.revertedWith("sOHM: insufficient balance");
     });
 
     it("should not allow alice to borrow more than her debt limit", async () => {
@@ -214,8 +234,9 @@ describe.only('Treasury', async () => {
         let staked = await sOhm.balanceOf(alice.address);
         await treasury.enable(10, alice.address, ZERO_ADDRESS);
         await treasury.setDebtLimit(alice.address, debtLimit);
-        await expect(treasury.connect(alice).incurDebt(staked, ohm.address))
-            .to.be.revertedWith("Treasury: exceeds limit");
+        await expect(treasury.connect(alice).incurDebt(staked, ohm.address)).to.be.revertedWith(
+            "Treasury: exceeds limit"
+        );
     });
 
     it("should allow alice to repay in dai", async () => {
