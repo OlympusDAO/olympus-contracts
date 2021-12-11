@@ -90,11 +90,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         } else {
             DonationInfo storage donation = donations[uint256(recipientIndex)];
 
-            // Only update carry if there was a previous deposit
-            if(donation.deposit != 0) {
-                donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
-            }
-
+            donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
             donation.deposit += amount_;
             donation.agnosticDeposit = _toAgnostic(donation.deposit);
             donation.indexAtLastChange = index;
@@ -125,14 +121,34 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         uint256 index = IsOHM(sOHM).index();
 
         // Donor accounting
-        DonationInfo storage donation = donationInfo[msg.sender][uint256(recipientIndexSigned)];
 
-        require(donation.deposit >= amount_, "Not enough sOHM to withdraw");
+        uint256 recipientIndex;
+        unchecked {
+            // Already checked if negative
+            recipientIndex = uint256(recipientIndexSigned);
+        }
+        DonationInfo storage donation = donationInfo[msg.sender][recipientIndex];
 
-        donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
-        donation.deposit -= amount_;
-        donation.agnosticDeposit = _toAgnostic(donation.deposit);
-        donation.indexAtLastChange = index;
+        if(amount_ >= donation.deposit) {
+            // Report how much was donated then clear donation information
+            uint256 accumulated = donation.carry
+                + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
+            emit Donated(msg.sender, recipient_, accumulated);
+
+            delete donationInfo[msg.sender][recipientIndex];
+
+            // If element was in middle of array, bring last element to deleted index
+            uint256 lastIndex = donationInfo[msg.sender].length - 1;
+            if(recipientIndex != lastIndex) {
+                donationInfo[msg.sender][recipientIndex] = donationInfo[msg.sender][lastIndex];
+                donationInfo[msg.sender].pop();
+            }
+        } else {
+            donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
+            donation.deposit -= amount_;
+            donation.agnosticDeposit = _toAgnostic(donation.deposit);
+            donation.indexAtLastChange = index;
+        }
 
         // Recipient accounting
         RecipientInfo storage recipient = recipientInfo[recipient_];
@@ -153,6 +169,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         require(!withdrawDisabled, "Withdraws currently disabled");
 
         DonationInfo[] storage donations = donationInfo[msg.sender];
+
         uint256 donationsLength = donations.length;
         require(donationsLength != 0, "User not donating to anything");
 
@@ -171,10 +188,9 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             recipient.indexAtLastChange = sOhmIndex;
 
             // Clear out donation
-            donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
-            donation.deposit = 0;
-            donation.agnosticDeposit = 0;
-            donation.indexAtLastChange = index;
+            uint256 accumulated = donation.carry
+                + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
+            emit Donated(msg.sender, donation.recipient, accumulated);
         }
 
         // Delete donor's entire donations array
@@ -233,7 +249,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     }
 
     /**
-        @notice Return total amount of sOHM donated to recipient
+        @notice Return total amount of sOHM donated to recipient since last full withdrawal
      */
     function donatedTo(address donor_, address recipient_) external override view returns (uint256) {
         DonationInfo[] storage donations = donationInfo[donor_];

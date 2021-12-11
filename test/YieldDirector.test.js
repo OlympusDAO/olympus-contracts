@@ -223,7 +223,6 @@ describe.only('YieldDirector', async () => {
 
         // Verify donor and recipient data is properly updated
         const donationInfo1 = await tyche.donationInfo(deployer.address, "0");
-        await expect(donationInfo1.recipient).is.equal(bob.address);
         await expect(donationInfo1.deposit).is.equal("0");
 
         const recipientInfo2 = await tyche.recipientInfo(bob.address);
@@ -453,38 +452,6 @@ describe.only('YieldDirector', async () => {
         await expect(await tyche.totalDeposits(deployer.address)).is.equal("200000000000");
     });
 
-    it('should display historical donated amount through various actions', async () => {
-        const principal = "100000000000";
-        await tyche.deposit(principal, bob.address);
-        await triggerRebase();
-
-        const initDonatedAmount = "100000000";
-        await expect(await tyche.donatedTo(deployer.address, bob.address)).is.equal(initDonatedAmount);
-
-        await tyche.connect(bob).redeem();
-        await expect(await tyche.donatedTo(deployer.address, bob.address)).is.equal(initDonatedAmount);
-
-        await tyche.withdraw(principal, bob.address);
-        await expect(await tyche.donatedTo(deployer.address, bob.address)).is.equal(initDonatedAmount);
-
-        await triggerRebase();
-        await expect(await tyche.donatedTo(deployer.address, bob.address)).is.equal(initDonatedAmount);
-
-        await tyche.deposit(principal, bob.address);
-        await expect(await tyche.donatedTo(deployer.address, bob.address)).is.equal(initDonatedAmount);
-
-        // This is when it should increment
-        const accumulated = "200000000";
-        await triggerRebase();
-        await expect(await tyche.donatedTo(deployer.address, bob.address)).is.equal(accumulated);
-
-        await tyche.withdraw(principal, bob.address);
-        await expect(await tyche.donatedTo(deployer.address, bob.address)).is.equal(accumulated);
-
-        await triggerRebase();
-        await expect(await tyche.donatedTo(deployer.address, bob.address)).is.equal(accumulated);
-    });
-
     it('should display donated amounts across multiple recipients', async () => {
         const principal = "100000000000";
         await tyche.deposit(principal, bob.address);
@@ -496,25 +463,25 @@ describe.only('YieldDirector', async () => {
 
         await tyche.withdraw(principal, bob.address);
         await tyche.withdraw(principal, alice.address);
-        await expect(await tyche.totalDonated(deployer.address)).is.equal(totalDonation);
+        await expect(await tyche.totalDonated(deployer.address)).is.equal(0);
 
         await triggerRebase();
-        await expect(await tyche.totalDonated(deployer.address)).is.equal(totalDonation);
+        await expect(await tyche.totalDonated(deployer.address)).is.equal(0);
 
         // Deposit again only to bob
         await tyche.deposit(principal, bob.address);
-        await expect(await tyche.totalDonated(deployer.address)).is.equal(totalDonation);
+        await expect(await tyche.totalDonated(deployer.address)).is.equal(0);
 
         // This is when it should increment
-        const accumulated = "300000000";
+        const principal2 = "100000000";
         await triggerRebase();
-        await expect(await tyche.totalDonated(deployer.address)).is.equal(accumulated);
+        await expect(await tyche.totalDonated(deployer.address)).is.equal(principal2);
 
         await tyche.withdraw(principal, bob.address);
-        await expect(await tyche.totalDonated(deployer.address)).is.equal(accumulated);
+        await expect(await tyche.totalDonated(deployer.address)).is.equal(0);
 
         await triggerRebase();
-        await expect(await tyche.totalDonated(deployer.address)).is.equal(accumulated);
+        await expect(await tyche.totalDonated(deployer.address)).is.equal(0);
     });
 
     it('should get all deposited positions', async () => {
