@@ -5,8 +5,6 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IsOHM} from "../interfaces/IsOHM.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
 import {IYieldDirector} from "../interfaces/IYieldDirector.sol";
-import {Ownable} from "../types/Ownable.sol";
-import {IgOHM} from "../interfaces/IgOHM.sol";
 import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 
 /**
@@ -19,7 +17,6 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     using SafeERC20 for IERC20;
 
     address public immutable sOHM;
-    uint256 public constant DECIMALS = 9; // Decimals of gOHM
 
     bool public depositDisabled;
     bool public withdrawDisabled;
@@ -43,10 +40,11 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     mapping(address => DonationInfo[]) public donationInfo;
     mapping(address => RecipientInfo) public recipientInfo;
 
-    event Deposited(address donor_, address recipient_, uint256 amount_);
-    event Withdrawn(address donor_, address recipient_, uint256 amount_);
-    event AllWithdrawn(address donor_, uint256 amount_);
-    event Redeemed(address recipient_, uint256 amount_);
+    event Deposited(address indexed donor_, address indexed recipient_, uint256 amount_);
+    event Withdrawn(address indexed donor_, address indexed recipient_, uint256 amount_);
+    event AllWithdrawn(address indexed donor_, uint256 indexed amount_);
+    event Donated(address indexed donor_, address indexed recipient_, uint256 amount_);
+    event Redeemed(address indexed recipient_, uint256 amount_);
     event EmergencyShutdown(bool active_);
 
     constructor (address sOhm_, address authority_)
@@ -55,10 +53,6 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         require(sOhm_ != address(0), "Invalid address for sOHM");
 
         sOHM = sOhm_;
-
-        depositDisabled = false;
-        withdrawDisabled = false;
-        redeemDisabled = false;
     }
 
     /************************
@@ -123,6 +117,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
      */
     function withdraw(uint256 amount_, address recipient_) external override {
         require(!withdrawDisabled, "Withdraws currently disabled");
+        require(amount_ > 0, "Invalid withdraw amount");
 
         int256 recipientIndexSigned = _getRecipientIndex(msg.sender, recipient_);
         require(recipientIndexSigned >= 0, "No donations to recipient");
@@ -158,12 +153,13 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         require(!withdrawDisabled, "Withdraws currently disabled");
 
         DonationInfo[] storage donations = donationInfo[msg.sender];
-        require(donations.length != 0, "User not donating to anything");
+        uint256 donationsLength = donations.length;
+        require(donationsLength != 0, "User not donating to anything");
 
         uint256 sOhmIndex = IsOHM(sOHM).index();
         uint256 total = 0;
 
-        for (uint256 index = 0; index < donations.length; index++) {
+        for (uint256 index = 0; index < donationsLength; index++) {
             DonationInfo storage donation = donations[index];
 
             total += donation.deposit;
@@ -196,14 +192,16 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         int256 recipientIndex = _getRecipientIndex(donor_, recipient_);
         require(recipientIndex >= 0, "No donations to recipient");
 
-        return donationInfo[donor_][uint256(recipientIndex)].deposit;
+        unchecked {
+            return donationInfo[donor_][uint256(recipientIndex)].deposit;
+        }
     }
 
     /**
         @notice Return total amount of donor's sOHM deposited
      */
     function totalDeposits(address donor_) external override view returns ( uint256 ) {
-        DonationInfo[] memory donations = donationInfo[donor_];
+        DonationInfo[] storage donations = donationInfo[donor_];
         require(donations.length != 0, "User is not donating");
 
         uint256 total = 0;
@@ -218,7 +216,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @notice Return arrays of donor's recipients and deposit amounts, matched by index
      */
     function getAllDeposits(address donor_) external override view returns ( address[] memory, uint256[] memory ) {
-        DonationInfo[] memory donations = donationInfo[donor_];
+        DonationInfo[] storage donations = donationInfo[donor_];
         require(donations.length != 0, "User is not donating");
 
         uint256 len = donations.length;
@@ -238,11 +236,11 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @notice Return total amount of sOHM donated to recipient
      */
     function donatedTo(address donor_, address recipient_) external override view returns (uint256) {
-        DonationInfo[] memory donations = donationInfo[donor_];
+        DonationInfo[] storage donations = donationInfo[donor_];
         int256 recipientIndexSigned = _getRecipientIndex(donor_, recipient_);
         require(recipientIndexSigned >= 0, "No donations to recipient");
 
-        DonationInfo memory donation = donations[uint256(recipientIndexSigned)];
+        DonationInfo storage donation = donations[uint256(recipientIndexSigned)];
         return donation.carry
             + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
     }
@@ -251,11 +249,11 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @notice Return total amount of sOHM donated from donor
      */
     function totalDonated(address donor_) external override view returns (uint256) {
-        DonationInfo[] memory donations = donationInfo[donor_];
+        DonationInfo[] storage donations = donationInfo[donor_];
         uint256 total = 0;
 
         for (uint256 index = 0; index < donations.length; index++) {
-            DonationInfo memory donation = donations[index];
+            DonationInfo storage donation = donations[index];
             total += donation.carry + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
         }
 
@@ -270,7 +268,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @notice Get redeemable sOHM balance of a recipient address
      */
     function redeemableBalance(address recipient_) public override view returns (uint256) {
-        RecipientInfo memory recipient = recipientInfo[recipient_];
+        RecipientInfo storage recipient = recipientInfo[recipient_];
         return recipient.carry
             + _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange);
     }
@@ -325,35 +323,37 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         return existingIndex;
     }
 
-    // TODO These can be replaced with wsOHM contract functions
     /**
         @notice Convert flat sOHM value to agnostic value at current index
-        @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index
+        @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
+             1e9 is because sOHM has 9 decimals.
      */
     function _toAgnostic(uint256 amount_) internal view returns ( uint256 ) {
         return amount_
-            * (10 ** DECIMALS)
+            * 1e9
             / (IsOHM(sOHM).index());
     }
 
     /**
         @notice Convert agnostic value at current index to flat sOHM value
-        @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index
+        @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
+             1e9 is because sOHM has 9 decimals.
      */
     function _fromAgnostic(uint256 amount_) internal view returns ( uint256 ) {
         return amount_
             * (IsOHM(sOHM).index())
-            / (10 ** DECIMALS);
+            / 1e9;
     }
 
     /**
         @notice Convert flat sOHM value to agnostic value at a given index value
-        @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index
+        @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
+             1e9 is because sOHM has 9 decimals.
      */
     function _fromAgnosticAtIndex(uint256 amount_, uint256 index_) internal pure returns ( uint256 ) {
         return amount_
             * index_
-            / (10 ** DECIMALS);
+            / 1e9;
     }
 
     /************************

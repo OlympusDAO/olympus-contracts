@@ -25,7 +25,11 @@ const chainIds = {
 
 // Ensure that we have all the environment variables we need.
 //const mnemonic: string | undefined = process.env.MNEMONIC ?? "NO_MNEMONIC";
+<<<<<<< HEAD
 const privateKey: string | undefined = process.env.PRIVATE_KEY ?? "NO_PRIVATE_KEY";
+=======
+const privateKey = process.env.PRIVATE_KEY ?? "NO_PRIVATE_KEY";
+>>>>>>> d755882 (audit findings. mainly code recs)
 // Make sure node is setup on Alchemy website
 const alchemyApiKey: string | undefined = process.env.ALCHEMY_API_KEY ?? "NO_ALCHEMY_API_KEY";
 
@@ -45,11 +49,12 @@ function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
 =======
   const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
   return {
-    accounts: {
-      count: 10,
-      mnemonic,
-      path: "m/44'/60'/0'/0",
-    },
+    //accounts: {
+    //  count: 10,
+    //  mnemonic,
+    //  path: "m/44'/60'/0'/0",
+    //},
+    accounts: [`${privateKey}`],
     chainId: chainIds[network],
     url,
   };
@@ -57,26 +62,19 @@ function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
 }
 
 const config: HardhatUserConfig = {
-    defaultNetwork: "hardhat",
-    gasReporter: {
-        currency: "USD",
-        enabled: process.env.REPORT_GAS ? true : false,
-        excludeContracts: [],
-        src: "./contracts",
-    },
-    networks: {
-        hardhat: {
-            forking: {
-                url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`,
-            },
-            //accounts: {
-            //    mnemonic,
-            //},
-            chainId: chainIds.hardhat,
-        },
-        // Uncomment for testing.
-        // rinkeby: getChainConfig("rinkeby"),
-        // ropsten: getChainConfig("ropsten"),
+  defaultNetwork: "hardhat",
+  gasReporter: {
+    currency: "USD",
+    enabled: process.env.REPORT_GAS ? true : false,
+    excludeContracts: [],
+    src: "./contracts",
+  },
+  networks: {
+    hardhat: {
+      forking: {
+        url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`
+      },
+      chainId: chainIds.hardhat,
     },
     goerli: getChainConfig("goerli"),
     kovan: getChainConfig("kovan"),
