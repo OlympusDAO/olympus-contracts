@@ -183,7 +183,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             recipient.agnosticDebt = _toAgnostic(recipient.totalDebt + recipient.carry);
             recipient.indexAtLastChange = sOhmIndex;
 
-            // Clear out donation
+            // Report amount donated
             uint256 accumulated = donation.carry
                 + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
             emit Donated(msg.sender, donation.recipient, accumulated);
