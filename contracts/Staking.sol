@@ -185,6 +185,8 @@ contract OlympusStaking is OlympusAccessControlled {
             gOHM.burn(msg.sender, _amount); // amount was given in gOHM terms
             amount_ = gOHM.balanceFrom(amount_).add(bounty); // convert amount to OHM terms & add bounty
         }
+
+        require(amount_ <= OHM.balanceOf(address(this)), "Insufficient OHM balance in contract");
         OHM.safeTransfer(_to, amount_);
     }
 
@@ -216,7 +218,7 @@ contract OlympusStaking is OlympusAccessControlled {
      * @notice trigger rebase if epoch over
      * @return uint256
      */
-    function rebase() public  returns (uint256) {
+    function rebase() public returns (uint256) {
         uint256 bounty;
         if (epoch.end <= block.timestamp) {
             sOHM.rebase(epoch.distribute, epoch.number);
