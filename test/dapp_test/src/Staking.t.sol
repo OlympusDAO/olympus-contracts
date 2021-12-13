@@ -151,11 +151,11 @@ contract StakingTest is DSTest {
         // Move into next rebase window
         hevm.warp(EPOCH_LENGTH);
 
+        // Post initial rebase, distribution amount is 0, so sOHM balance doens't change.
         uint256 ohmBalance = ohm.balanceOf(address(this));
         uint256 sOhmBalance = sohm.balanceOf(address(this));
-
         assertEq(ohmBalance, 0);
-        assertEq(sOhmBalance, amount); //
+        assertEq(sOhmBalance, amount);
 
         sohm.approve(address(staking), sOhmBalance);
         // TODO: this fails because the staking contract doesn't have enough ohm to gibb.
