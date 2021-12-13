@@ -91,11 +91,8 @@ contract OlympusStaking is OlympusAccessControlled {
         bool _rebasing,
         bool _claim
     ) external returns (uint256) {
-        rebase();
-        if (address(distributor) != address(0)) {
-            _amount = _amount.add(distributor.bounty()); // add bounty to stake
-        }
         OHM.safeTransferFrom(msg.sender, address(this), _amount);
+        _amount = _amount.add(rebase()); // add bounty if rebase occurred
         if (_claim && warmupPeriod == 0) {
             return _send(_to, _amount, _rebasing);
         } else {
@@ -179,17 +176,17 @@ contract OlympusStaking is OlympusAccessControlled {
         amount_ = _amount;
         uint256 bounty;
         if (_trigger) {
-            rebase();
-            if (address(distributor) != address(0)) {
-                bounty = distributor.bounty();
-            }
+            bounty = rebase();
         }
         if (_rebasing) {
             sOHM.safeTransferFrom(msg.sender, address(this), _amount);
+            amount_ = amount_.add(bounty);
         } else {
             gOHM.burn(msg.sender, _amount); // amount was given in gOHM terms
             amount_ = gOHM.balanceFrom(amount_).add(bounty); // convert amount to OHM terms & add bounty
         }
+
+        require(amount_ <= OHM.balanceOf(address(this)), "Insufficient OHM balance in contract");
         OHM.safeTransfer(_to, amount_);
     }
 
@@ -219,20 +216,19 @@ contract OlympusStaking is OlympusAccessControlled {
 
     /**
      * @notice trigger rebase if epoch over
-     * @return rebased_ bool
+     * @return uint256
      */
-    function rebase() public  returns (bool rebased_) {
-        rebased_ = epoch.end <= block.timestamp;
-        if (rebased_) {
+    function rebase() public returns (uint256) {
+        uint256 bounty;
+        if (epoch.end <= block.timestamp) {
             sOHM.rebase(epoch.distribute, epoch.number);
 
             epoch.end = epoch.end.add(epoch.length);
             epoch.number++;
 
-            uint256 bounty;
             if (address(distributor) != address(0)) {
                 distributor.distribute();
-                bounty = distributor.bounty();
+                bounty = distributor.retrieveBounty(); // Will mint ohm for this contract if there exists a bounty
             }
             uint256 balance = OHM.balanceOf(address(this));
             uint256 staked = sOHM.circulatingSupply();
@@ -242,6 +238,7 @@ contract OlympusStaking is OlympusAccessControlled {
                 epoch.distribute = balance.sub(staked).sub(bounty);
             }
         }
+        return bounty;
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
@@ -290,7 +287,6 @@ contract OlympusStaking is OlympusAccessControlled {
      * @param _distributor address
      */
     function setDistributor(address _distributor) external onlyGovernor {
-        require(_distributor != address(0));
         distributor = IDistributor(_distributor);
         emit DistributorSet(_distributor);
     }
