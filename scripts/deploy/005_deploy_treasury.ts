@@ -2,11 +2,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { CONTRACTS, TREASURY_TIMELOCK } from "../constants";
 //import { DAI, FRAX, OlympusERC20Token, OlympusTreasury } from "../types";
-import {
-    OlympusTreasury__factory,
-    // OlympusERC20Token__factory,
-    OlympusAuthority__factory,
-} from "../../types";
+import { OlympusTreasury__factory } from "../../types";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts, ethers } = hre;

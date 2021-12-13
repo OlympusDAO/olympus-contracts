@@ -62,6 +62,15 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     // Approve staking contact to spend deployer's OHM
     // TODO: Is this needed?
     await ohm.approve(staking.address, LARGE_APPROVAL);
+
+    console.log(
+        ohm.address,
+        sOhm.address,
+        gOhm.address,
+        distributor.address,
+        staking.address,
+        treasury.address
+    );
 };
 
 func.tags = ["setup"];
