@@ -22,3 +22,5 @@ deployments/hardhat
 deployments/localhost
 
 /.dapp
+
+/flatten
