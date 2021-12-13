@@ -3,7 +3,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import {
     CONTRACTS,
     EPOCH_LENGTH_IN_BLOCKS,
-    FIRST_EPOCH_BLOCK,
+    FIRST_EPOCH_TIME,
     FIRST_EPOCH_NUMBER,
 } from "../constants";
 
@@ -25,7 +25,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
             gOhmDeployment.address,
             EPOCH_LENGTH_IN_BLOCKS,
             FIRST_EPOCH_NUMBER,
-            FIRST_EPOCH_BLOCK,
+            FIRST_EPOCH_TIME,
             authorityDeployment.address,
         ],
         log: true,

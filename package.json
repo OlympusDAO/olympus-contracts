@@ -56,6 +56,7 @@
     "fork": "hardhat node",
     "deploy:mainnet": "hardhat --network mainnet deploy",
     "deploy:rinkeby": "hardhat --network rinkeby deploy",
+    "deploy:ropsten": "hardhat --network ropsten deploy",
     "deploy:hardhat": "hardhat --network hardhat deploy",
     "sourcify:mainnet": "hardhat --network mainnet sourcify",
     "sourcify:rinkeby": "hardhat --network rinkeby sourcify",
