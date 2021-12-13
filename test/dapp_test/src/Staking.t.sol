@@ -16,7 +16,6 @@ import "../../../contracts/StakingDistributor.sol";
 import "../../../contracts/OlympusAuthority.sol";
 
 import "./util/Hevm.sol";
-import "./util/MockContract.sol";
 
 contract StakingTest is DSTest {
     using FixedPoint for *;
@@ -31,8 +30,6 @@ contract StakingTest is DSTest {
     OlympusERC20Token internal ohm;
     sOlympus internal sohm;
     gOHM internal gohm;
-
-    MockContract internal abcToken;
 
     /// @dev Hevm setup
     Hevm internal constant hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
@@ -53,8 +50,6 @@ contract StakingTest is DSTest {
         sohm = new sOlympus();
         sohm.setIndex(10);
         sohm.setgOHM(address(gohm));
-
-        abcToken = new MockContract();
 
         treasury = new OlympusTreasury(address(ohm), 1, address(authority));
         // If you want to test the Treasury permissions
