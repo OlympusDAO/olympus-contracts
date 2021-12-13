@@ -98,6 +98,15 @@ const config: HardhatUserConfig = {
             },
         },
     },
+    namedAccounts: {
+        deployer: {
+            default: 0,
+        },
+        daoMultisig: {
+            // mainnet
+            1: "0x245cc372C84B3645Bf0Ffe6538620B04a217988B",
+        },
+    },
     typechain: {
         outDir: "types",
         target: "ethers-v5",
