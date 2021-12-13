@@ -34,9 +34,6 @@ contract StakingTest is DSTest {
 
     MockContract internal abcToken;
 
-    event logString(string);
-    event logUint(uint256);
-
     /// @dev Hevm setup
     Hevm internal constant hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     uint256 internal constant amount = 1000;
@@ -62,7 +59,15 @@ contract StakingTest is DSTest {
         treasury = new OlympusTreasury(address(ohm), 1, address(authority));
         // If you want to test the Treasury permissions
         // authority.pushVault(address(treasury), true);
-        staking = new OlympusStaking(address(ohm), address(sohm), address(gohm), EPOCH_LENGTH, START_TIME, NEXT_REBASE_TIME, address(authority));
+        staking = new OlympusStaking(
+            address(ohm),
+            address(sohm),
+            address(gohm),
+            EPOCH_LENGTH,
+            START_TIME,
+            NEXT_REBASE_TIME,
+            address(authority)
+        );
 
         distributor = new Distributor(address(treasury), address(ohm), address(staking), address(authority));
         distributor.setBounty(BOUNTY);
