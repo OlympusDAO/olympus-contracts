@@ -10,7 +10,6 @@ import "./interfaces/IDistributor.sol";
 
 import "./types/OlympusAccessControlled.sol";
 
-
 contract Distributor is IDistributor, OlympusAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
@@ -47,7 +46,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
     constructor(
         address _treasury,
         address _ohm,
-        address _staking, 
+        address _staking,
         address _authority
     ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_treasury != address(0), "Zero address: Treasury");
@@ -78,6 +77,16 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         }
     }
 
+    function retrieveBounty() external override returns (uint256) {
+        require(msg.sender == staking, "Only staking");
+        // If the distributor bounty is > 0, mint it for the staking contract.
+        if (bounty > 0) {
+            treasury.mint(address(staking), bounty);
+        }
+
+        return bounty;
+    }
+
     /* ====== INTERNAL FUNCTIONS ====== */
 
     /**
@@ -96,12 +105,13 @@ contract Distributor is IDistributor, OlympusAccessControlled {
                 }
             } else {
                 // if rate should decrease
-                if (info[_index].rate > adjustment.rate) { // protect from underflow
+                if (info[_index].rate > adjustment.rate) {
+                    // protect from underflow
                     info[_index].rate = info[_index].rate.sub(adjustment.rate); // lower rate
                 } else {
                     info[_index].rate = 0;
                 }
-                
+
                 if (info[_index].rate <= adjustment.target) {
                     // if target met
                     adjustments[_index].rate = 0; // turn off adjustment
@@ -164,7 +174,10 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         @param _index uint
      */
     function removeRecipient(uint256 _index) external override {
-        require(msg.sender == authority.governor() || msg.sender == authority.guardian(), "Caller is not governor or guardian");
+        require(
+            msg.sender == authority.governor() || msg.sender == authority.guardian(),
+            "Caller is not governor or guardian"
+        );
         require(info[_index].recipient != address(0), "Recipient does not exist");
         info[_index].recipient = address(0);
         info[_index].rate = 0;
@@ -183,7 +196,10 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         uint256 _rate,
         uint256 _target
     ) external override {
-        require(msg.sender == authority.governor() || msg.sender == authority.guardian(), "Caller is not governor or guardian");
+        require(
+            msg.sender == authority.governor() || msg.sender == authority.guardian(),
+            "Caller is not governor or guardian"
+        );
         require(info[_index].recipient != address(0), "Recipient does not exist");
 
         if (msg.sender == authority.guardian()) {
