@@ -14,6 +14,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     });
 };
 
-func.tags = [CONTRACTS.authority, "olympusAuthority"];
+func.tags = [CONTRACTS.authority];
 
 export default func;

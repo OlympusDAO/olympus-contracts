@@ -69,6 +69,8 @@ const config: HardhatUserConfig = {
         cache: "./cache",
         sources: "./contracts",
         tests: "./test",
+        deploy: "./scripts/deploy",
+        deployments: "./deployments",
     },
     solidity: {
         compilers: [
