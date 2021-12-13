@@ -17,12 +17,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     const ohmDeployment = await deployments.get(CONTRACTS.ohm);
 
-    // const ohm = await OlympusERC20Token__factory.connect(ohmDeployment.address, signer);
     const authorityDeployment = await deployments.get(CONTRACTS.authority);
-    const authorityContract = await OlympusAuthority__factory.connect(
-        authorityDeployment.address,
-        signer
-    );
 
     // TODO: TIMELOCK SET TO 0 FOR NOW, CHANGE FOR ACTUAL DEPLOYMENT
     const treasuryDeployment = await deploy(CONTRACTS.treasury, {
@@ -31,11 +26,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         log: true,
     });
 
-    const treasury = await OlympusTreasury__factory.connect(treasuryDeployment.address, signer);
-
-    // Set treasury for OHM token
-    await authorityContract.pushVault(treasury.address, true);
-    // await ohm.pushVault(treasury.address);
+    await OlympusTreasury__factory.connect(treasuryDeployment.address, signer);
 
     // TODO: These two functions are causing a revert
     // Deposit 9,000,000 DAI to treasury, 600,000 OHM gets minted to deployer and 8,400,000 are in treasury as excesss reserves
@@ -45,7 +36,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     // await treasuryContract.deposit("5000000000000000000000000", frax.address, "5000000000000000");
 };
 
-func.tags = [CONTRACTS.treasury, "staking"];
+func.tags = [CONTRACTS.treasury, "treasury"];
 func.dependencies = [CONTRACTS.ohm];
 
 export default func;

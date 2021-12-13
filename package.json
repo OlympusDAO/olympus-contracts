@@ -61,7 +61,6 @@
     "sourcify:rinkeby": "hardhat --network rinkeby sourcify",
     "etherscan:mainnet": "hardhat --network mainnet etherscan-verify",
     "etherscan:rinkeby": "hardhat --network mainnet etherscan-verify"
-
   },
   "repository": {
     "type": "git",

@@ -26,6 +26,7 @@ export const FIRST_EPOCH_NUMBER = 0;
 export const INITIAL_REWARD_RATE = 0;
 export const INITIAL_INDEX = 0;
 export const INITIAL_MINT = 69;
+export const BOUNTY_AMOUNT = (1 * 10) ^ 9;
 
 const func: DeployFunction = async () => {};
 
