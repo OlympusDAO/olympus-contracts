@@ -1136,7 +1136,7 @@ contract sOlympus is ERC20Permit, Ownable {
     }
 
     function transfer( address to, uint256 value ) public override returns (bool) {
-        uint256 gonValue = value.mul( _gonsPerFragment );
+        uint256 gonValue = gonsForBalance(value);
         _gonBalances[ msg.sender ] = _gonBalances[ msg.sender ].sub( gonValue );
         _gonBalances[ to ] = _gonBalances[ to ].add( gonValue );
         emit Transfer( msg.sender, to, value );
