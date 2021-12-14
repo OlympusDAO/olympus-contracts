@@ -17,7 +17,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     });
 };
 
-func.tags = [CONTRACTS.gOhm, "gohm", "tokens"];
+func.tags = [CONTRACTS.gOhm, "migration", "tokens"];
 func.dependencies = [CONTRACTS.migrator];
 
 export default func;
