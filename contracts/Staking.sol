@@ -227,8 +227,8 @@ contract OlympusStaking is OlympusAccessControlled {
             epoch.number++;
 
             if (address(distributor) != address(0)) {
-                distributor.distribute();
-                bounty = distributor.retrieveBounty(); // Will mint ohm for this contract if there exists a bounty
+                // Tell distributor to rebase and pay bounty as compensation to caller
+                bounty = distributor.distribute(true);
             }
             uint256 balance = OHM.balanceOf(address(this));
             uint256 staked = sOHM.circulatingSupply();

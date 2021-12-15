@@ -94,21 +94,21 @@ describe("Distributor", () => {
 
         describe("distribute", () => {
             it("will do nothing if there are no recipients", async () => {
-                await distributor.connect(staking).distribute();
+                await distributor.connect(staking).distribute(true);
 
                 expect(treasuryFake.mint).to.have.callCount(0);
             });
 
             it("can only be called by the staking contract", async () => {
-                await expect(distributor.connect(governor).distribute()).to.be.revertedWith(
+                await expect(distributor.connect(governor).distribute(true)).to.be.revertedWith(
                     "Only staking"
                 );
 
-                await expect(distributor.connect(guardian).distribute()).to.be.revertedWith(
+                await expect(distributor.connect(guardian).distribute(true)).to.be.revertedWith(
                     "Only staking"
                 );
 
-                await expect(distributor.connect(owner).distribute()).to.be.revertedWith(
+                await expect(distributor.connect(owner).distribute(true)).to.be.revertedWith(
                     "Only staking"
                 );
             });
@@ -118,7 +118,7 @@ describe("Distributor", () => {
                 await distributor.connect(governor).addRecipient(other.address, 1521);
 
                 ohmFake.totalSupply.returns(10000000);
-                await distributor.connect(staking).distribute();
+                await distributor.connect(staking).distribute(true);
 
                 expect(treasuryFake.mint).to.have.been.calledWith(staking.address, 29750);
                 expect(treasuryFake.mint).to.have.been.calledWith(other.address, 15210);
@@ -133,7 +133,7 @@ describe("Distributor", () => {
                     const target = 2000;
                     await distributor.connect(governor).setAdjustment(index, add, rate, target);
 
-                    await distributor.connect(staking).distribute();
+                    await distributor.connect(staking).distribute(true);
 
                     const info = await distributor.info(0);
                     expect(info.rate).to.equal(2970);
@@ -147,7 +147,7 @@ describe("Distributor", () => {
                     const target = 3000;
                     await distributor.connect(governor).setAdjustment(index, add, rate, target);
 
-                    await distributor.connect(staking).distribute();
+                    await distributor.connect(staking).distribute(true);
 
                     const info = await distributor.info(0);
                     expect(info.rate).to.equal(2980);
@@ -161,7 +161,7 @@ describe("Distributor", () => {
                     const target = 3000;
                     await distributor.connect(governor).setAdjustment(index, add, rate, target);
 
-                    await distributor.connect(staking).distribute();
+                    await distributor.connect(staking).distribute(true);
 
                     const info = await distributor.info(0);
                     expect(info.rate).to.equal(2975);
@@ -175,7 +175,7 @@ describe("Distributor", () => {
                     const target = 2970;
                     await distributor.connect(governor).setAdjustment(index, add, rate, target);
 
-                    await distributor.connect(staking).distribute();
+                    await distributor.connect(staking).distribute(true);
 
                     const adjustment = await distributor.adjustments(0);
                     expect(adjustment.rate).to.equal(0);
@@ -189,7 +189,7 @@ describe("Distributor", () => {
                     const target = 2980;
                     await distributor.connect(governor).setAdjustment(index, add, rate, target);
 
-                    await distributor.connect(staking).distribute();
+                    await distributor.connect(staking).distribute(true);
 
                     const adjustment = await distributor.adjustments(0);
                     expect(adjustment.rate).to.equal(0);

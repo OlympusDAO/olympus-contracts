@@ -60,27 +60,23 @@ contract Distributor is IDistributor, OlympusAccessControlled {
     /* ====== PUBLIC FUNCTIONS ====== */
 
     /**
-        @notice send epoch reward to staking contract
+        @notice send epoch reward to staking contract. Return bounty paid out if applicable.
      */
-    function distribute() external override {
+    function distribute(bool _payBounty) external override returns (uint256) {
         require(msg.sender == staking, "Only staking");
+
+        // Pay bounty if requested
+        uint256 payout = _payBounty ? bounty : 0;
+
         // distribute rewards to each recipient
         for (uint256 i = 0; i < info.length; i++) {
             if (info[i].rate > 0) {
-                treasury.mint(info[i].recipient, nextRewardAt(info[i].rate)); // mint and send tokens
+                treasury.mint(info[i].recipient, nextRewardAt(info[i].rate).add(payout)); // mint and send tokens
                 adjust(i); // check for adjustment
             }
         }
-    }
 
-    function retrieveBounty() external override returns (uint256) {
-        require(msg.sender == staking, "Only staking");
-        // If the distributor bounty is > 0, mint it for the staking contract.
-        if (bounty > 0) {
-            treasury.mint(address(staking), bounty);
-        }
-
-        return bounty;
+        return payout;
     }
 
     /* ====== INTERNAL FUNCTIONS ====== */
