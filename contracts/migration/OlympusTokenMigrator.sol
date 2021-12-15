@@ -357,7 +357,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
 
         if (tokenValue > excessReserves) {
             tokenValue = excessReserves;
-            balance = excessReserves * 10**9;
+            balance = excessReserves * 10**18;
         }
 
         oldTreasury.manage(token, balance);

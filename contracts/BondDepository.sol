@@ -48,7 +48,7 @@ contract OlympusBondDepository is OlympusAccessControlled {
     uint256 conclusion; // block number bond no longer offered
     uint256 minimumPrice; // vs principal value
     uint256 maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
-    uint256 maxDebt; // 9 decimal debt ratio, max % total supply created as debt
+    uint256 maxDebt; // 18 decimal debt ratio, max % total supply created as debt
   }
 
   /* ======== STATE VARIABLES ======== */
