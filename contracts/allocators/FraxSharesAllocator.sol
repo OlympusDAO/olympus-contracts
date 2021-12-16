@@ -54,6 +54,11 @@ interface IveFXSYieldDistributorV4 {
     /* BELOW USED ONLY IN TESTS */
 
     /**
+     * @notice forces an update of a user's rewards
+     */
+    function checkpointOtherUser(address _address) external;
+
+    /**
      * @notice requests FXS rewards to pulled from msg.sender
      */
     function notifyRewardAmount(uint256 amount) external;
