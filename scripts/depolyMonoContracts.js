@@ -11,7 +11,7 @@ async function main() {
     const gOHM = "";
     const authority = "";
 
-    const vcashAddress = "0xB2180448f8945C8Cc8AE9809E67D6bd27d8B2f2C";
+    const vcashAddress = "0x532d7ebe4556216490c9d03460214b58e4933454";
 
     const VCASH = await ethers.getContractFactory('VCASH');
     //const vcash = await VCASH.deploy(authority);
