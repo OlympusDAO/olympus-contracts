@@ -9,4 +9,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   // TODO: setVault (Treasury)
 };
-module.exports.tags = ['Brick'];
+module.exports.tags = ['Brick', 'AllEnvironments'];
