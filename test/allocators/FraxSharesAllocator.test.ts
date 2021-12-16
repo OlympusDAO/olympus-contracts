@@ -1,6 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import chai, { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { FakeContract, smock } from '@defi-wonderland/smock'
 import {
   IERC20,
@@ -8,7 +8,6 @@ import {
   IveFXSYieldDistributorV4,
   IveFXS,
   FraxSharesAllocator,
-  FraxSharesAllocator__factory,
 } from '../../types';
 const { fork_network, fork_reset } = require("../utils/network_fork");
 const impersonateAccount = require("../utils/impersonate_account");
@@ -34,7 +33,6 @@ describe("FraxSharesAllocator", () => {
         let veFXSYieldDistributorFake: FakeContract<IveFXSYieldDistributorV4>;
         let veFXSFake: FakeContract<IveFXS>;
         let fxsFake: FakeContract<IERC20>;
-        let allocator: FraxSharesAllocator;
 
         beforeEach(async () => {
             [owner, other, alice, bob] = await ethers.getSigners();
@@ -44,61 +42,69 @@ describe("FraxSharesAllocator", () => {
             fxsFake = await smock.fake<IERC20>("IERC20");
         });
 
-        describe("constructor", () => {
-            it("can construct", async () => {
-                allocator = await (new FraxSharesAllocator__factory(owner)).deploy(
+        describe("initilize", () => {
+            it("can initialize", async () => {
+                let contract = await ethers.getContractFactory("FraxSharesAllocator");
+                let allocator = await upgrades.deployProxy(contract, [
                     treasuryFake.address,
                     fxsFake.address,
                     veFXSFake.address,
                     veFXSYieldDistributorFake.address,
-                );
+                ]) as FraxSharesAllocator;
             });
 
             it("reverts on zero treasury address", async () => {
-                await expect((new FraxSharesAllocator__factory(owner)).deploy(
+                let contract = await ethers.getContractFactory("FraxSharesAllocator");
+                await expect(upgrades.deployProxy(contract, [
                     ZERO_ADDRESS,
                     fxsFake.address,
                     veFXSFake.address,
                     veFXSYieldDistributorFake.address,
-                )).to.be.revertedWith("zero treasury address");
+                ])).to.be.revertedWith("zero treasury address");
             });
 
             it("reverts on zero FXS address", async () => {
-                await expect((new FraxSharesAllocator__factory(owner)).deploy(
+                let contract = await ethers.getContractFactory("FraxSharesAllocator");
+                await expect(upgrades.deployProxy(contract, [
                     treasuryFake.address,
                     ZERO_ADDRESS,
                     veFXSFake.address,
                     veFXSYieldDistributorFake.address,
-                )).to.be.revertedWith("zero FXS address");
+                ])).to.be.revertedWith("zero FXS address");
             });
             
             it("reverts on zero veFXS address", async () => {
-                await expect((new FraxSharesAllocator__factory(owner)).deploy(
+                let contract = await ethers.getContractFactory("FraxSharesAllocator");
+                await expect(upgrades.deployProxy(contract, [
                     treasuryFake.address,
                     fxsFake.address,
                     ZERO_ADDRESS,
                     veFXSYieldDistributorFake.address,
-                )).to.be.revertedWith("zero veFXS address");
+                ])).to.be.revertedWith("zero veFXS address");
             });
 
             it("reverts on zero veFXSYieldDistributorV4 address", async () => {
-                await expect((new FraxSharesAllocator__factory(owner)).deploy(
+                let contract = await ethers.getContractFactory("FraxSharesAllocator");
+                await expect(upgrades.deployProxy(contract, [
                     treasuryFake.address,
                     fxsFake.address,
                     veFXSFake.address,
                     ZERO_ADDRESS,
-                )).to.be.revertedWith("zero veFXSYieldDistributorV4 address");
+                ])).to.be.revertedWith("zero veFXSYieldDistributorV4 address");
             });
         });
 
-        describe("post-construction", () => {
+        describe("post-initialization", () => {
+            let allocator: FraxSharesAllocator;
+
             beforeEach(async () => {
-                allocator = await (new FraxSharesAllocator__factory(owner)).deploy(
+                let contract = await ethers.getContractFactory("FraxSharesAllocator");
+                allocator = await upgrades.deployProxy(contract, [
                     treasuryFake.address,
                     fxsFake.address,
                     veFXSFake.address,
                     veFXSYieldDistributorFake.address,
-                );
+                ]) as FraxSharesAllocator;
             });
 
             describe("deposit", () => {
@@ -230,12 +236,12 @@ describe("FraxSharesAllocator", () => {
 
             [owner] = await ethers.getSigners();
             let allocatorContract = await ethers.getContractFactory("FraxSharesAllocator");
-            allocator = await allocatorContract.deploy(
-                TREASURY_ADDRESS, // treasury address
-                FXS_ADDRESS, // FXS address
-                VEFXS_ADDRESS, // veFXS address
-                VEFXS_YIELD_DIST_ADDRESS, // veFXSYieldDistributorV4 address
-            ) as FraxSharesAllocator;
+            allocator = await upgrades.deployProxy(allocatorContract, [
+                TREASURY_ADDRESS, // old treasury address
+                FXS_ADDRESS,
+                VEFXS_ADDRESS,
+                VEFXS_YIELD_DIST_ADDRESS,
+            ]) as FraxSharesAllocator;
 
             // new treasury
             // const TreasuryContract = await ethers.getContractFactory("OlympusTreasury");
@@ -303,8 +309,9 @@ describe("FraxSharesAllocator", () => {
         it("has created a veFXS balance", async () => {
             const veFXSBalance = await (vefxs as any)["balanceOf(address)"](allocator.address);
             // this is a little shy of 4x and I'm not quite sure why
-            const EXPECTED_VOTES = "27191585488917926737150";
-            expect(veFXSBalance).to.equal(EXPECTED_VOTES);
+            // it also isn't quite stable because of how veFXS rounds the lock end
+            // to the nearest week
+            expect(veFXSBalance.toString()).to.match(/^27191585\d{15}/);
         });
 
         it("can perform an additional deposit without extending lock", async () => {
@@ -356,7 +363,7 @@ describe("FraxSharesAllocator", () => {
             expect(deployedAfter).to.equal(deployedBefore);
         });
 
-        it("stage some rewards to be bad", async () => {
+        it("stage some rewards to be harvested", async () => {
             await vefxsYieldDistV4.connect(owner).checkpointOtherUser(allocator.address);
             const REWARD_AMOUNT = "100000000000000000000"
             vefxsYieldDistV4.connect(smartWalletOwner).toggleRewardNotifier(fxsHolder.address);
@@ -370,7 +377,7 @@ describe("FraxSharesAllocator", () => {
 
             // view the pending rewards, which varies a bit because of how we advance time
             let pendingRewards = await allocator.connect(owner).getPendingRewards();
-            expect(pendingRewards).to.match(/^86958337\d{10}/);
+            expect(pendingRewards.toString()).to.match(/^8695833\d{11}/);
         });
 
         it("can harvest and re-lock FXS", async () => {

@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-import "../libraries/Address.sol";
-import "../libraries/SafeMath.sol";
-import "../libraries/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
-import "../interfaces/IERC20.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IAllocator.sol";
-
-import "../types/Ownable.sol";
-import "hardhat/console.sol";
+import "../interfaces/IERC20.sol";
+import "../libraries/SafeERC20.sol";
 
 interface IveFXS is IERC20 {
     /**
@@ -48,28 +47,35 @@ interface IveFXSYieldDistributorV4 {
     function getYield() external returns (uint256);
 
     /**
-     * @notice returns pending FXS yields for address
-     * @param _address staker address
-     * @return the number of FXS
+     * @notice returns the pending rewards for an address
      */
-    function yields(address _address) external view returns (uint256);
-
     function earned(address _address) external view returns (uint256);
 
-    function checkpointOtherUser(address _address) external;
+    /* BELOW USED ONLY IN TESTS */
 
+    /**
+     * @notice requests FXS rewards to pulled from msg.sender
+     */
     function notifyRewardAmount(uint256 amount) external;
 
+    /**
+     * @notice allows an address to call notifyRewardAmount
+     */
     function toggleRewardNotifier(address notifier_addr) external;
 
+    /**
+     * @notice returns the number of seconds until a reward is fully distributed
+     */
     function yieldDuration() external returns(uint256);
-
-    function sync() external;
 }
 
-contract  FraxSharesAllocator is Ownable {
+contract  FraxSharesAllocator is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
+    using SafeMathUpgradeable for uint256;
+
+    /* ======== STATE VARIABLES ======== */
+    /* !!!! UPGRADABLE CONTRACT !!!! */
+    /* NEW STATE VARIABLES MUST BE APPENDED TO END */
 
     uint256 constant private MAX_TIME = 4 * 365 * 86400 + 1;  // 4 years and 1 second
     ITreasury public treasury;
@@ -79,14 +85,18 @@ contract  FraxSharesAllocator is Ownable {
 
     // uint256 public totalValueDeployed; // FXS isn't a reserve token, so will always be 0
     uint256 public totalAmountDeployed;
-    uint256 public lockEnd;
+    uint256 public lockEnd; // tracks the expiry of veFXS to know if can be extended
 
-    constructor(
+    /* ======== INITIALIZER ======== */
+    function initialize(
         address _treasury,
         address _fxs,
         address _veFXS,
         address _veFXSYieldDistributorV4
-    ) {
+    ) public initializer {
+        __Context_init_unchained();
+        __Ownable_init_unchained();
+
         require(_treasury != address(0), "zero treasury address");
         treasury = ITreasury(_treasury);
 
@@ -102,6 +112,8 @@ contract  FraxSharesAllocator is Ownable {
         totalAmountDeployed = 0;
     }
 
+    /* ======== POLICY FUNCTIONS ======== */
+
     /**
      * @notice harvest FXS rewards, will relock all veFXS for the maximum amount of time (4 years)
      */
@@ -114,6 +126,7 @@ contract  FraxSharesAllocator is Ownable {
             fxs.safeApprove(address(veFXS), amount);
             veFXS.increase_amount(amount);
             if (_canExtendLock()) {
+                lockEnd = block.timestamp + MAX_TIME;
                 veFXS.increase_unlock_time(block.timestamp + MAX_TIME);
             }
         }
@@ -136,18 +149,19 @@ contract  FraxSharesAllocator is Ownable {
         } else {
             veFXS.increase_amount(_amount);
             if (_canExtendLock()) {
+                lockEnd = block.timestamp + MAX_TIME;
                 veFXS.increase_unlock_time(block.timestamp + MAX_TIME);
             }
         }
-    }
-
-    function _canExtendLock() internal view returns (bool) {
-        return lockEnd < block.timestamp + MAX_TIME - 7 * 86400;
     }
 
     /* ======== VIEW FUNCTIONS ======== */
 
     function getPendingRewards() public view returns (uint256) {
         return veFXSYieldDistributorV4.earned(address(this));
+    }
+
+    function _canExtendLock() internal view returns (bool) {
+        return lockEnd < block.timestamp + MAX_TIME - 7 * 86400;
     }
 }
