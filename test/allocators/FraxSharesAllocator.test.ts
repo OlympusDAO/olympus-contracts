@@ -311,7 +311,7 @@ describe("FraxSharesAllocator", () => {
             // this is a little shy of 4x and I'm not quite sure why
             // it also isn't quite stable because of how veFXS rounds the lock end
             // to the nearest week
-            expect(veFXSBalance.toString()).to.match(/^27191585\d{15}/);
+            expect(veFXSBalance.toString()).to.match(/^2719158\d{16}/);
         });
 
         it("can perform an additional deposit without extending lock", async () => {
@@ -377,7 +377,7 @@ describe("FraxSharesAllocator", () => {
 
             // view the pending rewards, which varies a bit because of how we advance time
             let pendingRewards = await allocator.connect(owner).getPendingRewards();
-            expect(pendingRewards.toString()).to.match(/^8695833\d{11}/);
+            expect(pendingRewards.toString()).to.match(/^869583\d{12}/);
         });
 
         it("can harvest and re-lock FXS", async () => {
