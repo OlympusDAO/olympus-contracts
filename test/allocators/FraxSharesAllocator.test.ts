@@ -1,8 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import chai, { expect } from "chai";
 import { ethers } from "hardhat";
-const { BigNumber } = ethers;
-import { deployMockContract } from "ethereum-waffle";
 import { FakeContract, smock } from '@defi-wonderland/smock'
 import {
   IERC20,
@@ -13,11 +11,18 @@ import {
   FraxSharesAllocator__factory,
 } from '../../types';
 const { fork_network, fork_reset } = require("../utils/network_fork");
+const impersonateAccount = require("../utils/impersonate_account");
+const { advanceBlock, duration, increase } = require("../utils/advancement");
+const fxsAbi = require("../../abis/fxs.json");
+const vefxsAbi = require("../../abis/vefxs.json");
+const oldTreasuryAbi = require("../../abis/old_treasury_abi.json");
+const vefxsYieldDistV4Abi = require("../../abis/vefxs_yield_distributor_v4.json");
+const smartWalletCheckerAbi = require("../../abis/vefxs_smart_wallet_checker.json");
 
 chai.use(smock.matchers);
 
 const ZERO_ADDRESS = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
-const MAX_TIME = 4 * 365 * 86400;
+const MAX_TIME = 4 * 365 * 86400 + 1;
 
 describe("FraxSharesAllocator", () => {
     describe("unit tests", () => {
@@ -104,6 +109,9 @@ describe("FraxSharesAllocator", () => {
 
                 it("requests funds from the treasury and tracks the deployed amount", async () => {
                     const AMOUNT = 100
+
+                    fxsFake.approve.whenCalledWith(veFXSFake.address, AMOUNT).returns(true);
+
                     await allocator.deposit(AMOUNT);
 
                     expect(treasuryFake.manage).to.be.calledWith(fxsFake.address, AMOUNT);
@@ -112,18 +120,33 @@ describe("FraxSharesAllocator", () => {
 
                 it("creates a new lock on first call", async () => {
                     const AMOUNT = 100
-                    await allocator.deposit(AMOUNT);
+                    fxsFake.approve.whenCalledWith(veFXSFake.address, AMOUNT).returns(true);
+                    let receipt = await allocator.deposit(AMOUNT);
+                    let block = await ethers.provider.getBlock(receipt.blockNumber as number);
 
-                    expect(veFXSFake.create_lock).to.be.calledWith(AMOUNT, MAX_TIME);
+                    expect(veFXSFake.create_lock).to.be.calledWith(AMOUNT, block.timestamp + MAX_TIME);
                 });
 
-                it("increases amounts and unlock time on subsequent calls", async () => {
+                it("doesn't increase time when called within 1 week", async () => {
                     const AMOUNT = 100
+                    fxsFake.approve.whenCalledWith(veFXSFake.address, AMOUNT).returns(true);
                     await allocator.deposit(AMOUNT);
                     await allocator.deposit(AMOUNT);
 
                     expect(veFXSFake.increase_amount).to.be.calledWith(AMOUNT);
-                    expect(veFXSFake.increase_unlock_time).to.be.calledWith(MAX_TIME);
+                    expect(veFXSFake.increase_unlock_time).to.not.be.called;
+                });
+
+                it("increases amounts and unlock time on subsequent calls", async () => {
+                    const AMOUNT = 100
+                    fxsFake.approve.whenCalledWith(veFXSFake.address, AMOUNT).returns(true);
+                    await allocator.deposit(AMOUNT);
+                    increase(duration.days(8));
+                    let receipt = await allocator.deposit(AMOUNT);
+                    let block = await ethers.provider.getBlock(receipt.blockNumber as number);
+
+                    expect(veFXSFake.increase_amount).to.be.calledWith(AMOUNT);
+                    expect(veFXSFake.increase_unlock_time).to.be.calledWith(block.timestamp + MAX_TIME);
                 });
             });
 
@@ -131,24 +154,30 @@ describe("FraxSharesAllocator", () => {
                 it("increases total amount deployed by the yield", async () => {
                     const YIELD = 1000;
                     veFXSYieldDistributorFake.getYield.returns(YIELD);
+                    fxsFake.approve.whenCalledWith(veFXSFake.address, YIELD).returns(true);
+
                     await allocator.harvest();
+
                     expect(await allocator.totalAmountDeployed()).to.equal(YIELD);
                 });
 
                 it("increases veFXS by amount and extends lock", async () => {
                     const YIELD = 1000;
                     veFXSYieldDistributorFake.getYield.returns(YIELD);
-                    await allocator.harvest();
+                    fxsFake.approve.whenCalledWith(veFXSFake.address, YIELD).returns(true);
+
+                    let receipt = await allocator.harvest();
+                    let block = await ethers.provider.getBlock(receipt.blockNumber as number);
 
                     expect(veFXSFake.increase_amount).to.be.calledWith(YIELD);
-                    expect(veFXSFake.increase_unlock_time).to.be.calledWith(MAX_TIME);
+                    expect(veFXSFake.increase_unlock_time).to.be.calledWith(block.timestamp + MAX_TIME);
                 });
             });
 
             describe("getPendingRewards", () => {
                 it("delegates to veFXSYieldDistributorV4", async () => {
                     const YIELD = 1000;
-                    veFXSYieldDistributorFake.yields.whenCalledWith(allocator.address).returns(YIELD);
+                    veFXSYieldDistributorFake.earned.whenCalledWith(allocator.address).returns(YIELD);
 
                     expect(await allocator.getPendingRewards()).to.equal(YIELD);
                 })
@@ -156,33 +185,202 @@ describe("FraxSharesAllocator", () => {
         });
     });
 
+    interface IOldTreasury {
+        enable: any;
+        toggle: any;
+        connect: any;
+        address: string;
+    }
+
+    interface ISmartWalletChecker {
+        approveWallet: any
+        connect: any;
+        address: string;
+    }
+
+    async function advance(count: number) {
+        for (let i = 0; i < count; i++) {
+            await advanceBlock();
+        }
+    }
+
     describe("integration tests", () => {
         let owner: SignerWithAddress;
-        let other: SignerWithAddress;
-        let alice: SignerWithAddress;
-        let bob: SignerWithAddress;
+        let manager: SignerWithAddress;
+        let smartWalletOwner: SignerWithAddress;
+        let fxsHolder: SignerWithAddress;
         let allocator: FraxSharesAllocator;
+        let oldTreasury: IOldTreasury;
+        let fxs: IERC20;
+        let vefxs: IveFXS;
+        let smartWalletChecker: ISmartWalletChecker
+        let vefxsYieldDistV4: IveFXSYieldDistributorV4;
 
         before(async () => {
-            await fork_network(13487643);
+            await fork_network(13810795);
 
-            [owner, other, alice, bob] = await ethers.getSigners();
+            const TREASURY_ADDRESS = "0x31f8cc382c9898b273eff4e0b7626a6987c846e8"; 
+            const FXS_ADDRESS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"; 
+            const VEFXS_ADDRESS = "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0"; 
+            const VEFXS_YIELD_DIST_ADDRESS = "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872"; 
+            const TREASURY_MANAGER = "0x245cc372c84b3645bf0ffe6538620b04a217988b";
+            const FXS_SMART_WALLET_CHECKER = "0x53c13ba8834a1567474b19822aad85c6f90d9f9f";
+            const FXS_SMART_WALLET_CHECKER_OWNER = "0xb1748c79709f4ba2dd82834b8c82d4a505003f27";
+            const FXS_HOLDER = "0x9aa7db8e488ee3ffcc9cdfd4f2eaecc8abedcb48";
+
+            [owner] = await ethers.getSigners();
             let allocatorContract = await ethers.getContractFactory("FraxSharesAllocator");
             allocator = await allocatorContract.deploy(
-                "0x31f8cc382c9898b273eff4e0b7626a6987c846e8", // treasury address
-                "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0", // FXS address
-                "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0", // veFXS address
-                // TODO: find the real address for this
-                "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0", // veFXSYieldDistributorV4 address
+                TREASURY_ADDRESS, // treasury address
+                FXS_ADDRESS, // FXS address
+                VEFXS_ADDRESS, // veFXS address
+                VEFXS_YIELD_DIST_ADDRESS, // veFXSYieldDistributorV4 address
             ) as FraxSharesAllocator;
-        });
 
+            // new treasury
+            // const TreasuryContract = await ethers.getContractFactory("OlympusTreasury");
+            // treasury = await TreasuryContract.attach(TREASURY_ADDRESS) as ITreasuryAdmin;
+
+            oldTreasury = new ethers.Contract(TREASURY_ADDRESS, oldTreasuryAbi, ethers.provider) as unknown as IOldTreasury;
+            fxs = new ethers.Contract(FXS_ADDRESS, fxsAbi, ethers.provider) as IERC20;
+            vefxs = new ethers.Contract(VEFXS_ADDRESS, vefxsAbi, ethers.provider) as IveFXS;
+            vefxsYieldDistV4 = new ethers.Contract(VEFXS_YIELD_DIST_ADDRESS, vefxsYieldDistV4Abi, ethers.provider) as IveFXSYieldDistributorV4;
+
+            smartWalletChecker = new ethers.Contract(FXS_SMART_WALLET_CHECKER, smartWalletCheckerAbi, ethers.provider) as unknown as ISmartWalletChecker;
+
+            await impersonateAccount(TREASURY_MANAGER);
+            manager = await ethers.getSigner(TREASURY_MANAGER);
+
+            await impersonateAccount(FXS_SMART_WALLET_CHECKER_OWNER);
+            smartWalletOwner = await ethers.getSigner(FXS_SMART_WALLET_CHECKER_OWNER);
+
+            await impersonateAccount(FXS_HOLDER);
+            fxsHolder = await ethers.getSigner(FXS_HOLDER);
+        });
+        
         after(async () => {
             await fork_reset();
         });
 
-        it("works", async () => {
-            console.log("Huzzah")
+        // these tests are not independent
+        const TREASURY_BALANCE = ethers.BigNumber.from("166811323944565489588901");
+        const FIRST_DEPOSIT = ethers.BigNumber.from("6811323944565489588901");
+        const SECOND_DEPOSIT = ethers.BigNumber.from("60000000000000000000000");
+        const THIRD_DEPOSIT = ethers.BigNumber.from("60000000000000000000000");
+
+
+        it("cannot deposit without RESERVE_MANAGER role", async () => {
+            await expect(allocator.connect(owner).deposit(1))
+                .to.be.revertedWith("Not approved");
+        })
+
+        it("cannot deposit without veFXS whitelist", async () => {
+            // enable RESERVEMANAGER role
+            await oldTreasury.connect(manager).queue(3, allocator.address);
+            await advance(13000);
+            await oldTreasury.connect(manager).toggle(3, allocator.address, allocator.address);
+
+            await expect(allocator.connect(owner).deposit(1))
+                .to.be.revertedWith("Smart contract depositors not allowed");
         });
-    })
+
+        it("can perform initial deposit", async () => {
+            // whitelist allocator as not a "smart contract"
+            await smartWalletChecker.connect(smartWalletOwner).approveWallet(allocator.address);
+
+            const treasuryBefore = await fxs.balanceOf(oldTreasury.address);
+            expect(treasuryBefore).to.equal(TREASURY_BALANCE);
+
+            await allocator.connect(owner).deposit(FIRST_DEPOSIT);
+
+            const treasuryAfter = await fxs.balanceOf(oldTreasury.address);
+            expect(treasuryAfter).to.equal(TREASURY_BALANCE.sub(FIRST_DEPOSIT));
+
+            const deployedAfter = await allocator.totalAmountDeployed();
+            expect(deployedAfter).to.equal(FIRST_DEPOSIT);
+        });
+            
+        it("has created a veFXS balance", async () => {
+            const veFXSBalance = await (vefxs as any)["balanceOf(address)"](allocator.address);
+            // this is a little shy of 4x and I'm not quite sure why
+            const EXPECTED_VOTES = "27191585488917926737150";
+            expect(veFXSBalance).to.equal(EXPECTED_VOTES);
+        });
+
+        it("can perform an additional deposit without extending lock", async () => {
+            const treasuryBefore = await fxs.balanceOf(oldTreasury.address);
+            expect(treasuryBefore).to.equal(TREASURY_BALANCE.sub(FIRST_DEPOSIT));
+
+            const oldLockEnd = await vefxs.locked__end(allocator.address);
+
+            await allocator.connect(owner).deposit(SECOND_DEPOSIT);
+
+            const treasuryAfter = await fxs.balanceOf(oldTreasury.address);
+            expect(treasuryAfter).to.equal(TREASURY_BALANCE.sub(FIRST_DEPOSIT).sub(SECOND_DEPOSIT));
+
+            const deployedAfter = await allocator.totalAmountDeployed();
+            expect(deployedAfter).to.equal(FIRST_DEPOSIT.add(SECOND_DEPOSIT));
+
+            expect(oldLockEnd).to.equal(await vefxs.locked__end(allocator.address));
+        });
+
+        it("will extend the lock when possible", async function () {
+            const treasuryBefore = await fxs.balanceOf(oldTreasury.address);
+            expect(treasuryBefore).to.equal(TREASURY_BALANCE.sub(FIRST_DEPOSIT).sub(SECOND_DEPOSIT));
+
+            const oldLockEnd = await vefxs.locked__end(allocator.address);
+
+            await increase(duration.days(8));
+
+            await allocator.connect(owner).deposit(THIRD_DEPOSIT);
+
+            const treasuryAfter = await fxs.balanceOf(oldTreasury.address);
+            expect(treasuryAfter).to.equal(
+                TREASURY_BALANCE.sub(FIRST_DEPOSIT).sub(SECOND_DEPOSIT).sub(THIRD_DEPOSIT));
+
+            const deployedAfter = await allocator.totalAmountDeployed();
+            expect(deployedAfter).to.equal(FIRST_DEPOSIT.add(SECOND_DEPOSIT).add(THIRD_DEPOSIT));
+
+            const NEW_LOCK_END = 1766016000; // the next week
+            expect(await vefxs.locked__end(allocator.address)).to.equal(NEW_LOCK_END);
+        });
+
+        it("can harvest when there are no rewards", async () => {
+            let deployedBefore = await allocator.totalAmountDeployed();
+            let pendingRewards = await allocator.connect(owner).getPendingRewards();
+            expect(pendingRewards).to.equal(0);
+
+            await allocator.connect(owner).harvest();
+
+            let deployedAfter = await allocator.totalAmountDeployed();
+            expect(deployedAfter).to.equal(deployedBefore);
+        });
+
+        it("stage some rewards to be bad", async () => {
+            await vefxsYieldDistV4.connect(owner).checkpointOtherUser(allocator.address);
+            const REWARD_AMOUNT = "100000000000000000000"
+            vefxsYieldDistV4.connect(smartWalletOwner).toggleRewardNotifier(fxsHolder.address);
+            await fxs.connect(fxsHolder).approve(vefxsYieldDistV4.address, REWARD_AMOUNT)
+            // send 100 FXS as rewards for the next period from some random wallet
+            await vefxsYieldDistV4.connect(fxsHolder).notifyRewardAmount(REWARD_AMOUNT);
+
+            // advance time until rewards available
+            let timeUntilYield = await vefxsYieldDistV4.connect(fxsHolder).yieldDuration();
+            await increase((timeUntilYield as any).toNumber());
+
+            // view the pending rewards, which varies a bit because of how we advance time
+            let pendingRewards = await allocator.connect(owner).getPendingRewards();
+            expect(pendingRewards).to.match(/^86958337\d{10}/);
+        });
+
+        it("can harvest and re-lock FXS", async () => {
+            let deployedBefore = await allocator.totalAmountDeployed();
+            let pendingRewards = await allocator.connect(owner).getPendingRewards();
+            await allocator.connect(owner).harvest();
+
+            let deployedAfter = await allocator.totalAmountDeployed();
+            let diff = deployedAfter.sub(deployedBefore).sub(pendingRewards)
+            expect(diff.toNumber()).to.be.lessThan(1410742941);
+        });
+    });
 });

@@ -10,6 +10,7 @@ import "../interfaces/ITreasury.sol";
 import "../interfaces/IAllocator.sol";
 
 import "../types/Ownable.sol";
+import "hardhat/console.sol";
 
 interface IveFXS is IERC20 {
     /**
@@ -30,6 +31,13 @@ interface IveFXS is IERC20 {
      * @param _unlock_time New epoch time for unlocking 
      */
     function increase_unlock_time(uint256 _unlock_time) external;
+
+    /**
+     * @notice Get timestamp when `_addr`'s lock finishes
+     * @param _addr wallet address
+     * @return Epoch time of the lock end
+     */
+     function locked__end(address _addr) external view returns (uint256);
 }
 
 interface IveFXSYieldDistributorV4 {
@@ -45,13 +53,25 @@ interface IveFXSYieldDistributorV4 {
      * @return the number of FXS
      */
     function yields(address _address) external view returns (uint256);
+
+    function earned(address _address) external view returns (uint256);
+
+    function checkpointOtherUser(address _address) external;
+
+    function notifyRewardAmount(uint256 amount) external;
+
+    function toggleRewardNotifier(address notifier_addr) external;
+
+    function yieldDuration() external returns(uint256);
+
+    function sync() external;
 }
 
 contract  FraxSharesAllocator is Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    uint256 constant private MAX_TIME = 4 * 365 * 86400;  // 4 years
+    uint256 constant private MAX_TIME = 4 * 365 * 86400 + 1;  // 4 years and 1 second
     ITreasury public treasury;
     IERC20 public fxs; // $FXS token
     IveFXS public veFXS; // $veFXS token
@@ -59,6 +79,7 @@ contract  FraxSharesAllocator is Ownable {
 
     // uint256 public totalValueDeployed; // FXS isn't a reserve token, so will always be 0
     uint256 public totalAmountDeployed;
+    uint256 public lockEnd;
 
     constructor(
         address _treasury,
@@ -82,19 +103,24 @@ contract  FraxSharesAllocator is Ownable {
     }
 
     /**
-     * @notice harvest FXS rewards
+     * @notice harvest FXS rewards, will relock all veFXS for the maximum amount of time (4 years)
      */
     function harvest() external {
         uint256 amount = veFXSYieldDistributorV4.getYield();
 
-        totalAmountDeployed = totalAmountDeployed.add(amount);
+        if (amount > 0) {
+            totalAmountDeployed = totalAmountDeployed.add(amount);
 
-        veFXS.increase_amount(amount);
-        veFXS.increase_unlock_time(MAX_TIME);
+            fxs.safeApprove(address(veFXS), amount);
+            veFXS.increase_amount(amount);
+            if (_canExtendLock()) {
+                veFXS.increase_unlock_time(block.timestamp + MAX_TIME);
+            }
+        }
     }
     
     /**
-     *  @notice withdraws FXS from treasury, locks as veFXS for maximum time.
+     *  @notice withdraws FXS from treasury, locks as veFXS for maximum time (4 years).
      *  @param _amount uint
      */
     function deposit(uint256 _amount) external onlyOwner {
@@ -103,17 +129,25 @@ contract  FraxSharesAllocator is Ownable {
         uint256 prevAmount = totalAmountDeployed;
         totalAmountDeployed = totalAmountDeployed.add(_amount);
 
+        fxs.safeApprove(address(veFXS), _amount);
         if (prevAmount == 0) {
-            veFXS.create_lock(_amount, MAX_TIME);
+            lockEnd = block.timestamp + MAX_TIME;
+            veFXS.create_lock(_amount, lockEnd);
         } else {
             veFXS.increase_amount(_amount);
-            veFXS.increase_unlock_time(MAX_TIME);
+            if (_canExtendLock()) {
+                veFXS.increase_unlock_time(block.timestamp + MAX_TIME);
+            }
         }
+    }
+
+    function _canExtendLock() internal view returns (bool) {
+        return lockEnd < block.timestamp + MAX_TIME - 7 * 86400;
     }
 
     /* ======== VIEW FUNCTIONS ======== */
 
     function getPendingRewards() public view returns (uint256) {
-        return veFXSYieldDistributorV4.yields(address(this));
+        return veFXSYieldDistributorV4.earned(address(this));
     }
 }
