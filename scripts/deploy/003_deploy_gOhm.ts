@@ -14,6 +14,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         from: deployer,
         args: [migratorDeployment.address, sOhmDeployment.address],
         log: true,
+        skipIfAlreadyDeployed: true,
     });
 };
 

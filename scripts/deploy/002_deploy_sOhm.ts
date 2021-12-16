@@ -10,6 +10,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await deploy(CONTRACTS.sOhm, {
         from: deployer,
         log: true,
+        skipIfAlreadyDeployed: true,
     });
 };
 

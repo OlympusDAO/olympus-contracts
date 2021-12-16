@@ -20,16 +20,10 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         from: deployer,
         args: [ohmDeployment.address, TREASURY_TIMELOCK, authorityDeployment.address],
         log: true,
+        skipIfAlreadyDeployed: true,
     });
 
     await OlympusTreasury__factory.connect(treasuryDeployment.address, signer);
-
-    // TODO: These two functions are causing a revert
-    // Deposit 9,000,000 DAI to treasury, 600,000 OHM gets minted to deployer and 8,400,000 are in treasury as excesss reserves
-    //await treasury.deposit("9000000000000000000000000", dai.address, "8400000000000000");
-
-    // // Deposit 5,000,000 Frax to treasury, all is profit and goes as excess reserves
-    // await treasuryContract.deposit("5000000000000000000000000", frax.address, "5000000000000000");
 };
 
 func.tags = [CONTRACTS.treasury, "treasury"];

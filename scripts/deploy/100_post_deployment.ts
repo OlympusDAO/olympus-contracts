@@ -43,25 +43,32 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     // Step 1: Set treasury as vault on authority
     await authorityContract.pushVault(treasury.address, true);
+    console.log("Setup -- authorityContract.pushVault: set vault on authority");
 
     // Step 2: Set distributor as minter on treasury
     await treasury.enable(8, distributor.address, ethers.constants.AddressZero); // Allows distributor to mint ohm.
+    console.log("Setup -- treasury.enable(8):  distributor enabled to mint ohm on treasury");
 
     // Step 3: Set distributor on staking
     await staking.setDistributor(distributor.address);
+    console.log("Setup -- staking.setDistributor:  distributor set on staking");
 
     // Step 4: Initialize sOHM and set the index
-    await sOhm.setIndex(INITIAL_INDEX); // TODO
-    await sOhm.setgOHM(gOhm.address);
-    await sOhm.initialize(staking.address, treasuryDeployment.address);
+    if ((await sOhm.gOHM()) == ethers.constants.AddressZero) {
+        await sOhm.setIndex(INITIAL_INDEX); // TODO
+        await sOhm.setgOHM(gOhm.address);
+        await sOhm.initialize(staking.address, treasuryDeployment.address);
+    }
+    console.log("Setup -- sohm initialized (index, gohm)");
 
     // Step 5: Set up distributor with bounty and recipient
     await distributor.setBounty(BOUNTY_AMOUNT);
     await distributor.addRecipient(staking.address, INITIAL_REWARD_RATE);
+    console.log("Setup -- distributor.setBounty && distributor.addRecipient");
 
     // Approve staking contact to spend deployer's OHM
     // TODO: Is this needed?
-    await ohm.approve(staking.address, LARGE_APPROVAL);
+    // await ohm.approve(staking.address, LARGE_APPROVAL);
 };
 
 func.tags = ["setup"];

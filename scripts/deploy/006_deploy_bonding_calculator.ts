@@ -16,6 +16,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         from: deployer,
         args: [ohm.address],
         log: true,
+        skipIfAlreadyDeployed: true,
     });
 };
 

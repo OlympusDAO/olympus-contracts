@@ -12,6 +12,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         from: deployer,
         args: [authorityDeployment.address],
         log: true,
+        skipIfAlreadyDeployed: true,
     });
 };
 
