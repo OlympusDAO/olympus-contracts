@@ -9,4 +9,9 @@ module.exports = {
       // TODO: Fantom testnet and mainnet
     },
   },
+  contractAddresses: {
+    '250': {
+      frax: '0xaf319E5789945197e365E7f7fbFc56B130523B33',
+    },
+  },
 };

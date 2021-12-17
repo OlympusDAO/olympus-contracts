@@ -1,4 +1,4 @@
-const { ethers } = require("hardhat");
+const { config, ethers } = require("hardhat");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = await getChainId();
@@ -11,7 +11,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   // TODO: move it to config
   switch(chainId) {
     case '250':
-      fraxAddress = '0xaf319E5789945197e365E7f7fbFc56B130523B33';
+      fraxAddress = config.contractAddresses[chainId].frax;
       break;
     default:
       const frax = await get('FRAX');
