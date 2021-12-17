@@ -1,4 +1,4 @@
-const { config, getChainId } = require("hardhat");
+const { config, getChainId, ethers } = require("hardhat");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, get } = deployments;
@@ -45,5 +45,16 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   await treasury.queue('0', deployment.address);
   // TODO: this can only be done after blocksNeededForQueue has passed.
   // await treasury.toggle('0', deployment.address, config.contractAddresses.zero);
+
+  const fraxBond = (
+    await ethers.getContractFactory('contracts/BondDepository.sol:OlympusBondDepository')
+  ).attach(deployment.address);
+
+  // NOTE: Use staking helper.
+  const stakingHelperArtifact = await get('StakingHelper');
+  await fraxBond.setStaking(stakingHelperArtifact.address, true);
+
+  // TODO:
+  // await fraxBond.initializeBondTerms(fraxBondBCV, bondVestingLength, minBondPrice, maxBondPayout, bondFee, maxBondDebt, intialBondDebt);
 };
 module.exports.tags = ['Staking', 'AllEnvironments'];
