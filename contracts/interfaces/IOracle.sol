@@ -3,4 +3,5 @@ pragma solidity >=0.7.5;
 
 interface IOracle {
     function getPrice( address _pool ) external returns ( uint );
+    function getLatestPrice() external view returns (uint256);
 }
