@@ -24,8 +24,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log: true,
   });
 
-  // TODO: need to add recipient, which is the staking contract.
-  // TODO: need to set reward rate
   // TODO: need to transfer policy role to another address.
   const treasury = (
     await ethers.getContractFactory('OlympusTreasury')

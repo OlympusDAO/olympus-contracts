@@ -45,5 +45,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   await staking.setContract('0', distributorArtifact.address);
   await staking.setContract('1', stakingWarmupDeployment.address);
+
+  // TODO: confirm with the team, this is 0.3% per epoch
+  const initialRewardRate = 3000;
+  await distributor.addRecipient(stakingDeployment.address, initialRewardRate);
 };
 module.exports.tags = ['Staking', 'AllEnvironments'];
