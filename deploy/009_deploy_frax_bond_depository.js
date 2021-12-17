@@ -10,7 +10,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   // TODO: Setting it to our Fantom multi-sig for now, not sure what to put yet.
   const daoAddress = "0xba5c251Cffc942C8e16e2315024c7D4B7D76Bea8";
   // NOTE: Only LP bond requires bond calculator
-  const bondCalculatorAddress = '0x0000000000000000000000000000000000000000';
+  const bondCalculatorAddress = config.contractAddresses.zero;
 
   let fraxAddress;
   // TODO: move it to config
