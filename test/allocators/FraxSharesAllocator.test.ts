@@ -188,6 +188,18 @@ describe("FraxSharesAllocator", () => {
                     expect(await allocator.getPendingRewards()).to.equal(YIELD);
                 })
             });
+
+            describe("setTreasury", () => {
+                it("can set the treasury", async () => {
+                    await allocator.setTreasury(other.address);
+                    expect(await allocator.treasury()).to.equal(other.address);
+                });
+
+                it("cannot set the treasury to zero address", async () => {
+                    await expect(allocator.setTreasury(ZERO_ADDRESS))
+                        .to.be.revertedWith("zero treasury address");
+                });
+            });
         });
     });
 
@@ -389,5 +401,17 @@ describe("FraxSharesAllocator", () => {
             let diff = deployedAfter.sub(deployedBefore).sub(pendingRewards)
             expect(diff.toNumber()).to.be.lessThan(1410742941);
         });
+
+        it("keeps veFXS after a contract upgrade", async () => {
+            let NewContract = await ethers.getContractFactory("FraxSharesAllocatorVNext");
+            let newAllocator = await upgrades.upgradeProxy(allocator.address, NewContract);
+
+            let veFXSAfter = await (vefxs as any)["balanceOf(address)"](newAllocator.address);
+
+            expect(await newAllocator.didUpgrade()).to.be.true;
+
+            // we lose some after a few blocks pass
+            expect(veFXSAfter.toString()).to.match(/^505988\d{18}/);
+        })
     });
 });

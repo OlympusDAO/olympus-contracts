@@ -160,6 +160,11 @@ contract  FraxSharesAllocator is Initializable, OwnableUpgradeable {
         }
     }
 
+    function setTreasury(address _treasury) external onlyOwner {
+        require(_treasury != address(0), "zero treasury address");
+        treasury = ITreasury(_treasury);
+    }
+
     /* ======== VIEW FUNCTIONS ======== */
 
     function getPendingRewards() public view returns (uint256) {
