@@ -6,31 +6,30 @@ async function main() {
     console.log('Deploying contracts with the account: ' + deployer.address);
 
 
-    const firstEpochNumber = "550";
-    const firstBlockNumber = "9505000";
-    const gOHM = "0x025d3EBB9d7a3f3De5c8868CfAC82209774e084D";
+    const firstEpochNumber = "";
+    const firstBlockNumber = "";
+    const gOHM = "";
+    const authority = "";
 
     const OHM = await ethers.getContractFactory('OlympusERC20Token');
-    const ohm = await OHM.deploy();
+    const ohm = await OHM.deploy(authority);
 
     const OlympusTreasury = await ethers.getContractFactory('OlympusTreasury');
-    const olympusTreasury = await OlympusTreasury.deploy(ohm.address, '0');
+    const olympusTreasury = await OlympusTreasury.deploy(ohm.address, '0', authority);
 
     const SOHM = await ethers.getContractFactory('sOlympus');
     const sOHM = await SOHM.deploy();
 
     const OlympusStaking = await ethers.getContractFactory('OlympusStaking');
-    const staking = await OlympusStaking.deploy(ohm.address, sOHM.address, '2200', firstEpochNumber, firstBlockNumber);
+    const staking = await OlympusStaking.deploy(ohm.address, sOHM.address, gOHM, '2200', firstEpochNumber, firstBlockNumber, authority);
 
     const Distributor = await ethers.getContractFactory('Distributor');
-    const distributor = await Distributor.deploy(olympusTreasury.address, ohm.address, staking.address );
+    const distributor = await Distributor.deploy(olympusTreasury.address, ohm.address, staking.address, authority );
 
-    //await sOHM.setIndex('7675210820');
+    await sOHM.setIndex('');
     await sOHM.setgOHM(gOHM);
-    //await sOHM.initialize(staking.address);
+    await sOHM.initialize(staking.address, olympusTreasury.address);
     
-    //await staking.setContract('0', distributor.address);
-    await staking.setContract('1', gOHM);
 
 
     console.log("OHM: " + ohm.address);

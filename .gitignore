@@ -13,6 +13,7 @@ types/
 node_modules/
 .env
 yarn-error.log
+.package-lock.json
 
 .yalc
 yalc.lock
@@ -20,8 +21,11 @@ yalc.lock
 contractsInfo.json
 deployments/hardhat
 deployments/localhost
+deployments/**/solcinputs
 
 /.dapp
 
+
 # OpenZeppelin upgradeable files
 .openzeppelin/unknown-*.json
+/flatten

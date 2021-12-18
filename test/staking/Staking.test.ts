@@ -2,7 +2,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import chai, { expect } from "chai";
 import { ethers } from "hardhat";
 const { BigNumber } = ethers;
-import { deployMockContract } from "ethereum-waffle";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import {
     IDistributor,
@@ -11,6 +10,8 @@ import {
     IOHM,
     OlympusStaking,
     OlympusStaking__factory,
+    OlympusAuthority,
+    OlympusAuthority__factory,
 } from "../../types";
 
 chai.use(smock.matchers);
@@ -20,6 +21,7 @@ const ZERO_ADDRESS = ethers.utils.getAddress("0x00000000000000000000000000000000
 describe("OlympusStaking", () => {
     let owner: SignerWithAddress;
     let governor: SignerWithAddress;
+    let guardian: SignerWithAddress;
     let alice: SignerWithAddress;
     let bob: SignerWithAddress;
     let other: SignerWithAddress;
@@ -28,18 +30,25 @@ describe("OlympusStaking", () => {
     let gOHMFake: FakeContract<IgOHM>;
     let distributorFake: FakeContract<IDistributor>;
     let staking: OlympusStaking;
+    let authority: OlympusAuthority;
 
     const EPOCH_LENGTH = 2200;
     const EPOCH_NUMBER = 1;
-    const FUTURE_END_BLOCK = 102201; // an arbitrary fixed future block number
+    const FUTURE_END_TIME = 1022010000; // an arbitrary future block timestamp
 
     beforeEach(async () => {
-        [owner, governor, alice, bob, other] = await ethers.getSigners();
+        [owner, governor, guardian, alice, bob, other] = await ethers.getSigners();
         ohmFake = await smock.fake<IOHM>("IOHM");
         gOHMFake = await smock.fake<IgOHM>("IgOHM");
         // need to be specific because IsOHM is also defined in OLD
         sOHMFake = await smock.fake<IsOHM>("contracts/interfaces/IsOHM.sol:IsOHM");
         distributorFake = await smock.fake<IDistributor>("IDistributor");
+        authority = await new OlympusAuthority__factory(owner).deploy(
+            governor.address,
+            guardian.address,
+            owner.address,
+            owner.address
+        );
     });
 
     describe("constructor", () => {
@@ -50,18 +59,18 @@ describe("OlympusStaking", () => {
                 gOHMFake.address,
                 EPOCH_LENGTH,
                 EPOCH_NUMBER,
-                FUTURE_END_BLOCK
+                FUTURE_END_TIME,
+                authority.address
             );
 
-            // Initial checks
             expect(await staking.OHM()).to.equal(ohmFake.address);
             expect(await staking.sOHM()).to.equal(sOHMFake.address);
             const epoch = await staking.epoch();
             expect((epoch as any)._length).to.equal(BigNumber.from(EPOCH_LENGTH));
             expect(epoch.number).to.equal(BigNumber.from(EPOCH_NUMBER));
-            expect(epoch.endBlock).to.equal(BigNumber.from(FUTURE_END_BLOCK));
+            expect(epoch.end).to.equal(BigNumber.from(FUTURE_END_TIME));
 
-            expect(await staking.governor()).to.equal(owner.address);
+            expect(await authority.governor()).to.equal(governor.address);
         });
 
         it("will not allow a 0x0 OHM address", async () => {
@@ -72,7 +81,8 @@ describe("OlympusStaking", () => {
                     gOHMFake.address,
                     EPOCH_LENGTH,
                     EPOCH_NUMBER,
-                    FUTURE_END_BLOCK
+                    FUTURE_END_TIME,
+                    authority.address
                 )
             ).to.be.reverted;
         });
@@ -85,7 +95,8 @@ describe("OlympusStaking", () => {
                     gOHMFake.address,
                     EPOCH_LENGTH,
                     EPOCH_NUMBER,
-                    FUTURE_END_BLOCK
+                    FUTURE_END_TIME,
+                    authority.address
                 )
             ).to.be.reverted;
         });
@@ -98,7 +109,8 @@ describe("OlympusStaking", () => {
                     ZERO_ADDRESS,
                     EPOCH_LENGTH,
                     EPOCH_NUMBER,
-                    FUTURE_END_BLOCK
+                    FUTURE_END_TIME,
+                    authority.address
                 )
             ).to.be.reverted;
         });
@@ -112,10 +124,9 @@ describe("OlympusStaking", () => {
                 gOHMFake.address,
                 EPOCH_LENGTH,
                 EPOCH_NUMBER,
-                FUTURE_END_BLOCK
+                FUTURE_END_TIME,
+                authority.address
             );
-            await staking.connect(owner).pushGovernor(governor.address);
-            await staking.connect(governor).pullGovernor();
         });
 
         describe("setDistributor", () => {
@@ -163,10 +174,9 @@ describe("OlympusStaking", () => {
                 gOHMFake.address,
                 EPOCH_LENGTH,
                 EPOCH_NUMBER,
-                nextRebaseBlock
+                nextRebaseBlock,
+                authority.address
             );
-            await staking.connect(owner).pushGovernor(governor.address);
-            await staking.connect(governor).pullGovernor();
             await staking.connect(governor).setDistributor(distributorFake.address);
         }
 
@@ -195,9 +205,10 @@ describe("OlympusStaking", () => {
                 expect(await staking.supplyInWarmup()).to.equal(amount);
                 expect(await staking.warmupPeriod()).to.equal(0);
                 const warmupInfo = await staking.warmupInfo(alice.address);
+                const epochInfo = await staking.epoch();
                 expect(warmupInfo.deposit).to.equal(amount);
                 expect(warmupInfo.gons).to.equal(gons);
-                expect(warmupInfo.expiry).to.equal(EPOCH_NUMBER);
+                expect(warmupInfo.expiry).to.equal(epochInfo.number);
                 expect(warmupInfo.lock).to.equal(false);
             });
 
@@ -252,9 +263,10 @@ describe("OlympusStaking", () => {
 
                 expect(await staking.supplyInWarmup()).to.equal(amount);
                 const warmupInfo = await staking.warmupInfo(alice.address);
+                const epochInfo = await staking.epoch();
                 expect(warmupInfo.deposit).to.equal(amount);
                 expect(warmupInfo.gons).to.equal(gons);
-                expect(warmupInfo.expiry).to.equal(EPOCH_NUMBER + 1);
+                expect(warmupInfo.expiry).to.equal(Number(epochInfo.number) + 1);
                 expect(warmupInfo.lock).to.equal(false);
             });
 
@@ -427,6 +439,7 @@ describe("OlympusStaking", () => {
                 const claim = true;
 
                 ohmFake.transferFrom.returns(true);
+                ohmFake.balanceOf.returns(amount);
                 sOHMFake.transfer.returns(true);
                 await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
@@ -453,6 +466,7 @@ describe("OlympusStaking", () => {
 
                 gOHMFake.balanceFrom.whenCalledWith(indexedAmount).returns(amount);
                 ohmFake.transfer.returns(true);
+                ohmFake.balanceOf.returns(amount);
                 await staking.connect(alice).unstake(alice.address, indexedAmount, false, rebasing);
 
                 expect(ohmFake.transfer).to.be.calledWith(alice.address, amount);
@@ -498,7 +512,7 @@ describe("OlympusStaking", () => {
             it("does nothing if the block is before the epoch end block", async () => {
                 const currentBlock = await ethers.provider.send("eth_blockNumber", []);
                 const epoch = await staking.epoch();
-                expect(BigNumber.from(currentBlock)).to.be.lt(BigNumber.from(epoch.endBlock));
+                expect(BigNumber.from(currentBlock)).to.be.lt(BigNumber.from(epoch.end));
 
                 await staking.connect(alice).rebase();
             });
@@ -509,7 +523,7 @@ describe("OlympusStaking", () => {
                 await deployStaking(currentBlock);
 
                 const epoch = await staking.epoch();
-                expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.endBlock));
+                expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.end));
 
                 await staking.connect(alice).rebase();
 
@@ -517,7 +531,7 @@ describe("OlympusStaking", () => {
                 expect(BigNumber.from(nextEpoch.number)).to.equal(
                     BigNumber.from(epoch.number).add(1)
                 );
-                expect(BigNumber.from(nextEpoch.endBlock)).to.equal(
+                expect(BigNumber.from(nextEpoch.end)).to.equal(
                     BigNumber.from(currentBlock).add(EPOCH_LENGTH)
                 );
             });
@@ -526,7 +540,7 @@ describe("OlympusStaking", () => {
                 const currentBlock = await ethers.provider.send("eth_blockNumber", []);
                 await deployStaking(currentBlock);
                 const epoch = await staking.epoch();
-                expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.endBlock));
+                expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.end));
 
                 ohmFake.balanceOf.whenCalledWith(staking.address).returns(10);
                 sOHMFake.circulatingSupply.returns(10);
@@ -540,7 +554,7 @@ describe("OlympusStaking", () => {
                 const currentBlock = await ethers.provider.send("eth_blockNumber", []);
                 await deployStaking(currentBlock);
                 const epoch = await staking.epoch();
-                expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.endBlock));
+                expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.end));
 
                 ohmFake.balanceOf.whenCalledWith(staking.address).returns(10);
                 sOHMFake.circulatingSupply.returns(5);
@@ -554,7 +568,7 @@ describe("OlympusStaking", () => {
                 const currentBlock = await ethers.provider.send("eth_blockNumber", []);
                 await deployStaking(currentBlock);
                 const epoch = await staking.epoch();
-                expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.endBlock));
+                expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.end));
 
                 await staking.connect(alice).rebase();
 

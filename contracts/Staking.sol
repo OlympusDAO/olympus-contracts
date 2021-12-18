@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.7.5;
 
 import "./libraries/SafeMath.sol";
@@ -9,9 +9,9 @@ import "./interfaces/IsOHM.sol";
 import "./interfaces/IgOHM.sol";
 import "./interfaces/IDistributor.sol";
 
-import "./types/Governable.sol";
+import "./types/OlympusAccessControlled.sol";
 
-contract OlympusStaking is Governable {
+contract OlympusStaking is OlympusAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -27,16 +27,16 @@ contract OlympusStaking is Governable {
     /* ========== DATA STRUCTURES ========== */
 
     struct Epoch {
-        uint256 length;
-        uint256 number;
-        uint256 endBlock;
-        uint256 distribute;
+        uint256 length; // in seconds
+        uint256 number; // since inception
+        uint256 end; // timestamp
+        uint256 distribute; // amount
     }
 
     struct Claim {
-        uint256 deposit;
-        uint256 gons;
-        uint256 expiry;
+        uint256 deposit; // if forfeiting
+        uint256 gons; // staked balance
+        uint256 expiry; // end of warmup period
         bool lock; // prevents malicious delays for claim
     }
 
@@ -48,7 +48,7 @@ contract OlympusStaking is Governable {
 
     Epoch public epoch;
 
-    address public distributor;
+    IDistributor public distributor;
 
     mapping(address => Claim) public warmupInfo;
     uint256 public warmupPeriod;
@@ -62,8 +62,9 @@ contract OlympusStaking is Governable {
         address _gOHM,
         uint256 _epochLength,
         uint256 _firstEpochNumber,
-        uint256 _firstEpochBlock
-    ) {
+        uint256 _firstEpochTime,
+        address _authority
+    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_ohm != address(0), "Zero address: OHM");
         OHM = IERC20(_ohm);
         require(_sOHM != address(0), "Zero address: sOHM");
@@ -71,7 +72,7 @@ contract OlympusStaking is Governable {
         require(_gOHM != address(0), "Zero address: gOHM");
         gOHM = IgOHM(_gOHM);
 
-        epoch = Epoch({length: _epochLength, number: _firstEpochNumber, endBlock: _firstEpochBlock, distribute: 0});
+        epoch = Epoch({length: _epochLength, number: _firstEpochNumber, end: _firstEpochTime, distribute: 0});
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -90,10 +91,8 @@ contract OlympusStaking is Governable {
         bool _rebasing,
         bool _claim
     ) external returns (uint256) {
-        rebase();
-
         OHM.safeTransferFrom(msg.sender, address(this), _amount);
-
+        _amount = _amount.add(rebase()); // add bounty if rebase occurred
         if (_claim && warmupPeriod == 0) {
             return _send(_to, _amount, _rebasing);
         } else {
@@ -174,18 +173,20 @@ contract OlympusStaking is Governable {
         bool _trigger,
         bool _rebasing
     ) external returns (uint256 amount_) {
-        if (_trigger) {
-            rebase();
-        }
-
         amount_ = _amount;
+        uint256 bounty;
+        if (_trigger) {
+            bounty = rebase();
+        }
         if (_rebasing) {
             sOHM.safeTransferFrom(msg.sender, address(this), _amount);
+            amount_ = amount_.add(bounty);
         } else {
             gOHM.burn(msg.sender, _amount); // amount was given in gOHM terms
-            amount_ = gOHM.balanceFrom(_amount); // convert amount to OHM terms
+            amount_ = gOHM.balanceFrom(amount_).add(bounty); // convert amount to OHM terms & add bounty
         }
 
+        require(amount_ <= OHM.balanceOf(address(this)), "Insufficient OHM balance in contract");
         OHM.safeTransfer(_to, amount_);
     }
 
@@ -197,7 +198,6 @@ contract OlympusStaking is Governable {
      */
     function wrap(address _to, uint256 _amount) external returns (uint256 gBalance_) {
         sOHM.safeTransferFrom(msg.sender, address(this), _amount);
-
         gBalance_ = gOHM.balanceTo(_amount);
         gOHM.mint(_to, gBalance_);
     }
@@ -210,31 +210,35 @@ contract OlympusStaking is Governable {
      */
     function unwrap(address _to, uint256 _amount) external returns (uint256 sBalance_) {
         gOHM.burn(msg.sender, _amount);
-
         sBalance_ = gOHM.balanceFrom(_amount);
         sOHM.safeTransfer(_to, sBalance_);
     }
 
     /**
      * @notice trigger rebase if epoch over
+     * @return uint256
      */
-    function rebase() public {
-        if (epoch.endBlock <= block.number) {
+    function rebase() public returns (uint256) {
+        uint256 bounty;
+        if (epoch.end <= block.timestamp) {
             sOHM.rebase(epoch.distribute, epoch.number);
 
-            epoch.endBlock = epoch.endBlock.add(epoch.length);
+            epoch.end = epoch.end.add(epoch.length);
             epoch.number++;
 
-            if (distributor != address(0)) {
-                IDistributor(distributor).distribute();
+            if (address(distributor) != address(0)) {
+                distributor.distribute();
+                bounty = distributor.retrieveBounty(); // Will mint ohm for this contract if there exists a bounty
             }
-
-            if (contractBalance() <= totalStaked()) {
+            uint256 balance = OHM.balanceOf(address(this));
+            uint256 staked = sOHM.circulatingSupply();
+            if (balance <= staked.add(bounty)) {
                 epoch.distribute = 0;
             } else {
-                epoch.distribute = contractBalance().sub(totalStaked());
+                epoch.distribute = balance.sub(staked).sub(bounty);
             }
         }
+        return bounty;
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
@@ -270,25 +274,17 @@ contract OlympusStaking is Governable {
     }
 
     /**
-     * @notice returns contract OHM holdings, including bonuses provided
-     * @return uint
-     */
-    function contractBalance() public view returns (uint256) {
-        return OHM.balanceOf(address(this));
-    }
-
-    /**
-     * @notice total supply staked
-     */
-    function totalStaked() public view returns (uint256) {
-        return sOHM.circulatingSupply();
-    }
-
-    /**
      * @notice total supply in warmup
      */
     function supplyInWarmup() public view returns (uint256) {
         return sOHM.balanceForGons(gonsInWarmup);
+    }
+
+    /**
+     * @notice seconds until the next epoch begins
+     */
+    function secondsToNextEpoch() external view returns (uint256) {
+        return epoch.end.sub(block.timestamp);
     }
 
     /* ========== MANAGERIAL FUNCTIONS ========== */
@@ -298,7 +294,7 @@ contract OlympusStaking is Governable {
      * @param _distributor address
      */
     function setDistributor(address _distributor) external onlyGovernor {
-        distributor = _distributor;
+        distributor = IDistributor(_distributor);
         emit DistributorSet(_distributor);
     }
 

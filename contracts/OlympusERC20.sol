@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.7.5;
 
 import "./libraries/SafeMath.sol";
@@ -8,12 +8,15 @@ import "./interfaces/IOHM.sol";
 import "./interfaces/IERC20Permit.sol";
 
 import "./types/ERC20Permit.sol";
-import "./types/VaultOwned.sol";
+import "./types/OlympusAccessControlled.sol";
 
-contract OlympusERC20Token is ERC20Permit, IOHM, VaultOwned {
+contract OlympusERC20Token is ERC20Permit, IOHM, OlympusAccessControlled {
     using SafeMath for uint256;
 
-    constructor() ERC20("Olympus", "OHM", 9) ERC20Permit("Olympus") {}
+    constructor(address _authority) 
+    ERC20("Olympus", "OHM", 9) 
+    ERC20Permit("Olympus") 
+    OlympusAccessControlled(IOlympusAuthority(_authority)) {}
 
     function mint(address account_, uint256 amount_) external override onlyVault {
         _mint(account_, amount_);
