@@ -62,8 +62,8 @@ const config: HardhatUserConfig = {
             chainId: chainIds.hardhat,
         },
         // Uncomment for testing.
-        rinkeby: getChainConfig("rinkeby"),
-        ropsten: getChainConfig("ropsten"),
+        // rinkeby: getChainConfig("rinkeby"),
+        // ropsten: getChainConfig("ropsten"),
     },
     paths: {
         artifacts: "./artifacts",

@@ -12,6 +12,7 @@ import {
     OlympusTreasury__factory,
 } from "../../types";
 
+// TODO: Shouldn't run setup methods if the contracts weren't redeployed.
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts, ethers } = hre;
     const { deployer } = await getNamedAccounts();
