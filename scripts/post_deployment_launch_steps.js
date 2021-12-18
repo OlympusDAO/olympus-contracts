@@ -11,31 +11,50 @@ async function main() {
     const { deployer } = accounts;
     const treasuryAddress = (await get('OlympusTreasury')).address;
     const distributorAddress = (await get('Distributor')).address;
-    const fraxBondAddress = (await get('FraxBondDepository')).address;
+    const fraxBondDepositoryAddress = (await get('FraxBondDepository')).address;
 
     console.log(`deployer is ${deployer}`);
     console.log(`Treasury address is ${treasuryAddress}`);
     console.log(`Distributor address is ${distributorAddress}`);
-    console.log(`FRAX bond address is ${fraxBondAddress}`);
+    console.log(`FRAX bond depository address is ${fraxBondDepositoryAddress}`);
 
-    // const wftmBondAddress = (await get('WftmBondDepository')).address;
+    // const wftmDepositoryBondAddress = (await get('WftmBondDepository')).address;
     const zeroAddress = config.contractAddresses.zero;
     const treasury = (
       await ethers.getContractFactory('OlympusTreasury')
     ).attach(treasuryAddress);
 
-    // TODO: use reserveTokenQueue to check for block number.
-    // const fraxBondToggleBlockNumber = await treasury.reserveTokenQueue(fraxBondAddress);
-    // const wftmBondToggleBlockNumber = await treasury.reserveTokenQueue(wftmBondAddress);
-    await treasury.toggle('0', fraxBondAddress, zeroAddress);
+    const currentBlockNumber = await ethers.provider.getBlockNumber();
+
+    const fraxBondDepositoryToggleBlockNumber = await treasury.reserveDepositorQueue(fraxBondDepositoryAddress);
+    // const wftmBondDepositoryToggleBlockNumber = await treasury.reserveTokenQueue(wftmBondDepositoryAddress);
+
+    console.log(`currentBlockNumber is ${currentBlockNumber}`);
+    console.log(`fraxBondDepositoryToggleBlockNumber is ${fraxBondDepositoryToggleBlockNumber}`);
+
+    // TODO: && > wftmBondDepositoryToggleBlockNumber
+    if (currentBlockNumber > fraxBondDepositoryToggleBlockNumber) {
+      await treasury.toggle('0', fraxBondDepositoryAddress, zeroAddress);
+    }
+
     // await treasury.toggle('0', wftmBondAddress, zeroAddress);
 
     // approve deployer as the reserve and liquidity token depositor
-    await treasury.toggle('0', deployer.address, zeroAddress);
-    await treasury.toggle('4', deployer.address, zeroAddress);
+    const deployerReserveDepositorToggleBlockNumber = await treasury.reserveDepositorQueue(deployer);
+    const deployerLiquidityDepositorToggleBlockNumber = await treasury.LiquidityDepositorQueue(deployer);
+    if (
+      currentBlockNumber > deployerReserveDepositorToggleBlockNumber &&
+      currentBlockNumber > deployerLiquidityDepositorToggleBlockNumber
+    ) {
+      await treasury.toggle('0', deployer, zeroAddress);
+      await treasury.toggle('4', deployer, zeroAddress);
+    }
 
     // approve staking distributor as the reward manager
-    await treasury.toggle('8', distributorAddress, zeroAddress);
+    const distributorRewardManagerToggleBlockNumber = await treasury.rewardManagerQueue(distributorAddress);
+    if (currentBlockNumber > distributorRewardManagerToggleBlockNumber) {
+      await treasury.toggle('8', distributorAddress, zeroAddress);
+    }
 }
 
 main()
