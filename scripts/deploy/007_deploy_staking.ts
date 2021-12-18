@@ -29,7 +29,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
             authorityDeployment.address,
         ],
         log: true,
-        skipIfAlreadyDeployed: true,
     });
 };
 
