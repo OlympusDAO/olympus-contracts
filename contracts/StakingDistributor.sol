@@ -280,14 +280,14 @@ interface IPolicy {
     function policy() external view returns (address);
 
     function renouncePolicy() external;
-  
+
     function pushPolicy( address newPolicy_ ) external;
 
     function pullPolicy() external;
 }
 
 contract Policy is IPolicy {
-    
+
     address internal _policy;
     address internal _newPolicy;
 
@@ -331,76 +331,76 @@ interface ITreasury {
 contract Distributor is Policy {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
-    
-    
-    
+
+
+
     /* ====== VARIABLES ====== */
 
     address public immutable OHM;
     address public immutable treasury;
-    
+
     uint public immutable epochLength;
-    uint public nextEpochBlock;
-    
+    uint public nextEpochTime;
+
     mapping( uint => Adjust ) public adjustments;
-    
-    
+
+
     /* ====== STRUCTS ====== */
-        
+
     struct Info {
         uint rate; // in ten-thousandths ( 5000 = 0.5% )
         address recipient;
     }
     Info[] public info;
-    
+
     struct Adjust {
         bool add;
         uint rate;
         uint target;
     }
-    
-    
-    
+
+
+
     /* ====== CONSTRUCTOR ====== */
 
-    constructor( address _treasury, address _ohm, uint _epochLength, uint _nextEpochBlock ) {        
+    constructor( address _treasury, address _ohm, uint _epochLength, uint _nextEpochTime ) {
         require( _treasury != address(0) );
         treasury = _treasury;
         require( _ohm != address(0) );
         OHM = _ohm;
         epochLength = _epochLength;
-        nextEpochBlock = _nextEpochBlock;
+        nextEpochTime = _nextEpochTime;
     }
-    
-    
-    
+
+
+
     /* ====== PUBLIC FUNCTIONS ====== */
-    
+
     /**
         @notice send epoch reward to staking contract
      */
     function distribute() external returns ( bool ) {
-        if ( nextEpochBlock <= block.number ) {
-            nextEpochBlock = nextEpochBlock.add( epochLength ); // set next epoch block
-            
+        if ( nextEpochTime <= block.timestamp ) {
+            nextEpochTime = nextEpochTime.add( epochLength ); // set next epoch time
+
             // distribute rewards to each recipient
             for ( uint i = 0; i < info.length; i++ ) {
                 if ( info[ i ].rate > 0 ) {
                     ITreasury( treasury ).mintRewards( // mint and send from treasury
-                        info[ i ].recipient, 
-                        nextRewardAt( info[ i ].rate ) 
+                        info[ i ].recipient,
+                        nextRewardAt( info[ i ].rate )
                     );
                     adjust( i ); // check for adjustment
                 }
             }
             return true;
-        } else { 
-            return false; 
+        } else {
+            return false;
         }
     }
-    
-    
-    
+
+
+
     /* ====== INTERNAL FUNCTIONS ====== */
 
     /**
@@ -422,9 +422,9 @@ contract Distributor is Policy {
             }
         }
     }
-    
-    
-    
+
+
+
     /* ====== VIEW FUNCTIONS ====== */
 
     /**
@@ -450,9 +450,9 @@ contract Distributor is Policy {
         }
         return reward;
     }
-    
-    
-    
+
+
+
     /* ====== POLICY FUNCTIONS ====== */
 
     /**

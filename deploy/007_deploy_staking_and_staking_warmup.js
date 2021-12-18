@@ -7,12 +7,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const brickArtifact = await get('OlympusERC20Token');
   const sBrickArtifact = await get('sOlympus');
   const distributorArtifact = await get('Distributor');
-  const epochLengthInBlocks = 32000;
+  const epochLengthInSeconds = 28800;
 
   const distributor = (
     await ethers.getContractFactory('Distributor')
   ).attach(distributorArtifact.address);
-  const firstEpochBlock = await distributor.nextEpochBlock();
+  // TODO: Fix this.
+  const firstEpochTime = await distributor.nextEpochTime();
   // TODO: What should firstEpochNumber be?
   // I guess it doesn't matter what it is as it is only used for tracking warmup period.
   const firstEpochNumber = 0;
@@ -22,9 +23,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     args: [
       brickArtifact.address,
       sBrickArtifact.address,
-      epochLengthInBlocks,
+      epochLengthInSeconds,
       firstEpochNumber,
-      firstEpochBlock,
+      firstEpochTime,
 
     ],
     log: true,

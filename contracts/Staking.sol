@@ -548,35 +548,35 @@ contract OlympusStaking is Ownable {
     struct Epoch {
         uint length;
         uint number;
-        uint endBlock;
+        uint endTime;
         uint distribute;
     }
     Epoch public epoch;
 
     address public distributor;
-    
+
     address public locker;
     uint public totalBonus;
-    
+
     address public warmupContract;
     uint public warmupPeriod;
-    
-    constructor ( 
-        address _OHM, 
-        address _sOHM, 
+
+    constructor (
+        address _OHM,
+        address _sOHM,
         uint _epochLength,
         uint _firstEpochNumber,
-        uint _firstEpochBlock
+        uint _firstEpochTime
     ) {
         require( _OHM != address(0) );
         OHM = _OHM;
         require( _sOHM != address(0) );
         sOHM = _sOHM;
-        
+
         epoch = Epoch({
             length: _epochLength,
             number: _firstEpochNumber,
-            endBlock: _firstEpochBlock,
+            endTime: _firstEpochTime,
             distribute: 0
         });
     }
@@ -668,13 +668,13 @@ contract OlympusStaking is Ownable {
         @notice trigger rebase if epoch over
      */
     function rebase() public {
-        if( epoch.endBlock <= block.number ) {
+        if( epoch.endTime <= block.timestamp ) {
 
             IsOHM( sOHM ).rebase( epoch.distribute, epoch.number );
 
-            epoch.endBlock = epoch.endBlock.add( epoch.length );
+            epoch.endTime = epoch.endTime.add( epoch.length );
             epoch.number++;
-            
+
             if ( distributor != address(0) ) {
                 IDistributor( distributor ).distribute();
             }
