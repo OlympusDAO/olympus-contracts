@@ -46,5 +46,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     await ethers.getContractFactory('OlympusERC20Token')
   ).attach(brickArtifact.address);
   await brick.setVault(deployment.address);
+
+  const treasury = (
+    await ethers.getContractFactory('OlympusTreasury')
+  ).attach(deployment.address);
+
+  // NOTE: make deployer address an approved reserve and liquidity token depositor
+  await treasury.queue('0', deployer.address);
+  await treasury.queue('4', deployer.address);
 };
 module.exports.tags = ['Treasury', 'AllEnvironments'];

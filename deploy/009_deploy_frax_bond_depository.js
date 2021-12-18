@@ -24,9 +24,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
       break;
   }
 
+  const contractPath = 'contracts/BondDepository.sol:OlympusBondDepository';
+
   // NOTE: https://hardhat.org/guides/compile-contracts.html#reading-artifacts
   const deployment = await deploy('FraxBondDepository', {
-    contract: 'contracts/BondDepository.sol:OlympusBondDepository',
+    contract: contractPath,
     from: deployer,
     args: [
       brickArtifact.address,
@@ -43,12 +45,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   ).attach(treasuryArtifact.address);
   // NOTE: Grant FRAX bond depositor a reserve depositor role
   await treasury.queue('0', deployment.address);
-  // TODO: this can only be done after blocksNeededForQueue has passed.
-  // await treasury.toggle('0', deployment.address, config.contractAddresses.zero);
 
-  const fraxBond = (
-    await ethers.getContractFactory('contracts/BondDepository.sol:OlympusBondDepository')
-  ).attach(deployment.address);
+  const fraxBond = (await ethers.getContractFactory(contractPath)).attach(deployment.address);
 
   // NOTE: Use staking helper.
   const stakingHelperArtifact = await get('StakingHelper');

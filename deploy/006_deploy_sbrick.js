@@ -9,7 +9,5 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     args: [],
     log: true,
   });
-
-  // TODO: initialize and setIndex
 };
 module.exports.tags = ['sBRICK', 'AllEnvironments'];
