@@ -1,12 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import {
-    CONTRACTS,
-    LARGE_APPROVAL,
-    INITIAL_REWARD_RATE,
-    INITIAL_INDEX,
-    BOUNTY_AMOUNT,
-} from "../constants";
+import { waitFor } from "../txHelper";
+import { CONTRACTS, INITIAL_REWARD_RATE, INITIAL_INDEX, BOUNTY_AMOUNT } from "../constants";
 import {
     OlympusAuthority__factory,
     Distributor__factory,
@@ -42,28 +37,28 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const treasury = OlympusTreasury__factory.connect(treasuryDeployment.address, signer);
 
     // Step 1: Set treasury as vault on authority
-    await authorityContract.pushVault(treasury.address, true);
+    await waitFor(authorityContract.pushVault(treasury.address, true));
     console.log("Setup -- authorityContract.pushVault: set vault on authority");
 
     // Step 2: Set distributor as minter on treasury
-    await treasury.enable(8, distributor.address, ethers.constants.AddressZero); // Allows distributor to mint ohm.
+    await waitFor(treasury.enable(8, distributor.address, ethers.constants.AddressZero)); // Allows distributor to mint ohm.
     console.log("Setup -- treasury.enable(8):  distributor enabled to mint ohm on treasury");
 
     // Step 3: Set distributor on staking
-    await staking.setDistributor(distributor.address);
+    await waitFor(staking.setDistributor(distributor.address));
     console.log("Setup -- staking.setDistributor:  distributor set on staking");
 
     // Step 4: Initialize sOHM and set the index
     if ((await sOhm.gOHM()) == ethers.constants.AddressZero) {
-        await sOhm.setIndex(INITIAL_INDEX); // TODO
-        await sOhm.setgOHM(gOhm.address);
-        await sOhm.initialize(staking.address, treasuryDeployment.address);
+        await waitFor(sOhm.setIndex(INITIAL_INDEX)); // TODO
+        await waitFor(sOhm.setgOHM(gOhm.address));
+        await waitFor(sOhm.initialize(staking.address, treasuryDeployment.address));
     }
     console.log("Setup -- sohm initialized (index, gohm)");
 
     // Step 5: Set up distributor with bounty and recipient
-    await distributor.setBounty(BOUNTY_AMOUNT);
-    await distributor.addRecipient(staking.address, INITIAL_REWARD_RATE);
+    await waitFor(distributor.setBounty(BOUNTY_AMOUNT));
+    await waitFor(distributor.addRecipient(staking.address, INITIAL_REWARD_RATE));
     console.log("Setup -- distributor.setBounty && distributor.addRecipient");
 
     // Approve staking contact to spend deployer's OHM

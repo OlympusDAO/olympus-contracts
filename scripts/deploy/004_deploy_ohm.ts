@@ -17,4 +17,5 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 };
 
 func.tags = [CONTRACTS.ohm, "staking", "tokens"];
+func.dependencies = [CONTRACTS.authority];
 export default func;

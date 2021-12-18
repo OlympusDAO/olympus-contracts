@@ -1,4 +1,3 @@
-import { DeployFunction } from "hardhat-deploy/types";
 export const CONTRACTS: Record<string, string> = {
     ohm: "OlympusERC20Token",
     sOhm: "sOlympus",
@@ -12,7 +11,7 @@ export const CONTRACTS: Record<string, string> = {
     authority: "OlympusAuthority",
     migrator: "OlympusTokenMigrator",
     FRAX: "Frax",
-    DAI: "dai",
+    DAI: "DAI",
 };
 
 // Constructor Arguments
