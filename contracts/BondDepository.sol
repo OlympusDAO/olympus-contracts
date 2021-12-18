@@ -641,7 +641,7 @@ contract OlympusBondDepository is Ownable {
     mapping( address => Bond ) public bondInfo; // stores bond information for depositors
 
     uint public totalDebt; // total value of outstanding bonds; used for pricing
-    uint public lastDecay; // reference block for debt decay
+    uint public lastDecay; // reference block timestamp for debt decay
 
 
 
@@ -651,7 +651,7 @@ contract OlympusBondDepository is Ownable {
     // Info for creating new bonds
     struct Terms {
         uint controlVariable; // scaling variable for price
-        uint vestingTerm; // in blocks
+        uint vestingTerm; // in seconds
         uint minimumPrice; // vs principle value
         uint maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
         uint fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
@@ -729,12 +729,12 @@ contract OlympusBondDepository is Ownable {
             maxDebt: _maxDebt
         });
         totalDebt = _initialDebt;
-        lastDecay = block.number;
+        lastDecay = block.timestamp;
     }
 
 
 
-    
+
     /* ======== POLICY FUNCTIONS ======== */
 
     enum PARAMETER { VESTING, PAYOUT, FEE, DEBT }
@@ -745,7 +745,7 @@ contract OlympusBondDepository is Ownable {
      */
     function setBondTerms ( PARAMETER _parameter, uint _input ) external onlyPolicy() {
         if ( _parameter == PARAMETER.VESTING ) { // 0
-            require( _input >= 10000, "Vesting must be longer than 36 hours" );
+            require( _input >= 129600, "Vesting must be longer than 36 hours" );
             terms.vestingTerm = _input;
         } else if ( _parameter == PARAMETER.PAYOUT ) { // 1
             require( _input <= 1000, "Payout cannot be above 1 percent" );
@@ -860,7 +860,7 @@ contract OlympusBondDepository is Ownable {
         });
 
         // indexed events are emitted
-        emit BondCreated( _amount, payout, block.number.add( terms.vestingTerm ), priceInUSD );
+        emit BondCreated( _amount, payout, block.timestamp.add( terms.vestingTerm ), priceInUSD );
         emit BondPriceChanged( bondPriceInUSD(), _bondPrice(), debtRatio() );
 
         adjust(); // control variable is adjusted
@@ -953,7 +953,7 @@ contract OlympusBondDepository is Ownable {
      */
     function decayDebt() internal {
         totalDebt = totalDebt.sub( debtDecay() );
-        lastDecay = block.number;
+        lastDecay = block.timestamp;
     }
 
 
@@ -1053,8 +1053,8 @@ contract OlympusBondDepository is Ownable {
      *  @return decay_ uint
      */
     function debtDecay() public view returns ( uint decay_ ) {
-        uint blocksSinceLast = block.number.sub( lastDecay );
-        decay_ = totalDebt.mul( blocksSinceLast ).div( terms.vestingTerm );
+        uint timeSinceLast = block.timestamp.sub( lastDecay );
+        decay_ = totalDebt.mul( timeSinceLast ).div( terms.vestingTerm );
         if ( decay_ > totalDebt ) {
             decay_ = totalDebt;
         }

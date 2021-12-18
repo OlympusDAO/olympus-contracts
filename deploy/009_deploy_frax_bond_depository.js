@@ -57,10 +57,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   // for now. Need to adjust at least bondVestingLength, minBondPrice, maxBondPayout.
   const fraxBondBCV = 300;
 
-  // TODO: this number doesn't matter, we will update the bond depository
-  // contracts to use timestamps instead of block numbers.
-  // Will just get this contract deployed for now.
-  const bondVestingLength = 33110;
+  // 5 days
+  const bondVestingLength = 432000;
 
   const minBondPrice = 29000;
 
