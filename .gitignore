@@ -22,3 +22,6 @@ deployments/hardhat
 deployments/localhost
 
 /.dapp
+
+# OpenZeppelin upgradeable files
+.openzeppelin/unknown-*.json
