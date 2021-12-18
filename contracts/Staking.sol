@@ -280,6 +280,13 @@ contract OlympusStaking is OlympusAccessControlled {
         return sOHM.balanceForGons(gonsInWarmup);
     }
 
+    /**
+     * @notice seconds until the next epoch begins
+     */
+    function secondsToNextEpoch() external view returns (uint256) {
+        return epoch.end.sub(block.timestamp);
+    }
+
     /* ========== MANAGERIAL FUNCTIONS ========== */
 
     /**
