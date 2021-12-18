@@ -52,7 +52,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   ).attach(deployment.address);
 
   // NOTE: make deployer address an approved reserve and liquidity token depositor
-  await treasury.queue('0', deployer.address);
-  await treasury.queue('4', deployer.address);
+  await treasury.queue('0', deployer);
+  await treasury.queue('4', deployer);
 };
 module.exports.tags = ['Treasury', 'AllEnvironments'];

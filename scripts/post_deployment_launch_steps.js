@@ -10,9 +10,10 @@ async function main() {
     const accounts = await getNamedAccounts();
     const { deployer } = accounts;
     const treasuryAddress = (await get('OlympusTreasury')).address;
-    const distributorAddress = (await get('OlympusDistributor')).address;
+    const distributorAddress = (await get('Distributor')).address;
     const fraxBondAddress = (await get('FraxBondDepository')).address;
 
+    console.log(`deployer is ${deployer}`);
     console.log(`Treasury address is ${treasuryAddress}`);
     console.log(`Distributor address is ${distributorAddress}`);
     console.log(`FRAX bond address is ${fraxBondAddress}`);
