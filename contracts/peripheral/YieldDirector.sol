@@ -49,7 +49,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     event Redeemed(address indexed recipient_, uint256 amount_);
     event EmergencyShutdown(bool active_);
 
-    constructor (address sOhm_, address gOhm_, address authority_)
+    constructor (address sOhm_, address authority_)
         OlympusAccessControlled(IOlympusAuthority(authority_))
     {
         require(sOhm_ != address(0), "Invalid address for sOHM");
