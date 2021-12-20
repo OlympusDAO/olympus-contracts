@@ -114,9 +114,7 @@ contract OlympusBondDepository is OlympusAccessControlled {
     bond.capacity = bond.capacity.sub(checkAgainst);
     // get the timestamp when bond will mature
     uint256 expiration = info.vestingTerm.add(block.timestamp);
-    if (!info.fixedTerm) {
-      expiration = info.conclusion;
-    }
+    if (!info.fixedTerm) expiration = info.conclusion;
     // store user info with teller
     index_ = teller.newBond(_depositor, payout_, expiration, _referral);
     emit CreateBond(_bid, _amount, payout_, expiration);
@@ -124,9 +122,7 @@ contract OlympusBondDepository is OlympusAccessControlled {
     bond.quoteToken.safeTransferFrom(msg.sender, address(treasury), _amount);
     bond.totalDebt = bond.totalDebt.add(payout_);
     // shut off new bonds if max debt is breached
-    if (bond.totalDebt > info.maxDebt) {
-      bond.capacity = 0;
-    }
+    if (bond.totalDebt > info.maxDebt) bond.capacity = 0;
   }
 
 /* ======== INTERNAL ======== */
@@ -224,9 +220,7 @@ contract OlympusBondDepository is OlympusAccessControlled {
     uint256 totalDebt = bonds[_bid].totalDebt;
     uint256 secondsSinceLast = block.timestamp.sub(bonds[_bid].lastDecay);
     decay_ = totalDebt.mul(secondsSinceLast).div(decay);
-    if (decay_ > totalDebt) {
-      decay_ = totalDebt;
-    }
+    if (decay_ > totalDebt) decay_ = totalDebt;
   }
 
 /* ======== POLICY ======== */
