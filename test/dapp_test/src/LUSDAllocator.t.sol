@@ -21,6 +21,7 @@ import "../../../contracts/BondTeller.sol";
 import "../../../contracts/governance/gOHM.sol";
 import "./util/MockContract.sol";
 import "../../../contracts/allocators/LUSDAllocator.sol";
+import "../../../contracts/OlympusAuthority.sol";
 
 contract LUSDAllocatorTest is DSTest {
     using FixedPoint for *;
@@ -30,6 +31,7 @@ contract LUSDAllocatorTest is DSTest {
     LUSDAllocator internal allocator;
     OlympusTreasury internal treasury;    
     OlympusERC20Token internal ohm;
+    OlympusAuthority internal authority;
     MockContract internal lusdTokenAddress = new MockContract();
     MockContract internal wethContract = new MockContract();
     MockContract internal lqtyTokenAddress = new MockContract();
@@ -44,8 +46,10 @@ contract LUSDAllocatorTest is DSTest {
         hevm.warp(0);
         hevm.roll(0);
 
-        ohm = new OlympusERC20Token();
-        treasury = new OlympusTreasury(address(ohm), 1);
+        authority = new OlympusAuthority(address(this), address(this), address(this), address(this));
+
+        ohm = new OlympusERC20Token(address(authority));
+        treasury = new OlympusTreasury(address(ohm), 1, address(authority));
     }
 
     // Point of this test is to ensure the parameters we make in our sequence of calls
