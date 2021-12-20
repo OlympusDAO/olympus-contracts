@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.7.5;
 
-import "../interfaces/IERC20.sol";
-import "../interfaces/ITreasury.sol";
-import "../interfaces/IStaking.sol";
-import "../interfaces/IOwnable.sol";
-import "../interfaces/IsOHM.sol";
-import "../interfaces/ITeller.sol";
-import "../types/OlympusAccessControlled.sol";
-import "../libraries/SafeERC20.sol";
+import "./interfaces/IERC20.sol";
+import "./interfaces/ITreasury.sol";
+import "./interfaces/IStaking.sol";
+import "./interfaces/IOwnable.sol";
+import "./interfaces/IgOHM.sol";
+import "./interfaces/ITeller.sol";
+import "./types/OlympusAccessControlled.sol";
+import "./libraries/SafeERC20.sol";
+import "./libraries/SafeMath.sol";
 
 contract BondTeller is ITeller, OlympusAccessControlled {
     
 /* ========== DEPENDENCIES ========== */
 
     using SafeERC20 for IERC20;
-    using SafeERC20 for IsOHM;
+    using SafeERC20 for IgOHM;
+    using SafeMath for uint256;
 
 /* ========== EVENTS =========== */
 
@@ -31,9 +33,9 @@ contract BondTeller is ITeller, OlympusAccessControlled {
 
 /* ========== STRUCTS ========== */
 
-    // Info for bond slip
-    struct Slip {
-        uint112 payout; // sOHM remaining to be paid. gOHM balance
+    // Info for bond note
+    struct Note {
+        uint112 payout; // gOHM remaining to be paid
         uint48 created; // time bond was created
         uint48 matured; // timestamp when bond is matured
         uint48 redeemed; // time bond was redeemed
@@ -45,11 +47,12 @@ contract BondTeller is ITeller, OlympusAccessControlled {
     IStaking internal immutable staking; // contract to stake payout
     ITreasury internal immutable treasury;
     IERC20 internal immutable ohm;
-    IsOHM internal immutable sOHM; // payment token
-    address public dao; // receives fees on each bond
+    IgOHM internal immutable gOHM; // payment token
+    address public immutable dao; // receives fees on each bond
 
-    mapping(address => Slip[]) public slips; // user data
+    mapping(address => Note[]) public notes; // user data
     mapping(address => uint256) public rewards; // front end operator rewards
+    mapping(address => bool) public whitelisted; // whitelisted status for operators
     uint256[2] public rewardRate;
 
 /* ========== CONSTRUCTOR ========== */
@@ -59,14 +62,17 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         address _staking,
         address _treasury,
         address _ohm,
-        address _sOHM,
+        address _gOHM,
+        address _dao,
         address _authority
     ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         depository = _depository;
         staking = IStaking(_staking);
         treasury = ITreasury(_treasury);
         ohm = IERC20(_ohm);
-        sOHM = IsOHM(_sOHM);
+        gOHM = IgOHM(_gOHM);
+        dao = _dao;
+        whitelisted[_dao] = true;
     }
 
 /* ========== ONLY DEPOSITORY ========== */
@@ -85,23 +91,25 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         uint256 _expires,
         address _referral
     ) external override onlyDepository returns (uint256 index_) {
-        uint256 toDAO = _payout * rewardRate[1] / 1e4;
-        uint256 toFrontEnd = _payout * rewardRate[0] / 1e4;
-
-        treasury.mint(address(this), _payout + toDAO + toFrontEnd);
-
+        // compute dao and front end referrer bonuses
+        uint256 toDAO = _payout.mul(rewardRate[1]).div(1e4);
+        uint256 toReferrer = _payout.mul(rewardRate[0]).div(1e4);
+        // mint OHM and stake payout
+        treasury.mint(address(this), _payout.add(toDAO).add(toReferrer));
         ohm.approve(address(staking), _payout);
-        staking.stake(address(this), _payout, true, true);
-
-        rewards[dao] += toDAO;
-        rewards[_referral] += toFrontEnd; // front end operator reward
-
-        index_ = slips[_bonder].length;
-
-        // store bond & stake payout
-        slips[_bonder].push(
-            Slip({
-                payout: uint112(sOHM.toG(_payout)),
+        staking.stake(address(this), _payout, true, false);
+        // log rewards
+        if (whitelisted[_referral]) {
+            rewards[_referral] = rewards[_referral].add(toReferrer);
+            rewards[dao] = rewards[dao].add(toDAO);
+        } else { // DAO receives both rewards if referrer is not whitelisted
+            rewards[dao] = rewards[dao].add(toDAO.add(toReferrer));
+        }
+        // store info
+        index_ = notes[_bonder].length;
+        notes[_bonder].push(
+            Note({
+                payout: uint112(gOHM.balanceTo(_payout)),
                 created: uint48(block.timestamp),
                 matured: uint48(_expires),
                 redeemed: 0
@@ -120,24 +128,6 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         return redeem(_bonder, indexesFor(_bonder));
     }
 
-    function indexesFor(address _bonder) public view returns (uint256[] memory) {
-        uint256 length;
-        for (uint256 i = 0; i < slips[_bonder].length; i++) {
-            if (slips[_bonder][i].redeemed == 0) {
-                length++;
-            }
-        }
-        uint256[] memory array = new uint256[](length);
-        uint256 position;
-        for (uint256 i = 0; i < slips[_bonder].length; i++) {
-            if (slips[_bonder][i].redeemed == 0) {
-                array[position] = i;
-                position++;
-            }
-        }
-        return array;
-    }
-
     /**
      *  @notice redeem bond for user
      *  @param _bonder address
@@ -147,15 +137,14 @@ contract BondTeller is ITeller, OlympusAccessControlled {
     function redeem(address _bonder, uint256[] memory _indexes) public override returns (uint256) {
         uint256 dues;
         for (uint256 i = 0; i < _indexes.length; i++) {
-            Slip memory info = slips[_bonder][_indexes[i]];
+            Note memory info = notes[_bonder][_indexes[i]];
             if (pendingFor(_bonder, _indexes[i]) != 0) {
-                slips[_bonder][_indexes[i]].redeemed = uint48(block.timestamp); // mark as redeemed
+                notes[_bonder][_indexes[i]].redeemed = uint48(block.timestamp); // mark as redeemed
                 dues += info.payout;
             }
         }
-        dues = sOHM.fromG(dues);
         emit Redeemed(_bonder, dues);
-        sOHM.safeTransfer(_bonder, dues);
+        gOHM.safeTransfer(_bonder, dues);
         return dues;
     }
 
@@ -173,17 +162,33 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         rewardRate[1] = _toDAO;
     }
 
-    function setDAO(address _dao) external onlyPolicy {
-        require(_dao != address(0), "Zero address");
-        uint256 send = rewards[dao];
-        rewards[dao] = 0;
-        ohm.safeTransfer(dao, send);
-        dao = _dao;
+    // add or remove address from the whitelist
+    // whitelisted addresses can earn referral fees by operating a front end
+    function whitelist(address _operator) external override onlyPolicy {
+        require(_operator != dao, "Can not blacklist DAO");
+        whitelisted[_operator] = !whitelisted[_operator];
     }
 
 /* ========== VIEW ========== */
 
-    // PAYOUT
+    // all pending indexes for bonder
+    function indexesFor(address _bonder) public view returns (uint256[] memory) {
+        uint256 length;
+        for (uint256 i = 0; i < notes[_bonder].length; i++) {
+            if (notes[_bonder][i].redeemed == 0) {
+                length++;
+            }
+        }
+        uint256[] memory array = new uint256[](length);
+        uint256 position;
+        for (uint256 i = 0; i < notes[_bonder].length; i++) {
+            if (notes[_bonder][i].redeemed == 0) {
+                array[position] = i;
+                position++;
+            }
+        }
+        return array;
+    }
 
     /**
      * @notice calculate amount of OHM available for claim for single bond
@@ -192,8 +197,8 @@ contract BondTeller is ITeller, OlympusAccessControlled {
      * @return uint256
      */
     function pendingFor(address _bonder, uint256 _index) public view override returns (uint256) {
-        if (slips[_bonder][_index].redeemed == 0 && slips[_bonder][_index].matured <= block.timestamp) {
-            return slips[_bonder][_index].payout;
+        if (notes[_bonder][_index].redeemed == 0 && notes[_bonder][_index].matured <= block.timestamp) {
+            return notes[_bonder][_index].payout;
         }
         return 0;
     }
@@ -208,7 +213,6 @@ contract BondTeller is ITeller, OlympusAccessControlled {
         for (uint256 i = 0; i < _indexes.length; i++) {
             pending_ += pendingFor(_bonder, i);
         }
-        pending_ = sOHM.fromG(pending_);
     }
 
     /**
@@ -217,10 +221,9 @@ contract BondTeller is ITeller, OlympusAccessControlled {
      *  @return pending_ uint256
      */
     function totalPendingFor(address _bonder) public view override returns (uint256 pending_) {
-        Slip[] memory info = slips[_bonder];
-        for (uint256 i = 0; i < info.length; i++) {
-            pending_ += pendingFor(_bonder, i);
+        uint256[] memory indexes = indexesFor(_bonder);
+        for (uint256 i = 0; i < indexes.length; i++) {
+            pending_ += pendingFor(_bonder, indexes[i]);
         }
-        pending_ = sOHM.fromG(pending_);
     }
 }
