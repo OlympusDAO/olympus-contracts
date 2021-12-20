@@ -6,6 +6,7 @@ import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 
 import "../interfaces/IERC20.sol";
+import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IAllocator.sol";
 
@@ -182,7 +183,6 @@ contract LUSDAllocator is Ownable {
     using SafeMath for uint256;
 
     /* ======== STATE VARIABLES ======== */
-
     IStabilityPool immutable lusdStabilityPool;
     ILQTYStaking immutable lqtyStaking;
     ITreasury immutable treasury; // Olympus Treasury
@@ -292,7 +292,7 @@ contract LUSDAllocator is Ownable {
         IERC20(token).approve(address(lusdStabilityPool), amount); // approve to deposit into stability pool
         lusdStabilityPool.provideToSP(amount, frontEndAddress); //s either a front-end address OR 0x0
 
-        uint256 value = treasury.tokenValue(token, amount); // treasury RFV calculator
+        uint256 value = tokenValue(token, amount); // treasury RFV calculator
         accountingFor(amount, value, true); // account for deposit
     }
 
@@ -307,7 +307,7 @@ contract LUSDAllocator is Ownable {
         lusdStabilityPool.withdrawFromSP(amount); // withdraw from SP
 
         uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from stability pool
-        uint256 value = treasury.tokenValue(token, balance); // treasury RFV calculator
+        uint256 value = tokenValue(token, balance); // treasury RFV calculator
 
         accountingFor(balance, value, false); // account for withdrawal
 
@@ -353,6 +353,15 @@ contract LUSDAllocator is Ownable {
                 totalValueDeployed = 0;
             }
         }
+    }
+
+    /**
+    Helper method copying OlympusTreasury::tokenValue(), which will change it's name
+    to valueOf() in the future.  Implemented here so we don't have to upgrade contract later
+     */
+    function tokenValue(address _token, uint256 _amount) internal view returns (uint256 value_) {
+        value_ = _amount.mul(10**9).div(10**IERC20Metadata(_token).decimals());
+        return value_;
     }
 
     /* ======== VIEW FUNCTIONS ======== */
