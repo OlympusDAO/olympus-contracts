@@ -48,7 +48,7 @@ contract BondTeller is ITeller, OlympusAccessControlled {
     ITreasury internal immutable treasury;
     IERC20 internal immutable ohm;
     IgOHM internal immutable gOHM; // payment token
-    address public immutable dao; // receives fees on each bond
+    address internal immutable dao; // receives fees on each bond
 
     mapping(address => Note[]) public notes; // user data
     mapping(address => uint256) public rewards; // front end operator rewards

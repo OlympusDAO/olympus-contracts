@@ -107,15 +107,11 @@ contract OlympusBondDepository is OlympusAccessControlled {
     // compute payout in OHM for amount of quote
     payout_ = payoutFor(_amount, _bid);
     // check that capacity is sufficient and payout is within bounds
-    if (bond.capacityInQuote) {
-      require(bond.capacity >= _amount, "Capacity overflow");
-      require(bond.maxPayout >= _amount, "Size overflow");
-      bond.capacity = bond.capacity.sub(_amount);
-    } else {
-      require(bond.capacity >= payout_, "Capacity overflow");
-      require(bond.maxPayout >= payout_, "Size overflow");
-      bond.capacity = bond.capacity.sub(payout_);
-    }
+    uint256 checkAgainst = payout_;
+    if (bond.capacityInQuote) checkAgainst = _amount;
+    require(bond.capacity >= checkAgainst, "Capacity overflow");
+    require(bond.maxPayout >= checkAgainst, "Size overflow");
+    bond.capacity = bond.capacity.sub(checkAgainst);
     // get the timestamp when bond will mature
     uint256 expiration = info.vestingTerm.add(block.timestamp);
     if (!info.fixedTerm) {
