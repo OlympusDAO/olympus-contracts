@@ -12,13 +12,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   switch(chainId) {
     case '250':
       fraxAddress = config.contractAddresses[chainId].frax;
-      wrappedTokenAddress = config.contractAddresses[chainId].wftm;
+      wrappedTokenAddress = config.contractAddresses[chainId].wrappedToken;
       break;
     default:
       const frax = await get('FRAX');
       fraxAddress = frax.address;
-      const wftm = await get('WrappedFtm');
-      wrappedTokenAddress = wftm.address;
+      const wrappedToken = await get('WrappedToken');
+      wrappedTokenAddress = wrappedToken.address;
       break;
   }
 

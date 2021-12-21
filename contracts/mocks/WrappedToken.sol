@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract WrappedFtm is ERC20, ERC20Pausable {
+contract WrappedToken is ERC20, ERC20Pausable {
     // Error Code: No error.
     uint256 public constant ERR_NO_ERROR = 0x0;
 
@@ -17,11 +17,11 @@ contract WrappedFtm is ERC20, ERC20Pausable {
     constructor (string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
 
     function name() public view override returns (string memory) {
-        return "Wrapped Fantom";
+        return "Wrapped Token";
     }
 
     function symbol() public view override returns (string memory) {
-        return "WFTM";
+        return "WTOKEN";
     }
 
     function decimals() public view override returns (uint8) {

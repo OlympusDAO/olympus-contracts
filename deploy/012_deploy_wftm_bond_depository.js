@@ -15,11 +15,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   // TODO: move it to config
   switch(chainId) {
     case '250':
-      wftmAddress = config.contractAddresses[chainId].wftm;
+      wftmAddress = config.contractAddresses[chainId].wrappedToken;
       break;
     default:
-      const wftm = await get('WrappedFtm');
-      wftmAddress = wftm.address;
+      const wrappedToken = await get('WrappedToken');
+      wftmAddress = wrappedToken.address;
       break;
   }
 
