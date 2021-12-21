@@ -22,7 +22,7 @@ module.exports = {
   },
   contractAddresses: {
     '250': {
-      // TODO: This is out multi-sig (for now).
+      // TODO: This is our multi-sig (for now).
       dao: '0xba5c251Cffc942C8e16e2315024c7D4B7D76Bea8',
       frax: '0xaf319E5789945197e365E7f7fbFc56B130523B33',
       wftm: '0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83',
