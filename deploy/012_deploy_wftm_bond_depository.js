@@ -9,7 +9,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const treasuryArtifact = await get('OlympusTreasury');
   // TODO: Setting it to our Fantom multi-sig for now, not sure what to put yet.
   const daoAddress = config.contractAddresses[chainId].dao;
-  const priceFeedAddress = config.contractAddresses[chainId].ftmPriceFeed;
+  const priceFeedAddress = config.contractAddresses[chainId].priceFeed;
 
   let wftmAddress;
   // TODO: move it to config
