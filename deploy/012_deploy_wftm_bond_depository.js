@@ -9,7 +9,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const treasuryArtifact = await get('OlympusTreasury');
   // TODO: Setting it to our Fantom multi-sig for now, not sure what to put yet.
   const daoAddress = config.contractAddresses[chainId].dao;
-  const priceFeedAddress = config.contractAddresses[chainId].priceFeedAddress;
+  const priceFeedAddress = config.contractAddresses[chainId].ftmPriceFeed;
 
   let wftmAddress;
   // TODO: move it to config
@@ -18,7 +18,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
       wftmAddress = config.contractAddresses[chainId].wftm;
       break;
     default:
-      const wftm = await get('WrappedFantom');
+      const wftm = await get('WrappedFtm');
       wftmAddress = wftm.address;
       break;
   }
@@ -66,6 +66,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   const maxBondDebt = ethers.utils.parseUnits('1000000000', 9);
   const initialBondDebt = 0;
+
+  // NOTE: this needs to be set twice to avoid division by 0 error.
+  await wftmBond.setBondTerms('0', bondVestingLength);
 
   await wftmBond.initializeBondTerms(
     wftmBondBCV,

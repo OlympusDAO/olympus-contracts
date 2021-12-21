@@ -7,10 +7,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    const deployment = await deploy('Wftm', {
+    const deployment = await deploy('WrappedFtm', {
       from: deployer,
+      args: ["Wrapped Fantom", "WFTM"],
       log: true,
     });
   }
 };
-module.exports.tags = ['Wftm', 'TestingOnly'];
+module.exports.tags = ['WrappedFtm', 'TestingOnly'];

@@ -7,15 +7,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-abstract contract WrappedFtm is ERC20, ERC20Pausable {
+contract WrappedFtm is ERC20, ERC20Pausable {
     // Error Code: No error.
     uint256 public constant ERR_NO_ERROR = 0x0;
 
     // Error Code: Non-zero value expected to perform the function.
     uint256 public constant ERR_INVALID_ZERO_VALUE = 0x01;
 
-    // create instance of the wFTM token
-    constructor (string memory name_, string memory symbol_) {}
+    constructor (string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
 
     function name() public view override returns (string memory) {
         return "Wrapped Fantom";
