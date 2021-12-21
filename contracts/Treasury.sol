@@ -101,9 +101,9 @@ interface IOwnable {
   function manager() external view returns (address);
 
   function renounceManagement() external;
-  
+
   function pushManagement( address newOwner_ ) external;
-  
+
   function pullManagement() external;
 }
 
@@ -139,7 +139,7 @@ contract Ownable is IOwnable {
         emit OwnershipPushed( _owner, newOwner_ );
         _newOwner = newOwner_;
     }
-    
+
     function pullManagement() public virtual override {
         require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
         emit OwnershipPulled( _owner, _newOwner );
@@ -262,28 +262,20 @@ contract OlympusTreasury is Ownable {
 
     address public sOHM;
     uint public sOHMQueue; // Delays change to sOHM address
-    
+
     uint public totalReserves; // Risk-free value of all assets
     uint public totalDebt;
 
     constructor (
         address _OHM,
-        address _DAI,
         address _Frax,
-        address _OHMDAI,
         uint _blocksNeededForQueue
     ) {
         require( _OHM != address(0) );
         OHM = _OHM;
 
-        isReserveToken[ _DAI ] = true;
-        reserveTokens.push( _DAI );
-
         isReserveToken[ _Frax] = true;
         reserveTokens.push( _Frax );
-
-       isLiquidityToken[ _OHMDAI ] = true;
-       liquidityTokens.push( _OHMDAI );
 
         blocksNeededForQueue = _blocksNeededForQueue;
     }
@@ -358,7 +350,7 @@ contract OlympusTreasury is Ownable {
         emit ReservesUpdated( totalReserves );
 
         IERC20( _token ).transfer( msg.sender, _amount );
-        
+
         emit CreateDebt( msg.sender, _token, _amount, value );
     }
 
@@ -431,7 +423,7 @@ contract OlympusTreasury is Ownable {
         IERC20Mintable( OHM ).mint( _recipient, _amount );
 
         emit RewardsMinted( msg.sender, _recipient, _amount );
-    } 
+    }
 
     /**
         @notice returns excess reserves not backing tokens
@@ -448,7 +440,7 @@ contract OlympusTreasury is Ownable {
     function auditReserves() external onlyManager() {
         uint reserves;
         for( uint i = 0; i < reserveTokens.length; i++ ) {
-            reserves = reserves.add ( 
+            reserves = reserves.add (
                 valueOf( reserveTokens[ i ], IERC20( reserveTokens[ i ] ).balanceOf( address(this) ) )
             );
         }
@@ -530,7 +522,7 @@ contract OlympusTreasury is Ownable {
             }
             result = !isReserveDepositor[ _address ];
             isReserveDepositor[ _address ] = result;
-            
+
         } else if ( _managing == MANAGING.RESERVESPENDER ) { // 1
             if ( requirements( reserveSpenderQueue, isReserveSpender, _address ) ) {
                 reserveSpenderQueue[ _address ] = 0;
@@ -630,12 +622,12 @@ contract OlympusTreasury is Ownable {
         @param queue_ mapping( address => uint )
         @param status_ mapping( address => bool )
         @param _address address
-        @return bool 
+        @return bool
      */
-    function requirements( 
-        mapping( address => uint ) storage queue_, 
-        mapping( address => bool ) storage status_, 
-        address _address 
+    function requirements(
+        mapping( address => uint ) storage queue_,
+        mapping( address => bool ) storage status_,
+        address _address
     ) internal view returns ( bool ) {
         if ( !status_[ _address ] ) {
             require( queue_[ _address ] != 0, "Must queue" );

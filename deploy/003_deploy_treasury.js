@@ -25,17 +25,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   // 6,000 / 0.9 which is approximately 6,600 blocks.
   const blocksNeededForQueue = 6600;
 
-  // TODO: Should I remove the constructor arguments so that it goes through first?
-  // TODO: need BRICK-FRAX address
-  // TODO: Or should I set it later through the queue?
   const deployment = await deploy('OlympusTreasury', {
     from: deployer,
     args: [
       brickArtifact.address,
-      // address _DAI, (using FRAX address for now so it passes)
-      fraxAddress,
-      fraxAddress,
-      // address _OHMDAI, (using FRAX address for now so it passes)
       fraxAddress,
       blocksNeededForQueue
     ],
