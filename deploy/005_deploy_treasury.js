@@ -7,15 +7,18 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   const brickArtifact = await get('OlympusERC20Token');
 
-  let fraxAddress;
+  let fraxAddress, wrappedTokenAddress;
   // TODO: move it to config
   switch(chainId) {
     case '250':
       fraxAddress = config.contractAddresses[chainId].frax;
+      wrappedTokenAddress = config.contractAddresses[chainId].wftm;
       break;
     default:
       const frax = await get('FRAX');
       fraxAddress = frax.address;
+      const wftm = await get('WrappedFtm');
+      wrappedTokenAddress = wftm.address;
       break;
   }
 
@@ -30,6 +33,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     args: [
       brickArtifact.address,
       fraxAddress,
+      wrappedTokenAddress,
       blocksNeededForQueue
     ],
     log: true,

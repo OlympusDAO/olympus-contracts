@@ -269,6 +269,7 @@ contract OlympusTreasury is Ownable {
     constructor (
         address _OHM,
         address _Frax,
+        address _WrappedToken,
         uint _blocksNeededForQueue
     ) {
         require( _OHM != address(0) );
@@ -276,6 +277,9 @@ contract OlympusTreasury is Ownable {
 
         isReserveToken[ _Frax] = true;
         reserveTokens.push( _Frax );
+
+        isReserveToken[ _WrappedToken] = true;
+        reserveTokens.push( _WrappedToken );
 
         blocksNeededForQueue = _blocksNeededForQueue;
     }
