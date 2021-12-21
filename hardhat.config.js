@@ -9,6 +9,17 @@ module.exports = {
       // TODO: Fantom testnet and mainnet
     },
   },
+  protocolParameters: {
+    '250': {
+      epochLength: 28800, // seconds
+    },
+    '4002': {
+      epochLength: 28800, // seconds
+    },
+    '31337': {
+      epochLength: 28800, // seconds
+    },
+  },
   contractAddresses: {
     '250': {
       // TODO: This is out multi-sig (for now).

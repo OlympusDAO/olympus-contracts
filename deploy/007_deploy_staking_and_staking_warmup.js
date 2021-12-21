@@ -1,4 +1,4 @@
-const { ethers } = require('hardhat');
+const { ethers, getChainId, config } = require('hardhat');
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, get } = deployments;
@@ -7,7 +7,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const brickArtifact = await get('OlympusERC20Token');
   const sBrickArtifact = await get('sOlympus');
   const distributorArtifact = await get('Distributor');
-  const epochLengthInSeconds = 28800;
+  const chainId = await getChainId();
+  const epochLength = config.protocolParameters[chainId].epochLength;
 
   const distributor = (
     await ethers.getContractFactory('Distributor')
@@ -23,7 +24,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     args: [
       brickArtifact.address,
       sBrickArtifact.address,
-      epochLengthInSeconds,
+      epochLength,
       firstEpochNumber,
       firstEpochTime,
 

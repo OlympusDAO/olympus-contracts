@@ -1,4 +1,4 @@
-const { ethers } = require('hardhat');
+const { ethers, getChainId, config } = require('hardhat');
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, get } = deployments;
@@ -6,8 +6,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   const treasuryArtifact = await get('OlympusTreasury');
   const brickArtifact = await get('OlympusERC20Token');
-  // 28,800 seconds = 8 hours
-  const epochLength = 28800;
+
+  const chainId = await getChainId();
+  const epochLength = config.protocolParameters[chainId].epochLength;
   // TODO: nextEpochTime is TBD. For now I will just set it to
   // the current block timestamp + epoch length.
   const currentBlockNumber = await ethers.provider.getBlockNumber();
