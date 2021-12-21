@@ -431,16 +431,16 @@ describe.only('YieldDirector', async () => {
         //await expect(await tyche.connect(bob).redeem()).to.be.reverted(); // TODO revert check doesnt work
     });
 
-    it('should display total donated to recipient', async () => {
+    it.only('should display total donated to recipient', async () => {
         const principal = "100000000000";
         await tyche.deposit(principal, bob.address);
         await triggerRebase();
 
-        await expect(await tyche.depositsTo(deployer.address, bob.address)).is.equal(principal);
-        await expect(await tyche.totalDeposits(deployer.address)).is.equal(principal);
+        await expect(await tyche.donatedTo(deployer.address, bob.address)).is.equal("100000000");
+        await expect(await tyche.totalDonated(deployer.address)).is.equal("100000000");
     });
 
-    it('should display total donated to all recipients', async () => {
+    it.only('should display total deposited to all recipients', async () => {
         const principal = "100000000000";
 
         await tyche.deposit(principal, bob.address);
@@ -449,6 +449,9 @@ describe.only('YieldDirector', async () => {
 
         await expect(await tyche.depositsTo(deployer.address, bob.address)).is.equal(principal);
         await expect(await tyche.depositsTo(deployer.address, alice.address)).is.equal(principal);
+
+        await expect(tyche.depositsTo(bob.address, alice.address)).to.be.revertedWith("No deposits");
+
         await expect(await tyche.totalDeposits(deployer.address)).is.equal("200000000000");
     });
 

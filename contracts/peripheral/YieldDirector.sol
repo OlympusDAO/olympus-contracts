@@ -201,12 +201,10 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @notice Get deposited sOHM amount for specific recipient
      */
     function depositsTo(address donor_, address recipient_) external override view returns ( uint256 ) {
-        uint256 recipientIndex = _getRecipientIndex(msg.sender, recipient_);
-        require(recipientIndex != MAX_UINT256, "No donations to recipient");
+        uint256 recipientIndex = _getRecipientIndex(donor_, recipient_);
+        require(recipientIndex != MAX_UINT256, "No deposits");
 
-        unchecked {
-            return donationInfo[donor_][recipientIndex].deposit;
-        }
+        return donationInfo[donor_][recipientIndex].deposit;
     }
 
     /**
@@ -248,12 +246,10 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @notice Return total amount of sOHM donated to recipient since last full withdrawal
      */
     function donatedTo(address donor_, address recipient_) external override view returns (uint256) {
-        DonationInfo[] storage donations = donationInfo[donor_];
-
-        uint256 recipientIndex = _getRecipientIndex(msg.sender, recipient_);
+        uint256 recipientIndex = _getRecipientIndex(donor_, recipient_);
         require(recipientIndex != MAX_UINT256, "No donations to recipient");
 
-        DonationInfo storage donation = donations[recipientIndex];
+        DonationInfo storage donation = donationInfo[donor_][recipientIndex];
         return donation.carry
             + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
     }
