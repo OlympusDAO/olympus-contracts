@@ -11,7 +11,19 @@ module.exports = {
   },
   contractAddresses: {
     '250': {
+      // TODO: This is out multi-sig (for now).
+      dao: '0xba5c251Cffc942C8e16e2315024c7D4B7D76Bea8',
       frax: '0xaf319E5789945197e365E7f7fbFc56B130523B33',
+      wftm: '0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83',
+      ftmPriceFeed: '0xf4766552D15AE4d256Ad41B6cf2933482B0680dc',
+    },
+    '4002': {
+      dao: '0x0000000000000000000000000000000000000000',
+      ftmPriceFeed: '0xe04676B9A9A2973BCb0D1478b5E1E9098BBB7f3D',
+    },
+    '31337': {
+      dao: '0x0000000000000000000000000000000000000000',
+      ftmPriceFeed: '0x0000000000000000000000000000000000000000',
     },
     zero: '0x0000000000000000000000000000000000000000',
   },
