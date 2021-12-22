@@ -9,7 +9,8 @@ import "./types/OlympusAccessControlled.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/ITeller.sol";
 import "./interfaces/IERC20Metadata.sol";
-import "./BondTeller.sol";
+import "./interfaces/IgOHM.sol";
+import "./interfaces/IStaking.sol";
 
 contract OlympusBondDepository is OlympusAccessControlled {
 /* ======== DEPENDENCIES ======== */
@@ -18,11 +19,13 @@ contract OlympusBondDepository is OlympusAccessControlled {
   using SafeMath for uint48;
   using SafeMath for uint64;
   using SafeERC20 for IERC20;
+  using SafeERC20 for IgOHM;
 
 /* ======== EVENTS ======== */
 
   event BeforeBond(uint256 id, uint256 internalPrice, uint256 debtRatio);
   event CreateBond(uint256 id, uint256 amount, uint256 payout, uint256 expires);
+  event Redeemed(address indexed bonder, uint256 payout);
 
 /* ======== STRUCTS ======== */
 
@@ -35,6 +38,7 @@ contract OlympusBondDepository is OlympusAccessControlled {
     bool capacityInQuote; // capacity limit is in payment token (true) or in OHM (false, default)
     uint48 lastTune; // last timestamp when control variable was tuned
     uint48 lastDecay; // last timestamp when bond was created and debt was decayed
+    uint48 length; // time from creation to conclusion. used as speed to decay debt.
   }
 
   // Info for creating new bonds
@@ -46,20 +50,36 @@ contract OlympusBondDepository is OlympusAccessControlled {
     uint64 maxDebt; // 9 decimal debt maximum in OHM
   }
 
+  // Info for bond note
+  struct Note {
+    uint256 payout; // gOHM remaining to be paid
+    uint48 created; // time bond was created
+    uint48 matured; // timestamp when bond is matured
+    uint48 redeemed; // time bond was redeemed
+  }
+
 /* ======== STATE VARIABLES ======== */
 
-  uint256 internal immutable tuneInterval = 3600; // One hour between tuning
-  uint256 internal immutable targetDepositInterval = 21600; // target six hours between deposits
-  uint256 internal immutable decay = 432000; // Five day decay period
+  // Constants
+  uint256 internal immutable tuneInterval = 360; // One hour between tuning
+  uint256 internal immutable targetDepositInterval = 14400; // target four hours between deposits
 
-  mapping(uint256 => Bond) public bonds;
-  mapping(uint256 => Terms) public terms;
-  uint256 public nonce; // last index on bonds and terms mappings
-
-  ITeller public teller; // handles payment
-
+  // Addresses
   ITreasury internal immutable treasury; // the purchaser of quote tokens
+  IStaking internal immutable staking; // contract to stake payout
   IERC20 internal immutable ohm; // the payment token for bonds
+  IgOHM internal immutable gOHM; // payment token
+  address internal immutable dao; // receives fees on each bond
+
+  // Storage
+  Bond[] public bonds;
+  Terms[] public terms;
+  mapping(address => Note[]) public notes; // user deposit data
+
+  // Front end incentive
+  uint256[2] public rewardRate; // % reward for [operator, dao] (5 decimals)
+  mapping(address => uint256) public rewards; // front end operator rewards
+  mapping(address => bool) public whitelisted; // whitelisted status for operators
 
 /* ======== CONSTRUCTOR ======== */
 
@@ -78,10 +98,12 @@ contract OlympusBondDepository is OlympusAccessControlled {
     require(_dao != address(0), "Zero address: DAO");
     ohm = IERC20(_ohm);
     treasury = ITreasury(_treasury);
-    teller = ITeller(address(new BondTeller(address(this), _staking, _treasury, _ohm, _gohm, _dao, _authority)));
+    staking = IStaking(_staking);
+    gOHM = IgOHM(_gohm);
+    dao = _dao;
   }
 
-/* ======== DEPOSIT ======== */
+/* ======== MUTABLE ======== */
 
   /**
    * @notice deposit bond
@@ -101,52 +123,115 @@ contract OlympusBondDepository is OlympusAccessControlled {
     address _referral
   ) external returns (uint256 payout_, uint256 index_) {
     Bond storage bond = bonds[_bid];
-    Terms memory info = terms[_bid];
-    // ensure certain requirements are true
-    _checkBeforeBond(_bid, _depositor, _maxPrice);
+    Terms memory term = terms[_bid];
+    // ensure initial requirements are true
+    require(_depositor != address(0), "Depository: invalid address");
+    require(block.timestamp < term.conclusion, "Depository: bond concluded");
+    // decrement debt once initial checks have passed
+    bond.totalDebt = bond.totalDebt.sub(debtDecay(_bid));
+    bond.lastDecay = uint48(block.timestamp);
+    // do checks reliant on update to date debt
+    uint256 price = bondPrice(_bid);
+    require(bond.totalDebt <= term.maxDebt, "Depository: max debt exceeded");
+    require(_maxPrice >= price, "Depository: more than max price"); // slippage protection
+    emit BeforeBond(_bid, price, bond.totalDebt.mul(1e9).div(ohm.totalSupply()));
     // compute payout in OHM for amount of quote
-    payout_ = payoutFor(_amount, _bid);
+    payout_ = _amount.div(price);
     // check that capacity is sufficient and payout is within bounds
-    uint256 checkAgainst = payout_;
-    if (bond.capacityInQuote) checkAgainst = _amount;
-    require(bond.capacity >= checkAgainst, "Capacity overflow");
-    require(bond.maxPayout >= checkAgainst, "Size overflow");
+    uint256 checkAgainst; // use amount paid in if tracking in terms of quote, payout otherwise
+    if (bond.capacityInQuote) checkAgainst = _amount; else checkAgainst = payout_;
+    require(bond.capacity >= checkAgainst, "Depository: capacity exceeded");
+    require(bond.maxPayout >= checkAgainst, "Depository: max size exceeded");
     bond.capacity = bond.capacity.sub(checkAgainst);
     // get the timestamp when bond will mature
-    uint256 expiration = info.vestingTerm.add(block.timestamp);
-    if (!info.fixedTerm) expiration = info.conclusion;
-    // store user info with teller
-    index_ = teller.newBond(_depositor, payout_, expiration, _referral);
-    emit CreateBond(_bid, _amount, payout_, expiration);
+    uint256 maturation; // fixed term means now + fixed amount of time, otherwise use static maturation time
+    if (!term.fixedTerm) maturation = term.conclusion; else maturation = term.vestingTerm.add(block.timestamp);
+    // store user data 
+    index_ = newBond(_depositor, payout_, maturation, _referral);
+    emit CreateBond(_bid, _amount, payout_, maturation);
     // transfer tokens and add to total debt (increasing price for next bond)
     bond.quoteToken.safeTransferFrom(msg.sender, address(treasury), _amount);
     bond.totalDebt = bond.totalDebt.add(payout_);
     // shut off new bonds if max debt is breached
-    if (bond.totalDebt > info.maxDebt) bond.capacity = 0;
+    if (bond.totalDebt > term.maxDebt) bond.capacity = 0;
+    // tune control variable to hit target on time
+    tune(_bid);
+  }
+
+  /**
+   *  @notice redeem bond for user
+   *  @param _bonder address
+   *  @param _indexes calldata uint256[]
+   *  @return uint256
+   */
+  function redeem(address _bonder, uint256[] memory _indexes) public returns (uint256) {
+      uint256 dues;
+      for (uint256 i = 0; i < _indexes.length; i++) {
+          Note memory info = notes[_bonder][_indexes[i]];
+          if (pendingFor(_bonder, _indexes[i]) != 0) {
+              notes[_bonder][_indexes[i]].redeemed = uint48(block.timestamp); // mark as redeemed
+              dues += info.payout;
+          }
+      }
+      emit Redeemed(_bonder, dues);
+      gOHM.safeTransfer(_bonder, dues);
+      return dues;
+  }
+
+  // redeem all redeemable bonds for user
+  function redeemAll(address _bonder) external returns (uint256) {
+      return redeem(_bonder, indexesFor(_bonder));
+  }
+
+  // pay reward to front end operator
+  function getReward() external {
+      ohm.safeTransfer(msg.sender, rewards[msg.sender]);
+      rewards[msg.sender] = 0;
   }
 
 /* ======== INTERNAL ======== */
 
-  // check various conditions to be true before bond is created
-  function _checkBeforeBond(uint256 _bid, address _depositor, uint256 _maxPrice) internal {
-    require(_depositor != address(0), "Invalid address");
-    require(block.timestamp < terms[_bid].conclusion, "Bond concluded");
-    emit BeforeBond(_bid, bondPrice(_bid), debtRatio(_bid));
-    // decrement debt once initial checks have passed
-    _decayDebt(_bid);
-    // do checks reliant on update to date debt
-    require(bonds[_bid].totalDebt <= terms[_bid].maxDebt, "Max debt exceeded");
-    require(_maxPrice >= bondPrice(_bid), "Slippage limit: more than max price"); // slippage protection
-  }
-
-  // reduce total debt
-  function _decayDebt(uint256 _bid) internal {
-    bonds[_bid].totalDebt = bonds[_bid].totalDebt.sub(debtDecay(_bid));
-    bonds[_bid].lastDecay = uint48(block.timestamp);
+  /** 
+    * @notice add new bond payout to user data
+    * @param _bonder address
+    * @param _payout uint256
+    * @param _expires uint256
+    * @param _referral address
+    * @return index_ uint256
+    */
+  function newBond(
+      address _bonder,
+      uint256 _payout,
+      uint256 _expires,
+      address _referral
+  ) internal returns (uint256 index_) {
+      // compute dao and front end referrer bonuses
+      uint256 toDAO = _payout.mul(rewardRate[1]).div(1e4);
+      uint256 toReferrer = _payout.mul(rewardRate[0]).div(1e4);
+      // mint OHM and stake payout
+      treasury.mint(address(this), _payout.add(toDAO).add(toReferrer));
+      staking.stake(address(this), _payout, false, true);
+      // log rewards
+      if (whitelisted[_referral]) {
+          rewards[_referral] = rewards[_referral].add(toReferrer);
+          rewards[dao] = rewards[dao].add(toDAO);
+      } else { // DAO receives both rewards if referrer is not whitelisted
+          rewards[dao] = rewards[dao].add(toDAO.add(toReferrer));
+      }
+      // store info
+      index_ = notes[_bonder].length;
+      notes[_bonder].push(
+          Note({
+              payout: gOHM.balanceTo(_payout),
+              created: uint48(block.timestamp),
+              matured: uint48(_expires),
+              redeemed: 0
+          })
+      );
   }
 
   // auto-adjust control variable to hit capacity/spend target
-  function _tune(uint256 _bid) internal {
+  function tune(uint256 _bid) public {
     Bond memory bond = bonds[_bid];
     if (block.timestamp >= bond.lastTune.add(tuneInterval)) {
       // compute seconds until bond will conclude
@@ -159,10 +244,10 @@ contract OlympusBondDepository is OlympusAccessControlled {
         capacity = capacity.div(bondPrice(_bid));
       }
       // calculate target debt to complete offering at conclusion
-      uint256 targetDebt = capacity.mul(decay).div(timeRemaining);
+      uint256 targetDebt = capacity.mul(bond.length).div(timeRemaining);
       // derive a new control variable from the target debt
       uint256 newControlVariable = bondPrice(_bid).mul(ohm.totalSupply()).div(targetDebt);
-      // prevent control variable by adjusting down by more than 2% at a time
+      // prevent control variable by decrementing price by more than 2% at a time
       uint256 minNewControlVariable = terms[_bid].controlVariable.mul(98).div(100);
       if (minNewControlVariable < newControlVariable) {
         terms[_bid].controlVariable = uint64(newControlVariable);
@@ -173,6 +258,8 @@ contract OlympusBondDepository is OlympusAccessControlled {
   }
 
 /* ======== VIEW ======== */
+
+  // DEPOSITS
 
   /**
    * @notice payout due for amount of treasury value
@@ -219,8 +306,66 @@ contract OlympusBondDepository is OlympusAccessControlled {
   function debtDecay(uint256 _bid) public view returns (uint256 decay_) {
     uint256 totalDebt = bonds[_bid].totalDebt;
     uint256 secondsSinceLast = block.timestamp.sub(bonds[_bid].lastDecay);
-    decay_ = totalDebt.mul(secondsSinceLast).div(decay);
+    decay_ = totalDebt.mul(secondsSinceLast).div(bonds[_bid].length);
     if (decay_ > totalDebt) decay_ = totalDebt;
+  }
+
+  // REDEMPTIONS
+
+  // all pending indexes for bonder
+  function indexesFor(address _bonder) public view returns (uint256[] memory) {
+      uint256 length;
+      for (uint256 i = 0; i < notes[_bonder].length; i++) {
+          if (notes[_bonder][i].redeemed == 0) {
+              length++;
+          }
+      }
+      uint256[] memory array = new uint256[](length);
+      uint256 position;
+      for (uint256 i = 0; i < notes[_bonder].length; i++) {
+          if (notes[_bonder][i].redeemed == 0) {
+              array[position] = i;
+              position++;
+          }
+      }
+      return array;
+  }
+
+  /**
+    * @notice calculate amount of OHM available for claim for single bond
+    * @param _bonder address
+    * @param _index uint256
+    * @return uint256
+    */
+  function pendingFor(address _bonder, uint256 _index) public view returns (uint256) {
+      if (notes[_bonder][_index].redeemed == 0 && notes[_bonder][_index].matured <= block.timestamp) {
+          return notes[_bonder][_index].payout;
+      }
+      return 0;
+  }
+
+  /**
+    * @notice calculate amount of OHM available for claim for array of bonds
+    * @param _bonder address
+    * @param _indexes uint256[]
+    * @return pending_ uint256
+    */
+  function pendingForIndexes(address _bonder, uint256[] memory _indexes) public view returns (uint256 pending_) {
+      for (uint256 i = 0; i < _indexes.length; i++) {
+          pending_ += pendingFor(_bonder, i);
+      }
+  }
+
+  /**
+    *  @notice total pending on all bonds for bonder
+    *  @param _bonder address
+    *  @return pending_ uint256
+    */
+  function totalPendingFor(address _bonder) public view returns (uint256 pending_) {
+      uint256[] memory indexes = indexesFor(_bonder);
+      for (uint256 i = 0; i < indexes.length; i++) {
+          pending_ += pendingFor(_bonder, indexes[i]);
+      }
   }
 
 /* ======== POLICY ======== */
@@ -244,43 +389,60 @@ contract OlympusBondDepository is OlympusAccessControlled {
     uint256 _vestingTerm,
     uint256 _conclusion,
     uint256 _currentPrice // 9 decimals, price of ohm in quote
-  ) external onlyGuardian returns (uint256 id_) {
+  ) external onlyPolicy returns (uint256 id_) {
     uint256 capacity = _capacity;
     if (_capacityInQuote) {
       require(IERC20Metadata(address(_quoteToken)).decimals() == 18, "Only 18 decimals for capacity in quote");
       capacity = capacity.div(_currentPrice);
     }
-    uint256 timeToConclusion = _conclusion.sub(block.timestamp);
-    uint256 maxPayout = capacity.mul(targetDepositInterval).div(timeToConclusion);
-    uint256 targetDebt = capacity.mul(decay).div(timeToConclusion);
+    uint256 length = _conclusion.sub(block.timestamp);
+    uint256 maxPayout = capacity.mul(targetDepositInterval).div(length);
+    uint256 targetDebt = capacity;
     uint256 controlVariable = _currentPrice.mul(ohm.totalSupply()).div(targetDebt);
 
-    id_ = nonce;
-    bonds[id_] = Bond({
+    id_ = bonds.length;
+    bonds.push(Bond({
       capacity: _capacity,
       totalDebt: targetDebt, 
       maxPayout: maxPayout,
       quoteToken: _quoteToken, 
       capacityInQuote: _capacityInQuote,
       lastTune: uint48(block.timestamp),
-      lastDecay: uint48(block.timestamp)
-    });
+      lastDecay: uint48(block.timestamp),
+      length: uint48(length)
+    }));
 
-    terms[id_] = Terms({
+    terms.push(Terms({
       fixedTerm: _fixedTerm, 
       controlVariable: uint64(controlVariable),
       vestingTerm: uint48(_vestingTerm), 
       conclusion: uint48(_conclusion), 
       maxDebt: uint48(targetDebt.mul(3)) // 3x buffer. exists to hedge tail risk.
-    });
-    nonce = nonce.add(1);
+    }));
   }
 
   /**
    * @notice disable existing bond
    * @param _id uint
    */
-  function deprecateBond(uint256 _id) external onlyGuardian {
+  function deprecateBond(uint256 _id) external onlyPolicy {
     bonds[_id].capacity = 0;
+  }
+
+  // set reward for front end operator (4 decimals. 100 = 1%)
+  function setRewards(uint256 _toFrontEnd, uint256 _toDAO) external onlyPolicy {
+      rewardRate[0] = _toFrontEnd;
+      rewardRate[1] = _toDAO;
+  }
+
+  // add or remove address from the whitelist
+  // whitelisted addresses can earn referral fees by operating a front end
+  function whitelist(address _operator) external onlyPolicy {
+      require(_operator != dao, "Can not blacklist DAO");
+      whitelisted[_operator] = !whitelisted[_operator];
+  }
+
+  function approve() external onlyPolicy {
+    ohm.approve(address(staking), 1e18);
   }
 }
