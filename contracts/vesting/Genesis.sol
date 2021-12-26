@@ -21,7 +21,7 @@ interface IClaim {
 
 /**
  *  This contract allows Olympus genesis contributors to claim OHM. It has been
- *  revised to consider 2/3 tokens as staked at the time of claim; previously,
+ *  revised to consider 9/10 tokens as staked at the time of claim; previously,
  *  no claims were treated as staked. This change keeps network ownership in check. 
  *  100% can be treated as staked, if the DAO sees fit to do so.
  */
@@ -58,7 +58,7 @@ contract GenesisClaim is Ownable {
     // previous deployment of contract (to migrate terms)
     IClaim internal immutable previous = IClaim(0xEaAA9d97Be33a764031eDdEbA1cB6Cb385350Ca3);
 
-    // track 1/3 as static. governance can disable if desired.
+    // track 1/10 as static. governance can disable if desired.
     bool public useStatic;
     // tracks address info
     mapping( address => Term ) public terms;
