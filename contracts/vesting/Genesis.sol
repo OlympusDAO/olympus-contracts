@@ -71,7 +71,7 @@ contract GenesisClaim is Ownable {
 
     constructor() {useStatic = true;}
 
-    /* ========== USER FUNCTIONS ========== */
+    /* ========== MUTABLE FUNCTIONS ========== */
     
     /**
      * @notice allows wallet to claim OHM
@@ -142,8 +142,6 @@ contract GenesisClaim is Ownable {
         ohm.approve(address(staking), 1e33);
         dai.approve(address(treasury), 1e33);
     }
-
-
 
     /* ========== VIEW FUNCTIONS ========== */
 
@@ -223,7 +221,7 @@ contract GenesisClaim is Ownable {
         totalAllocated = totalAllocated.add(_percent);
     }
 
-     /* ========== DAO FUNCTIONS ========== */
+    /* ========== DAO FUNCTIONS ========== */
 
     /**
      * @notice all claims tracked under gClaimed (and track rebase)

@@ -70,9 +70,9 @@ contract InvestorClaimV2 is Ownable {
     
     constructor() {}
 
-    /* ========== USER FUNCTIONS ========== */
+    /* ========== MUTABLE FUNCTIONS ========== */
     
-/**
+    /**
      * @notice allows wallet to claim OHM
      * @param _to address
      * @param _amount uint256
@@ -139,8 +139,6 @@ contract InvestorClaimV2 is Ownable {
         dai.approve(address(treasury), 1e33);
     }
 
-
-
     /* ========== VIEW FUNCTIONS ========== */
 
     /**
@@ -175,7 +173,7 @@ contract InvestorClaimV2 is Ownable {
 
     /* ========== OWNER FUNCTIONS ========== */
 
-        /**
+    /**
      * @notice bulk migrate users from previous contract
      * @param _addresses address[] memory
      */
