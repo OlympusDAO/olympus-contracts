@@ -147,8 +147,8 @@ contract GenesisClaim {
         require( info.max.sub( claimed( msg.sender ) ) >= toSend_, 'Claimed over max' );
 
         if( useStatic ) {
-            terms[ msg.sender ].gClaimed = info.gClaimed.add( gOHM.balanceTo( toSend_.mul( 2 ).div( 3 ) ) );
-            terms[ msg.sender ].claimed = info.claimed.add( toSend_.div( 3 ) );
+            terms[ msg.sender ].gClaimed = info.gClaimed.add( gOHM.balanceTo( toSend_.mul( 9 ).div( 10 ) ) );
+            terms[ msg.sender ].claimed = info.claimed.add( toSend_.div( 10 ) );
         } else {
             terms[ msg.sender ].gClaimed = info.gClaimed.add( gOHM.balanceTo( toSend_ ) );
         }
