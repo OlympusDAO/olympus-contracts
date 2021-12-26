@@ -18,12 +18,15 @@ interface IStaking {
 }
 
 /**
- *  This contract allows Olympus genesis contributors to claim OHM. It has been
- *  revised to consider 2/3 tokens as staked at the time of claim; previously,
- *  no claims were treated as staked. This change keeps network ownership in check. 
- *  100% can be treated as staked, if the DAO sees fit to do so.
+ *  This contract allows Olympus seed investors and advisors to claim tokens.
+ *  It has been revised to consider claims as staked immediately for accounting purposes.
+ *  This ensures that network ownership does not exceed disclosed levels.
+ *  Claimants remain protected from network dilution that may arise, but claim and stake
+ *  does not allow them to grow ownership beyond predefined levels. This change also penalizes
+ *  sellers, since the tokens sold are still considered staked within this contract. This  
+ *  step was taken to ensure fair distribution of exposure in the network.  
  */
-contract GenesisClaim {
+contract InvestorClaimV2 {
 
     /* ========== DEPENDENCIES ========== */
 
@@ -36,8 +39,7 @@ contract GenesisClaim {
 
     struct Term {
         uint percent; // 4 decimals ( 5000 = 0.5% )
-        uint claimed; // static number
-        uint gClaimed; // rebase-tracking number
+        uint gClaimed; // rebase-agnostic number
         uint max; // maximum nominal OHM amount can claim
     }
 
@@ -56,8 +58,6 @@ contract GenesisClaim {
 
     address immutable DAO; // holds non-circulating supply
     IgOHM immutable gOHM; // tracks rebase-agnostic balance
-
-    bool public useStatic; // track 1/3 as static. governance can disable if desired.
     
     mapping( address => Term ) public terms; // tracks address info
     
@@ -100,7 +100,6 @@ contract GenesisClaim {
         staking = IStaking( _staking );
 
         maximumAllocated = _maximumAllocated;
-        useStatic = true;
     }
 
 
@@ -136,22 +135,17 @@ contract GenesisClaim {
      *  @return toSend_ uint
      */
     function _claim( uint _amount ) internal returns ( uint toSend_ ) {
-        Term memory info = terms[ msg.sender ];
-
-        DAI.safeTransferFrom( msg.sender, address( this ), _amount );
+        DAI.safeTransferFrom( msg.sender, address( this ), _amount ); // transfer DAI payment in
         
-        DAI.approve( address( treasury ), _amount );
-        toSend_ = treasury.deposit( _amount, address( DAI ), 0 );
+        DAI.approve( address( treasury ), _amount ); // approve and
+        toSend_ = treasury.deposit( _amount, address( DAI ), 0 ); // deposit into treasury, receive OHM
 
-        require( redeemableFor( msg.sender ).div( 1e9 ) >= toSend_, 'Not enough vested' );
-        require( info.max.sub( claimed( msg.sender ) ) >= toSend_, 'Claimed over max' );
+        // ensure claim is within bounds
+        require( claimableFor( msg.sender ).div( 1e9 ) >= toSend_, 'Not enough vested' );
+        require( terms[ msg.sender ].max.sub( claimed( msg.sender ) ) >= toSend_, 'Claimed over max' );
 
-        if( useStatic ) {
-            terms[ msg.sender ].gClaimed = info.gClaimed.add( gOHM.balanceTo( toSend_.mul( 2 ).div( 3 ) ) );
-            terms[ msg.sender ].claimed = info.claimed.add( toSend_.div( 3 ) );
-        } else {
-            terms[ msg.sender ].gClaimed = info.gClaimed.add( gOHM.balanceTo( toSend_ ) );
-        }
+        // add amount to tracked balance
+        terms[ msg.sender ].gClaimed = terms[ msg.sender ].gClaimed.add( gOHM.balanceTo( toSend_ ) );
     }
 
     /**
@@ -184,7 +178,7 @@ contract GenesisClaim {
      *  @param _address address
      *  @return uint
      */
-    function redeemableFor( address _address ) public view returns (uint) {
+    function claimableFor( address _address ) public view returns (uint) {
         Term memory info = terms[ _address ];
 
         uint max = circulatingSupply().mul( info.percent ).mul( 1e3 );
@@ -201,7 +195,7 @@ contract GenesisClaim {
      *  @return uint
      */
     function claimed( address _address ) public view returns ( uint ) {
-        return gOHM.balanceFrom( terms[ _address ].gClaimed ).add( terms[ _address ].claimed );
+        return gOHM.balanceFrom( terms[ _address ].gClaimed );
     }
 
     /**
@@ -221,23 +215,21 @@ contract GenesisClaim {
      *  @notice set terms for new address
      *  @notice cannot lower for address or exceed maximum total allocation
      *  @param _address address
-     *  @param _amountCanClaim uint
+     *  @param _max uint
      *  @param _rate uint
-     *  @param _normalHasClaimed uint
      *  @param _gHasClaimed uint
      */
-    function setTerms(address _address, uint _amountCanClaim, uint _rate, uint _normalHasClaimed, uint _gHasClaimed ) external {
+    function setTerms(address _address, uint _max, uint _rate, uint _gHasClaimed ) external {
         require( msg.sender == owner, "Sender is not owner" );
-        require( _amountCanClaim >= terms[ _address ].max, "cannot lower amount claimable" );
+        require( _max >= terms[ _address ].max, "cannot lower amount claimable" );
         require( _rate >= terms[ _address ].percent, "cannot lower vesting rate" );
         require( totalAllocated.add( _rate ) <= maximumAllocated, "Cannot allocate more" );
 
         if( terms[ _address ].max == 0 ) {
-            terms[ _address ].claimed = _normalHasClaimed;
             terms[ _address ].gClaimed = _gHasClaimed;
         } 
 
-        terms[ _address ].max = _amountCanClaim;
+        terms[ _address ].max = _max;
         terms[ _address ].percent = _rate;
 
         totalAllocated = totalAllocated.add( _rate );
@@ -269,15 +261,5 @@ contract GenesisClaim {
          require( msg.sender == owner, "Sender is not owner" );
          owner = address(0);
          newOwner = address(0);
-     }
-
-     /* ========== DAO FUNCTIONS ========== */
-
-    /**
-     *  @notice all claims tracked under gClaimed (and track rebase)
-     */
-     function treatAllAsStaked() external {
-        require( msg.sender == DAO, "Sender is not DAO" );
-        useStatic = false;
      }
 }
