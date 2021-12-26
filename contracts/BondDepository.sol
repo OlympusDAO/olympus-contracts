@@ -64,6 +64,7 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
     uint48 created; // time bond was created
     uint48 matured; // timestamp when bond is matured
     uint48 redeemed; // time bond was redeemed
+    uint48 bondID; // bond ID of deposit. uint48 to avoid adding a slot.
   }
 
 /* ======== STATE VARIABLES ======== */
@@ -141,6 +142,7 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
     uint256 price = bondPrice(_bid);
     require(bond.totalDebt <= term.maxDebt, "Depository: max debt exceeded");
     require(price <= _maxPrice, "Depository: more than max price"); // slippage protection
+
     emit BeforeBond(_bid, price, bond.totalDebt.mul(1e9).div(treasury.baseSupply()));
 
     // compute the users' payout in OHM for amount of quote token deposited
@@ -148,31 +150,30 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
     require(payout_ <= bond.maxPayout, "Depository: max size exceeded");
     
     // ensure the contract can buy or sell this many tokens
-    if (bond.capacityInQuote) { // can it buy this many -- use amount of quote token
-      require(_amount <= bond.capacity, "Depository: capacity exceeded");
-      bond.capacity = bond.capacity.sub(_amount);
-    } else { // can it sell this many -- use amount of base token (OHM)
-      require(payout_ <= bond.capacity, "Depository: capacity exceeded");
-      bond.capacity = bond.capacity.sub(payout_);
-    }    
+    uint256 toCheck = payout_;
+    if (bond.capacityInQuote) toCheck = _amount;
+    // if true, it can buy this many -- use quote token amount.
+    // if false, it can sell this many -- use base token (ohm) amount.
+    require(toCheck <= bond.capacity, "Depository: capacity exceeded");
+    bond.capacity = bond.capacity.sub(toCheck);
 
     // get the timestamp when bond will mature
     // a fixed term bond matures at deposit + an interval (the vesting term)
     if (term.fixedTerm) expiry_ = term.vesting.add(block.timestamp);
     else expiry_ = term.vesting; // otherwise, its a set timestamp
 
-    // store the users data
-    index_ = newBond(_depositor, payout_, uint48(expiry_), _referral);
+    // store the data as a new Note in the users' array
+    index_ = notes[_depositor].length;
+    notes[_depositor].push(
+        Note({
+            payout: gOHM.balanceTo(payout_),
+            created: uint48(block.timestamp),
+            matured: uint48(expiry_),
+            redeemed: 0,
+            bondID: uint48(_bid)
+        })
+    );
     emit CreateBond(_bid, _amount, payout_, expiry_);
-
-    if (bond.deposit) { 
-      // transfer tokens into this contract. call clear() to deposit to treasury
-      bond.quoteToken.safeTransferFrom(msg.sender, address(this), _amount);
-    } else {
-      // or just transfer tokens to treasury
-      // transferFrom route will not change treasury RFV
-      bond.quoteToken.safeTransferFrom(msg.sender, address(treasury), _amount);
-    }
 
     // increment sale/purchase counters
     bond.purchased = bond.purchased.add(_amount);
@@ -181,8 +182,17 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
     // increment total debt
     bond.totalDebt = bond.totalDebt.add(payout_);
 
+    // add to reward mappings + mint payout
+    _giveRewards(payout_, _referral);
+
     // shut off future deposits if max debt is breached
     if (term.maxDebt < bond.totalDebt) bond.capacity = 0;
+
+    address transferTo = address(treasury);
+    // if it should deposit, transfer tokens into this contract and call clear() in batches.
+    if (bond.deposit) transferTo = address(this);
+    // transfer tokens from user
+    bond.quoteToken.safeTransferFrom(msg.sender, transferTo, _amount);
 
     // tune the control variable to hit target on time
     _tune(_bid);
@@ -231,7 +241,8 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
       uint256 dues;
       for (uint256 i = 0; i < _indexes.length; i++) {
           Note memory info = notes[_bonder][_indexes[i]];
-          if (pendingFor(_bonder, _indexes[i]) != 0) {
+          (, bool matured) = pendingFor(_bonder, _indexes[i]);
+          if (matured) {
               notes[_bonder][_indexes[i]].redeemed = uint48(block.timestamp); // mark as redeemed
               dues += info.payout;
           }
@@ -256,18 +267,13 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
 
   /** 
     * @notice add new bond payout to user data
-    * @param _bonder address
     * @param _payout uint256
-    * @param _matures uint256
     * @param _referral address
-    * @return index_ uint256
     */
-  function newBond(
-      address _bonder,
+  function _giveRewards(
       uint256 _payout,
-      uint48 _matures,
       address _referral
-  ) internal returns (uint256 index_) {
+  ) internal {
       // first we calculate rewards paid to the DAO and to the front end operator (referrer)
       uint256 toDAO = _payout.mul(rewardRate[1]).div(1e4);
       uint256 toReferrer = _payout.mul(rewardRate[0]).div(1e4);
@@ -284,17 +290,6 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
       treasury.mint(address(this), _payout.add(toDAO).add(toReferrer));
       // note that we stake only what is given to the depositor
       staking.stake(address(this), _payout, false, true);
-
-      // finally, we store the data as a new Note in the users' array
-      index_ = notes[_bonder].length;
-      notes[_bonder].push(
-          Note({
-              payout: gOHM.balanceTo(_payout),
-              created: uint48(block.timestamp),
-              matured: _matures,
-              redeemed: 0
-          })
-      );
   }
 
   // auto-adjust control variable to hit capacity/spend target
@@ -331,6 +326,38 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
   }
 
 /* ======== VIEW ======== */
+
+  // BONDS
+
+  /**
+   * @notice is a given bond accepting deposits
+   * @param _bid uint256
+   * @return bool
+   */
+  function isLive(uint256 _bid) public view override returns (bool) {
+    if (bonds[_bid].capacity == 0 || terms[_bid].conclusion < block.timestamp) return false;
+    return true;
+  }
+
+  /**
+   * @notice returns all active bond IDs
+   * @return uint256[] memory
+   */
+  function liveBonds() external override view returns (uint256[] memory) {
+    uint256 num;
+    for (uint256 i = 0; i < bonds.length; i++) {
+      if (isLive(i)) num++;
+    }
+    uint256[] memory ids = new uint256[](num);
+    uint256 nonce;
+    for (uint256 i = 0; i < bonds.length; i++) {
+      if (isLive(i)) {
+        ids[nonce] = i;
+        nonce++;
+      }
+    }
+    return ids;
+  }
 
   // DEPOSITS
 
@@ -408,13 +435,15 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
     * @notice calculate amount of OHM available for claim for single bond
     * @param _bonder address
     * @param _index uint256
-    * @return uint256
+    * @return payout_ uint256
+    * @return matured_ bool
     */
-  function pendingFor(address _bonder, uint256 _index) public view override returns (uint256) {
+  function pendingFor(address _bonder, uint256 _index) public view override returns (uint256 payout_, bool matured_) {
+    payout_ = notes[_bonder][_index].payout;
       if (notes[_bonder][_index].redeemed == 0 && notes[_bonder][_index].matured <= block.timestamp) {
-          return notes[_bonder][_index].payout;
+          matured_ = true;
       }
-      return 0;
+      matured_ = false;
   }
 
   /**
@@ -424,9 +453,10 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
     * @return pending_ uint256
     */
   function pendingForIndexes(address _bonder, uint256[] memory _indexes) public view override returns (uint256 pending_) {
-      for (uint256 i = 0; i < _indexes.length; i++) {
-          pending_ += pendingFor(_bonder, i);
-      }
+    for (uint256 i = 0; i < _indexes.length; i++) {
+      (uint256 pending,) = pendingFor(_bonder, i);
+      pending_ += pending;
+    }
   }
 
   /**
@@ -435,10 +465,11 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
     *  @return pending_ uint256
     */
   function totalPendingFor(address _bonder) public view override returns (uint256 pending_) {
-      uint256[] memory indexes = indexesFor(_bonder);
-      for (uint256 i = 0; i < indexes.length; i++) {
-          pending_ += pendingFor(_bonder, indexes[i]);
-      }
+    uint256[] memory indexes = indexesFor(_bonder);
+    for (uint256 i = 0; i < indexes.length; i++) {
+      (uint256 pending,) = pendingFor(_bonder, i);
+      pending_ += pending;
+    }
   }
 
 /* ======== POLICY ======== */

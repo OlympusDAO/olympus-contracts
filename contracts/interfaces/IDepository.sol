@@ -4,6 +4,7 @@ pragma solidity ^0.7.5;
 import "./IERC20.sol";
 
 interface IDepository {
+  // These are the interaction functions
   function deposit(
     uint256 _bid,
     uint256 _amount,
@@ -15,13 +16,15 @@ interface IDepository {
   function redeemAll(address _bonder) external returns (uint256);
   function getReward() external;
   function tune(uint256 _bid) external;
+  function isLive(uint256 _bid) external view returns (bool);
+  function liveBonds() external view returns (uint256[] memory);
   function payoutFor(uint256 _amount, uint256 _bid) external view returns (uint256);
   function bondPrice(uint256 _bid) external view returns (uint256);
   function currentDebt(uint256 _bid) external view returns (uint256);
   function debtRatio(uint256 _bid) external view returns (uint256);
   function debtDecay(uint256 _bid) external view returns (uint256 decay_);
   function indexesFor(address _bonder) external view returns (uint256[] memory);
-  function pendingFor(address _bonder, uint256 _index) external view returns (uint256);
+  function pendingFor(address _bonder, uint256 _index) external view returns (uint256 payout_, bool matured_);
   function pendingForIndexes(address _bonder, uint256[] memory _indexes) external view returns (uint256 pending_);
   function totalPendingFor(address _bonder) external view returns (uint256 pending_);
 
