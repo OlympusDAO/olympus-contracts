@@ -10,7 +10,7 @@ interface IDepository {
     uint256 _maxPrice,
     address _depositor,
     address _referral
-  ) external returns (uint256 payout_, uint256 index_);
+  ) external returns (uint256 payout_, uint256 expiry_, uint256 index_);
   function redeem(address _bonder, uint256[] memory _indexes) external returns (uint256);
   function redeemAll(address _bonder) external returns (uint256);
   function getReward() external;
@@ -36,6 +36,7 @@ interface IDepository {
     uint256 _currentPrice
   ) external returns (uint256 id_);
   function deprecateBond(uint256 _id) external;
+  function setDeposit(uint256 _id) external;
   function setRewards(uint256 _toFrontEnd, uint256 _toDAO) external;
   function whitelist(address _operator) external;
   function approve() external;

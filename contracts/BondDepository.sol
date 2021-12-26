@@ -35,8 +35,14 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
     uint256 capacity; // capacity remaining
     uint256 totalDebt; // total debt from bond
     uint256 maxPayout; // max tokens in/out (determined by capacityInQuote false/true, respectively)
+    uint256 purchased; // tokens in
+    uint256 sold; // ohm out
     IERC20 quoteToken; // token to accept as payment
     bool capacityInQuote; // capacity limit is in payment token (true) or in OHM (false, default)
+    bool deposit; // should engage deposit function (safeTransfer if false)
+  }
+
+  struct Metadata {
     uint48 lastTune; // last timestamp when control variable was tuned
     uint48 lastDecay; // last timestamp when bond was created and debt was decayed
     uint48 length; // time from creation to conclusion. used as speed to decay debt.
@@ -47,7 +53,7 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
   struct Terms {
     bool fixedTerm; // fixed term or fixed expiration
     uint64 controlVariable; // scaling variable for price
-    uint48 vestingTerm; // length of time from deposit to maturity if fixed-term
+    uint48 vesting; // length of time from deposit to maturity if fixed-term
     uint48 conclusion; // timestamp when bond no longer offered (doubles as time when bond matures if fixed-expiry)
     uint64 maxDebt; // 9 decimal debt maximum in OHM
   }
@@ -76,6 +82,7 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
   // Storage
   Bond[] public bonds;
   Terms[] public terms;
+  Metadata[] public metadata;
   mapping(address => Note[]) public notes; // user deposit data
 
   // Front end incentive
@@ -105,6 +112,7 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
    * @param _depositor address
    * @param _referral address
    * @return payout_ uint256
+   * @return expiry_ uint256
    * @return index_ uint256
    */
   function deposit(
@@ -113,7 +121,11 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
     uint256 _maxPrice,
     address _depositor,
     address _referral
-  ) external override returns (uint256 payout_, uint256 index_) {
+  ) external override returns (
+    uint256 payout_, 
+    uint256 expiry_,
+    uint256 index_
+  ) {
     Bond storage bond = bonds[_bid];
     Terms memory term = terms[_bid];
 
@@ -123,7 +135,7 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
 
     // decrement debt to create time decay
     bond.totalDebt = bond.totalDebt.sub(debtDecay(_bid));
-    bond.lastDecay = uint48(block.timestamp);
+    metadata[_bid].lastDecay = uint48(block.timestamp);
 
     // checks that are dependent on totalDebt being up-to-date
     uint256 price = bondPrice(_bid);
@@ -145,16 +157,26 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
     }    
 
     // get the timestamp when bond will mature
-    uint48 maturation; // a fixed term bond matures at deposit + an interval (the vesting term)
-    if (!term.fixedTerm) maturation = term.conclusion;  // otherwise, its a set timestamp
-    else maturation = uint48(term.vestingTerm.add(block.timestamp)); // <-- fixed term
+    // a fixed term bond matures at deposit + an interval (the vesting term)
+    if (term.fixedTerm) expiry_ = term.vesting.add(block.timestamp);
+    else expiry_ = term.vesting; // otherwise, its a set timestamp
 
     // store the users data
-    index_ = newBond(_depositor, payout_, maturation, _referral);
-    emit CreateBond(_bid, _amount, payout_, maturation);
+    index_ = newBond(_depositor, payout_, uint48(expiry_), _referral);
+    emit CreateBond(_bid, _amount, payout_, expiry_);
 
-    // transfer the deposited tokens to the treasury
-    bond.quoteToken.safeTransferFrom(msg.sender, address(treasury), _amount);
+    if (bond.deposit) { 
+      // transfer tokens into this contract. call clear() to deposit to treasury
+      bond.quoteToken.safeTransferFrom(msg.sender, address(this), _amount);
+    } else {
+      // or just transfer tokens to treasury
+      // transferFrom route will not change treasury RFV
+      bond.quoteToken.safeTransferFrom(msg.sender, address(treasury), _amount);
+    }
+
+    // increment sale/purchase counters
+    bond.purchased = bond.purchased.add(_amount);
+    bond.sold = bond.sold.add(payout_);
 
     // increment total debt
     bond.totalDebt = bond.totalDebt.add(payout_);
@@ -167,25 +189,36 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
   }
 
   /**
+   * @notice batch deposit funds into treasury
+   * @param _token address
+   */
+  function clear(address _token) external {
+    IERC20 token = IERC20(_token);
+    uint256 balance = token.balanceOf(address(this));
+    token.approve(address(treasury), balance);
+    treasury.deposit(balance, _token, treasury.tokenValue(_token, balance));
+  }
+
+  /**
    * @notice trigger tuning without depositing
    * @param _bid uint256
    */
   function tune(uint256 _bid) external override {
     // as the external version of _tune, we first need to update debt
     bonds[_bid].totalDebt = bonds[_bid].totalDebt.sub(debtDecay(_bid));
-    bonds[_bid].lastDecay = uint48(block.timestamp);
+    metadata[_bid].lastDecay = uint48(block.timestamp);
     // then we can call the function
     _tune(_bid);
   }
 
   // testing function to jump forward by a number of seconds
   function jump(uint256 _bid, uint256 _by) external {
-    Bond storage bond = bonds[_bid];
     Terms storage term = terms[_bid];
-    bond.lastDecay = uint48(bond.lastDecay.sub(_by));
-    bond.lastTune = uint48(bond.lastTune.sub(_by));
+    Metadata storage meta = metadata[_bid];
+    meta.lastDecay = uint48(meta.lastDecay.sub(_by));
+    meta.lastTune = uint48(meta.lastTune.sub(_by));
     term.conclusion = uint48(term.conclusion.sub(_by));
-    if (!term.fixedTerm) term.vestingTerm = uint48(term.vestingTerm.sub(_by));
+    if (!term.fixedTerm) term.vesting = uint48(term.vesting.sub(_by));
   }
 
   /**
@@ -267,7 +300,8 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
   // auto-adjust control variable to hit capacity/spend target
   function _tune(uint256 _bid) internal {
     Bond memory bond = bonds[_bid];
-    if (block.timestamp >= bond.lastTune.add(tuneInterval)) {
+    Metadata memory meta = metadata[_bid];
+    if (block.timestamp >= meta.lastTune.add(tuneInterval)) {
       // compute seconds until bond will conclude
       uint256 timeRemaining = terms[_bid].conclusion.sub(block.timestamp);
       // standardize capacity into an OHM amount to compute target debt
@@ -278,7 +312,7 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
       // calculate max payout for four hour intervals 
       bonds[_bid].maxPayout = capacity.mul(targetDepositInterval).div(timeRemaining);
       // calculate target debt to complete offering at conclusion
-      uint256 targetDebt = capacity.mul(bond.length).div(timeRemaining);
+      uint256 targetDebt = capacity.mul(meta.length).div(timeRemaining);
       // derive a new control variable from the target debt
       uint256 newControlVariable = bondPrice(_bid).mul(treasury.baseSupply()).div(targetDebt);
       // prevent control variable by decrementing price by more than 2% at a time
@@ -293,7 +327,7 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
 
   // convert an amount to standard 18 decimal format
   function _eighteenDecimals(uint256 _amount, uint256 _bid) internal view returns (uint256) {
-    return _amount.mul(1e18).div(10 ** bonds[_bid].decimals);
+    return _amount.mul(1e18).div(10 ** metadata[_bid].decimals);
   }
 
 /* ======== VIEW ======== */
@@ -344,8 +378,8 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
    */
   function debtDecay(uint256 _bid) public view override returns (uint256 decay_) {
     uint256 totalDebt = bonds[_bid].totalDebt;
-    uint256 secondsSinceLast = block.timestamp.sub(bonds[_bid].lastDecay);
-    decay_ = totalDebt.mul(secondsSinceLast).div(bonds[_bid].length);
+    uint256 secondsSinceLast = block.timestamp.sub(metadata[_bid].lastDecay);
+    decay_ = totalDebt.mul(secondsSinceLast).div(metadata[_bid].length);
     if (decay_ > totalDebt) decay_ = totalDebt;
   }
 
@@ -415,7 +449,7 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
    * @param _capacity uint256
    * @param _capacityInQuote bool
    * @param _fixedTerm bool
-   * @param _vestingTerm uint256
+   * @param _vesting uint256
    * @param _conclusion uint256
    * @param _currentPrice uint256
    * @return id_ uint256
@@ -425,7 +459,7 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
     uint256 _capacity,
     bool _capacityInQuote,
     bool _fixedTerm,
-    uint256 _vestingTerm,
+    uint256 _vesting,
     uint256 _conclusion,
     uint48 _decimals,
     uint256 _currentPrice // 9 decimals, price of ohm in quote
@@ -444,20 +478,26 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
       capacity: _capacity,
       totalDebt: targetDebt, 
       maxPayout: maxPayout,
+      purchased: 0,
+      sold: 0,
       quoteToken: _quoteToken, 
       capacityInQuote: _capacityInQuote,
-      lastTune: uint48(block.timestamp),
-      lastDecay: uint48(block.timestamp),
-      length: uint48(length),
-      decimals: _decimals
+      deposit: false
     }));
 
     terms.push(Terms({
       fixedTerm: _fixedTerm, 
       controlVariable: uint64(controlVariable),
-      vestingTerm: uint48(_vestingTerm), 
+      vesting: uint48(_vesting), 
       conclusion: uint48(_conclusion), 
       maxDebt: uint64(targetDebt.mul(3)) // 3x buffer. exists to hedge tail risk.
+    }));
+
+    metadata.push(Metadata({
+      lastTune: uint48(block.timestamp),
+      lastDecay: uint48(block.timestamp),
+      length: uint48(length),
+      decimals: _decimals
     }));
   }
 
@@ -467,6 +507,15 @@ contract OlympusBondDepository is OlympusAccessControlled, IDepository {
    */
   function deprecateBond(uint256 _id) external override onlyPolicy {
     bonds[_id].capacity = 0;
+  }
+
+  /**
+   * @notice set bond ID to use or not use deposit
+   * @dev disabled by default
+   * @param _id uint256
+   */
+  function setDeposit(uint256 _id) external override onlyPolicy {
+    bonds[_id].deposit = !bonds[_id].deposit;
   }
 
   // set reward for front end operator (4 decimals. 100 = 1%)
