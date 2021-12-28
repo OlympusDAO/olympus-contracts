@@ -1,0 +1,7 @@
+*.*
+
+!hardhat.config.js
+!package.json
+!package-lock.json
+!contracts
+!scripts
