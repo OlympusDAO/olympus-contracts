@@ -185,9 +185,9 @@ contract LUSDAllocator is Ownable {
     /* ======== STATE VARIABLES ======== */
     IStabilityPool immutable lusdStabilityPool;
     ILQTYStaking immutable lqtyStaking;
-    ITreasury immutable treasury; // Olympus Treasury
     IERC20 immutable weth;  // WETH9 address (0xb603cEa165119701B58D56d10D2060fBFB3efad8)
-
+    ITreasury public treasury; // Olympus Treasury
+  
     // TODO(zx): I don't think we care about front-end because we're our own frontend.
     address public frontEndAddress; // frontEndAddress for potential liquity rewards
     address public lusdTokenAddress; // LUSD Address (0x5f98805A4E8be255a32880FDeC7F6728C6568bA0)
@@ -207,8 +207,7 @@ contract LUSDAllocator is Ownable {
         address _frontEndAddress,
         address _wethAddress
     ) {
-        require(_treasury != address(0), "treasury address cannot be 0x0");
-        treasury = ITreasury(_treasury);
+        setTreasury(_treasury);
 
         require(_lusdTokenAddress != address(0), "LUSD token address cannot be 0x0");
         lusdTokenAddress = _lusdTokenAddress;
@@ -323,6 +322,11 @@ contract LUSDAllocator is Ownable {
         frontEndAddress = _frontEndAddress;
     }
 
+    function setTreasury(address _treasury) public onlyOwner {
+        require(_treasury != address(0), "treasury address cannot be 0x0");
+        treasury = ITreasury(_treasury);
+    }
+
     /* ======== INTERNAL FUNCTIONS ======== */
 
     /**
@@ -356,8 +360,8 @@ contract LUSDAllocator is Ownable {
     }
 
     /**
-    Helper method copying OlympusTreasury::tokenValue(), which will change it's name
-    to valueOf() in the future.  Implemented here so we don't have to upgrade contract later
+    Helper method copying OlympusTreasury::tokenValue(), whose name changed was 'valueOf()' in v1 
+    Implemented here so we don't have to upgrade contract later
      */
     function tokenValue(address _token, uint256 _amount) internal view returns (uint256 value_) {
         value_ = _amount.mul(10**9).div(10**IERC20Metadata(_token).decimals());
