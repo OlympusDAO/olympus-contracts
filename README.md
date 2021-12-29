@@ -9,18 +9,18 @@ Requirements:
 
 Local Setup Steps:
 1. ``git clone https://github.com/OlympusDAO/olympus-contracts.git ``
-1. Install dependencies: `npm install` 
+1. Install dependencies: `yarn install` 
     - Installs [Hardhat](https://hardhat.org/getting-started/) and [OpenZepplin](https://docs.openzeppelin.com/contracts/4.x/) dependencies
 1. Run the Hardhat node: `npm run start`
-1. Compile Solidity: ``npm run compile``
-1. Compile and deploy the contracts (in another terminal): `npm run deploy`
+1. Compile Solidity: ``yarn run compile``
+1. Compile and deploy the contracts (in another terminal): `yarn run deploy:hardhat`
 
 A Docker image is available to reduce the steps and variables.
 
 Local Setup Steps (with Docker):
 
 1. Start the node: `make run`
-1. Compile and deploy the contracts: `npm run deploy`
+1. Compile and deploy the contracts: `yarn run deploy:hardhat`
 
 ## 🤨 How it all works
 ![High Level Contract Interactions](./docs/box-diagram.png)
