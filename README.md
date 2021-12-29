@@ -11,9 +11,11 @@ Local Setup Steps:
 1. ``git clone https://github.com/OlympusDAO/olympus-contracts.git ``
 1. Install dependencies: `yarn install` 
     - Installs [Hardhat](https://hardhat.org/getting-started/) and [OpenZepplin](https://docs.openzeppelin.com/contracts/4.x/) dependencies
-1. Run the Hardhat node: `npm run start`
+1. Set up keys
+    - Use the `.env.example` file as a base and populate API keys
 1. Compile Solidity: ``yarn run compile``
-1. Compile and deploy the contracts (in another terminal): `yarn run deploy:hardhat`
+1. Run a local Hardhat node: `npm run start`
+1. Compile and deploy the contracts (in another terminal): `yarn run deploy:hardhat` --> not needed?
 
 A Docker image is available to reduce the steps and variables.
 

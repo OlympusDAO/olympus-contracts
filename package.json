@@ -61,7 +61,8 @@
     "sourcify:mainnet": "hardhat --network mainnet sourcify",
     "sourcify:rinkeby": "hardhat --network rinkeby sourcify",
     "etherscan:mainnet": "hardhat --network mainnet etherscan-verify",
-    "etherscan:rinkeby": "hardhat --network rinkeby etherscan-verify"
+    "etherscan:rinkeby": "hardhat --network rinkeby etherscan-verify",
+    "start": "hardhat node --network hardhat"
   },
   "repository": {
     "type": "git",
