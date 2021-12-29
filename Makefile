@@ -3,6 +3,8 @@ DOCKER_IMAGE=0xjem/olympus-contracts
 DOCKER_TAG=$(shell git branch --show-current)
 DOCKER_VOLUMES=--volume $(shell pwd)/contracts:/opt/contracts/ --volume $(shell pwd)/scripts:/opt/scripts/
 DOCKER_PORTS=-p 8545:8545
+include .env
+export
 
 build:
 	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) .

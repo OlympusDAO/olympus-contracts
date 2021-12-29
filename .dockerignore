@@ -1,7 +1,7 @@
 *.*
 
-!hardhat.config.js
+!hardhat.config.ts
 !package.json
-!package-lock.json
+!yarn.lock
 !contracts
 !scripts
