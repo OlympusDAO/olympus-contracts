@@ -13,14 +13,15 @@ Local Setup Steps:
     - Installs [Hardhat](https://hardhat.org/getting-started/) and [OpenZepplin](https://docs.openzeppelin.com/contracts/4.x/) dependencies
 1. Set up keys. Use the `.env.example` file as a base and populate API keys.
 1. Compile Solidity: ``yarn run compile``
-1. Run a local Hardhat node: `npm run start`
+1. Compile types: `yarn run typechain`
+1. Run a local Hardhat node: `yarn run start`
 1. Compile and deploy the contracts (in another terminal): `yarn run deploy:hardhat` --> not needed?
 
 A Docker image is available to reduce the steps and variables.
 
 Local Setup Steps (with Docker):
 
-1. Set up keys. Use the `.env.example` file as a base and populate API keys.
+1. Set up keys. Use the `.env.example` file as a base and populate API keys: `ALCHEMY_API_KEY` and `PRIVATE_KEY`
 1. Start the node: `make run`
 
 ## 🤨 How it all works

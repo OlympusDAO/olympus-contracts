@@ -62,6 +62,7 @@
     "sourcify:rinkeby": "hardhat --network rinkeby sourcify",
     "etherscan:mainnet": "hardhat --network mainnet etherscan-verify",
     "etherscan:rinkeby": "hardhat --network rinkeby etherscan-verify",
+    "prestart": "yarn run typechain",
     "start": "hardhat node --network hardhat"
   },
   "repository": {
