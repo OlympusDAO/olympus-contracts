@@ -360,7 +360,7 @@ contract LUSDAllocator is Ownable {
     }
 
     /**
-    Helper method copying OlympusTreasury::tokenValue(), whose name changed was 'valueOf()' in v1 
+    Helper method copying OlympusTreasury::tokenValue(), whose name was 'valueOf()' in v1 
     Implemented here so we don't have to upgrade contract later
      */
     function tokenValue(address _token, uint256 _amount) internal view returns (uint256 value_) {
