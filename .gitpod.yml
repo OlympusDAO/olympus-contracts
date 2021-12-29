@@ -1,0 +1,3 @@
+tasks:
+  - init: yarn && yarn run compile
+    # command: npm run start
