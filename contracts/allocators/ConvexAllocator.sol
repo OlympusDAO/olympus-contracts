@@ -9,7 +9,7 @@ import "../interfaces/IERC20.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IAllocator.sol";
 
-import "../types/Ownable.sol";
+import "../types/OlympusAccessControlled.sol";
 
 interface ICurve3Pool {
     // add liquidity (frax) to receive back FRAX3CRV-f
@@ -70,7 +70,7 @@ interface IConvexRewards {
  *  earning interest and $CVX.
  */
 
-contract ConvexAllocator is Ownable {
+contract ConvexAllocator is OlympusAccessControlled {
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;
@@ -92,7 +92,7 @@ contract ConvexAllocator is Ownable {
 
     IConvex immutable booster; // Convex deposit contract
     IConvexRewards immutable rewardPool; // Convex reward contract
-    ITreasury immutable treasury; // Olympus Treasury
+    ITreasury treasury; // Olympus Treasury
     ICurve3Pool immutable curve3Pool; // Curve 3Pool
 
     mapping(address => tokenData) public tokenInfo; // info for deposited tokens
@@ -111,8 +111,9 @@ contract ConvexAllocator is Ownable {
         address _booster,
         address _rewardPool,
         address _curve3Pool,
+        address _authority,
         uint256 _timelockInBlocks
-    ) {
+    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_treasury != address(0));
         treasury = ITreasury(_treasury);
 
@@ -147,6 +148,12 @@ contract ConvexAllocator is Ownable {
 
     /* ======== POLICY FUNCTIONS ======== */
 
+    function updateTreasury() external onlyGuardian {
+        require(authority.vault() != address(0));
+        require(address(authority.vault()) != address(treasury));
+        treasury = ITreasury(authority.vault());
+    }
+
     /**
      *  @notice withdraws asset from treasury, deposits asset into lending pool, then deposits crvToken into convex
      *  @param token address
@@ -159,7 +166,7 @@ contract ConvexAllocator is Ownable {
         uint256 amount,
         uint256[4] calldata amounts,
         uint256 minAmount
-    ) public onlyOwner {
+    ) public onlyGovernor {
         require(!exceedsLimit(token, amount)); // ensure deposit is within bounds
 
         address curveToken = tokenInfo[token].curveToken;
@@ -187,7 +194,7 @@ contract ConvexAllocator is Ownable {
         address token,
         uint256 amount,
         uint256 minAmount
-    ) public onlyOwner {
+    ) public onlyGovernor {
         rewardPool.withdrawAndUnwrap(amount, false); // withdraw to curve token
 
         address curveToken = tokenInfo[token].curveToken;
@@ -216,7 +223,7 @@ contract ConvexAllocator is Ownable {
         int128 index,
         uint256 max,
         uint256 pid
-    ) external onlyOwner {
+    ) external onlyGovernor {
         require(token != address(0));
         require(curveToken != address(0));
         require(tokenInfo[token].deployed == 0);
@@ -238,7 +245,7 @@ contract ConvexAllocator is Ownable {
      *  @notice add new reward token to be harvested
      *  @param token address
      */
-    function addRewardToken(address token) external onlyOwner {
+    function addRewardToken(address token) external onlyGovernor {
         rewardTokens.push(token);
     }
 
@@ -247,7 +254,7 @@ contract ConvexAllocator is Ownable {
      *  @param token address
      *  @param newMax uint
      */
-    function lowerLimit(address token, uint256 newMax) external onlyOwner {
+    function lowerLimit(address token, uint256 newMax) external onlyGovernor {
         require(newMax < tokenInfo[token].limit);
         require(newMax > tokenInfo[token].deployed); // cannot set limit below what has been deployed already
         tokenInfo[token].limit = newMax;
@@ -258,7 +265,7 @@ contract ConvexAllocator is Ownable {
      *  @param token address
      *  @param newMax uint
      */
-    function queueRaiseLimit(address token, uint256 newMax) external onlyOwner {
+    function queueRaiseLimit(address token, uint256 newMax) external onlyGovernor {
         tokenInfo[token].limitChangeTimelockEnd = block.number.add(timelockInBlocks);
         tokenInfo[token].newLimit = newMax;
     }
@@ -267,7 +274,7 @@ contract ConvexAllocator is Ownable {
      *  @notice changes max allocation for asset when timelock elapsed
      *  @param token address
      */
-    function raiseLimit(address token) external onlyOwner {
+    function raiseLimit(address token) external onlyGovernor {
         require(block.number >= tokenInfo[token].limitChangeTimelockEnd, "Timelock not expired");
         require(tokenInfo[token].limitChangeTimelockEnd != 0, "Timelock not started");
 
