@@ -63,7 +63,7 @@ async function main() {
     await authority.pushVault(olympusTreasury.address, true); // replaces ohm.setVault(treasury.address)
 
     const OlympusStaking = await ethers.getContractFactory("OlympusStaking");
-    const staking = await OlympusStaking.deploy(
+    const staking = await OlympusStaking.deploy( 
         ohm.address,
         sOHM.address,
         gOHM.address,

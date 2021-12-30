@@ -752,7 +752,7 @@ contract wOHM is ERC20 {
 
     address public immutable sOHM;
 
-    constructor( address _sOHM ) ERC20( 'Wrapped sOHM', 'wsOHM' ) {
+    constructor( address _sOHM ) ERC20( 'Wrapped mGLU', 'wsmGLU' ) {
         require( _sOHM != address(0) );
         sOHM = _sOHM;
     }

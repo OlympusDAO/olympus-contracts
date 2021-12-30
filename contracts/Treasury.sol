@@ -374,7 +374,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         require(block.number >= info.timelockEnd, "Timelock not complete");
 
         if (info.managing == STATUS.SOHM) {
-            // 9
+            // 18
             sOHM = IsOHM(info.toPermit);
         } else {
             permissions[info.managing][info.toPermit] = true;
