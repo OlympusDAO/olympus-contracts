@@ -6,6 +6,7 @@ import { deployMockContract } from "ethereum-waffle";
 import { FakeContract, smock } from '@defi-wonderland/smock'
 import {
   IERC20,
+  IERC20Metadata,
   ITreasury,
   IStabilityPool,
   ILQTYStaking,
@@ -25,7 +26,7 @@ describe("LUSDAllocator", () => {
   let treasuryFake: FakeContract<ITreasury>;
   let stabilityPoolFake: FakeContract<IStabilityPool>;
   let lqtyStakingFake: FakeContract<ILQTYStaking>;
-  let lusdTokenFake: FakeContract<IERC20>;
+  let lusdTokenFake: FakeContract<IERC20Metadata>;
   let lqtyTokenFake: FakeContract<IERC20>;
   let wethTokenFake: FakeContract<IERC20>;
   let lusdAllocator: LUSDAllocator;
@@ -35,7 +36,7 @@ describe("LUSDAllocator", () => {
     treasuryFake = await smock.fake<ITreasury>("ITreasury");
     stabilityPoolFake = await smock.fake<IStabilityPool>("IStabilityPool");
     lqtyStakingFake = await smock.fake<ILQTYStaking>("ILQTYStaking");
-    lusdTokenFake = await smock.fake<IERC20>("IERC20");
+    lusdTokenFake = await smock.fake<IERC20Metadata>("IERC20Metadata");
     lqtyTokenFake = await smock.fake<IERC20>("IERC20");
     wethTokenFake = await smock.fake<IERC20>("IERC20");
   });
@@ -144,8 +145,8 @@ describe("LUSDAllocator", () => {
     describe("deposit", () => {
       it("withdraws amount of token from treasury and deposits in pool", async () => {
         const AMOUNT = 12345;
-        const VALUE = 999999;
-        treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, AMOUNT).returns(VALUE);
+        const VALUE = AMOUNT * (10 ** 8);
+        lusdTokenFake.decimals.returns(1);
         await lusdAllocator.connect(owner).deposit(lusdTokenFake.address, AMOUNT);
 
         expect(treasuryFake.manage).to.be.calledWith(lusdTokenFake.address, AMOUNT);
@@ -158,8 +159,8 @@ describe("LUSDAllocator", () => {
 
       it("can perform additional deposit", async () => {
         const AMOUNT = 12345;
-        const VALUE = 999999;
-        treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, AMOUNT).returns(VALUE);
+        const VALUE = AMOUNT * (10 ** 8);
+        lusdTokenFake.decimals.returns(1);
         await lusdAllocator.connect(owner).deposit(lusdTokenFake.address, AMOUNT);
         await lusdAllocator.connect(owner).deposit(lusdTokenFake.address, AMOUNT);
 
@@ -180,9 +181,10 @@ describe("LUSDAllocator", () => {
 
     describe("withdraw", () => {
       const DEPOSIT_AMOUNT = 12345;
-      const DEPOSIT_VALUE = 999999;
+      const DEPOSIT_VALUE = DEPOSIT_AMOUNT * (10 ** 8);
       beforeEach(async () => {
-        treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, DEPOSIT_AMOUNT).returns(DEPOSIT_VALUE);
+        lusdTokenFake.decimals.returns(1);
+        // treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, DEPOSIT_AMOUNT).returns(DEPOSIT_VALUE);
         await lusdAllocator.connect(owner).deposit(lusdTokenFake.address, DEPOSIT_AMOUNT);
       });
 
@@ -202,7 +204,8 @@ describe("LUSDAllocator", () => {
 
       it("can do do a partial withdraw", async () => {
         const PARTIAL_AMOUNT = 4321;
-        const PARTIAL_VALUE = 8888;
+        const PARTIAL_VALUE = PARTIAL_AMOUNT * (10 ** 8);
+        lusdTokenFake.decimals.returns(1);
         lusdTokenFake.balanceOf.whenCalledWith(lusdAllocator.address).returns(PARTIAL_AMOUNT);
         treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, PARTIAL_AMOUNT).returns(PARTIAL_VALUE);
         await lusdAllocator.connect(owner).withdraw(lusdTokenFake.address, PARTIAL_AMOUNT);
