@@ -78,9 +78,11 @@ contract ConvexAllocator is OlympusAccessControlled {
 
     /* ======== STRUCTS ======== */
 
-    struct tokenData {
+    struct TokenData {
         address underlying;
         address curveToken;
+        IConvexRewards rewardPool;
+        address[] rewardTokens;
         int128 index;
         uint256 deployed;
         uint256 limit;
@@ -91,25 +93,22 @@ contract ConvexAllocator is OlympusAccessControlled {
     /* ======== STATE VARIABLES ======== */
 
     IConvex immutable booster; // Convex deposit contract
-    IConvexRewards immutable rewardPool; // Convex reward contract
     ITreasury treasury; // Olympus Treasury
     ICurve3Pool immutable curve3Pool; // Curve 3Pool
 
-    mapping(address => tokenData) public tokenInfo; // info for deposited tokens
+    mapping(address => TokenData) public tokenInfo; // info for deposited tokens
     mapping(address => uint256) public pidForReserve; // convex pid for token
 
     uint256 public totalValueDeployed; // total RFV deployed into lending pool
 
     uint256 public immutable timelockInBlocks; // timelock to raise deployment limit
 
-    address[] rewardTokens;
 
     /* ======== CONSTRUCTOR ======== */
 
     constructor(
         address _treasury,
         address _booster,
-        address _rewardPool,
         address _curve3Pool,
         address _authority,
         uint256 _timelockInBlocks
@@ -119,9 +118,6 @@ contract ConvexAllocator is OlympusAccessControlled {
 
         require(_booster != address(0));
         booster = IConvex(_booster);
-
-        require(_rewardPool != address(0));
-        rewardPool = IConvexRewards(_rewardPool);
 
         require(_curve3Pool != address(0));
         curve3Pool = ICurve3Pool(_curve3Pool);
@@ -134,14 +130,20 @@ contract ConvexAllocator is OlympusAccessControlled {
     /**
      *  @notice claims accrued CVX rewards for all tracked crvTokens
      */
-    function harvest() public {
-        rewardPool.getReward();
+    function harvest(address[] memory tokens) external {
+        for(uint i; i < tokens.length; i++) {
+            TokenData memory tokenData = tokenInfo[tokens[i]];
+            address[] memory rewardTokens = tokenData.rewardTokens;
+            
+            IConvexRewards rewardPool = tokenData.rewardPool;
+            rewardPool.getReward();
 
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            uint256 balance = IERC20(rewardTokens[i]).balanceOf(address(this));
+            for (uint256 r = 0; r < rewardTokens.length; r++) {
+                uint256 balance = IERC20(rewardTokens[r]).balanceOf(address(this));
 
-            if (balance > 0) {
-                IERC20(rewardTokens[i]).safeTransfer(address(treasury), balance);
+                if (balance > 0) {
+                    IERC20(rewardTokens[r]).safeTransfer(address(treasury), balance);
+                }
             }
         }
     }
@@ -195,6 +197,8 @@ contract ConvexAllocator is OlympusAccessControlled {
         uint256 amount,
         uint256 minAmount
     ) public onlyGovernor {
+        IConvexRewards rewardPool = tokenInfo[token].rewardPool;
+
         rewardPool.withdrawAndUnwrap(amount, false); // withdraw to curve token
 
         address curveToken = tokenInfo[token].curveToken;
@@ -220,6 +224,8 @@ contract ConvexAllocator is OlympusAccessControlled {
     function addToken(
         address token,
         address curveToken,
+        address rewardPool,
+        address[] memory rewardTokens,
         int128 index,
         uint256 max,
         uint256 pid
@@ -228,9 +234,11 @@ contract ConvexAllocator is OlympusAccessControlled {
         require(curveToken != address(0));
         require(tokenInfo[token].deployed == 0);
 
-        tokenInfo[token] = tokenData({
+        tokenInfo[token] = TokenData({
             underlying: token,
             curveToken: curveToken,
+            rewardPool: IConvexRewards(rewardPool),
+            rewardTokens: rewardTokens,
             index: index,
             deployed: 0,
             limit: max,
@@ -243,10 +251,11 @@ contract ConvexAllocator is OlympusAccessControlled {
 
     /**
      *  @notice add new reward token to be harvested
-     *  @param token address
+     *  @param baseToken address
+     *  @param rewardTokens address[]
      */
-    function addRewardToken(address token) external onlyGovernor {
-        rewardTokens.push(token);
+    function addRewardTokens(address baseToken, address[] memory rewardTokens) external onlyGovernor {
+        tokenInfo[baseToken].rewardTokens = rewardTokens;
     }
 
     /**
@@ -325,8 +334,8 @@ contract ConvexAllocator is OlympusAccessControlled {
      *  @notice query all pending rewards
      *  @return uint
      */
-    function rewardsPending() public view returns (uint256) {
-        return rewardPool.earned(address(this));
+    function rewardsPending(address baseToken) public view returns (uint256) {
+        return tokenInfo[baseToken].rewardPool.earned(address(this));
     }
 
     /**
