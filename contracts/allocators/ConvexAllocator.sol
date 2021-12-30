@@ -12,14 +12,14 @@ import "../interfaces/IAllocator.sol";
 import "../types/OlympusAccessControlled.sol";
 
 interface ICurve3Pool {
-    // add liquidity (frax) to receive back FRAX3CRV-f
+    // add liquidity to Curve to receive back 3CRV tokens
     function add_liquidity(
         address _pool,
         uint256[4] memory _deposit_amounts,
         uint256 _min_mint_amount
     ) external returns (uint256);
 
-    // remove liquidity (FRAX3CRV-f) to recieve back Frax
+    // remove liquidity Curve liquidity to recieve back base token
     function remove_liquidity_one_coin(
         address _pool,
         uint256 _burn_amount,
@@ -36,30 +36,15 @@ interface IConvex {
         uint256 _amount,
         bool _stake
     ) external returns (bool);
-
-    //burn a tokenized deposit to receive curve lp tokens back
-    function withdraw(uint256 _pid, uint256 _amount) external returns (bool);
 }
 
 //sample convex reward contracts interface
 interface IConvexRewards {
-    //get balance of an address
-    function balanceOf(address _account) external returns (uint256);
-
-    //withdraw to a convex tokenized deposit
-    function withdraw(uint256 _amount, bool _claim) external returns (bool);
-
     //withdraw directly to curve LP token
     function withdrawAndUnwrap(uint256 _amount, bool _claim) external returns (bool);
 
     //claim rewards
     function getReward() external returns (bool);
-
-    //stake a convex tokenized deposit
-    function stake(uint256 _amount) external returns (bool);
-
-    //stake a convex tokenized deposit for another address(transfering ownership)
-    function stakeFor(address _account, uint256 _amount) external returns (bool);
 
     //get rewards for an address
     function earned(address _account) external view returns (uint256);
@@ -93,8 +78,8 @@ contract ConvexAllocator is OlympusAccessControlled {
     /* ======== STATE VARIABLES ======== */
 
     IConvex immutable booster; // Convex deposit contract
-    ITreasury treasury; // Olympus Treasury
     ICurve3Pool immutable curve3Pool; // Curve 3Pool
+    ITreasury treasury; // Olympus Treasury
 
     mapping(address => TokenData) public tokenInfo; // info for deposited tokens
     mapping(address => uint256) public pidForReserve; // convex pid for token
@@ -191,11 +176,13 @@ contract ConvexAllocator is OlympusAccessControlled {
      *  @param token address
      *  @param amount uint
      *  @param minAmount uint
+     *  @param reserve bool
      */
     function withdraw(
         address token,
         uint256 amount,
-        uint256 minAmount
+        uint256 minAmount,
+        bool reserve
     ) public onlyGovernor {
         IConvexRewards rewardPool = tokenInfo[token].rewardPool;
 
@@ -212,14 +199,23 @@ contract ConvexAllocator is OlympusAccessControlled {
         uint256 value = treasury.tokenValue(token, balance);
         accountingFor(token, balance, value, false);
 
-        IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
-        treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
+        if( reserve ) {
+            IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
+            treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
+        } else {
+            IERC20(token).safeTransfer(address(treasury), balance);
+        }
     }
 
     /**
      *  @notice adds asset and corresponding crvToken to mapping
      *  @param token address
      *  @param curveToken address
+     *  @param rewardPool address
+     *  @param rewardTokens address[]
+     *  @param index int128
+     *  @param max uint256
+     *  @param pid uint256
      */
     function addToken(
         address token,
@@ -331,10 +327,11 @@ contract ConvexAllocator is OlympusAccessControlled {
     /* ======== VIEW FUNCTIONS ======== */
 
     /**
-     *  @notice query all pending rewards
+     *  @notice query all pending rewards for a specific base token
+     *  @param baseToken address
      *  @return uint
      */
-    function rewardsPending(address baseToken) public view returns (uint256) {
+    function rewardsPending(address baseToken) external view returns (uint256) {
         return tokenInfo[baseToken].rewardPool.earned(address(this));
     }
 
@@ -345,7 +342,6 @@ contract ConvexAllocator is OlympusAccessControlled {
      */
     function exceedsLimit(address token, uint256 amount) public view returns (bool) {
         uint256 willBeDeployed = tokenInfo[token].deployed.add(amount);
-
         return (willBeDeployed > tokenInfo[token].limit);
     }
 }
