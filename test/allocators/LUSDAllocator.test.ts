@@ -344,7 +344,7 @@ describe("LUSDAllocator", () => {
           .to.be.revertedWith("Not approved");
       });
 
-      it.only("perform initial deposit, wait, then harvest", async () => {
+      it("perform initial deposit, wait, then harvest", async () => {
         // enable RESERVEMANAGER role
         await oldTreasury.connect(manager).queue(3, allocator.address);
         await advance(13000);
