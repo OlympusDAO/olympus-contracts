@@ -108,8 +108,7 @@ contract ConvexAllocator is OlympusAccessControlled {
             TokenData memory tokenData = tokenInfo[tokens[i]];
             address[] memory rewardTokens = tokenData.rewardTokens;
             
-            IConvexRewards rewardPool = tokenData.rewardPool;
-            rewardPool.getReward();
+            tokenData.rewardPool.getReward();
 
             for (uint256 r = 0; r < rewardTokens.length; r++) {
                 uint256 balance = IERC20(rewardTokens[r]).balanceOf(address(this));
@@ -166,12 +165,10 @@ contract ConvexAllocator is OlympusAccessControlled {
         uint256 minAmount,
         bool reserve
     ) public onlyGuardian {
-        IConvexRewards rewardPool = tokenInfo[token].rewardPool;
+        address curveToken = tokenInfo[token].curveToken;
 
         // withdraw from convex
-        rewardPool.withdrawAndUnwrap(amount, false); 
-
-        address curveToken = tokenInfo[token].curveToken;
+        tokenInfo[token].rewardPool.withdrawAndUnwrap(amount, false); 
 
         // approve and withdraw from curve
         IERC20(curveToken).approve(address(curve3Pool), amount); 
