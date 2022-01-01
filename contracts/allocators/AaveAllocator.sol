@@ -7,9 +7,8 @@ import "../libraries/SafeERC20.sol";
 
 import "../interfaces/IERC20.sol";
 import "../interfaces/ITreasury.sol";
-import "../interfaces/IAllocator.sol";
 
-import "../types/Ownable.sol";
+import "../types/OlympusAccessControlled.sol";
 
 interface ILendingPool {
     function deposit(
@@ -18,7 +17,6 @@ interface ILendingPool {
         address onBehalfOf,
         uint16 referralCode
     ) external;
-
     function withdraw(
         address asset,
         uint256 amount,
@@ -41,8 +39,6 @@ interface IStakedTokenIncentivesController {
     ) external;
 
     function getRewardsBalance(address[] memory assets, address user) external view returns (uint256);
-
-    function getClaimer(address user) external view returns (address);
 }
 
 /**
@@ -50,7 +46,8 @@ interface IStakedTokenIncentivesController {
  *  earning interest and $stkAAVE.
  */
 
-contract AaveAllocator is Ownable {
+contract AaveAllocator is OlympusAccessControlled {
+
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;
@@ -67,229 +64,144 @@ contract AaveAllocator is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    IStakedTokenIncentivesController immutable incentives; // stkAave incentive controller
-    ILendingPool immutable lendingPool; // Aave Lending Pool
-    ITreasury immutable treasury; // Olympus Treasury
+    // stkAave incentive controller
+    IStakedTokenIncentivesController internal immutable incentives = 
+        IStakedTokenIncentivesController(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5);
+    // Aave Lending Pool 
+    ILendingPool internal immutable lendingPool = ILendingPool(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9); 
+    // Olympus Treasury
+    ITreasury internal immutable treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef); 
 
-    address[] public aTokens; // all relevant aTokens
+    // all relevant aTokens
+    address[] public aTokens; 
+    // corresponding aTokens for tokens
     mapping(address => aTokenData) public aTokenInfo;
+    // total RFV deployed into lending pool
+    uint256 public totalValueDeployed; 
 
-    uint256 public totalValueDeployed; // total RFV deployed into lending pool
+    // timelock to raise deployment limit
+    uint256 public immutable timelockInBlocks = 6600; 
+    // rebates portion of lending pool fees
+    uint16 public referralCode;
 
-    uint256 public immutable timelockInBlocks; // timelock to raise deployment limit
-
-    uint16 public referralCode; // rebates portion of lending pool fees
-
-    /** Two modes on this contract. Default mode (depositToTreasury = false)
-     *  holds aDAI in this contract. The alternate mode (depositToTreasury = true)
-     *  deposits aDAI into the treasury and retrieves it to withdraw. Switching
-     *  to true is contigent on claimOnBehalfOf permission (which must be given
-     *  by Aave governance) so that this contract can claim stkAAVE rewards.
-     */
-    bool public depositToTreasury;
 
     /* ======== CONSTRUCTOR ======== */
 
-    constructor(
-        address _treasury,
-        address _lendingPool,
-        address _incentives,
-        uint256 _timelockInBlocks,
-        uint16 _referralCode
-    ) {
-        require(_treasury != address(0));
-        treasury = ITreasury(_treasury);
-
-        require(_lendingPool != address(0));
-        lendingPool = ILendingPool(_lendingPool);
-
-        require(_incentives != address(0));
-        incentives = IStakedTokenIncentivesController(_incentives);
-
-        timelockInBlocks = _timelockInBlocks;
-        referralCode = _referralCode;
+    constructor (IOlympusAuthority _authority) OlympusAccessControlled(_authority) {
+        referralCode = 0;
     }
 
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
-     *  @notice claims accrued stkAave rewards for all tracked aTokens
+     * @notice claims accrued stkAave rewards for all tracked aTokens
      */
     function harvest() public {
-        address _treasury = address(treasury);
-        if (depositToTreasury) {
-            // claims rewards accrued to treasury
-            incentives.claimRewardsOnBehalf(aTokens, rewardsPending(_treasury), _treasury, _treasury);
-        } else {
-            // claims rewards accrued to this contract
-            incentives.claimRewards(aTokens, rewardsPending(address(this)), _treasury);
-        }
+        incentives.claimRewards(aTokens, rewardsPending(), address(treasury));
     }
 
     /**
-     *  @notice claims accrued stkAave rewards for given aTokens
-     *  @param _aTokens address[] memory
+     * @notice claims accrued stkAave rewards for given aTokens
      */
     function harvestFor(address[] calldata _aTokens) external {
-        address _treasury = address(treasury);
-        if (depositToTreasury) {
-            // claims rewards accrued to treasury
-            incentives.claimRewardsOnBehalf(_aTokens, rewardsPending(_treasury), _treasury, _treasury);
-        } else {
-            // claims rewards accrued to this contract
-            incentives.claimRewards(_aTokens, rewardsPending(address(this)), _treasury);
-        }
+        incentives.claimRewards(_aTokens, rewardsPendingFor(_aTokens), address(treasury));
     }
 
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     *  @notice withdraws asset from treasury, deposits asset into lending pool, then deposits aToken into treasury
-     *  @param token address
-     *  @param amount uint
+     * @notice withdraws asset from treasury, deposits asset into lending pool, then deposits aToken into treasury
      */
-    function deposit(address token, uint256 amount) external onlyOwner {
-        require(!exceedsLimit(token, amount)); // ensure deposit is within bounds
+    function deposit(address token, uint256 amount) public onlyPolicy {
+        require(!exceedsLimit(token, amount), "Exceeds deposit limit");
 
-        treasury.manage(token, amount); // retrieve amount of asset from treasury
+        // retrieve amount of asset from treasury
+        treasury.manage(token, amount); 
 
-        IERC20(token).approve(address(lendingPool), amount); // approve to deposit into lending pool
-        lendingPool.deposit(token, amount, address(this), referralCode); // deposit, returning aToken
+        // approve and deposit into lending pool, returning aToken
+        IERC20(token).approve(address(lendingPool), amount);
+        lendingPool.deposit(token, amount, address(this), referralCode);
 
-        uint256 value = treasury.tokenValue(token, amount); // treasury RFV calculator
-        accountingFor(token, amount, value, true); // account for deposit
-
-        if (depositToTreasury) {
-            // if aTokens are being deposited into treasury
-            address aToken = aTokenInfo[token].aToken; // address of aToken
-            uint256 aBalance = IERC20(aToken).balanceOf(address(this)); // balance of aToken received
-
-            IERC20(aToken).approve(address(treasury), aBalance); // approve to deposit aToken into treasury
-            treasury.deposit(aBalance, aToken, value); // deposit using value as profit so no OHM is minted
-        }
+        // account for deposit
+        accountingFor(token, amount, treasury.tokenValue(token, amount), true); 
     }
 
     /**
-     *  @notice withdraws aToken from treasury, withdraws from lending pool, and deposits asset into treasury
-     *  @param token address
-     *  @param amount uint
+     * @notice withdraws aToken from treasury, withdraws from lending pool, and deposits asset into treasury
      */
-    function withdraw(address token, uint256 amount) public onlyOwner {
-        address aToken = aTokenInfo[token].aToken; // aToken to withdraw
+    function withdraw(address token, uint256 amount) public onlyPolicy {
+        // approve and withdraw from lending pool, returning asset
+        IERC20(aTokenInfo[token].aToken).approve(address(lendingPool), amount);
+        lendingPool.withdraw(token, amount, address(this)); 
+        
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        uint256 value = treasury.tokenValue(token, balance);
+        
+        // account for withdrawal
+        accountingFor(token, balance, value, false); 
 
-        if (depositToTreasury) {
-            // if aTokens are being deposited into treasury
-            treasury.manage(aToken, amount); // retrieve aToken from treasury
-        }
-
-        IERC20(aToken).approve(address(lendingPool), amount); // approve to withdraw from lending pool
-        lendingPool.withdraw(token, amount, address(this)); // withdraw from lending pool, returning asset
-
-        uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from lending pool
-        uint256 value = treasury.tokenValue(token, balance); // treasury RFV calculator
-
-        accountingFor(token, balance, value, false); // account for withdrawal
-
-        IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
-        treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
+        // approve and deposit asset into treasury
+        IERC20(token).approve(address(treasury), balance); 
+        treasury.deposit(balance, token, value);
     }
 
     /**
-     *  @notice adds asset and corresponding aToken to mapping
-     *  @param token address
-     *  @param aToken address
+     * @notice adds asset and corresponding aToken to mapping
      */
-    function addToken(
-        address token,
-        address aToken,
-        uint256 max
-    ) external onlyOwner {
-        require(token != address(0));
-        require(aToken != address(0));
-        require(aTokenInfo[token].deployed == 0);
+    function addToken(address token, address aToken, uint256 max) external onlyPolicy {
+        require(token != address(0), "Token: Zero address");
+        require(aToken != address(0), "aToken: Zero address");
+        require(aTokenInfo[token].deployed == 0, "Token added");
 
-        aTokenInfo[token] = aTokenData({underlying: token, aToken: aToken, deployed: 0, limit: max, newLimit: 0, limitChangeTimelockEnd: 0});
+        aTokenInfo[token] = aTokenData({
+            underlying: token,
+            aToken: aToken,
+            deployed: 0,
+            limit: max,
+            newLimit: 0,
+            limitChangeTimelockEnd: 0
+        });
     }
 
     /**
-     *  @notice lowers max can be deployed for asset (no timelock)
-     *  @param token address
-     *  @param newMax uint
+     * @notice lowers max can be deployed for asset (no timelock)
      */
-    function lowerLimit(address token, uint256 newMax) external onlyOwner {
-        require(newMax < aTokenInfo[token].limit);
-        require(newMax > aTokenInfo[token].deployed); // cannot set limit below what has been deployed already
+    function lowerLimit(address token, uint256 newMax) external onlyPolicy {
+        require(newMax < aTokenInfo[token].limit, "Must be lower");
+        require(newMax > aTokenInfo[token].deployed, "Must be less than deployed"); 
         aTokenInfo[token].limit = newMax;
     }
-
+    
     /**
-     *  @notice starts timelock to raise max allocation for asset
-     *  @param token address
-     *  @param newMax uint
+     * @notice starts timelock to raise max allocation for asset
      */
-    function queueRaiseLimit(address token, uint256 newMax) external onlyOwner {
+    function queueRaiseLimit(address token, uint256 newMax) external onlyPolicy {
         aTokenInfo[token].limitChangeTimelockEnd = block.number.add(timelockInBlocks);
         aTokenInfo[token].newLimit = newMax;
     }
 
     /**
-     *  @notice changes max allocation for asset when timelock elapsed
-     *  @param token address
+     * @notice changes max allocation for asset when timelock elapsed
      */
-    function raiseLimit(address token) external onlyOwner {
-        require(block.number >= aTokenInfo[token].limitChangeTimelockEnd, "Timelock not expired");
-        require(aTokenInfo[token].limitChangeTimelockEnd != 0, "Timelock not started");
-
-        aTokenInfo[token].limit = aTokenInfo[token].newLimit;
-        aTokenInfo[token].newLimit = 0;
-        aTokenInfo[token].limitChangeTimelockEnd = 0;
+    function raiseLimit(address token) external onlyPolicy {
+        aTokenData storage info = aTokenInfo[token];
+        require(block.number >= info.limitChangeTimelockEnd, "Timelock not expired");
+        info.limit = info.newLimit;
+        info.newLimit = 0;
+        info.limitChangeTimelockEnd = 0;
     }
-
+    
     /**
-     *  @notice set referral code for rebate on fees
-     *  @param code uint16
+     * @notice set referral code for rebate on fees
      */
-    function setReferralCode(uint16 code) external onlyOwner {
+    function setReferralCode(uint16 code) external onlyPolicy {
         referralCode = code;
-    }
-
-    /**
-     *  @notice deposit aTokens into treasury and begin claiming rewards on behalf of
-     */
-    function enableDepositToTreasury() external onlyOwner {
-        require(incentives.getClaimer(address(treasury)) == address(this), "Contract not approved to claim rewards");
-        require(!depositToTreasury, "Already enabled");
-
-        harvest(); // claim accrued rewards to this address first
-
-        // deposit all held aTokens into treasury
-        for (uint256 i = 0; i < aTokens.length; i++) {
-            address aToken = aTokens[i];
-            uint256 balance = IERC20(aToken).balanceOf(address(this));
-            if (balance > 0) {
-                uint256 value = treasury.tokenValue(aToken, balance);
-                IERC20(aToken).approve(address(treasury), balance); // approve to deposit asset into treasury
-                treasury.deposit(balance, aToken, value); // deposit using value as profit so no OHM is minted
-            }
-        }
-        depositToTreasury = true; // enable last
-    }
-
-    /**
-     *  @notice revert enabling aToken treasury deposits
-     */
-    function revertDepositToTreasury() external onlyOwner {
-        depositToTreasury = false; // future aToken deposits will be held in this contract
     }
 
     /* ======== INTERNAL FUNCTIONS ======== */
 
     /**
-     *  @notice accounting of deposits/withdrawals of assets
-     *  @param token address
-     *  @param amount uint
-     *  @param value uint
-     *  @param add bool
+     * @notice accounting of deposits/withdrawals of assets
      */
     function accountingFor(
         address token,
@@ -299,54 +211,41 @@ contract AaveAllocator is Ownable {
     ) internal {
         if (add) {
             aTokenInfo[token].deployed = aTokenInfo[token].deployed.add(amount); // track amount allocated into pool
-
             totalValueDeployed = totalValueDeployed.add(value); // track total value allocated into pools
         } else {
             // track amount allocated into pool
             if (amount < aTokenInfo[token].deployed) {
-                aTokenInfo[token].deployed = aTokenInfo[token].deployed.sub(amount);
-            } else {
-                aTokenInfo[token].deployed = 0;
-            }
-
+                aTokenInfo[token].deployed = aTokenInfo[token].deployed.sub(amount); 
+            } else aTokenInfo[token].deployed = 0;
+            
             // track total value allocated into pools
             if (value < totalValueDeployed) {
                 totalValueDeployed = totalValueDeployed.sub(value);
-            } else {
-                totalValueDeployed = 0;
-            }
+            } else totalValueDeployed = 0;
         }
     }
 
     /* ======== VIEW FUNCTIONS ======== */
 
     /**
-     *  @notice query all pending rewards
-     *  @param user address
-     *  @return uint
+     * @notice query all pending rewards
      */
-    function rewardsPending(address user) public view returns (uint256) {
-        return incentives.getRewardsBalance(aTokens, user);
+    function rewardsPending() public view returns (uint256) {
+        return incentives.getRewardsBalance(aTokens, address(this));
     }
 
     /**
-     *  @notice query pending rewards for provided aTokens
-     *  @param tokens address[]
-     *  @param user address
-     *  @return uint
+     * @notice query pending rewards for provided aTokens
      */
-    function rewardsPendingFor(address[] calldata tokens, address user) public view returns (uint256) {
-        return incentives.getRewardsBalance(tokens, user);
+    function rewardsPendingFor(address[] calldata tokens) public view returns (uint256) {
+        return incentives.getRewardsBalance(tokens, address(this));
     }
 
     /**
-     *  @notice checks to ensure deposit does not exceed max allocation for asset
-     *  @param token address
-     *  @param amount uint
+     * @notice checks to ensure deposit does not exceed max allocation for asset
      */
     function exceedsLimit(address token, uint256 amount) public view returns (bool) {
         uint256 willBeDeployed = aTokenInfo[token].deployed.add(amount);
-
         return (willBeDeployed > aTokenInfo[token].limit);
     }
 }
