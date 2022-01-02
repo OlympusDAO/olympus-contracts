@@ -71,11 +71,11 @@ contract GovernorOHMegaDelegateStorageV1 is GovernorOHMegaDelegatorStorage {
     /// @notice The number of votes required in order for a voter to become a proposer
     uint public proposalThreshold;
 
-    /// @notice Initial proposal id set at become
-    uint public initialProposalId;
-
     /// @notice The total number of proposals
     uint public proposalCount;
+
+    /// @notice If has been initaited
+    bool public initiated;
 
     /// @notice The address of the Olympus Protocol Timelock
     TimelockInterface public timelock;
@@ -189,16 +189,9 @@ interface TimelockInterface {
 interface gOHMInterface {
     function getPriorVotes(address account, uint blockNumber) external view returns (uint);
     function balanceTo( uint _amount ) external view returns ( uint );
-    function balanceFrom( uint _amount ) external view returns ( uint );
 }
 
 /// @notice change from original contract
 interface sOHMInterface {
     function circulatingSupply() external view returns ( uint );
-}
-
-
-interface GovernorAlpha {
-    /// @notice The total number of proposals
-    function proposalCount() external returns (uint);
 }

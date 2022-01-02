@@ -80,7 +80,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
       */
     function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
         // Reject proposals before initiating as Governor
-        require(initialProposalId != 0, "GovernorOHMega::propose: Governor OHMega not active");
+        require(initiated == true, "GovernorOHMega::propose: Governor OHMega not active");
         /// @notice change from original contract
         require(gOHM.getPriorVotes(msg.sender, sub256(block.number, 1)) > getVotesFromPercentOfsOHMSupply(proposalThreshold), "GovernorOHMega::propose: proposer votes below proposal threshold");
         require(targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length, "GovernorOHMega::propose: proposal function information arity mismatch");
@@ -215,7 +215,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
       * @return Proposal state
       */
     function state(uint proposalId) public view returns (ProposalState) {
-        require(proposalCount >= proposalId && proposalId > initialProposalId, "GovernorOHMega::state: invalid proposal id");
+        require(proposalCount >= proposalId, "GovernorOHMega::state: invalid proposal id");
         Proposal storage proposal = proposals[proposalId];
         if (proposal.canceled) {
             return ProposalState.Canceled;
@@ -343,13 +343,12 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
     /**
       * @notice Initiate the GovernorOHMega contract
       * @dev Admin only. Sets initial proposal id which initiates the contract, ensuring a continuous proposal id count
-      * @param governorAlpha The address for the Governor to continue the proposal id count from
       */
-    function _initiate(address governorAlpha) external {
+      /// @notice change from original contract
+    function _initiate() external {
         require(msg.sender == admin, "GovernorOHMega::_initiate: admin only");
-        require(initialProposalId == 0, "GovernorOHMega::_initiate: can only initiate once");
-        proposalCount = GovernorAlpha(governorAlpha).proposalCount();
-        initialProposalId = proposalCount;
+        require(initiated == false, "GovernorOHMega::_initiate: can only initiate once");
+        initiated = true;
         timelock.acceptAdmin();
     }
 
