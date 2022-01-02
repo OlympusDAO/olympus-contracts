@@ -215,7 +215,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
       * @return Proposal state
       */
     function state(uint proposalId) public view returns (ProposalState) {
-        require(proposalCount >= proposalId, "GovernorOHMega::state: invalid proposal id");
+        require(proposalCount >= proposalId && proposalId > 0, "GovernorOHMega::state: invalid proposal id");
         Proposal storage proposal = proposals[proposalId];
         if (proposal.canceled) {
             return ProposalState.Canceled;
@@ -342,7 +342,7 @@ contract GovernorOHMegaDelegate is GovernorOHMegaDelegateStorageV1, GovernorOHMe
 
     /**
       * @notice Initiate the GovernorOHMega contract
-      * @dev Admin only. Sets initial proposal id which initiates the contract, ensuring a continuous proposal id count
+      * @dev Admin only. Sets that contract has been initiated
       */
       /// @notice change from original contract
     function _initiate() external {
