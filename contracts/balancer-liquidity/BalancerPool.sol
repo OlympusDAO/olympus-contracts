@@ -121,7 +121,7 @@ contract BalancerLiquidty is OlympusAccessControlled {
         OHM, 
         _amountOHMDAI,
         _minOHMDAI[0], 
-        _minOHMETH[1], 
+        _minOHMDAI[1], 
         address(this), 
         _deadline
         );
