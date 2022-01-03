@@ -100,7 +100,7 @@ async function main() {
         constructorArguments: [
             vcash.address,
             sOHM.address,
-            gOHM.addres,
+            gOHM.address,
             '2200',
             firstEpochNumber,
             firstBlockNumber,
