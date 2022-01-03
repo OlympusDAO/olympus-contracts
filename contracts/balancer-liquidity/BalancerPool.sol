@@ -1,7 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.7.5;
 pragma abicoder v2;
 
-import "../libraries/Address.sol";
 import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 
@@ -13,18 +13,6 @@ import "../interfaces/IOlympusAuthority.sol";
 import "../types/OlympusAccessControlled.sol";
 
 interface IBalancerVault {
-
-    /**
-     * @dev Emitted when a user joins or exits a Pool by calling `joinPool` or `exitPool`, respectively.
-     */
-    event PoolBalanceChanged(
-        bytes32 indexed poolId,
-        address indexed liquidityProvider,
-        IERC20[] tokens,
-        int256[] deltas,
-        uint256[] protocolFeeAmounts
-    );
-
     /**
      * @dev Called by users to join a Pool, which transfers tokens from `sender` into the Pool's balance. This will
      * trigger custom Pool behavior, which will typically grant something in return to `recipient` - often tokenized
@@ -96,64 +84,77 @@ contract BalancerLiquidty is OlympusAccessControlled {
 
     constructor(IOlympusAuthority _authority) OlympusAccessControlled(_authority) {}
 
+    /**
+     * @notice Removes liquidity from OHM/ETH SLP and OHM/DAI SLP, then adds liquidty to 
+     * 50OHM-25DAI-25WETH Balancer pool. 
+     */
     function moveLiquidity(
         uint256 _amountOHMETH, 
         uint256 _amountOHMDAI, 
-        uint256 _minOHMETHA, 
-        uint256 _minOHMETHB, 
-        uint256 _minOHMDAIA, 
-        uint256 _minOHMDAIB,
+        uint256[2] memory _minOHMETH, 
+        uint256[2] memory _minOHMDAI, 
         uint256 _deadline, 
-        bytes calldata _userData
+        bytes memory _userData
     ) external onlyGovernor {
+        // Manage LPs from treasury
         treasury.manage(OHMETHSLP, _amountOHMETH);
         treasury.manage(OHMDAISLP, _amountOHMDAI);
 
+        // Approve LPs to be spent by the Sushiswap router
         IERC20(OHMETHSLP).approve(address(router), _amountOHMETH);
         IERC20(OHMDAISLP).approve(address(router), _amountOHMDAI);
 
+        // Remove specified liquidity from OHM/ETH SLP
         (uint256 amountETH, uint256 amountOHM1) = router.removeLiquidity(
         WETH, 
         OHM, 
         _amountOHMETH,
-        _minOHMETHA, 
-        _minOHMETHB, 
+        _minOHMETH[0], 
+        _minOHMETH[1], 
         address(this), 
         _deadline
         );
 
+        // Remove specified liquidity from OHM/DAI SLP
         (uint256 amountDAI, uint256 amountOHM2) = router.removeLiquidity(
         DAI, 
         OHM, 
         _amountOHMDAI,
-        _minOHMDAIA, 
-        _minOHMETHB, 
+        _minOHMDAI[0], 
+        _minOHMETH[1], 
         address(this), 
         _deadline
         );
 
+        // Amount of OHM removed from liquidity
         uint256 amountOHM = amountOHM1.add(amountOHM2);
 
+        // Approve Balancer vault to spend tokens
         IERC20(OHM).approve(address(balancerVault), amountOHM);
         IERC20(WETH).approve(address(balancerVault), amountETH);
         IERC20(DAI).approve(address(balancerVault), amountDAI);
         
+        // Array of tokens that liquidty will be added for
         address[] memory tokens = new address[](3);
         tokens[0] = OHM;
         tokens[1] = DAI;
         tokens[2] = WETH;
 
+        // Max amount of each token that liquidity will be added for
         uint256[] memory amounts = new uint256[](3);
         amounts[0] = amountOHM;
         amounts[1] = amountDAI;
         amounts[2] = amountETH;
 
+        // Struct that is passed in when adding to the pool
         IBalancerVault.JoinPoolRequest memory poolRequest = IBalancerVault.JoinPoolRequest(tokens, amounts, _userData, false);
 
+        // Add liquidity to the Balancer pool
         balancerVault.joinPool(balancerPoolID, address(this), address(treasury), poolRequest);
 
+        // Send any leftover OHM back to governor and WETH and DAI to treasury
+        IERC20(OHM).safeTransfer(authority.governor(), amountOHM);
+        IERC20(WETH).safeTransfer(address(treasury), amountETH);
+        IERC20(DAI).safeTransfer(address(treasury), amountDAI);
     }
-
-
-
 }
