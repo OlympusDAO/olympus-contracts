@@ -7,15 +7,10 @@ import "../libraries/SafeERC20.sol";
 
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IERC20.sol";
+import "../interfaces/IUniswapV2Router.sol";
+import "../interfaces/IOlympusAuthority.sol";
 
-/**
- * @dev This is an empty interface used to represent either ERC20-conforming token contracts or ETH (using the zero
- * address sentinel value). We're just relying on the fact that `interface` can be used to declare new address-like
- * types.
- *
- * This concept is unrelated to a Pool's Asset Managers.
- */
-interface IAsset {}
+import "../types/OlympusAccessControlled.sol";
 
 interface IBalancerVault {
 
@@ -70,29 +65,94 @@ interface IBalancerVault {
     ) external payable;
 
     struct JoinPoolRequest {
-        IAsset[] assets;
+        address[] assets;
         uint256[] maxAmountsIn;
         bytes userData;
         bool fromInternalBalance;
     }
 }
 
-contract BalancerLiquidty {
+contract BalancerLiquidty is OlympusAccessControlled {
+    using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     // Balancer Vault
     IBalancerVault internal immutable balancerVault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8); 
 
     // Olympus Treasury
-    ITreasury internal immutable treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef); 
+    ITreasury internal immutable treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
 
-    // Balancer 50OHM-25DAI-25WETH address
-    address internal immutable balancerPool = 0xc45D42f801105e861e86658648e3678aD7aa70f9; 
+    // Sushiswap Router
+    IUniswapV2Router internal immutable router = IUniswapV2Router(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
+
+    // Balancer 50OHM-25DAI-25WETH poolID
+    bytes32 internal immutable balancerPoolID = 0xc45d42f801105e861e86658648e3678ad7aa70f900010000000000000000011e; 
 
     address internal immutable OHMETHSLP = 0x69b81152c5A8d35A67B32A4D3772795d96CaE4da;
-
     address internal immutable OHMDAISLP = 0x055475920a8c93CfFb64d039A8205F7AcC7722d3;
-
     address internal immutable OHM = 0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5;
+    address internal immutable WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address internal immutable DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+
+    constructor(IOlympusAuthority _authority) OlympusAccessControlled(_authority) {}
+
+    function moveLiquidity(
+        uint256 _amountOHMETH, 
+        uint256 _amountOHMDAI, 
+        uint256 _minOHMETHA, 
+        uint256 _minOHMETHB, 
+        uint256 _minOHMDAIA, 
+        uint256 _minOHMDAIB,
+        uint256 _deadline, 
+        bytes calldata _userData
+    ) external onlyGovernor {
+        treasury.manage(OHMETHSLP, _amountOHMETH);
+        treasury.manage(OHMDAISLP, _amountOHMDAI);
+
+        IERC20(OHMETHSLP).approve(address(router), _amountOHMETH);
+        IERC20(OHMDAISLP).approve(address(router), _amountOHMDAI);
+
+        (uint256 amountETH, uint256 amountOHM1) = router.removeLiquidity(
+        WETH, 
+        OHM, 
+        _amountOHMETH,
+        _minOHMETHA, 
+        _minOHMETHB, 
+        address(this), 
+        _deadline
+        );
+
+        (uint256 amountDAI, uint256 amountOHM2) = router.removeLiquidity(
+        DAI, 
+        OHM, 
+        _amountOHMDAI,
+        _minOHMDAIA, 
+        _minOHMETHB, 
+        address(this), 
+        _deadline
+        );
+
+        uint256 amountOHM = amountOHM1.add(amountOHM2);
+
+        IERC20(OHM).approve(address(balancerVault), amountOHM);
+        IERC20(WETH).approve(address(balancerVault), amountETH);
+        IERC20(DAI).approve(address(balancerVault), amountDAI);
+        
+        address[] memory tokens = new address[](3);
+        tokens[0] = OHM;
+        tokens[1] = DAI;
+        tokens[2] = WETH;
+
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = amountOHM;
+        amounts[1] = amountDAI;
+        amounts[2] = amountETH;
+
+        IBalancerVault.JoinPoolRequest memory poolRequest = IBalancerVault.JoinPoolRequest(tokens, amounts, _userData, false);
+
+        balancerVault.joinPool(balancerPoolID, address(this), address(treasury), poolRequest);
+
+    }
 
 
 
