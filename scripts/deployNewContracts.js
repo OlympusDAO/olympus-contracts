@@ -8,7 +8,7 @@ async function main() {
 
     const firstEpochNumber = "";
     const firstBlockNumber = "";
-    const gOHM = "";
+    const gOHM = "0xC963bf29405884e3C0c52C16793Ead51Ccb88761"; // MONO token address
     const authority = "";
 
     const OHM = await ethers.getContractFactory('OlympusERC20Token');
