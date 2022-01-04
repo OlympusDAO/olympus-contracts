@@ -13,12 +13,6 @@ jobs:
             - name: Get branch name
               id: branch-name
               uses: tj-actions/branch-names@v5.1
-            - name: Make branch name compatible
-              run: |
-                  BRANCH=${{ steps.branch-name.outputs.current_branch }}
-                  BRANCH_CLEAN="${BRANCH//\//-}"
-                  echo "clean_branch=${BRANCH_CLEAN}" >> $GITHUB_ENV
-                  echo "Cleaned branch name from $BRANCH to $BRANCH_CLEAN"
             - name: Set up QEMU
               uses: docker/setup-qemu-action@v1
             - name: Set up Docker Buildx
@@ -29,9 +23,15 @@ jobs:
                   registry: ghcr.io
                   username: ${{ github.repository_owner }}
                   password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Extract Docker metadata
+              id: meta
+              uses: docker/metadata-action@v3
+              with:
+                  images: ${{ github.repository_owner }}/olympus-contracts
             - name: Build and push
               id: docker_build
               uses: docker/build-push-action@v2
               with:
                   push: true
-                  tags: ghcr.io/${{ github.repository_owner }}/olympus-contracts:${{ env.clean_branch }}
+                  tags: ${{ steps.meta.outputs.tags }}
+                  labels: ${{ steps.meta.outputs.labels }}
