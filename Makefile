@@ -3,6 +3,7 @@ export
 
 # TODO shift to using official registry repo
 DOCKER_IMAGE=0xjem/olympus-contracts
+# Use the branch name as the tag
 DOCKER_TAG=$(shell git branch --show-current)
 DOCKER_VOLUMES=--volume $(shell pwd)/contracts:/opt/contracts/ --volume $(shell pwd)/scripts:/opt/scripts/
 DOCKER_PORTS=-p 8545:8545
