@@ -14,12 +14,11 @@ jobs:
               id: branch-name
               uses: tj-actions/branch-names@v5.1
             - name: Make branch name compatible
-              id: clean-branch
               run: |
                   BRANCH=${{ steps.branch-name.outputs.current_branch }}
                   BRANCH_CLEAN="${BRANCH//\//-}"
                   echo "clean_branch=${BRANCH_CLEAN}" >> $GITHUB_ENV
-                  echp "Cleaned branch name from $BRANCH to $BRANCH_CLEAN"
+                  echo "Cleaned branch name from $BRANCH to $BRANCH_CLEAN"
             - name: Set up QEMU
               uses: docker/setup-qemu-action@v1
             - name: Set up Docker Buildx
