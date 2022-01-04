@@ -32,7 +32,7 @@ jobs:
               with:
                   # owner/repository
                   # the action also takes care of making it docker-compatible
-                  images: ${{ github.repository }}
+                  images: ${{ env.REGISTRY }}/${{ github.repository }}
             - name: Build and push
               id: docker_build
               uses: docker/build-push-action@v2
