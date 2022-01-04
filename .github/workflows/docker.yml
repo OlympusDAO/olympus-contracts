@@ -30,12 +30,13 @@ jobs:
               id: meta
               uses: docker/metadata-action@v3
               with:
-                  images: ${{ github.repository_owner }}/olympus-contracts
+                  # owner/repository
+                  # the action also takes care of making it docker-compatible
+                  images: ${{ github.repository }}
             - name: Build and push
               id: docker_build
               uses: docker/build-push-action@v2
               with:
                   push: true
-                  registry: ${{ env.REGISTRY }}
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
