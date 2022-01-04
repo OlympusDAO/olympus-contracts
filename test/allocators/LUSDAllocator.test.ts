@@ -27,116 +27,116 @@ const ZERO_ADDRESS = ethers.utils.getAddress("0x00000000000000000000000000000000
 
 describe("LUSDAllocator", () => {
   describe("unit tests", () => {
-  let owner: SignerWithAddress;
-  let other: SignerWithAddress;
-  let alice: SignerWithAddress;
-  let bob: SignerWithAddress;
-  let treasuryFake: FakeContract<ITreasury>;
-  let stabilityPoolFake: FakeContract<IStabilityPool>;
-  let lqtyStakingFake: FakeContract<ILQTYStaking>;
-  let lusdTokenFake: FakeContract<IERC20Metadata>;
-  let lqtyTokenFake: FakeContract<IERC20>;
-  let wethTokenFake: FakeContract<IERC20>;
-  let lusdAllocator: LUSDAllocator;
+    let owner: SignerWithAddress;
+    let other: SignerWithAddress;
+    let alice: SignerWithAddress;
+    let bob: SignerWithAddress;
+    let treasuryFake: FakeContract<ITreasury>;
+    let stabilityPoolFake: FakeContract<IStabilityPool>;
+    let lqtyStakingFake: FakeContract<ILQTYStaking>;
+    let lusdTokenFake: FakeContract<IERC20Metadata>;
+    let lqtyTokenFake: FakeContract<IERC20>;
+    let wethTokenFake: FakeContract<IERC20>;
+    let lusdAllocator: LUSDAllocator;
 
-  beforeEach(async () => {
-    [owner, other, alice, bob] = await ethers.getSigners();
-    treasuryFake = await smock.fake<ITreasury>("ITreasury");
-    stabilityPoolFake = await smock.fake<IStabilityPool>("IStabilityPool");
-    lqtyStakingFake = await smock.fake<ILQTYStaking>("ILQTYStaking");
-    lusdTokenFake = await smock.fake<IERC20Metadata>("IERC20Metadata");
-    lqtyTokenFake = await smock.fake<IERC20>("IERC20");
-    wethTokenFake = await smock.fake<IERC20>("IERC20");
-  });
-
-  describe("constructor", () => {
-    it("can construct", async () => {
-      lusdAllocator = await (new LUSDAllocator__factory(owner)).deploy(
-        treasuryFake.address,
-        lusdTokenFake.address,
-        lqtyTokenFake.address,
-        stabilityPoolFake.address,
-        lqtyStakingFake.address,
-        ZERO_ADDRESS,
-        wethTokenFake.address
-      );
-      expect(await lusdAllocator.lusdTokenAddress()).to.equal(lusdTokenFake.address);
+    beforeEach(async () => {
+      [owner, other, alice, bob] = await ethers.getSigners();
+      treasuryFake = await smock.fake<ITreasury>("ITreasury");
+      stabilityPoolFake = await smock.fake<IStabilityPool>("IStabilityPool");
+      lqtyStakingFake = await smock.fake<ILQTYStaking>("ILQTYStaking");
+      lusdTokenFake = await smock.fake<IERC20Metadata>("IERC20Metadata");
+      lqtyTokenFake = await smock.fake<IERC20>("IERC20");
+      wethTokenFake = await smock.fake<IERC20>("IERC20");
     });
 
-    it("does not allow treasury to be 0x0", async () => {
-      await expect((new LUSDAllocator__factory(owner)).deploy(
-        ZERO_ADDRESS,
-        lusdTokenFake.address,
-        lqtyTokenFake.address,
-        stabilityPoolFake.address,
-        lqtyStakingFake.address,
-        ZERO_ADDRESS,
-        wethTokenFake.address
-      )).to.be.revertedWith("treasury address cannot be 0x0");
+    describe("constructor", () => {
+      it("can construct", async () => {
+        lusdAllocator = await (new LUSDAllocator__factory(owner)).deploy(
+          treasuryFake.address,
+          lusdTokenFake.address,
+          lqtyTokenFake.address,
+          stabilityPoolFake.address,
+          lqtyStakingFake.address,
+          ZERO_ADDRESS,
+          wethTokenFake.address
+        );
+        expect(await lusdAllocator.lusdTokenAddress()).to.equal(lusdTokenFake.address);
+      });
+
+      it("does not allow treasury to be 0x0", async () => {
+        await expect((new LUSDAllocator__factory(owner)).deploy(
+          ZERO_ADDRESS,
+          lusdTokenFake.address,
+          lqtyTokenFake.address,
+          stabilityPoolFake.address,
+          lqtyStakingFake.address,
+          ZERO_ADDRESS,
+          wethTokenFake.address
+        )).to.be.revertedWith("treasury address cannot be 0x0");
+      });
+
+      it("does not allow stability pool to be 0x0", async () => {
+        await expect((new LUSDAllocator__factory(owner)).deploy(
+          treasuryFake.address,
+          lusdTokenFake.address,
+          lqtyTokenFake.address,
+          ZERO_ADDRESS,
+          lqtyStakingFake.address,
+          ZERO_ADDRESS,
+          wethTokenFake.address
+        )).to.be.revertedWith("stabilityPool address cannot be 0x0");
+      });
+
+      it("does not allow LUSD token to be 0x0", async () => {
+        await expect((new LUSDAllocator__factory(owner)).deploy(
+          treasuryFake.address,
+          ZERO_ADDRESS,
+          lqtyTokenFake.address,
+          stabilityPoolFake.address,
+          lqtyStakingFake.address,
+          ZERO_ADDRESS,
+          wethTokenFake.address
+        )).to.be.revertedWith("LUSD token address cannot be 0x0");
+      });
+
+      it("does not allow LQTY token to be 0x0", async () => {
+        await expect((new LUSDAllocator__factory(owner)).deploy(
+          treasuryFake.address,
+          lusdTokenFake.address,
+          ZERO_ADDRESS,
+          stabilityPoolFake.address,
+          lqtyStakingFake.address,
+          ZERO_ADDRESS,
+          wethTokenFake.address
+        )).to.be.revertedWith("LQTY token address cannot be 0x0");
+      });
+
+      it("does not allow LQTY staking address to be 0x0", async () => {
+        await expect((new LUSDAllocator__factory(owner)).deploy(
+          treasuryFake.address,
+          lusdTokenFake.address,
+          lqtyTokenFake.address,
+          stabilityPoolFake.address,
+          ZERO_ADDRESS,
+          ZERO_ADDRESS,
+          wethTokenFake.address
+        )).to.be.revertedWith("LQTY staking address cannot be 0x0");
+      });
+
+      it("does not allow WETH token address to be 0x0", async () => {
+        await expect((new LUSDAllocator__factory(owner)).deploy(
+          treasuryFake.address,
+          lusdTokenFake.address,
+          lqtyTokenFake.address,
+          stabilityPoolFake.address,
+          lqtyStakingFake.address,
+          ZERO_ADDRESS,
+          ZERO_ADDRESS,
+        )).to.be.revertedWith("WETH token address cannot be 0x0");
+      });
+
     });
 
-    it("does not allow stability pool to be 0x0", async () => {
-      await expect((new LUSDAllocator__factory(owner)).deploy(
-        treasuryFake.address,
-        lusdTokenFake.address,
-        lqtyTokenFake.address,
-        ZERO_ADDRESS,
-        lqtyStakingFake.address,
-        ZERO_ADDRESS,
-        wethTokenFake.address
-      )).to.be.revertedWith("stabilityPool address cannot be 0x0");
-    });
-
-    it("does not allow LUSD token to be 0x0", async () => {
-      await expect((new LUSDAllocator__factory(owner)).deploy(
-        treasuryFake.address,
-        ZERO_ADDRESS,
-        lqtyTokenFake.address,
-        stabilityPoolFake.address,
-        lqtyStakingFake.address,
-        ZERO_ADDRESS,
-        wethTokenFake.address
-      )).to.be.revertedWith("LUSD token address cannot be 0x0");
-    });
-
-    it("does not allow LQTY token to be 0x0", async () => {
-      await expect((new LUSDAllocator__factory(owner)).deploy(
-        treasuryFake.address,
-        lusdTokenFake.address,
-        ZERO_ADDRESS,
-        stabilityPoolFake.address,
-        lqtyStakingFake.address,
-        ZERO_ADDRESS,
-        wethTokenFake.address
-      )).to.be.revertedWith("LQTY token address cannot be 0x0");
-    });
-
-    it("does not allow LQTY staking address to be 0x0", async () => {
-      await expect((new LUSDAllocator__factory(owner)).deploy(
-        treasuryFake.address,
-        lusdTokenFake.address,
-        lqtyTokenFake.address,
-        stabilityPoolFake.address,
-        ZERO_ADDRESS,
-        ZERO_ADDRESS,
-        wethTokenFake.address
-      )).to.be.revertedWith("LQTY staking address cannot be 0x0");
-    });
-    
-    it("does not allow WETH token address to be 0x0", async () => {
-      await expect((new LUSDAllocator__factory(owner)).deploy(
-        treasuryFake.address,
-        lusdTokenFake.address,
-        lqtyTokenFake.address,
-        stabilityPoolFake.address,
-        lqtyStakingFake.address,
-        ZERO_ADDRESS,
-        ZERO_ADDRESS,
-      )).to.be.revertedWith("WETH token address cannot be 0x0");
-    });    
-
-  });
-  
     describe("post-constructor", () => {
       beforeEach(async () => {
         lusdAllocator = await (new LUSDAllocator__factory(owner)).deploy(
@@ -246,153 +246,150 @@ describe("LUSDAllocator", () => {
     connect: any;
     address: string;
   }
-  
+
   async function advance(count: number) {
     for (let i = 0; i < count; i++) {
-        await advanceBlock();
+      await advanceBlock();
     }
-}
+  }
 
-    describe("integration tests", () => {
-      let owner: SignerWithAddress;
-      let manager: SignerWithAddress;      
-      let allocator: LUSDAllocator;
-      let oldTreasury: IOldTreasury;
-      let lusd: IERC20;
-      let lusdStabilityPool: IStabilityPool;
-      // let vefxs: IveFXS;
-      // let smartWalletChecker: ISmartWalletChecker
-      // let vefxsYieldDistV4: IveFXSYieldDistributorV4;
+  describe("integration tests", () => {
+    let owner: SignerWithAddress;
+    let manager: SignerWithAddress;
+    let allocator: LUSDAllocator;
+    let oldTreasury: IOldTreasury;
+    let lusd: IERC20;
+    let lusdStabilityPool: IStabilityPool;
 
-      const LUSD_TOKEN_ADDRESS = "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0";
-      const STABILITY_POOL_ADDRESS = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb";
-      const TROVE_MANAGER = "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2";
-    
-      before(async () => {
-          await fork_network(13797676); // Chosen intentionally as we have liquidations on 13810677 from https://dune.xyz/dani/Liquity also https://etherscan.io/tx/0xad44adfd6c728a7558c1865143be69ff1b0129b65f9efd58c5dd5c803a58ce73
+    const LUSD_TOKEN_ADDRESS = "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0";
+    const STABILITY_POOL_ADDRESS = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb";
+    const TROVE_MANAGER = "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2";
 
-        const TREASURY_ADDRESS = "0x31f8cc382c9898b273eff4e0b7626a6987c846e8"; 
-        const TREASURY_MANAGER = "0x245cc372c84b3645bf0ffe6538620b04a217988b";
-        const LQTY_TOKEN_ADDRESS = "0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D";
-        const LQTY_STAKING_ADDRESS = "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d";
-        const WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
-                  
+    before(async () => {
+      await fork_network(13797676); // Chosen intentionally as we have liquidations on 13810677 from https://dune.xyz/dani/Liquity also https://etherscan.io/tx/0xad44adfd6c728a7558c1865143be69ff1b0129b65f9efd58c5dd5c803a58ce73
 
-        [owner] = await ethers.getSigners();
-        allocator = await (new LUSDAllocator__factory(owner)).deploy(
-          TREASURY_ADDRESS,
-          LUSD_TOKEN_ADDRESS,
-          LQTY_TOKEN_ADDRESS,
-          STABILITY_POOL_ADDRESS,
-          LQTY_STAKING_ADDRESS,
-          ZERO_ADDRESS,
-          WETH_ADDRESS
-        );
-          // let allocatorContract = await ethers.getContractFactory("FraxSharesAllocator");
-          // allocator = await upgrades.deployProxy(allocatorContract, [
-          //     TREASURY_ADDRESS, // old treasury address
-          //     FXS_ADDRESS,
-          //     VEFXS_ADDRESS,
-          //     VEFXS_YIELD_DIST_ADDRESS,
-          // ]) as FraxSharesAllocator;
+      const TREASURY_ADDRESS = "0x31f8cc382c9898b273eff4e0b7626a6987c846e8";
+      const TREASURY_MANAGER = "0x245cc372c84b3645bf0ffe6538620b04a217988b";
+      const LQTY_TOKEN_ADDRESS = "0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D";
+      const LQTY_STAKING_ADDRESS = "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d";
+      const WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
 
-          // new treasury
-          // const TreasuryContract = await ethers.getContractFactory("OlympusTreasury");
-          // treasury = await TreasuryContract.attach(TREASURY_ADDRESS) as ITreasuryAdmin;
 
-        oldTreasury = new ethers.Contract(TREASURY_ADDRESS, oldTreasuryAbi, ethers.provider) as unknown as IOldTreasury;
-        lusd = new ethers.Contract(LUSD_TOKEN_ADDRESS, lusdAbi, ethers.provider) as IERC20;
-        lusdStabilityPool = new ethers.Contract(STABILITY_POOL_ADDRESS, lusdStabilityPoolAbi, ethers.provider) as IStabilityPool;
-        
-        // vefxs = new ethers.Contract(VEFXS_ADDRESS, vefxsAbi, ethers.provider) as IveFXS;
-          // vefxsYieldDistV4 = new ethers.Contract(VEFXS_YIELD_DIST_ADDRESS, vefxsYieldDistV4Abi, ethers.provider) as IveFXSYieldDistributorV4;
+      [owner] = await ethers.getSigners();
+      allocator = await (new LUSDAllocator__factory(owner)).deploy(
+        TREASURY_ADDRESS,
+        LUSD_TOKEN_ADDRESS,
+        LQTY_TOKEN_ADDRESS,
+        STABILITY_POOL_ADDRESS,
+        LQTY_STAKING_ADDRESS,
+        ZERO_ADDRESS,
+        WETH_ADDRESS
+      );
 
-          // smartWalletChecker = new ethers.Contract(FXS_SMART_WALLET_CHECKER, smartWalletCheckerAbi, ethers.provider) as unknown as ISmartWalletChecker;
 
-          await impersonateAccount(TREASURY_MANAGER);
-          manager = await ethers.getSigner(TREASURY_MANAGER);
 
-          // await impersonateAccount(FXS_SMART_WALLET_CHECKER_OWNER);
-          // smartWalletOwner = await ethers.getSigner(FXS_SMART_WALLET_CHECKER_OWNER);
+      oldTreasury = new ethers.Contract(TREASURY_ADDRESS, oldTreasuryAbi, ethers.provider) as unknown as IOldTreasury;
+      lusd = new ethers.Contract(LUSD_TOKEN_ADDRESS, lusdAbi, ethers.provider) as IERC20;
+      lusdStabilityPool = new ethers.Contract(STABILITY_POOL_ADDRESS, lusdStabilityPoolAbi, ethers.provider) as IStabilityPool;
 
-          // await impersonateAccount(FXS_HOLDER);
-          // fxsHolder = await ethers.getSigner(FXS_HOLDER);
-      });
-      
-      after(async () => {
-          await fork_reset();
-      });
 
-      // these tests are not independent
-      const TREASURY_BALANCE = ethers.BigNumber.from("76679064561310247224296926");
-      const STABILITY_POOL_BALANCE = ethers.BigNumber.from("565196951535056715675940849");
-      const FIRST_DEPOSIT = ethers.BigNumber.from("6811323944565489588901");
+      await impersonateAccount(TREASURY_MANAGER);
+      manager = await ethers.getSigner(TREASURY_MANAGER);
 
-      const STABILITY_POOL_TOTAL_BALANCE = ethers.BigNumber.from("565203762859001281165529750");
-      const ZERO = ethers.BigNumber.from("0");
-      // const SECOND_DEPOSIT = ethers.BigNumber.from("60000000000000000000000");
-      // const THIRD_DEPOSIT = ethers.BigNumber.from("60000000000000000000000");
-      
+    });
 
-      it("cannot deposit without unless LUSD token", async () => {
-        await expect(allocator.connect(owner).deposit(ZERO_ADDRESS, 1))
-          .to.be.revertedWith("token address does not match LUSD token");
-      });
+    after(async () => {
+      await fork_reset();
+    });
 
-      it("cannot deposit without RESERVE_MANAGER role", async () => {
-        await expect(allocator.connect(owner).deposit(LUSD_TOKEN_ADDRESS, 1))
-          .to.be.revertedWith("Not approved");
-      });
+    // these tests are not independent
+    const TREASURY_BALANCE = ethers.BigNumber.from("76679064561310247224296926");
+    const STABILITY_POOL_BALANCE = ethers.BigNumber.from("565196951535056715675940849");
+    const DEPOSIT_AMOUNT = ethers.BigNumber.from("6811323944565489588901");
 
-      it("perform initial deposit, wait, then harvest", async () => {
-        // enable RESERVEMANAGER role
-        await oldTreasury.connect(manager).queue(3, allocator.address);
-        await advance(13000);
-        await oldTreasury.connect(manager).toggle(3, allocator.address, allocator.address);
+    const STABILITY_POOL_TOTAL_BALANCE = ethers.BigNumber.from("565203762859001281165529750");
+    const ZERO = ethers.BigNumber.from("0");
 
-        const treasuryBefore = await lusd.balanceOf(oldTreasury.address);
-        expect(treasuryBefore).to.equal(TREASURY_BALANCE);
+    it("cannot deposit without unless LUSD token", async () => {
+      await expect(allocator.connect(owner).deposit(ZERO_ADDRESS, 1))
+        .to.be.revertedWith("token address does not match LUSD token");
+    });
 
-        
-        const stabilityPoolBefore = await lusd.balanceOf(lusdStabilityPool.address);
-        expect(stabilityPoolBefore).to.equal(STABILITY_POOL_BALANCE);
+    it("cannot deposit without RESERVE_MANAGER role", async () => {
+      await expect(allocator.connect(owner).deposit(LUSD_TOKEN_ADDRESS, 1))
+        .to.be.revertedWith("Not approved");
+    });
 
-        await expect(allocator.connect(owner).deposit(LUSD_TOKEN_ADDRESS, FIRST_DEPOSIT))
-          .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("350461943063989161432445055694169347038"), 0, 0)
-          // .not.to.emit(lusdStabilityPool, "LQTYPaidToFrontEnd").withArgs(ZERO_ADDRESS, 0)          //How to get NOT emit to work??!
-          .to.emit(lusdStabilityPool, "LQTYPaidToDepositor").withArgs(allocator.address, 0)  ///Hmm 0 LQTY???          
-          .to.emit(lusdStabilityPool, "FrontEndStakeChanged").withArgs(ZERO_ADDRESS, ethers.BigNumber.from("45632567909241122202977270"), allocator.address)
-          .to.emit(lusdStabilityPool, "StabilityPoolLUSDBalanceUpdated").withArgs(STABILITY_POOL_TOTAL_BALANCE)
-          .to.emit(lusdStabilityPool, "DepositSnapshotUpdated").withArgs(allocator.address, 
-            ethers.BigNumber.from("876920926160447076"), ethers.BigNumber.from("58089263752322121983911170457988"), ethers.BigNumber.from("350461943063989161432445055694169347038"))
-          .to.emit(lusdStabilityPool, "UserDepositChanged").withArgs(allocator.address, ethers.BigNumber.from("6811323944565489588901"))
-          .to.emit(lusdStabilityPool, "ETHGainWithdrawn").withArgs(allocator.address, ethers.BigNumber.from("0"), ethers.BigNumber.from("0"))
-          ;
-        const treasuryAfter = await lusd.balanceOf(oldTreasury.address);
-        expect(treasuryAfter).to.equal(TREASURY_BALANCE.sub(FIRST_DEPOSIT));
+    it.only("perform deposit, withdrawal", async () => {
+      // enable RESERVEMANAGER role
+      await oldTreasury.connect(manager).queue(3, allocator.address);    
+      // enable RESERVEDEPOSITOR role
+      await oldTreasury.connect(manager).queue(0, allocator.address);   
 
-        const stabilityPoolAfter = await lusd.balanceOf(lusdStabilityPool.address);
-        expect(stabilityPoolAfter).to.equal(STABILITY_POOL_BALANCE.add(FIRST_DEPOSIT));
-        
-        const deployedAfter = await allocator.totalAmountDeployed();
-        expect(deployedAfter).to.equal(FIRST_DEPOSIT);
-      
-        await advance(1000);
+      await advance(13000);
+      await oldTreasury.connect(manager).toggle(3, allocator.address, allocator.address);
+      await oldTreasury.connect(manager).toggle(0, allocator.address, allocator.address);
 
-        const ethRewards = await allocator.getETHRewards();
-        const lqtyRewards = await allocator.getLQTYRewards();
+      const treasuryBefore = await lusd.balanceOf(oldTreasury.address);
+      expect(treasuryBefore).to.equal(TREASURY_BALANCE);
 
-        expect(ethRewards).to.equal(ZERO);
-        expect(lqtyRewards).to.equal(ZERO);
 
-        // await expect(allocator.connect(owner).harvest())
-        // .to.be.revertedWith("Not approved")
-          // .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("111"), 0, 0)
-          // .not.to.emit(lusdStabilityPool, "LQTYPaidToFrontEnd").withArgs(ZERO_ADDRESS, 0)          //How to get NOT emit to work??!
-          // .to.emit(lusdStabilityPool, "LQTYPaidToDepositor").withArgs(allocator.address, 0)  ///Hmm 0 LQTY???          
-          ;
-      });
+      const stabilityPoolBefore = await lusd.balanceOf(lusdStabilityPool.address);
+      expect(stabilityPoolBefore).to.equal(STABILITY_POOL_BALANCE);
 
-    
+      await expect(allocator.connect(owner).deposit(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT))
+        .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("350461943063989161432445055694169347038"), 0, 0)
+        // .not.to.emit(lusdStabilityPool, "LQTYPaidToFrontEnd").withArgs(ZERO_ADDRESS, 0)          //How to get NOT emit to work??!
+        .to.emit(lusdStabilityPool, "LQTYPaidToDepositor").withArgs(allocator.address, 0)        
+        .to.emit(lusdStabilityPool, "FrontEndStakeChanged").withArgs(ZERO_ADDRESS, ethers.BigNumber.from("45632567909241122202977270"), allocator.address)
+        .to.emit(lusdStabilityPool, "StabilityPoolLUSDBalanceUpdated").withArgs(STABILITY_POOL_TOTAL_BALANCE)
+        .to.emit(lusdStabilityPool, "DepositSnapshotUpdated").withArgs(allocator.address,
+          ethers.BigNumber.from("876920926160447076"), ethers.BigNumber.from("58089263752322121983911170457988"), ethers.BigNumber.from("350461943063989161432445055694169347038"))
+        .to.emit(lusdStabilityPool, "UserDepositChanged").withArgs(allocator.address, DEPOSIT_AMOUNT)
+        .to.emit(lusdStabilityPool, "ETHGainWithdrawn").withArgs(allocator.address, ZERO, ZERO)
+        .to.emit(oldTreasury, "ReservesUpdated").withArgs(ethers.BigNumber.from("168613073893284949"))
+        .to.emit(oldTreasury, "ReservesManaged").withArgs(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT)
+        ;
+      const treasuryAfter = await lusd.balanceOf(oldTreasury.address);
+      expect(treasuryAfter).to.equal(TREASURY_BALANCE.sub(DEPOSIT_AMOUNT));
+
+      const stabilityPoolAfter = await lusd.balanceOf(lusdStabilityPool.address);
+      expect(stabilityPoolAfter).to.equal(STABILITY_POOL_BALANCE.add(DEPOSIT_AMOUNT));
+
+      const deployedAfter = await allocator.totalAmountDeployed();
+      expect(deployedAfter).to.equal(DEPOSIT_AMOUNT);
+
+      await advance(1000);
+
+      const ethRewards = await allocator.getETHRewards();
+      const lqtyRewards = await allocator.getLQTYRewards();
+
+      expect(ethRewards).to.equal(ZERO);
+      expect(lqtyRewards).to.equal(ZERO);
+
+      // await expect(allocator.connect(owner).harvest())
+      // .to.be.revertedWith("Not approved")
+      // .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("111"), 0, 0)
+      // .not.to.emit(lusdStabilityPool, "LQTYPaidToFrontEnd").withArgs(ZERO_ADDRESS, 0)          //How to get NOT emit to work??!
+      // .to.emit(lusdStabilityPool, "LQTYPaidToDepositor").withArgs(allocator.address, 0)  ///Hmm 0 LQTY???          
+      ;
+
+
+      await expect(allocator.connect(owner).withdraw(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT))
+        .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("350461943753146787543868841926858937250"), 0, 0)
+        // .not.to.emit(lusdStabilityPool, "LQTYPaidToFrontEnd").withArgs(ZERO_ADDRESS, 0)          //How to get NOT emit to work??!
+        .to.emit(lusdStabilityPool, "LQTYPaidToDepositor").withArgs(allocator.address, ethers.BigNumber.from("5352906630778467"))
+        .to.emit(lusdStabilityPool, "FrontEndStakeChanged").withArgs(ZERO_ADDRESS, ethers.BigNumber.from("45625756585296556713388369"), allocator.address)
+        .to.emit(lusdStabilityPool, "StabilityPoolLUSDBalanceUpdated").withArgs(STABILITY_POOL_BALANCE)        
+        .to.emit(lusdStabilityPool, "DepositSnapshotUpdated").withArgs(allocator.address,
+          ZERO, ZERO, ZERO)
+        .to.emit(lusdStabilityPool, "UserDepositChanged").withArgs(allocator.address, ZERO)
+        .to.emit(lusdStabilityPool, "ETHGainWithdrawn").withArgs(allocator.address, ZERO, ZERO)
+        .to.emit(oldTreasury, "ReservesUpdated").withArgs(ethers.BigNumber.from("168619885217229514"))
+        .to.emit(oldTreasury, "Deposit").withArgs(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT, ethers.BigNumber.from("6811323944565"))
+        ;
+    });
+
+
   });
 });
