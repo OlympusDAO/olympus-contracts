@@ -7,6 +7,7 @@ import "../libraries/SafeERC20.sol";
 
 import "../interfaces/IERC20.sol";
 import "../interfaces/IERC20Metadata.sol";
+import "../interfaces/IWETH.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IAllocator.sol";
 
@@ -182,10 +183,12 @@ contract LUSDAllocator is Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
+    event Deposit(address indexed dst, uint amount);
+
     /* ======== STATE VARIABLES ======== */
     IStabilityPool immutable lusdStabilityPool;
     ILQTYStaking immutable lqtyStaking;
-    IERC20 immutable weth;  // WETH9 address (0xb603cEa165119701B58D56d10D2060fBFB3efad8)
+    IWETH immutable weth;  // WETH address (0xc778417E063141139Fce010982780140Aa0cD5Ab)
     ITreasury public treasury; // Olympus Treasury
   
     // TODO(zx): I don't think we care about front-end because we're our own frontend.
@@ -224,7 +227,15 @@ contract LUSDAllocator is Ownable {
         frontEndAddress = _frontEndAddress; // address can be 0
 
         require(_wethAddress != address(0), "WETH token address cannot be 0x0");
-        weth = IERC20(_wethAddress);
+        weth = IWETH(_wethAddress);
+    }
+
+
+    /**
+        StabilityPool::withdrawFromSP() and LQTYStaking::stake() will send ETH here, so capture and emit the event
+     */
+    receive() external payable {        
+        emit Deposit(msg.sender, msg.value);
     }
 
     /* ======== OPEN FUNCTIONS ======== */
@@ -269,9 +280,22 @@ contract LUSDAllocator is Ownable {
 
         // 4.  Move ETH from #1 and #2 to treasury 
        if (stabilityPoolEthRewards > 0 || stakingEthRewards > 0) {            
-            uint256 totalEthRewards = stabilityPoolEthRewards + stakingEthRewards;            
+            uint256 totalEthRewards = stabilityPoolEthRewards.add(stakingEthRewards);    
+            //(stabilityPoolEthRewards.add(stakingEthRewards)).mul(1e18);    
+
+            // Taken from https://github.com/fractional-company/contracts/blob/d4faa2dddf010d12b87eae8054f485656c8ed14b/src/ERC721TokenVault.sol#L403-L404
+            // Wrap ETH to WETH
+            // weth.deposit{value: totalEthRewards}();
+             weth.deposit{value: 1e18}();
+            // Approve and transfer WETH to treasury
             weth.approve(address(treasury), totalEthRewards);
-            weth.safeTransferFrom(address(this), address(treasury), totalEthRewards);
+            weth.transfer(address(treasury), totalEthRewards);
+
+            // (bool success, ) = address(weth).call{ value: totalEthRewards }(new bytes(0));
+            // require(success, "WETH: sending ETH failed");            
+            // Send WETH to treasury
+            // weth.approve(address(treasury), totalEthRewards);
+            // weth.safeTransferFrom(address(this), address(treasury), totalEthRewards);
        }
 
         return true;

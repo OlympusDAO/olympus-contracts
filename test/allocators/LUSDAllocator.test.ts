@@ -16,9 +16,12 @@ import {
 const { fork_network, fork_reset } = require("../utils/network_fork");
 const impersonateAccount = require("../utils/impersonate_account");
 const { advanceBlock, duration, increase } = require("../utils/advancement");
+const wethAbi = require("../../abis/weth.json");
 const lusdAbi = require("../../abis/lusd.json");
 const lusdStabilityPoolAbi = require("../../abis/lusd_stability_pool.json");
 const lusdTroveManagerAbi = require("../../abis/lusd_trove_manager.json");
+const lusdActivePoolAbi = require("../../abis/lusd_active_pool.json");
+const lusdDefaultPoolAbi = require("../../abis/lusd_default_pool.json");
 const oldTreasuryAbi = require("../../abis/old_treasury_abi.json");
 
 chai.use(smock.matchers);
@@ -187,6 +190,25 @@ describe("LUSDAllocator", () => {
         });
       });
 
+      describe("harvest", () => {
+        it.only("harvest testing", async () => {
+          const AMOUNT = 12345;
+          const VALUE = AMOUNT * (10 ** 8);
+          lusdTokenFake.decimals.returns(1);
+          stabilityPoolFake.getDepositorETHGain.returns(AMOUNT);          
+
+          await lusdAllocator.connect(owner).harvest();
+
+          // expect(treasuryFake.manage).to.be.calledWith(lusdTokenFake.address, AMOUNT);
+          // expect(lusdTokenFake.approve).to.be.calledWith(stabilityPoolFake.address, AMOUNT);
+          // expect(stabilityPoolFake.provideToSP).to.be.calledWith(AMOUNT, ZERO_ADDRESS);
+
+          // expect(await lusdAllocator.totalAmountDeployed()).to.equal(AMOUNT);
+          // expect(await lusdAllocator.totalValueDeployed()).to.equal(VALUE);
+        });
+      });
+
+
       describe("withdraw", () => {
         const DEPOSIT_AMOUNT = 12345;
         const DEPOSIT_VALUE = DEPOSIT_AMOUNT * (10 ** 8);
@@ -247,6 +269,20 @@ describe("LUSDAllocator", () => {
     address: string;
   }
 
+  interface ITroveManager {
+    connect: any;
+    address: string;
+  }
+
+  interface IActivePool {
+    connect: any;
+    address: string;
+  }
+  interface IDefaultPool {
+    connect: any;
+    address: string;
+  }
+
   async function advance(count: number) {
     for (let i = 0; i < count; i++) {
       await advanceBlock();
@@ -260,19 +296,26 @@ describe("LUSDAllocator", () => {
     let oldTreasury: IOldTreasury;
     let lusd: IERC20;
     let lusdStabilityPool: IStabilityPool;
+    let lusdTroveManager: ITroveManager;
+    let lusdActivePool: IActivePool;
+    let lusdDefaultPool: IDefaultPool;
 
     const LUSD_TOKEN_ADDRESS = "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0";
     const STABILITY_POOL_ADDRESS = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb";
     const TROVE_MANAGER = "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2";
+    const ACTIVE_POOL = "0x741d21A9dd5dcc14cc5cd84cD91fd74638AFA313";
+    const DEFAULT_POOL = "0x896a3F03176f05CFbb4f006BfCd8723F2B0D741C";
 
     before(async () => {
-      await fork_network(13797676); // Chosen intentionally as we have liquidations on 13810677 from https://dune.xyz/dani/Liquity also https://etherscan.io/tx/0xad44adfd6c728a7558c1865143be69ff1b0129b65f9efd58c5dd5c803a58ce73
+      // await fork_network(13797676); // Chosen intentionally as we have liquidations on 13810677 from https://dune.xyz/dani/Liquity also https://etherscan.io/tx/0xad44adfd6c728a7558c1865143be69ff1b0129b65f9efd58c5dd5c803a58ce73
+      await fork_network(13179379);
+
 
       const TREASURY_ADDRESS = "0x31f8cc382c9898b273eff4e0b7626a6987c846e8";
       const TREASURY_MANAGER = "0x245cc372c84b3645bf0ffe6538620b04a217988b";
       const LQTY_TOKEN_ADDRESS = "0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D";
       const LQTY_STAKING_ADDRESS = "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d";
-      const WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+      const WETH_ADDRESS = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
 
 
       [owner] = await ethers.getSigners();
@@ -286,12 +329,12 @@ describe("LUSDAllocator", () => {
         WETH_ADDRESS
       );
 
-
-
       oldTreasury = new ethers.Contract(TREASURY_ADDRESS, oldTreasuryAbi, ethers.provider) as unknown as IOldTreasury;
       lusd = new ethers.Contract(LUSD_TOKEN_ADDRESS, lusdAbi, ethers.provider) as IERC20;
       lusdStabilityPool = new ethers.Contract(STABILITY_POOL_ADDRESS, lusdStabilityPoolAbi, ethers.provider) as IStabilityPool;
-
+      lusdTroveManager = new ethers.Contract(TROVE_MANAGER, lusdTroveManagerAbi, ethers.provider) as ITroveManager;
+      lusdActivePool = new ethers.Contract(ACTIVE_POOL, lusdActivePoolAbi, ethers.provider) as IActivePool;
+      lusdDefaultPool = new ethers.Contract(DEFAULT_POOL, lusdDefaultPoolAbi, ethers.provider) as IDefaultPool;
 
       await impersonateAccount(TREASURY_MANAGER);
       manager = await ethers.getSigner(TREASURY_MANAGER);
@@ -320,7 +363,27 @@ describe("LUSDAllocator", () => {
         .to.be.revertedWith("Not approved");
     });
 
-    it.only("perform deposit, withdrawal", async () => {
+    it("perform deposit, withdrawal", async () => {
+        // await lusdActivePool.connect(owner).sendTransaction({
+        //   to: lusdDefaultPool.address,
+        //   value: ethers.utils.parseEther("1.0"), // Sends exactly 1.0 ether
+        // });
+      
+        await lusdActivePool.connect(lusdStabilityPool).sendETH(lusdActivePool.address, ethers.utils.parseEther("1.0"));
+
+        console.log("owner balance:", await owner.getBalance());
+        // console.log("alice balance:", await alice.getBalance());      
+        console.log("activePool balance:", await lusdActivePool.connect(owner).getETH());
+        console.log("defaultPool balance:", await lusdDefaultPool.connect(owner).getETH());
+  
+  
+          await expect(lusdTroveManager.connect(owner).liquidateTroves(1))
+            .to.emit(lusdTroveManager, "Liquidation").withArgs(
+              ethers.BigNumber.from("91613491045746840934846"),
+              ethers.BigNumber.from("29228567795742597429"),
+              ethers.BigNumber.from("146877225104234157"),
+              ethers.BigNumber.from("200000000000000000000"));
+
       // enable RESERVEMANAGER role
       await oldTreasury.connect(manager).queue(3, allocator.address);
       // enable RESERVEDEPOSITOR role
