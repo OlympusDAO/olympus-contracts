@@ -375,7 +375,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
      */
     function _toAgnostic(uint256 amount_) internal view returns ( uint256 ) {
         return amount_
-            / (IsOHM(sOHM).index());
+            / (IsOHM(sOHM).index())
+            * 1e9;
     }
 
     /**
@@ -385,7 +386,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
      */
     function _fromAgnostic(uint256 amount_) internal view returns ( uint256 ) {
         return amount_
-            * (IsOHM(sOHM).index());
+            * (IsOHM(sOHM).index())
+            / 1e9;
     }
 
     /**
