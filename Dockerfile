@@ -24,4 +24,4 @@ EXPOSE 8545
 HEALTHCHECK --interval=10s --timeout=15s --start-period=10s --retries=3 CMD curl -f http://localhost:8545/ || exit 1
 
 # Run the node by default
-ENTRYPOINT npm run start
+ENTRYPOINT yarn run start
