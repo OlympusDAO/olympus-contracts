@@ -193,18 +193,16 @@ describe("LUSDAllocator", () => {
       describe("harvest", () => {
         it("harvest testing", async () => {
           const AMOUNT = 12345;
-          const VALUE = AMOUNT * (10 ** 8);
+          
           lusdTokenFake.decimals.returns(1);
           wethTokenFake.approve.returns(true);
           wethTokenFake.transfer.returns(true);
+          stabilityPoolFake.getDepositorETHGain.returns(AMOUNT);
 
           await alice.sendTransaction({
             to: lusdAllocator.address,
             value: AMOUNT,
-          });
-
-          stabilityPoolFake.getDepositorETHGain.returns(AMOUNT);
-
+          });          
           await lusdAllocator.connect(owner).harvest();
 
           expect(wethTokenFake.transfer).to.be.calledWith(treasuryFake.address, AMOUNT);          
