@@ -286,10 +286,10 @@ contract LUSDAllocator is Ownable {
             // Wrap ETH to WETH
             weth.deposit{value: ethBalance}();
             // Approve and transfer WETH to treasury
-            weth.approve(address(this), ethBalance);
-            // require(rval, "Failed to approve WETH to treasury");  //TODO our test cases are failing on this
-            weth.transfer(address(treasury), ethBalance);
-            // require(rval, "Failed to transfer WETH to treasury");  //TODO our test cases are failing on this
+            bool rval = weth.approve(address(this), ethBalance);
+            require(rval, "Failed to approve WETH to treasury");
+            rval = weth.transfer(address(treasury), ethBalance);
+            require(rval, "Failed to transfer WETH to treasury");
         }
 
         return true;

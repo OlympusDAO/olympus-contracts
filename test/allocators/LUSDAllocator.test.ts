@@ -195,6 +195,8 @@ describe("LUSDAllocator", () => {
           const AMOUNT = 12345;
           const VALUE = AMOUNT * (10 ** 8);
           lusdTokenFake.decimals.returns(1);
+          wethTokenFake.approve.returns(true);
+          wethTokenFake.transfer.returns(true);
 
           await alice.sendTransaction({
             to: lusdAllocator.address,
