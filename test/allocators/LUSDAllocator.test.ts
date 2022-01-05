@@ -195,8 +195,8 @@ describe("LUSDAllocator", () => {
           const AMOUNT = 12345;
           
           lusdTokenFake.decimals.returns(1);
-          wethTokenFake.approve.returns(true);
-          wethTokenFake.transfer.returns(true);
+          wethTokenFake.approve.whenCalledWith(lusdAllocator.address, AMOUNT).returns(true);
+          wethTokenFake.transfer.whenCalledWith(treasuryFake.address, AMOUNT).returns(true);
           stabilityPoolFake.getDepositorETHGain.returns(AMOUNT);
 
           await alice.sendTransaction({
