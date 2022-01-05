@@ -285,18 +285,11 @@ contract LUSDAllocator is Ownable {
 
             // Taken from https://github.com/fractional-company/contracts/blob/d4faa2dddf010d12b87eae8054f485656c8ed14b/src/ERC721TokenVault.sol#L403-L404
             // Wrap ETH to WETH
-            // weth.deposit{value: totalEthRewards}();
-             weth.deposit{value: 1e18}();
+            weth.deposit{value: totalEthRewards}();
             // Approve and transfer WETH to treasury
             weth.approve(address(treasury), totalEthRewards);
             weth.transfer(address(treasury), totalEthRewards);
-
-            // (bool success, ) = address(weth).call{ value: totalEthRewards }(new bytes(0));
-            // require(success, "WETH: sending ETH failed");            
-            // Send WETH to treasury
-            // weth.approve(address(treasury), totalEthRewards);
-            // weth.safeTransferFrom(address(this), address(treasury), totalEthRewards);
-       }
+        }
 
         return true;
     }
