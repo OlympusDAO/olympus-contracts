@@ -21,6 +21,9 @@ async function main() {
     const GOHM = await ethers.getContractFactory('gOHM');
     const gOHM = await GOHM.deploy(migrator, sOHM.address);
 
+    const OlympusBondingCalculator = await ethers.getContractFactory('OlympusBondingCalculator');
+    const bondingCalculator = await OlympusBondingCalculator.deploy(vcash.address);
+
     const OlympusTreasury = await ethers.getContractFactory('OlympusTreasury');
     const olympusTreasury = await OlympusTreasury.deploy(vcash.address, '0', authority);
 
@@ -34,6 +37,7 @@ async function main() {
     await olympusTreasury.deployed()
     await sOHM.deployed()
     await distributor.deployed()
+    await bondingCalculator.deployed()
 
     await sOHM.setIndex('0');
     await sOHM.setgOHM(gOHM.address);
@@ -44,6 +48,7 @@ async function main() {
     console.log("VCASH: " + vcash.address);
     console.log("sOHM: " + sOHM.address);
     console.log("gOHM: " + gOHM.address);
+    console.log("BondingCalculator: " + bondingCalculator.address);
     console.log("Olympus Treasury: " + olympusTreasury.address);    // await sOHM.setIndex('');
     console.log("Staked Olympus: " + sOHM.address);
     console.log("Staking Contract: " + staking.address);
@@ -75,6 +80,17 @@ async function main() {
             constructorArguments: [
                 migrator,
                 sOHM.address
+            ],
+        })
+    } catch(e) {
+        console.log(e)
+    }
+
+    try {
+        await hre.run("verify:verify", {
+            address: bondingCalculator.address,
+            constructorArguments: [
+                vcash.address
             ],
         })
     } catch(e) {
