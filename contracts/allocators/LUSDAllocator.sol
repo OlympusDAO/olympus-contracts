@@ -267,13 +267,11 @@ contract LUSDAllocator is Ownable {
             stakingEthRewards = lqtyStaking.getPendingETHGain(address(this));
             stakingLUSDRewards = lqtyStaking.getPendingLUSDGain(address(this));
             //Stake
-            IERC20(lqtyTokenAddress).approve(address(lqtyStaking), balanceLqty); // approve to deposit into stability pool
             lqtyStaking.stake(balanceLqty); //Stake LQTY, also receives any prior ETH+LUSD rewards from prior staking TODO need to deposit this LUSD
         }
 
         // 3.  Deposit LUSD from #2 into StabilityPool
         if (stakingLUSDRewards > 0) {
-            IERC20(lusdTokenAddress).approve(address(lusdStabilityPool), stakingLUSDRewards); // approve to deposit into stability pool
             lusdStabilityPool.provideToSP(stakingLUSDRewards, frontEndAddress);
         }
 
@@ -286,10 +284,10 @@ contract LUSDAllocator is Ownable {
             // Wrap ETH to WETH
             weth.deposit{value: ethBalance}();
             // Approve and transfer WETH to treasury
-            weth.approve(address(this), ethBalance);
-            // require(rval, "Failed to approve WETH to treasury"); //TODO need to explore why LUSDAllocator.test.ts "harvest" test fails here
-            weth.transfer(address(treasury), ethBalance);
-            // require(rval, "Failed to transfer WETH to treasury");
+            bool rval = weth.approve(address(this), ethBalance);
+            require(rval, "Failed to approve WETH to treasury"); //TODO need to explore why LUSDAllocator.test.ts "harvest" test fails here
+            rval = weth.transfer(address(treasury), ethBalance);
+            require(rval, "Failed to transfer WETH to treasury");
         }
 
         return true;
