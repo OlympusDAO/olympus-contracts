@@ -191,20 +191,21 @@ describe("LUSDAllocator", () => {
       });
 
       describe("harvest", () => {
-        it.only("harvest testing", async () => {
+        it("harvest testing", async () => {
           const AMOUNT = 12345;
           const VALUE = AMOUNT * (10 ** 8);
           lusdTokenFake.decimals.returns(1);
-          stabilityPoolFake.getDepositorETHGain.returns(AMOUNT);          
+
+          await alice.sendTransaction({
+            to: lusdAllocator.address,
+            value: AMOUNT,
+          });
+
+          stabilityPoolFake.getDepositorETHGain.returns(AMOUNT);
 
           await lusdAllocator.connect(owner).harvest();
 
-          // expect(treasuryFake.manage).to.be.calledWith(lusdTokenFake.address, AMOUNT);
-          // expect(lusdTokenFake.approve).to.be.calledWith(stabilityPoolFake.address, AMOUNT);
-          // expect(stabilityPoolFake.provideToSP).to.be.calledWith(AMOUNT, ZERO_ADDRESS);
-
-          // expect(await lusdAllocator.totalAmountDeployed()).to.equal(AMOUNT);
-          // expect(await lusdAllocator.totalValueDeployed()).to.equal(VALUE);
+          expect(wethTokenFake.transfer).to.be.calledWith(treasuryFake.address, AMOUNT);          
         });
       });
 
@@ -307,9 +308,7 @@ describe("LUSDAllocator", () => {
     const DEFAULT_POOL = "0x896a3F03176f05CFbb4f006BfCd8723F2B0D741C";
 
     before(async () => {
-      // await fork_network(13797676); // Chosen intentionally as we have liquidations on 13810677 from https://dune.xyz/dani/Liquity also https://etherscan.io/tx/0xad44adfd6c728a7558c1865143be69ff1b0129b65f9efd58c5dd5c803a58ce73
-      await fork_network(13179379);
-
+      await fork_network(13797676); 
 
       const TREASURY_ADDRESS = "0x31f8cc382c9898b273eff4e0b7626a6987c846e8";
       const TREASURY_MANAGER = "0x245cc372c84b3645bf0ffe6538620b04a217988b";
@@ -364,26 +363,7 @@ describe("LUSDAllocator", () => {
     });
 
     it("perform deposit, withdrawal", async () => {
-        // await lusdActivePool.connect(owner).sendTransaction({
-        //   to: lusdDefaultPool.address,
-        //   value: ethers.utils.parseEther("1.0"), // Sends exactly 1.0 ether
-        // });
-      
-        await lusdActivePool.connect(lusdStabilityPool).sendETH(lusdActivePool.address, ethers.utils.parseEther("1.0"));
-
-        console.log("owner balance:", await owner.getBalance());
-        // console.log("alice balance:", await alice.getBalance());      
-        console.log("activePool balance:", await lusdActivePool.connect(owner).getETH());
-        console.log("defaultPool balance:", await lusdDefaultPool.connect(owner).getETH());
-  
-  
-          await expect(lusdTroveManager.connect(owner).liquidateTroves(1))
-            .to.emit(lusdTroveManager, "Liquidation").withArgs(
-              ethers.BigNumber.from("91613491045746840934846"),
-              ethers.BigNumber.from("29228567795742597429"),
-              ethers.BigNumber.from("146877225104234157"),
-              ethers.BigNumber.from("200000000000000000000"));
-
+     
       // enable RESERVEMANAGER role
       await oldTreasury.connect(manager).queue(3, allocator.address);
       // enable RESERVEDEPOSITOR role
@@ -395,7 +375,6 @@ describe("LUSDAllocator", () => {
 
       const treasuryBefore = await lusd.balanceOf(oldTreasury.address);
       expect(treasuryBefore).to.equal(TREASURY_BALANCE);
-
 
       const stabilityPoolBefore = await lusd.balanceOf(lusdStabilityPool.address);
       expect(stabilityPoolBefore).to.equal(STABILITY_POOL_BALANCE);

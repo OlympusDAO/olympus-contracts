@@ -188,7 +188,7 @@ contract LUSDAllocator is Ownable {
     /* ======== STATE VARIABLES ======== */
     IStabilityPool immutable lusdStabilityPool;
     ILQTYStaking immutable lqtyStaking;
-    IWETH immutable weth;  // WETH address (0xc778417E063141139Fce010982780140Aa0cD5Ab)
+    IWETH immutable weth;  // WETH address (0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2)
     ITreasury public treasury; // Olympus Treasury
   
     // TODO(zx): I don't think we care about front-end because we're our own frontend.
@@ -279,16 +279,17 @@ contract LUSDAllocator is Ownable {
 
 
         // 4.  Move ETH from #1 and #2 to treasury 
-       if (stabilityPoolEthRewards > 0 || stakingEthRewards > 0) {            
-            uint256 totalEthRewards = stabilityPoolEthRewards.add(stakingEthRewards);    
-            //(stabilityPoolEthRewards.add(stakingEthRewards)).mul(1e18);    
+       if (stabilityPoolEthRewards > 0 || stakingEthRewards > 0) {    
+            // Use total balance in case we have leftover from a prior failed attempt                   
+            uint256 ethBalance = address(this).balance;
 
-            // Taken from https://github.com/fractional-company/contracts/blob/d4faa2dddf010d12b87eae8054f485656c8ed14b/src/ERC721TokenVault.sol#L403-L404
             // Wrap ETH to WETH
-            weth.deposit{value: totalEthRewards}();
+            weth.deposit{value: ethBalance}();
             // Approve and transfer WETH to treasury
-            weth.approve(address(treasury), totalEthRewards);
-            weth.transfer(address(treasury), totalEthRewards);
+            weth.approve(address(this), ethBalance);
+            // require(rval, "Failed to approve WETH to treasury");  //TODO our test cases are failing on this
+            weth.transfer(address(treasury), ethBalance);
+            // require(rval, "Failed to transfer WETH to treasury");  //TODO our test cases are failing on this
         }
 
         return true;
