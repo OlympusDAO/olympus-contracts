@@ -2,6 +2,7 @@
 pragma solidity ^0.8.10;
 
 import {IERC20} from "../interfaces/IERC20.sol";
+import {IsOHM} from "../interfaces/IsOHM.sol";
 import {IgOHM} from "../interfaces/IgOHM.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
 import {IYieldDirector} from "../interfaces/IYieldDirector.sol";
@@ -18,6 +19,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
     uint256 private constant MAX_UINT256 = type(uint256).max;
 
+    // drop sOHM for mainnet launch
+    address public immutable sOHM;
     address public immutable gOHM;
 
     bool public depositDisabled;
@@ -49,11 +52,14 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     event Redeemed(address indexed recipient_, uint256 amount_);
     event EmergencyShutdown(bool active_);
 
-    constructor (address gOhm_, address authority_)
+    // drop sOhm_ for mainnet launch
+    constructor (address sOhm_, address gOhm_, address authority_)
         OlympusAccessControlled(IOlympusAuthority(authority_))
     {
+        require(sOhm_ != address(0), "Invalid address for sOHM");
         require(gOhm_ != address(0), "Invalid address for gOHM");
 
+        sOHM = sOhm_; // drop for mainnet launch
         gOHM = gOhm_;
     }
 
@@ -73,7 +79,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
 
-        uint256 index = IgOHM(gOHM).index();
+        uint256 index = IsOHM(sOHM).index();
 
         // Record donors's issued debt to recipient address
         DonationInfo[] storage donations = donationInfo[msg.sender];
@@ -116,7 +122,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         require(!withdrawDisabled, "Withdraws currently disabled");
         require(amount_ > 0, "Invalid withdraw amount");
 
-        uint256 index = IgOHM(gOHM).index();
+        uint256 index = IsOHM(sOHM).index();
 
         // Donor accounting
         uint256 recipientIndex = _getRecipientIndex(msg.sender, recipient_);
@@ -143,7 +149,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             }
         } else {
             donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
-            donation.nonAgnosticDeposit = _toAgnostic(donation.nonAgnosticDeposit) - amount_;
+            donation.nonAgnosticDeposit = _fromAgnostic(_toAgnostic(donation.nonAgnosticDeposit) - amount_);
             donation.agnosticDeposit = _toAgnostic(donation.nonAgnosticDeposit);
             donation.indexAtLastChange = index;
         }
@@ -151,7 +157,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         // Recipient accounting
         RecipientInfo storage recipient = recipientInfo[recipient_];
         recipient.totalCarry += _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange);
-        recipient.totalDebt = _toAgnostic(recipient.totalDebt) - amount_;
+        recipient.totalDebt = _fromAgnostic(_toAgnostic(recipient.totalDebt) - amount_);
         recipient.agnosticDebt = _toAgnostic(recipient.totalDebt + recipient.totalCarry);
         recipient.indexAtLastChange = index;
 
@@ -171,7 +177,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         uint256 donationsLength = donations.length;
         require(donationsLength != 0, "User not donating to anything");
 
-        uint256 sOhmIndex = IgOHM(gOHM).index();
+        uint256 sOhmIndex = IsOHM(sOHM).index();
         uint256 gohmTotal = 0;
 
         for (uint256 index = 0; index < donationsLength; index++) {
@@ -327,7 +333,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         RecipientInfo storage recipient = recipientInfo[msg.sender];
         recipient.agnosticDebt = _toAgnostic(recipient.totalDebt);
         recipient.totalCarry = 0;
-        recipient.indexAtLastChange = IgOHM(gOHM).index();
+        recipient.indexAtLastChange = IsOHM(sOHM).index();
 
         IERC20(gOHM).safeTransfer(msg.sender, redeemable);
 
@@ -369,7 +375,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
      */
     function _toAgnostic(uint256 amount_) internal view returns ( uint256 ) {
         return amount_
-            / (IgOHM(gOHM).index());
+            / (IsOHM(sOHM).index());
     }
 
     /**
@@ -379,7 +385,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
      */
     function _fromAgnostic(uint256 amount_) internal view returns ( uint256 ) {
         return amount_
-            * (IgOHM(gOHM).index());
+            * (IsOHM(sOHM).index());
     }
 
     /**
