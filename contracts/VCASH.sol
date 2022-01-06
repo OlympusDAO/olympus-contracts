@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.7.6;
+pragma solidity 0.7.5;
 
 // import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -12,21 +12,23 @@ import "./interfaces/IOHM.sol";
 import "./interfaces/IERC20Permit.sol";
 
 import "./types/ERC20Permit.sol";
+import "./types/OlympusAccessControlled.sol";
 
-contract VCASH is ERC20Permit, IOHM, Ownable, AccessControl {
+contract VCASH is ERC20Permit, IOHM, Ownable, AccessControl, OlympusAccessControlled {
     using SafeMath for uint256;
 	bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 	address public childChainManagerProxy;
 
-    constructor () 
+    constructor (address _authority) 
         ERC20("Mono Glue", "mGLU", 18) 
         ERC20Permit("Mono Glue") 
+        OlympusAccessControlled(IOlympusAuthority(_authority)) 
     {
 
     }
 
 	function mint (address account, uint256 amount) public override {
-		require(hasRole(MINTER_ROLE, msg.sender), "VCASH: caller is not a minter");
+		require(hasRole(MINTER_ROLE, msg.sender) || authority.vault() == msg.sender, "VCASH: caller is not a minter");
 		_mint(account, amount);
 	}
 

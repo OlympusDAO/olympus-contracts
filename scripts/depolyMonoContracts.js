@@ -13,7 +13,7 @@ async function main() {
     const migrator = deployer.address;
 
     const VCASH = await ethers.getContractFactory('VCASH');
-    const vcash = await VCASH.deploy();
+    const vcash = await VCASH.deploy(authority);
 
     const SOHM = await ethers.getContractFactory('sOlympus');
     const sOHM = await SOHM.deploy();
