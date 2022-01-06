@@ -22,23 +22,38 @@ contract OlympusStaking is OlympusAccessControlled {
 
     /// EVENTS ///
 
+    /// @notice Emitted when distributor is updated
+    /// @param distributor Address of distributor
     event DistributorSet(address distributor);
+
+    /// @notice Emitted when warmup is set
+    /// @param warmup Amount of time new stakers spend in warmup
     event WarmupSet(uint256 warmup);
 
     /// STRUCTS ///
 
+    /// @notice            Parameters of the current epoch
+    /// @param length      Length in seconds of the current epoch
+    /// @param number      Number epoch that the current epoch is
+    /// @param end         Timestamp of when current epoch ends
+    /// @param distribute  Amount of OHM to distirbute at the end of the epoch
     struct Epoch {
-        uint256 length; // in seconds
-        uint256 number; // since inception
-        uint256 end; // timestamp
-        uint256 distribute; // amount
+        uint256 length;
+        uint256 number;
+        uint256 end;
+        uint256 distribute;
     }
 
+    /// @notice         Parameters of a user's stake that is in the warmup contract
+    /// @param deposit  User's OHM deposit
+    /// @param gons     User's staked balance of OHM
+    /// @param expiry   Timestamp warmup period is over
+    /// @param lock     Prevents malicious delays for claim
     struct Claim {
-        uint256 deposit; // if forfeiting
-        uint256 gons; // staked balance
-        uint256 expiry; // end of warmup period
-        bool lock; // prevents malicious delays for claim
+        uint256 deposit;
+        uint256 gons;
+        uint256 expiry;
+        bool lock;
     }
 
     /// STATE VARIABLES ///
@@ -50,9 +65,10 @@ contract OlympusStaking is OlympusAccessControlled {
 
     Epoch public epoch;
 
-    mapping(address => Claim) public warmupInfo;
     uint256 public warmupPeriod;
     uint256 private gonsInWarmup;
+
+    mapping(address => Claim) public warmupInfo;
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -84,12 +100,12 @@ contract OlympusStaking is OlympusAccessControlled {
 
     /// MUTATIVE FUNCTIONS ///
 
-    /// @notice             Stakes OHM to recieve back sOHM or gOHM
-    /// @param _to          Address of whom will receieve the staked token
-    /// @param _amount      Amount of OHM that will be staked
-    /// @param _rebasing    Bool if recieving the rebasing token (sOHM) or non rebasing token (gOHM)
-    /// @param _claim       Bool if `_to` will recieve staked token or has to claim
-    /// @return             Amount of sOHM or gOHM received plus bounty if the rebase was triggered
+    /// @notice           Stakes OHM to recieve back sOHM or gOHM
+    /// @param _to        Address of whom will receieve the staked token
+    /// @param _amount    Amount of OHM that will be staked
+    /// @param _rebasing  Bool if recieving the rebasing token (sOHM) or non rebasing token (gOHM)
+    /// @param _claim     Bool if `_to` will recieve staked token or has to claim
+    /// @return           Amount of sOHM or gOHM received plus bounty if the rebase was triggered
     function stake(
         address _to,
         uint256 _amount,
@@ -119,10 +135,10 @@ contract OlympusStaking is OlympusAccessControlled {
         }
     }
 
-    /// @notice             Claim either sOHM or gOHM for an address
-    /// @param _to          Address of who is being claimed for
-    /// @param _rebasing    Bool if claiming the rebasing token (sOHM) or non rebasing token (gOHM)
-    /// @return             Amount in terms of OHM that has been claimed
+    /// @notice           Claim either sOHM or gOHM for an address
+    /// @param _to        Address of who is being claimed for
+    /// @param _rebasing  Bool if claiming the rebasing token (sOHM) or non rebasing token (gOHM)
+    /// @return           Amount in terms of OHM that has been claimed
     function claim(address _to, bool _rebasing) public returns (uint256) {
         Claim memory info = warmupInfo[_to];
 
@@ -140,8 +156,8 @@ contract OlympusStaking is OlympusAccessControlled {
         return 0;
     }
 
-    /// @notice     User forfeits their unclaimed stake, only gets back initally deposit
-    /// @return     Amount of OHM the user deposited and recieved back
+    /// @notice  User forfeits their unclaimed stake, only gets back initally deposit
+    /// @return  Amount of OHM the user deposited and recieved back
     function forfeit() external returns (uint256) {
         Claim memory info = warmupInfo[msg.sender];
         delete warmupInfo[msg.sender];
@@ -153,17 +169,17 @@ contract OlympusStaking is OlympusAccessControlled {
         return info.deposit;
     }
 
-    /// @notice     prevent new deposits or claims from ext. address (protection from malicious activity)
+    /// @notice  prevent new deposits or claims from ext. address (protection from malicious activity)
     function toggleLock() external {
         warmupInfo[msg.sender].lock = !warmupInfo[msg.sender].lock;
     }
 
-    /// @notice             Redeems sOHM or gOHM for OHM
-    /// @param _to          Address of whom will receieve OHM once unstaked
-    /// @param _amount      Amount of sOHM or gOHM that will be unstaked
-    /// @param _trigger     Bool if this action will call `rebase()`
-    /// @param _rebasing    Bool if unstaking the rebasing token (sOHM) or non rebasing token (gOHM)
-    /// @return amount_     Amount of OHM that `_to` received
+    /// @notice           Redeems sOHM or gOHM for OHM
+    /// @param _to        Address of whom will receieve OHM once unstaked
+    /// @param _amount    Amount of sOHM or gOHM that will be unstaked
+    /// @param _trigger   Bool if this action will call `rebase()`
+    /// @param _rebasing  Bool if unstaking the rebasing token (sOHM) or non rebasing token (gOHM)
+    /// @return amount_   Amount of OHM that `_to` received
     function unstake(
         address _to,
         uint256 _amount,
@@ -187,26 +203,26 @@ contract OlympusStaking is OlympusAccessControlled {
         OHM.safeTransfer(_to, amount_);
     }
 
-    /// @notice             convert `_amount` sOHM into `gBalance_` gOHM
-    /// @param _to          Address of whom will receieve gOHM once sOHM is wrapped
-    /// @return gBalance_   Amount of gOHM that `_to` recieved 
+    /// @notice            convert `_amount` sOHM into `gBalance_` gOHM
+    /// @param _to         Address of whom will receieve gOHM once sOHM is wrapped
+    /// @return gBalance_  Amount of gOHM that `_to` recieved 
     function wrap(address _to, uint256 _amount) external returns (uint256 gBalance_) {
         sOHM.safeTransferFrom(msg.sender, address(this), _amount);
         gBalance_ = gOHM.balanceTo(_amount);
         gOHM.mint(_to, gBalance_);
     }
 
-    /// @notice             Convert `_amount` gOHM into `sBalance_` sOHM
-    /// @param _to          Address of whom will receieve sOHM once gOHM is unwrapped
-    /// @return sBalance_   Amount of sOHM that `_to` recieved 
+    /// @notice            Convert `_amount` gOHM into `sBalance_` sOHM
+    /// @param _to         Address of whom will receieve sOHM once gOHM is unwrapped
+    /// @return sBalance_  Amount of sOHM that `_to` recieved 
     function unwrap(address _to, uint256 _amount) external returns (uint256 sBalance_) {
         gOHM.burn(msg.sender, _amount);
         sBalance_ = gOHM.balanceFrom(_amount);
         sOHM.safeTransfer(_to, sBalance_);
     }
 
-    /// @notice   If end of epoch trigger rebase of sOHM. Returns bounty amount for triggering
-    /// @return   Amount of OHM minted for triggering rebase 
+    /// @notice  If end of epoch trigger rebase of sOHM. Returns bounty amount for triggering
+    /// @return  Amount of OHM minted for triggering rebase 
     function rebase() public returns (uint256) {
         uint256 bounty;
         if (epoch.end <= block.timestamp) {
@@ -232,11 +248,11 @@ contract OlympusStaking is OlympusAccessControlled {
 
     /// INTERNAL FUNCTIONS ///
 
-    /// @notice                 Internal function that calculates how much sOHM or gOHM to send
-    /// @param _to              Address of whom will be minted the sOHM or gOHM
-    /// @param _amount          Amount of OHM to be sent
-    /// @param _rebasing        Bool if sending rebasing token (sOHM) or non rebasing token (gOHM)
-    /// @return                 Amount of sOHM or gOHM that has been sent 
+    /// @notice           Internal function that calculates how much sOHM or gOHM to send
+    /// @param _to        Address of whom will be minted the sOHM or gOHM
+    /// @param _amount    Amount of OHM to be sent
+    /// @param _rebasing  Bool if sending rebasing token (sOHM) or non rebasing token (gOHM)
+    /// @return           Amount of sOHM or gOHM that has been sent 
     function _send(
         address _to,
         uint256 _amount,
@@ -253,35 +269,35 @@ contract OlympusStaking is OlympusAccessControlled {
 
     /// VIEW FUNCTIONS ///
 
-    /// @notice       Returns the sOHM index, which tracks rebase growth
-    /// @return       sOHM index
+    /// @notice  Returns the sOHM index, which tracks rebase growth
+    /// @return  sOHM index
     function index() public view returns (uint256) {
         return sOHM.index();
     }
 
-    /// @notice       Returns balance in OHM of the warmp
-    /// @return       Balance in OHM of the warmup
+    /// @notice  Returns balance in OHM of the warmp
+    /// @return  Balance in OHM of the warmup
     function supplyInWarmup() public view returns (uint256) {
         return sOHM.balanceForGons(gonsInWarmup);
     }
 
-    /// @notice       Returns seconds left till the end of next epoch
-    /// @return       Seconds left till end of next epoch
+    /// @notice  Returns seconds left till the end of next epoch
+    /// @return  Seconds left till end of next epoch
     function secondsToNextEpoch() external view returns (uint256) {
         return epoch.end.sub(block.timestamp);
     }
 
     /// MANAGERIAL FUNCTIONS ///
 
-    /// @notice                Sets the address of the distributor
-    /// @param _distributor    Address of the distirbutor that mints OHM every epoch     
+    /// @notice              Sets the address of the distributor
+    /// @param _distributor  Address of the distirbutor that mints OHM every epoch     
     function setDistributor(address _distributor) external onlyGovernor {
         distributor = IDistributor(_distributor);
         emit DistributorSet(_distributor);
     }
 
-    /// @notice                   Sets the amount of time needed to be in warmup contract prior to claiming for new stakers
-    /// @param _warmupPeriod      Amount of time needed to spend in warmup prior to claiming
+    /// @notice               Sets the amount of time needed to be in warmup contract prior to claiming for new stakers
+    /// @param _warmupPeriod  Amount of time needed to spend in warmup prior to claiming
     function setWarmupLength(uint256 _warmupPeriod) external onlyGovernor {
         warmupPeriod = _warmupPeriod;
         emit WarmupSet(_warmupPeriod);
