@@ -10,6 +10,7 @@ import {
   ITreasury,
   IStabilityPool,
   ILQTYStaking,
+  ISwapRouter,
   LUSDAllocator,
   LUSDAllocator__factory,
 } from '../../types';
@@ -40,7 +41,8 @@ describe("LUSDAllocator", () => {
     let lusdTokenFake: FakeContract<IERC20Metadata>;
     let lqtyTokenFake: FakeContract<IERC20>;
     let wethTokenFake: FakeContract<IERC20>;
-    let lusdAllocator: LUSDAllocator;
+    let swapRouterFake: FakeContract<ISwapRouter>;
+    let lusdAllocator: LUSDAllocator;    
 
     beforeEach(async () => {
       [owner, other, alice, bob] = await ethers.getSigners();
@@ -50,6 +52,7 @@ describe("LUSDAllocator", () => {
       lusdTokenFake = await smock.fake<IERC20Metadata>("IERC20Metadata");
       lqtyTokenFake = await smock.fake<IERC20>("IERC20");
       wethTokenFake = await smock.fake<IERC20>("IERC20");
+      swapRouterFake = await smock.fake<ISwapRouter>("ISwapRouter");
     });
 
     describe("constructor", () => {
@@ -61,7 +64,8 @@ describe("LUSDAllocator", () => {
           stabilityPoolFake.address,
           lqtyStakingFake.address,
           ZERO_ADDRESS,
-          wethTokenFake.address
+          wethTokenFake.address,
+          swapRouterFake.address
         );
         expect(await lusdAllocator.lusdTokenAddress()).to.equal(lusdTokenFake.address);
       });
@@ -74,7 +78,8 @@ describe("LUSDAllocator", () => {
           stabilityPoolFake.address,
           lqtyStakingFake.address,
           ZERO_ADDRESS,
-          wethTokenFake.address
+          wethTokenFake.address,
+          swapRouterFake.address
         )).to.be.revertedWith("treasury address cannot be 0x0");
       });
 
@@ -86,7 +91,8 @@ describe("LUSDAllocator", () => {
           ZERO_ADDRESS,
           lqtyStakingFake.address,
           ZERO_ADDRESS,
-          wethTokenFake.address
+          wethTokenFake.address,
+          swapRouterFake.address
         )).to.be.revertedWith("stabilityPool address cannot be 0x0");
       });
 
@@ -98,7 +104,8 @@ describe("LUSDAllocator", () => {
           stabilityPoolFake.address,
           lqtyStakingFake.address,
           ZERO_ADDRESS,
-          wethTokenFake.address
+          wethTokenFake.address,
+          swapRouterFake.address
         )).to.be.revertedWith("LUSD token address cannot be 0x0");
       });
 
@@ -110,7 +117,8 @@ describe("LUSDAllocator", () => {
           stabilityPoolFake.address,
           lqtyStakingFake.address,
           ZERO_ADDRESS,
-          wethTokenFake.address
+          wethTokenFake.address,
+          swapRouterFake.address
         )).to.be.revertedWith("LQTY token address cannot be 0x0");
       });
 
@@ -122,7 +130,8 @@ describe("LUSDAllocator", () => {
           stabilityPoolFake.address,
           ZERO_ADDRESS,
           ZERO_ADDRESS,
-          wethTokenFake.address
+          wethTokenFake.address,
+          swapRouterFake.address
         )).to.be.revertedWith("LQTY staking address cannot be 0x0");
       });
 
@@ -135,7 +144,21 @@ describe("LUSDAllocator", () => {
           lqtyStakingFake.address,
           ZERO_ADDRESS,
           ZERO_ADDRESS,
+          swapRouterFake.address
         )).to.be.revertedWith("WETH token address cannot be 0x0");
+      });
+
+      it("does not allow uniswapV3SwapRouter address to be 0x0", async () => {
+        await expect((new LUSDAllocator__factory(owner)).deploy(
+          treasuryFake.address,
+          lusdTokenFake.address,
+          lqtyTokenFake.address,
+          stabilityPoolFake.address,
+          lqtyStakingFake.address,
+          ZERO_ADDRESS,
+          wethTokenFake.address,
+          ZERO_ADDRESS
+        )).to.be.revertedWith("UniswapV3Router address cannot be 0x0");
       });
 
     });
@@ -149,7 +172,8 @@ describe("LUSDAllocator", () => {
           stabilityPoolFake.address,
           lqtyStakingFake.address,
           ZERO_ADDRESS,
-          wethTokenFake.address
+          wethTokenFake.address,
+          swapRouterFake.address
         );
       });
 
@@ -315,6 +339,7 @@ describe("LUSDAllocator", () => {
       const LQTY_TOKEN_ADDRESS = "0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D";
       const LQTY_STAKING_ADDRESS = "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d";
       const WETH_ADDRESS = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
+      const UNISWAPV3_ROUTER_ADDRESS = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
 
 
       [owner] = await ethers.getSigners();
@@ -325,7 +350,8 @@ describe("LUSDAllocator", () => {
         STABILITY_POOL_ADDRESS,
         LQTY_STAKING_ADDRESS,
         ZERO_ADDRESS,
-        WETH_ADDRESS
+        WETH_ADDRESS,
+        UNISWAPV3_ROUTER_ADDRESS
       );
 
       oldTreasury = new ethers.Contract(TREASURY_ADDRESS, oldTreasuryAbi, ethers.provider) as unknown as IOldTreasury;

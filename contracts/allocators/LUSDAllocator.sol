@@ -10,6 +10,7 @@ import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/IWETH.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IAllocator.sol";
+import "../interfaces/ISwapRouter.sol";
 
 import "../types/Ownable.sol";
 
@@ -189,6 +190,7 @@ contract LUSDAllocator is Ownable {
     IStabilityPool immutable lusdStabilityPool;
     ILQTYStaking immutable lqtyStaking;
     IWETH immutable weth;  // WETH address (0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2)
+    ISwapRouter immutable swapRouter;
     ITreasury public treasury; // Olympus Treasury
   
     // TODO(zx): I don't think we care about front-end because we're our own frontend.
@@ -208,7 +210,8 @@ contract LUSDAllocator is Ownable {
         address _stabilityPool,
         address _lqtyStaking,
         address _frontEndAddress,
-        address _wethAddress
+        address _wethAddress,
+        address _uniswapV3Router
     ) {
         setTreasury(_treasury);
 
@@ -228,6 +231,9 @@ contract LUSDAllocator is Ownable {
 
         require(_wethAddress != address(0), "WETH token address cannot be 0x0");
         weth = IWETH(_wethAddress);
+
+        require(_uniswapV3Router != address(0), "UniswapV3Router address cannot be 0x0");
+        swapRouter = ISwapRouter(_uniswapV3Router);
     }
 
 
