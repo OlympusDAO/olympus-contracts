@@ -8,6 +8,9 @@ import {SafeERC20} from "../libraries/SafeERC20.sol";
 import {IYieldDirector} from "../interfaces/IYieldDirector.sol";
 import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 
+
+// Because of truncation in the ones place for both agnosticDeposit and agnosticDebt we lose
+// 1e-18 units of precision. Potential solution is to round up redeemable amount by 1e-18
 /**
     @title YieldDirector (codename Tyche) 
     @notice This contract allows donors to deposit their sOHM and donate their rebases
@@ -213,7 +216,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             return 0;
         }
 
-        return (_toAgnostic(donationInfo[donor_][recipientIndex].nonAgnosticDeposit));
+        return _toAgnostic(donationInfo[donor_][recipientIndex].nonAgnosticDeposit);
     }
 
     /**
@@ -310,10 +313,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
      */
     function redeemableBalance(address recipient_) public override view returns ( uint256 ) {
         RecipientInfo storage recipient = recipientInfo[recipient_];
-        uint gohmRedeemable = _toAgnostic(
-            recipient.totalCarry
-            + _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange)
-        );
+        uint gohmRedeemable = _toAgnostic(recipient.totalCarry
+                + _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange));
 
         return gohmRedeemable;
     }
@@ -371,18 +372,18 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     /**
         @notice Convert flat sOHM value to agnostic value at current index
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
-             1e9 is because sOHM has 9 decimals.
+             1e18 is because sOHM has 18 decimals.
      */
     function _toAgnostic(uint256 amount_) internal view returns ( uint256 ) {
         return amount_
-            / (IsOHM(sOHM).index())
-            * 1e9;
+            * 1e9
+            / (IsOHM(sOHM).index());
     }
 
     /**
         @notice Convert agnostic value at current index to flat sOHM value
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
-             1e9 is because sOHM has 9 decimals.
+             1e18 is because gOHM has 18 decimals.
      */
     function _fromAgnostic(uint256 amount_) internal view returns ( uint256 ) {
         return amount_
@@ -393,11 +394,12 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     /**
         @notice Convert flat sOHM value to agnostic value at a given index value
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
-             1e9 is because sOHM has 9 decimals.
+             1e18 is because gOHM has 18 decimals.
      */
     function _fromAgnosticAtIndex(uint256 amount_, uint256 index_) internal pure returns ( uint256 ) {
         return amount_
-            * index_;
+            * index_
+            / 1e9;
     }
 
     /************************
