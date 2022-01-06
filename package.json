@@ -10,10 +10,9 @@
   },
   "devDependencies": {
     "@defi-wonderland/smock": "^2.0.7",
-    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@0.3.0-beta.11",
+    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
     "@nomiclabs/hardhat-etherscan": "^2.1.7",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/contracts": "^4.3.2",
     "@typechain/ethers-v5": "^7.1.2",
     "@typechain/hardhat": "^2.3.0",
     "@types/chai": "^4.2.22",
@@ -55,7 +54,15 @@
     "gas": "REPORT_GAS=true hardhat test",
     "coverage": "HARDHAT_DEPLOY_FIXTURE=true hardhat coverage",
     "typechain": "TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
-    "fork": "hardhat node"
+    "fork": "hardhat node",
+    "deploy:mainnet": "hardhat --network mainnet deploy",
+    "deploy:rinkeby": "hardhat --network rinkeby deploy",
+    "deploy:ropsten": "hardhat --network ropsten deploy",
+    "deploy:hardhat": "hardhat --network hardhat deploy",
+    "sourcify:mainnet": "hardhat --network mainnet sourcify",
+    "sourcify:rinkeby": "hardhat --network rinkeby sourcify",
+    "etherscan:mainnet": "hardhat --network mainnet etherscan-verify",
+    "etherscan:rinkeby": "hardhat --network rinkeby etherscan-verify"
   },
   "repository": {
     "type": "git",

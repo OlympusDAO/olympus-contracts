@@ -150,10 +150,7 @@ describe("Treasury Token Migration", async function () {
         await old_treasury.connect(manager).toggle(6, migratorAddress, migratorAddress);
         await old_treasury.connect(manager).toggle(2, lp_token_1[0], lp_token_1[0]);
 
-        // Enables onchain governance, needs two calls. :odd:
-        await newTreasury.connect(deployer).enableOnChainGovernance();
-        await advance(1000);
-        await newTreasury.connect(deployer).enableOnChainGovernance();
+        // Timelock is disabled by default so no longer need to "enable" on chain governance
 
         // Give migrator access  to the new treasury
         // 0 = RESERVEDEPOSITOR
@@ -181,7 +178,7 @@ describe("Treasury Token Migration", async function () {
         await expect(
             olympusTokenMigrator
                 .connect(user1)
-                .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0)
+                .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0, 0, 0)
         ).to.revertedWith("UNAUTHORIZED");
     });
 
@@ -189,7 +186,7 @@ describe("Treasury Token Migration", async function () {
         await sendETH(deployer, NON_TOKEN_HOLDER);
         const user = await impersonate(NON_TOKEN_HOLDER);
         // Using safeTransferFrom so generic safeERC20 error message
-        await expect(olympusTokenMigrator.connect(user).migrate(1000000, 0, 2)).to.revertedWith(
+        await expect(olympusTokenMigrator.connect(user).migrate(1000000, 1, 2)).to.revertedWith(
             "TRANSFER_FROM_FAILED"
         );
     });
@@ -277,7 +274,7 @@ describe("Treasury Token Migration", async function () {
                 await sendETH(deployer, wallet);
             }
         });
-
+        /** 
         it("should migrate ohm", async () => {
             const token = olympus_tokens.find((token) => token.name === "ohm");
             const { oldTokenBalance, newgOhmBalance } = await performMigration(token);
@@ -287,7 +284,7 @@ describe("Treasury Token Migration", async function () {
 
             assert.equal(gohmBalanceOld, gohmBalanceNew);
         });
-
+*/
         it("should migrate sohm", async () => {
             const token = olympus_tokens.find((token) => token.name === "sohm");
             const { oldTokenBalance, newgOhmBalance } = await performMigration(token);
@@ -365,7 +362,7 @@ describe("Treasury Token Migration", async function () {
             // console.log("migrating", lpToken.name);
             await olympusTokenMigrator
                 .connect(deployer)
-                .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0);
+                .migrateLP(lpToken.address, lpToken.is_sushi, lpToken.token0, 0, 0);
         });
 
         await treasury_tokens.forEach(async (token) => {
@@ -469,9 +466,6 @@ describe("Treasury Token Migration", async function () {
 
             const token1 = olympus_tokens.find((token) => token.name === "sohm");
             await performMigration(token1);
-
-            const token2 = olympus_tokens.find((token) => token.name === "ohm");
-            await performMigration(token2);
 
             const olympus_token_migrator_wsohm_balance = await olympus_tokens[0].contract.balanceOf(
                 olympusTokenMigrator.address
