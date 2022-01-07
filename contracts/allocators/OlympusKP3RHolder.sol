@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.8.10;
 
-import "../libraries/Address.sol";
-import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 
 import "../interfaces/IERC20.sol";
 import "../interfaces/ITreasury.sol";
-import "../interfaces/IAllocator.sol";
 
 import "../types/OlympusAccessControlled.sol";
 
@@ -45,7 +42,6 @@ interface IGauge {
 /// @notice  Manages KP3R from treasury and locks into vKP3R contract
 contract OlympusKP3RHolder is OlympusAccessControlled {
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
 
     // KP3RVault deposit contract
     IKP3RVault internal immutable KP3RVault = IKP3RVault(0x2FC52C61fB0C03489649311989CE2689D93dC1a2); 
