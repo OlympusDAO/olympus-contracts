@@ -15,7 +15,9 @@ async function main() {
       "0x66017D22b0f8556afDd19FC67041899Eb65a21bb", // Liquity stability pool
       "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d", // LQTY Staking pool 
       "0x", // Front end address,
-      "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2" // weth
+      "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", // weth
+      "0x6b175474e89094c44da98b954eedeac495271d0f", //dai
+      "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45" //uniswapV3 router
     ];
     const LUSDAllocator = await ethers.getContractFactory("LUSDAllocator");
     const instance = await upgrades.deployProxy(LUSDAllocator, constructorArgs);
