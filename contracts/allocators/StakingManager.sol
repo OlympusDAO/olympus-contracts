@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.8.10;
 
 import "../libraries/SafeERC20.sol";
 
@@ -30,6 +30,12 @@ contract OlympusStakingManager is OlympusAccessControlled {
     address internal immutable lobiStaking = 0x3818eff63418e0a0BA3980ABA5fF388b029b6d90;
 
     constructor(IOlympusAuthority _authority) OlympusAccessControlled(_authority) {}
+
+    function updateTreasury() external onlyGuardian {
+        require(authority.vault() != address(0), "Zero address: Vault");
+        require(address(authority.vault()) != address(treasury), "No change");
+        treasury = ITreasury(authority.vault());
+    }
 
 
     /**
