@@ -53,6 +53,14 @@ async function main() {
         authority.address
     );
 
+    const OlympusBondDepository = await ethers.getContractFactory("OlympusBondDepository");
+    const bondDepository = await OlympusBondDepository.deploy(vcash.address, olympusTreasury.address, authority.address);
+    
+    const OlympusBondingCalculator = await ethers.getContractFactory("OlympusBondingCalculator");
+    const bondingCalculator = await OlympusBondingCalculator.deploy(vcash.address);
+
+    const BondTeller = await ethers.getContractFactory("BondTeller");
+    const bondTeller = await BondTeller.deploy(bondDepository.address, staking.address, olympusTreasury.address, vcash.address, sOHM.address, authority.address);
     console.log("Olympus Authority: ", authority.address);
     console.log("VCASH: " + vcash.address);
     console.log("sOhm: " + sOHM.address);
@@ -60,6 +68,9 @@ async function main() {
     console.log("Olympus Treasury: " + olympusTreasury.address);
     console.log("Staking Contract: " + staking.address);
     console.log("Distributor: " + distributor.address);
+    console.log("BondDepository: " + bondDepository.address);
+    console.log("BondingCalculator: " + bondingCalculator.address);
+    console.log("BondTeller: " + bondTeller.address);
     
     await authority.deployed()
     await vcash.deployed()
@@ -68,6 +79,9 @@ async function main() {
     await olympusTreasury.deployed()
     await staking.deployed()
     await distributor.deployed()
+    await bondDepository.deployed()
+    await bondingCalculator.deployed()
+    await bondTeller.deployed()
 
     await authority.pushVault(olympusTreasury.address, true); // replaces ohm.setVault(treasury.address)
     // Initialize sohm
@@ -75,6 +89,9 @@ async function main() {
     await sOHM.setgOHM(gOHM.address);
     await sOHM.initialize(staking.address, olympusTreasury.address);
     await staking.setDistributor(distributor.address);
+    await staking.setDistributor(distributor.address);
+    
+    await bondDepository.setTeller(bondTeller.address);
     
     try {
         await hre.run("verify:verify", {
@@ -160,6 +177,46 @@ async function main() {
             olympusTreasury.address,
             vcash.address,
             staking.address,
+            authority.address
+        ],
+        })
+    } catch(e) {
+        console.log(e)
+    }
+
+    try {
+        await hre.run("verify:verify", {
+        address: bondDepository.address,
+        constructorArguments: [
+            vcash.address,
+            olympusTreasury.address,
+            authority.address
+        ],
+        })
+    } catch(e) {
+        console.log(e)
+    }
+    
+    try {
+        await hre.run("verify:verify", {
+        address: bondingCalculator.address,
+        constructorArguments: [
+            vcash.address,
+        ],
+        })
+    } catch(e) {
+        console.log(e)
+    }
+
+    try {
+        await hre.run("verify:verify", {
+        address: bondTeller.address,
+        constructorArguments: [
+            bondDepository.address,
+            staking.address,
+            olympusTreasury.address,
+            vcash.address,
+            sOHM.address,
             authority.address
         ],
         })
