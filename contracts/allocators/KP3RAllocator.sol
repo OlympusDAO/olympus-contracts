@@ -63,10 +63,7 @@ contract KP3RAllocator is OlympusAccessControlled {
     /**
      * @notice withdraws KP3R from treasury and creates vault
      */
-    function createLock(
-        uint256 amount,
-        uint256 unlockTime
-    ) external onlyGuardian {
+    function createLock(uint256 amount, uint256 unlockTime) external onlyGuardian {
 
         // retrieve amount of KP3R from treasury
         treasury.manage(KP3R, amount); 
@@ -77,6 +74,37 @@ contract KP3RAllocator is OlympusAccessControlled {
         KP3RVault.create_lock(amount, unlockTime);
     }
 
- 
+    /**
+     * @notice withdraws KP3R from treasury and adds to already created vault
+     */
+    function increaseAmount(uint256 amount) external onlyGuardian {
+
+        // retrieve amount of KP3R from treasury
+        treasury.manage(KP3R, amount); 
+
+        // approve and deposit into curve
+        IERC20(KP3R).approve(address(KP3RVault), amount); 
+
+        KP3RVault.increase_amount(amount);
+    }
+
+    /**
+     * @notice Increases lock time on vault
+     */
+    function increaseLockTime(uint256 unlockTime) external onlyGuardian {
+
+        KP3RVault.increase_unlock_time(unlockTime);
+    }
+
+    /**
+     * @notice After timelock is over withdraw KP3R to treasury
+     */
+    function withdraw() external onlyGuardian {
+        KP3RVault.withdraw();
+
+        uint amount = IERC20(KP3R).balanceOf(address(this));
+
+        IERC20(KP3R).transfer(address(treasury), amount);
+    }
 
 }
