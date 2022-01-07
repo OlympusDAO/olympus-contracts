@@ -277,8 +277,6 @@ contract LUSDAllocator is Ownable {
         uint256 stabilityPoolEthRewards = getETHRewards();
         uint256 stabilityPoolLqtyRewards = getLQTYRewards();
 
-        console.log("Harvesting LUSD rewards: ", stabilityPoolEthRewards, stabilityPoolLqtyRewards);
-
         if (stabilityPoolEthRewards == 0 && stabilityPoolLqtyRewards == 0) {
             return false;
         }
