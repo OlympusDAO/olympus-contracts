@@ -270,8 +270,8 @@ contract LUSDAllocator is Ownable {
 
         1.  Harvest from LUSD StabilityPool to get ETH+LQTY rewards
         2.  Stake LQTY rewards from #1.  This txn will also give out any outstanding ETH+LUSD rewards from prior staking
-        3.  Deposit LUSD from #2 into StabilityPool
-        4.  Move ETH from #1 and #2 to treasury 
+        3.  If we have eth, convert to weth, then swap a percentage of it to LUSD.  If swap successul then send all remaining WETH to treasury
+        4.  Deposit LUSD from #2 and potentially #3 into StabilityPool
      */
     function harvest() public returns (bool) {
         uint256 stabilityPoolEthRewards = getETHRewards();
@@ -286,59 +286,52 @@ contract LUSDAllocator is Ownable {
         // 2.  Stake LQTY rewards from #1.  This txn will also give out any outstanding ETH+LUSD rewards from prior staking
         uint256 balanceLqty = IERC20(lqtyTokenAddress).balanceOf(address(this)); // LQTY balance received from stability pool
 
-        uint256 stakingEthRewards = 0;
-        uint256 stakingLUSDRewards = 0;
         if (balanceLqty > 0) {
-            stakingEthRewards = lqtyStaking.getPendingETHGain(address(this));
-            stakingLUSDRewards = lqtyStaking.getPendingLUSDGain(address(this));
             //Stake
-            lqtyStaking.stake(balanceLqty); //Stake LQTY, also receives any prior ETH+LUSD rewards from prior staking TODO need to deposit this LUSD
+            lqtyStaking.stake(balanceLqty); //Stake LQTY, also receives any prior ETH+LUSD rewards from prior staking
         }
 
-        // 3.  Deposit LUSD from #2 into StabilityPool
-        if (stakingLUSDRewards > 0) {
-            lusdStabilityPool.provideToSP(stakingLUSDRewards, frontEndAddress);
-        }
-
-        // 4.  Move ETH from #1 and #2 to treasury
-        if (stabilityPoolEthRewards > 0 || stakingEthRewards > 0) {
-            // Use total balance in case we have leftover from a prior failed attempt
-            uint256 ethBalance = address(this).balance;
-
+        // 3.  If we have eth, convert to weth, then swap a percentage of it to LUSD.  If swap successul then send all remaining WETH to treasury
+        uint256 ethBalance = address(this).balance;  // Use total balance in case we have leftover from a prior failed attempt
+        if (ethBalance > 0) {
             // Wrap ETH to WETH
             weth.deposit{value: ethBalance}();
 
-            uint256 amountEthToSwap = ethBalance.mul(percentETHtoLUSD).div(100);
+            uint256 wethBalance = weth.balanceOf(address(this));  //Base off of WETH balance in case we have leftover from a prior failed attempt
+            uint256 amountWethToSwap = wethBalance.mul(percentETHtoLUSD).div(100);
 
             // Approve WETH to uniswap
-            weth.safeApprove(address(swapRouter), amountEthToSwap);
+            weth.safeApprove(address(swapRouter), amountWethToSwap);
 
             // Multiple pool swaps are encoded through bytes called a `path`. A path is a sequence of token addresses and poolFees that define the pools used in the swaps.
             // The format for pool encoding is (tokenIn, fee, tokenOut/tokenIn, fee, tokenOut) where tokenIn/tokenOut parameter is the shared token across the pools.
             // Since we are swapping WETH to DAI and then DAI to LUSD the path encoding is (WETH, 0.3%, DAI, 0.3%, LUSD).
             ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
                 path: abi.encodePacked(address(weth), poolFee, daiAddress, poolFee, lusdTokenAddress),
-                recipient: address(treasury),
+                recipient: address(this),  //Send LUSD here
                 deadline: block.timestamp,
-                amountIn: amountEthToSwap,
+                amountIn: amountWethToSwap,
                 amountOutMinimum: 0
             });
 
-            // Executes the swap.
+            // Executes the swap
             uint256 amountOut = swapRouter.exactInput(params);
 
-            // If swap was successful, send the remaining WETH to the treasury.
+            // If swap was successful, send the remaining WETH to the treasury.  Crucial check otherwise we'd send all our WETH to the treasury
             if (amountOut > 0) {
-                // Withdraw WETH
-                weth.withdraw(amountOut);
-
                 // Get updated balance, send to treasury
-                uint256 wethBalance = weth.balanceOf(address(this));
+                wethBalance = weth.balanceOf(address(this));
 
                 // Approve and transfer WETH to treasury
                 weth.safeApprove(address(treasury), wethBalance);
                 weth.safeTransfer(address(treasury), wethBalance);
             }
+        }
+
+         // 4.  Deposit LUSD from #2 and potentially #3 into StabilityPool
+        uint256 lusdBalance = IERC20(lusdTokenAddress).balanceOf(address(this));
+        if (lusdBalance > 0) {
+            depositLUSD(lusdBalance);
         }
 
         return true;
@@ -355,11 +348,15 @@ contract LUSDAllocator is Ownable {
         require(token == lusdTokenAddress, "token address does not match LUSD token");
         treasury.manage(token, amount); // retrieve amount of asset from treasury
 
-        IERC20(token).approve(address(lusdStabilityPool), amount); // approve to deposit into stability pool
+        depositLUSD(amount); 
+    }
+
+    function depositLUSD(uint256 amount) internal {
+        IERC20(lusdTokenAddress).approve(address(lusdStabilityPool), amount); // approve to deposit into stability pool
         lusdStabilityPool.provideToSP(amount, frontEndAddress); //s either a front-end address OR 0x0
 
-        uint256 value = tokenValue(token, amount); // treasury RFV calculator
-        accountingFor(amount, value, true); // account for deposit
+        uint256 value = tokenValue(lusdTokenAddress, amount); // treasury RFV calculator
+        accountingFor(amount, value, true); // account for deposit      
     }
 
     /**

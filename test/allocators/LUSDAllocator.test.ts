@@ -2,7 +2,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import chai, { expect } from "chai";
 import { ethers } from "hardhat";
 const { BigNumber } = ethers;
-import { deployMockContract } from "ethereum-waffle";
 import { FakeContract, smock } from '@defi-wonderland/smock'
 import {
   IERC20,
@@ -379,12 +378,6 @@ describe("LUSDAllocator", () => {
         .to.be.revertedWith("Not approved");
     });
 
-    // it.only("harvest", async () => {
-    //   await allocator.connect(owner).harvest();
-    //     // .to.be.revertedWith("Not approved");
-    // });    
-
-
     it("perform deposit, withdrawal", async () => {
      
       // enable RESERVEMANAGER role
@@ -431,14 +424,6 @@ describe("LUSDAllocator", () => {
 
       expect(ethRewards).to.equal(ZERO);
       expect(lqtyRewards).to.equal(ZERO);
-
-      // await expect(allocator.connect(owner).harvest())
-      // .to.be.revertedWith("Not approved")
-      // .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("111"), 0, 0)
-      // .not.to.emit(lusdStabilityPool, "LQTYPaidToFrontEnd").withArgs(ZERO_ADDRESS, 0)          //How to get NOT emit to work??!
-      // .to.emit(lusdStabilityPool, "LQTYPaidToDepositor").withArgs(allocator.address, 0)  ///Hmm 0 LQTY???          
-      ;
-
 
       await expect(allocator.connect(owner).withdraw(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT))
         .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("350461943753146787543868841926858937250"), 0, 0)
