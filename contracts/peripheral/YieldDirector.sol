@@ -137,8 +137,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             uint256 lastIndex = donationInfo[msg.sender].length - 1;
             if(recipientIndex != lastIndex) {
                 donationInfo[msg.sender][recipientIndex] = donationInfo[msg.sender][lastIndex];
-                donationInfo[msg.sender].pop();
             }
+            donationInfo[msg.sender].pop();
         } else {
             donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
             donation.deposit -= amount_;
@@ -196,6 +196,64 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
         emit AllWithdrawn(msg.sender, total);
     }
+    
+    /**
+        @notice Redirect the yields of a deposit to another recipient
+     */
+	function redirectDeposit(address oldRecipient_, address newRecipient_, uint amount_) external override {
+        require(!withdrawDisabled, "Withdraws currently disabled");
+        require(!depositDisabled, "Deposits currently disabled");
+
+        uint256 oldRecipientIndex = _getRecipientIndex(msg.sender, oldRecipient_);
+        require(oldRecipientIndex != MAX_UINT256, "oldRecipient has no deposit");
+        
+        uint256 sOhmIndex = IsOHM(sOHM).index();
+        DonationInfo storage oldDonation = donationInfo[msg.sender][oldRecipientIndex];
+        require(amount_ > oldDonation.deposit, "amount exceeds deposit");
+
+        oldDonation.carry += _getAccumulatedValue(oldDonation.agnosticDeposit, oldDonation.indexAtLastChange);
+        oldDonation.deposit -= amount_;
+        oldDonation.agnosticDeposit = _toAgnostic(oldDonation.deposit);
+        oldDonation.indexAtLastChange = sOhmIndex;
+
+        RecipientInfo storage oldRecipient = recipientInfo[oldRecipient_];
+        oldRecipient.carry += _getAccumulatedValue(oldRecipient.agnosticDebt, oldRecipient.indexAtLastChange);
+        oldRecipient.totalDebt -= amount_;
+        oldRecipient.agnosticDebt = _toAgnostic(oldRecipient.totalDebt + oldRecipient.carry);
+        oldRecipient.indexAtLastChange = sOhmIndex;
+
+        emit Withdrawn(msg.sender, oldRecipient_, amount_);
+
+        uint256 newRecipientIndex = _getRecipientIndex(msg.sender, newRecipient_);
+
+        if(newRecipientIndex == MAX_UINT256) {
+            donationInfo[msg.sender].push(
+                DonationInfo({
+                    recipient: newRecipient_,
+                    deposit: amount_,
+                    agnosticDeposit: _toAgnostic(amount_),
+                    carry: 0,
+                    indexAtLastChange: sOhmIndex
+                })
+            );
+        } else {
+            DonationInfo storage newDonation = donationInfo[msg.sender][newRecipientIndex];
+
+            newDonation.carry += _getAccumulatedValue(newDonation.agnosticDeposit, newDonation.indexAtLastChange);
+            newDonation.deposit += amount_;
+            newDonation.agnosticDeposit = _toAgnostic(newDonation.deposit);
+            newDonation.indexAtLastChange = sOhmIndex;
+        }
+
+        RecipientInfo storage newRecipient = recipientInfo[newRecipient_];
+
+        newRecipient.carry += _getAccumulatedValue(newRecipient.agnosticDebt, newRecipient.indexAtLastChange);
+        newRecipient.totalDebt += amount_;
+        newRecipient.agnosticDebt = _toAgnostic(newRecipient.totalDebt + newRecipient.carry);
+        newRecipient.indexAtLastChange = sOhmIndex;
+
+        emit Deposited(msg.sender, newRecipient_, amount_);
+    }
 
     /**
         @notice Get deposited sOHM amount for specific recipient
@@ -211,7 +269,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @notice Return total amount of donor's sOHM deposited
      */
     function totalDeposits(address donor_) external override view returns ( uint256 ) {
-        DonationInfo[] storage donations = donationInfo[donor_];
+        DonationInfo[] memory donations = donationInfo[donor_];
         require(donations.length != 0, "User is not donating");
 
         uint256 total = 0;
@@ -226,7 +284,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @notice Return arrays of donor's recipients and deposit amounts, matched by index
      */
     function getAllDeposits(address donor_) external override view returns ( address[] memory, uint256[] memory ) {
-        DonationInfo[] storage donations = donationInfo[donor_];
+        DonationInfo[] memory donations = donationInfo[donor_];
         require(donations.length != 0, "User is not donating");
 
         uint256 len = donations.length;
@@ -249,7 +307,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         uint256 recipientIndex = _getRecipientIndex(donor_, recipient_);
         require(recipientIndex != MAX_UINT256, "No donations to recipient");
 
-        DonationInfo storage donation = donationInfo[donor_][recipientIndex];
+        DonationInfo memory donation = donationInfo[donor_][recipientIndex];
         return donation.carry
             + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
     }
@@ -277,7 +335,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @notice Get redeemable sOHM balance of a recipient address
      */
     function redeemableBalance(address recipient_) public override view returns (uint256) {
-        RecipientInfo storage recipient = recipientInfo[recipient_];
+        RecipientInfo memory recipient = recipientInfo[recipient_];
         return recipient.carry
             + _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange);
     }
@@ -320,7 +378,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @return Array index of recipient address. If recipient not present, returns max uint256 value.
      */
     function _getRecipientIndex(address donor_, address recipient_) internal view returns (uint256) {
-        DonationInfo[] storage info = donationInfo[donor_];
+        DonationInfo[] memory info = donationInfo[donor_];
 
         uint256 existingIndex = MAX_UINT256;
         for (uint256 i = 0; i < info.length; i++) {
