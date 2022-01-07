@@ -9,17 +9,17 @@ import "../interfaces/IERC20.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IAllocator.sol";
 
-import "../types/Ownable.sol";
+import "../types/OlympusAccessControlled.sol";
 
 interface ICurve3Pool {
-    // add liquidity (frax) to receive back FRAX3CRV-f
+    // add liquidity to Curve to receive back 3CRV tokens
     function add_liquidity(
         address _pool,
         uint256[4] memory _deposit_amounts,
         uint256 _min_mint_amount
     ) external returns (uint256);
 
-    // remove liquidity (FRAX3CRV-f) to recieve back Frax
+    // remove liquidity Curve liquidity to recieve back base token
     function remove_liquidity_one_coin(
         address _pool,
         uint256 _burn_amount,
@@ -36,30 +36,15 @@ interface IConvex {
         uint256 _amount,
         bool _stake
     ) external returns (bool);
-
-    //burn a tokenized deposit to receive curve lp tokens back
-    function withdraw(uint256 _pid, uint256 _amount) external returns (bool);
 }
 
 //sample convex reward contracts interface
 interface IConvexRewards {
-    //get balance of an address
-    function balanceOf(address _account) external returns (uint256);
-
-    //withdraw to a convex tokenized deposit
-    function withdraw(uint256 _amount, bool _claim) external returns (bool);
-
     //withdraw directly to curve LP token
     function withdrawAndUnwrap(uint256 _amount, bool _claim) external returns (bool);
 
     //claim rewards
     function getReward() external returns (bool);
-
-    //stake a convex tokenized deposit
-    function stake(uint256 _amount) external returns (bool);
-
-    //stake a convex tokenized deposit for another address(transfering ownership)
-    function stakeFor(address _account, uint256 _amount) external returns (bool);
 
     //get rewards for an address
     function earned(address _account) external view returns (uint256);
@@ -70,7 +55,7 @@ interface IConvexRewards {
  *  earning interest and $CVX.
  */
 
-contract ConvexAllocator is Ownable {
+contract ConvexAllocator is OlympusAccessControlled {
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;
@@ -78,9 +63,11 @@ contract ConvexAllocator is Ownable {
 
     /* ======== STRUCTS ======== */
 
-    struct tokenData {
+    struct TokenData {
         address underlying;
         address curveToken;
+        IConvexRewards rewardPool;
+        address[] rewardTokens;
         int128 index;
         uint256 deployed;
         uint256 limit;
@@ -90,140 +77,137 @@ contract ConvexAllocator is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    IConvex immutable booster; // Convex deposit contract
-    IConvexRewards immutable rewardPool; // Convex reward contract
-    ITreasury immutable treasury; // Olympus Treasury
-    ICurve3Pool immutable curve3Pool; // Curve 3Pool
+    // Convex deposit contract
+    IConvex internal immutable booster = IConvex(0xF403C135812408BFbE8713b5A23a04b3D48AAE31); 
+    // Curve 3Pool
+    ICurve3Pool internal immutable curve3Pool = ICurve3Pool(0xA79828DF1850E8a3A3064576f380D90aECDD3359); 
+    // Olympus Treasury
+    ITreasury internal treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef); 
 
-    mapping(address => tokenData) public tokenInfo; // info for deposited tokens
-    mapping(address => uint256) public pidForReserve; // convex pid for token
+    // info for deposited tokens
+    mapping(address => TokenData) public tokenInfo; 
+    // convex pid for token
+    mapping(address => uint256) public pidForReserve; 
+    // total RFV deployed into lending pool
+    uint256 public totalValueDeployed; 
+    // timelock to raise deployment limit
+    uint256 public immutable timelockInBlocks = 6600; 
 
-    uint256 public totalValueDeployed; // total RFV deployed into lending pool
-
-    uint256 public immutable timelockInBlocks; // timelock to raise deployment limit
-
-    address[] rewardTokens;
 
     /* ======== CONSTRUCTOR ======== */
 
-    constructor(
-        address _treasury,
-        address _booster,
-        address _rewardPool,
-        address _curve3Pool,
-        uint256 _timelockInBlocks
-    ) {
-        require(_treasury != address(0));
-        treasury = ITreasury(_treasury);
-
-        require(_booster != address(0));
-        booster = IConvex(_booster);
-
-        require(_rewardPool != address(0));
-        rewardPool = IConvexRewards(_rewardPool);
-
-        require(_curve3Pool != address(0));
-        curve3Pool = ICurve3Pool(_curve3Pool);
-
-        timelockInBlocks = _timelockInBlocks;
-    }
+    constructor(IOlympusAuthority _authority) OlympusAccessControlled(_authority) {}
 
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
-     *  @notice claims accrued CVX rewards for all tracked crvTokens
+     * @notice claims accrued CVX rewards for all tracked crvTokens
      */
-    function harvest() public {
-        rewardPool.getReward();
+    function harvest(address[] memory tokens) external {
+        for(uint256 i; i < tokens.length; i++) {
+            TokenData memory tokenData = tokenInfo[tokens[i]];
+            address[] memory rewardTokens = tokenData.rewardTokens;
+            
+            tokenData.rewardPool.getReward();
 
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            uint256 balance = IERC20(rewardTokens[i]).balanceOf(address(this));
+            for (uint256 r = 0; r < rewardTokens.length; r++) {
+                uint256 balance = IERC20(rewardTokens[r]).balanceOf(address(this));
 
-            if (balance > 0) {
-                IERC20(rewardTokens[i]).safeTransfer(address(treasury), balance);
+                if (balance > 0) {
+                    IERC20(rewardTokens[r]).safeTransfer(address(treasury), balance);
+                }
             }
         }
     }
 
     /* ======== POLICY FUNCTIONS ======== */
 
+    function updateTreasury() external onlyGuardian {
+        require(authority.vault() != address(0), "Zero address: Vault");
+        require(address(authority.vault()) != address(treasury), "No change");
+        treasury = ITreasury(authority.vault());
+    }
+
     /**
-     *  @notice withdraws asset from treasury, deposits asset into lending pool, then deposits crvToken into convex
-     *  @param token address
-     *  @param amount uint
-     *  @param amounts uint[]
-     *  @param minAmount uint
+     * @notice withdraws asset from treasury, deposits asset into lending pool, then deposits crvToken into convex
      */
     function deposit(
         address token,
         uint256 amount,
         uint256[4] calldata amounts,
         uint256 minAmount
-    ) public onlyOwner {
-        require(!exceedsLimit(token, amount)); // ensure deposit is within bounds
-
+    ) public onlyGuardian {
+        require(!exceedsLimit(token, amount), "Exceeds deployment limit");
         address curveToken = tokenInfo[token].curveToken;
 
-        treasury.manage(token, amount); // retrieve amount of asset from treasury
+        // retrieve amount of asset from treasury
+        treasury.manage(token, amount); 
 
         // account for deposit
         uint256 value = treasury.tokenValue(token, amount);
         accountingFor(token, amount, value, true);
 
-        IERC20(token).approve(address(curve3Pool), amount); // approve curve pool to spend tokens
-        uint256 curveAmount = curve3Pool.add_liquidity(curveToken, amounts, minAmount); // deposit into curve
+        // approve and deposit into curve
+        IERC20(token).approve(address(curve3Pool), amount); 
+        uint256 curveAmount = curve3Pool.add_liquidity(curveToken, amounts, minAmount); 
 
-        IERC20(curveToken).approve(address(booster), curveAmount); // approve to deposit to convex
-        booster.deposit(pidForReserve[token], curveAmount, true); // deposit into convex
+        // approve and deposit into convex
+        IERC20(curveToken).approve(address(booster), curveAmount); 
+        booster.deposit(pidForReserve[token], curveAmount, true);
     }
 
     /**
-     *  @notice withdraws crvToken from convex, withdraws from lending pool, then deposits asset into treasury
-     *  @param token address
-     *  @param amount uint
-     *  @param minAmount uint
+     * @notice withdraws crvToken from convex, withdraws from lending pool, then deposits asset into treasury
      */
     function withdraw(
         address token,
         uint256 amount,
-        uint256 minAmount
-    ) public onlyOwner {
-        rewardPool.withdrawAndUnwrap(amount, false); // withdraw to curve token
-
+        uint256 minAmount,
+        bool reserve
+    ) public onlyGuardian {
         address curveToken = tokenInfo[token].curveToken;
 
-        IERC20(curveToken).approve(address(curve3Pool), amount); // approve 3Pool to spend curveToken
-        curve3Pool.remove_liquidity_one_coin(curveToken, amount, tokenInfo[token].index, minAmount); // withdraw from curve
+        // withdraw from convex
+        tokenInfo[token].rewardPool.withdrawAndUnwrap(amount, false); 
 
-        uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset withdrawn
+        // approve and withdraw from curve
+        IERC20(curveToken).approve(address(curve3Pool), amount); 
+        curve3Pool.remove_liquidity_one_coin(curveToken, amount, tokenInfo[token].index, minAmount);
+
+        uint256 balance = IERC20(token).balanceOf(address(this));
 
         // account for withdrawal
         uint256 value = treasury.tokenValue(token, balance);
         accountingFor(token, balance, value, false);
 
-        IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
-        treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
+        if (reserve) {
+            // approve and deposit asset into treasury
+            IERC20(token).approve(address(treasury), balance); 
+            treasury.deposit(balance, token, value);
+        } else IERC20(token).safeTransfer(address(treasury), balance);
     }
 
     /**
-     *  @notice adds asset and corresponding crvToken to mapping
-     *  @param token address
-     *  @param curveToken address
+     * @notice adds asset and corresponding crvToken to mapping
      */
     function addToken(
         address token,
         address curveToken,
+        address rewardPool,
+        address[] memory rewardTokens,
         int128 index,
         uint256 max,
         uint256 pid
-    ) external onlyOwner {
-        require(token != address(0));
-        require(curveToken != address(0));
-        require(tokenInfo[token].deployed == 0);
+    ) external onlyGuardian {
+        require(token != address(0), "Zero address: Token");
+        require(curveToken != address(0), "Zero address: Curve Token");
+        require(tokenInfo[token].deployed == 0, "Token added");
 
-        tokenInfo[token] = tokenData({
+        tokenInfo[token] = TokenData({
             underlying: token,
             curveToken: curveToken,
+            rewardPool: IConvexRewards(rewardPool),
+            rewardTokens: rewardTokens,
             index: index,
             deployed: 0,
             limit: max,
@@ -235,39 +219,33 @@ contract ConvexAllocator is Ownable {
     }
 
     /**
-     *  @notice add new reward token to be harvested
-     *  @param token address
+     * @notice add new reward token to be harvested
      */
-    function addRewardToken(address token) external onlyOwner {
-        rewardTokens.push(token);
+    function addRewardTokens(address baseToken, address[] memory rewardTokens) external onlyGuardian {
+        tokenInfo[baseToken].rewardTokens = rewardTokens;
     }
 
     /**
-     *  @notice lowers max can be deployed for asset (no timelock)
-     *  @param token address
-     *  @param newMax uint
+     * @notice lowers max can be deployed for asset (no timelock)
      */
-    function lowerLimit(address token, uint256 newMax) external onlyOwner {
-        require(newMax < tokenInfo[token].limit);
-        require(newMax > tokenInfo[token].deployed); // cannot set limit below what has been deployed already
+    function lowerLimit(address token, uint256 newMax) external onlyGuardian {
+        require(newMax < tokenInfo[token].limit, "Must be lower");
+        require(newMax > tokenInfo[token].deployed, "Greater than deployed");
         tokenInfo[token].limit = newMax;
     }
 
     /**
-     *  @notice starts timelock to raise max allocation for asset
-     *  @param token address
-     *  @param newMax uint
+     * @notice starts timelock to raise max allocation for asset
      */
-    function queueRaiseLimit(address token, uint256 newMax) external onlyOwner {
+    function queueRaiseLimit(address token, uint256 newMax) external onlyGuardian {
         tokenInfo[token].limitChangeTimelockEnd = block.number.add(timelockInBlocks);
         tokenInfo[token].newLimit = newMax;
     }
 
     /**
-     *  @notice changes max allocation for asset when timelock elapsed
-     *  @param token address
+     * @notice changes max allocation for asset when timelock elapsed
      */
-    function raiseLimit(address token) external onlyOwner {
+    function raiseLimit(address token) external onlyGuardian {
         require(block.number >= tokenInfo[token].limitChangeTimelockEnd, "Timelock not expired");
         require(tokenInfo[token].limitChangeTimelockEnd != 0, "Timelock not started");
 
@@ -279,11 +257,7 @@ contract ConvexAllocator is Ownable {
     /* ======== INTERNAL FUNCTIONS ======== */
 
     /**
-     *  @notice accounting of deposits/withdrawals of assets
-     *  @param token address
-     *  @param amount uint
-     *  @param value uint
-     *  @param add bool
+     * @notice accounting of deposits/withdrawals of assets
      */
     function accountingFor(
         address token,
@@ -293,43 +267,34 @@ contract ConvexAllocator is Ownable {
     ) internal {
         if (add) {
             tokenInfo[token].deployed = tokenInfo[token].deployed.add(amount); // track amount allocated into pool
-
             totalValueDeployed = totalValueDeployed.add(value); // track total value allocated into pools
         } else {
             // track amount allocated into pool
             if (amount < tokenInfo[token].deployed) {
                 tokenInfo[token].deployed = tokenInfo[token].deployed.sub(amount);
-            } else {
-                tokenInfo[token].deployed = 0;
-            }
+            } else tokenInfo[token].deployed = 0;
 
             // track total value allocated into pools
             if (value < totalValueDeployed) {
                 totalValueDeployed = totalValueDeployed.sub(value);
-            } else {
-                totalValueDeployed = 0;
-            }
+            } else totalValueDeployed = 0;
         }
     }
 
     /* ======== VIEW FUNCTIONS ======== */
 
     /**
-     *  @notice query all pending rewards
-     *  @return uint
+     * @notice query all pending rewards for a specific base token
      */
-    function rewardsPending() public view returns (uint256) {
-        return rewardPool.earned(address(this));
+    function rewardsPending(address baseToken) external view returns (uint256) {
+        return tokenInfo[baseToken].rewardPool.earned(address(this));
     }
 
     /**
-     *  @notice checks to ensure deposit does not exceed max allocation for asset
-     *  @param token address
-     *  @param amount uint
+     * @notice checks to ensure deposit does not exceed max allocation for asset
      */
     function exceedsLimit(address token, uint256 amount) public view returns (bool) {
         uint256 willBeDeployed = tokenInfo[token].deployed.add(amount);
-
         return (willBeDeployed > tokenInfo[token].limit);
     }
 }
