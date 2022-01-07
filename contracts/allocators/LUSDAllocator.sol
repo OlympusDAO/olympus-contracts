@@ -197,7 +197,7 @@ contract LUSDAllocator is Ownable {
     uint8 public percentETHtoLUSD = 33; // 33% of ETH to LUSD
     uint24 public poolFee = 3000; // Init the uniswap pool fee to 0.3%
 
-    address public daiAddress;
+    address public hopTokenAddress; //Initially DAI, could potentially be USDC
 
     // TODO(zx): I don't think we care about front-end because we're our own frontend.
     address public frontEndAddress; // frontEndAddress for potential liquity rewards
@@ -217,7 +217,7 @@ contract LUSDAllocator is Ownable {
         address _lqtyStaking,
         address _frontEndAddress,
         address _wethAddress,
-        address _daiAddress,
+        address _hopTokenAddress,
         address _uniswapV3Router
     ) {
         setTreasury(_treasury);
@@ -239,8 +239,8 @@ contract LUSDAllocator is Ownable {
         require(_wethAddress != address(0), "WETH token address cannot be 0x0");
         weth = IWETH(_wethAddress);
 
-        require(_daiAddress != address(0), "DAI address cannot be 0x0");
-        daiAddress = _daiAddress; // address can be 0
+        require(_hopTokenAddress != address(0), "Hop Token address cannot be 0x0");
+        hopTokenAddress = _hopTokenAddress; // address can be 0
 
         require(_uniswapV3Router != address(0), "UniswapV3Router address cannot be 0x0");
         swapRouter = ISwapRouter(_uniswapV3Router);
@@ -261,6 +261,11 @@ contract LUSDAllocator is Ownable {
     function setPoolFee(uint24 _poolFee) external onlyOwner {
         require(_poolFee <= 100, "Pool fee must be between 0 and 100");
         poolFee = _poolFee;
+    }
+
+     function setHopTokenAddress(address _hopTokenAddress) external onlyOwner {
+        require(_hopTokenAddress != address(0), "Hop Token address cannot be 0x0");
+        hopTokenAddress = _hopTokenAddress;
     }
 
     /* ======== OPEN FUNCTIONS ======== */
@@ -306,7 +311,7 @@ contract LUSDAllocator is Ownable {
             // The format for pool encoding is (tokenIn, fee, tokenOut/tokenIn, fee, tokenOut) where tokenIn/tokenOut parameter is the shared token across the pools.
             // Since we are swapping WETH to DAI and then DAI to LUSD the path encoding is (WETH, 0.3%, DAI, 0.3%, LUSD).
             ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
-                path: abi.encodePacked(address(weth), poolFee, daiAddress, poolFee, lusdTokenAddress),
+                path: abi.encodePacked(address(weth), poolFee, hopTokenAddress, poolFee, lusdTokenAddress),
                 recipient: address(this),  //Send LUSD here
                 deadline: block.timestamp,
                 amountIn: amountWethToSwap,
