@@ -361,16 +361,14 @@ describe("LUSDAllocator", () => {
 
   describe("integration tests", () => {
     let owner: SignerWithAddress;
-    let manager: SignerWithAddress;
-    let guardian: SignerWithAddress;
+    let manager: SignerWithAddress;    
     let allocator: LUSDAllocator;
     let oldTreasury: IOldTreasury;
     let lusd: IERC20;
     let lusdStabilityPool: IStabilityPool;
 
     const LUSD_TOKEN_ADDRESS = "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0";
-    const STABILITY_POOL_ADDRESS = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb";  
-    const GUADRIAN_ADDRESS = "0x245cc372c84b3645bf0ffe6538620b04a217988b";
+    const STABILITY_POOL_ADDRESS = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb";    
     // const ACTIVE_POOL = "0x741d21A9dd5dcc14cc5cd84cD91fd74638AFA313";
     // const DEFAULT_POOL = "0x896a3F03176f05CFbb4f006BfCd8723F2B0D741C";
 
@@ -379,7 +377,7 @@ describe("LUSDAllocator", () => {
 
       const OLYMPUS_AUTHORITY = "0x1c21F8EA7e39E2BA00BC12d2968D63F4acb38b7A";
       const TREASURY_ADDRESS = "0x31f8cc382c9898b273eff4e0b7626a6987c846e8";
-      const TREASURY_MANAGER = "0x245cc372c84b3645bf0ffe6538620b04a217988b";
+      const TREASURY_MANAGER = "0x245cc372c84b3645bf0ffe6538620b04a217988b";  //This is also our guardian
       const LQTY_TOKEN_ADDRESS = "0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D";
       const LQTY_STAKING_ADDRESS = "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d";
       const WETH_ADDRESS = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
@@ -407,9 +405,6 @@ describe("LUSDAllocator", () => {
 
       await impersonateAccount(TREASURY_MANAGER);
       manager = await ethers.getSigner(TREASURY_MANAGER);
-
-      await impersonateAccount(GUADRIAN_ADDRESS);
-      guardian = await ethers.getSigner(GUADRIAN_ADDRESS);
     });
 
     after(async () => {
@@ -426,12 +421,12 @@ describe("LUSDAllocator", () => {
     const ZERO = ethers.BigNumber.from("0");
 
     it("cannot deposit without unless LUSD token", async () => {
-      await expect(allocator.connect(guardian).deposit(ZERO_ADDRESS, 1))
+      await expect(allocator.connect(manager).deposit(ZERO_ADDRESS, 1))
         .to.be.revertedWith("token address does not match LUSD token");
     });
 
     it("cannot deposit without RESERVE_MANAGER role", async () => {
-      await expect(allocator.connect(guardian).deposit(LUSD_TOKEN_ADDRESS, 1))
+      await expect(allocator.connect(manager).deposit(LUSD_TOKEN_ADDRESS, 1))
         .to.be.revertedWith("Not approved");
     });
 
@@ -452,7 +447,7 @@ describe("LUSDAllocator", () => {
       const stabilityPoolBefore = await lusd.balanceOf(lusdStabilityPool.address);
       expect(stabilityPoolBefore).to.equal(STABILITY_POOL_BALANCE);
 
-      await expect(allocator.connect(guardian).deposit(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT))
+      await expect(allocator.connect(manager).deposit(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT))
         .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("350461943063989161432445055694169347038"), 0, 0)
         // .not.to.emit(lusdStabilityPool, "LQTYPaidToFrontEnd").withArgs(ZERO_ADDRESS, 0)          //How to get NOT emit to work??!
         .to.emit(lusdStabilityPool, "LQTYPaidToDepositor").withArgs(allocator.address, 0)
@@ -482,7 +477,7 @@ describe("LUSDAllocator", () => {
       expect(ethRewards).to.equal(ZERO);
       expect(lqtyRewards).to.equal(ZERO);
 
-      await expect(allocator.connect(guardian).deposit(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT_2))
+      await expect(allocator.connect(manager).deposit(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT_2))
         .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("350461943753146787543868841926858937250"), 0, 0)
         .to.emit(lusdStabilityPool, "DepositSnapshotUpdated").withArgs(allocator.address,
           ethers.BigNumber.from("876920926160447076"), ethers.BigNumber.from("58089263752322121983911170457988"), ethers.BigNumber.from("350461943753146787543868841926858937250"))
@@ -510,7 +505,7 @@ describe("LUSDAllocator", () => {
         // .to.emit(oldTreasury, "ReservesManaged").withArgs(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT)
         // ;
 
-      await allocator.connect(guardian).withdraw(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT);
+      await allocator.connect(manager).withdraw(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT);
         // .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("350461943753146787543868841926858937250"), 0, 0)
         // // .not.to.emit(lusdStabilityPool, "LQTYPaidToFrontEnd").withArgs(ZERO_ADDRESS, 0)          //How to get NOT emit to work??!
         // .to.emit(lusdStabilityPool, "LQTYPaidToDepositor").withArgs(allocator.address, ethers.BigNumber.from("5352906630778467"))
