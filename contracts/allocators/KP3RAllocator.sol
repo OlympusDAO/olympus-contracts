@@ -34,91 +34,96 @@ interface IKP3RVault {
 
 interface IGauge {
 
-    function vote(address[] calldata _tokenVote, uint256[] calldata _weights) external;
-
+    function vote(
+        address[] calldata _tokenVote, 
+        uint256[] calldata _weights
+    ) external;
 }
 
-contract KP3RAllocator is OlympusAccessControlled {
-    /* ======== DEPENDENCIES ======== */
-
+/// @title   Olympus KP3R Holder
+/// @author  JeffX
+/// @notice  Manages KP3R from treasury and locks into vKP3R contract
+contract OlympusKP3RHolder is OlympusAccessControlled {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
-
-    /* ======== STATE VARIABLES ======== */
 
     // KP3RVault deposit contract
     IKP3RVault internal immutable KP3RVault = IKP3RVault(0x2FC52C61fB0C03489649311989CE2689D93dC1a2); 
     // Foxed Forex Gauge contract
     IGauge internal immutable gauge = IGauge(0x81a8CAb6bb568fC94bCa70C9AdbFCF05592dEd7b);
+    // KP3R token
+    IERC20 internal immutable KP3R = IERC20(0x1cEB5cB57C4D4E2b2433641b95Dd330A33185A44);
     // Olympus Treasury
     ITreasury internal treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef); 
 
-    address internal immutable KP3R = 0x1cEB5cB57C4D4E2b2433641b95Dd330A33185A44;
 
+    /// CONSTRUCTOR ///
 
-    /* ======== CONSTRUCTOR ======== */
-
+    /// @param _authority  Address of the Olympus Authority contract
     constructor(IOlympusAuthority _authority) OlympusAccessControlled(_authority) {}
 
-    /* ======== POLICY FUNCTIONS ======== */
 
+    /// POLICY FUNCTIONS ///
+
+    /// @notice  If vault has been updated through authority contract update treasury address
     function updateTreasury() external onlyGuardian {
         require(authority.vault() != address(0), "Zero address: Vault");
         require(address(authority.vault()) != address(treasury), "No change");
         treasury = ITreasury(authority.vault());
     }
 
-    /**
-     * @notice withdraws KP3R from treasury and creates vault
-     */
-    function createLock(uint256 amount, uint256 unlockTime) external onlyGuardian {
+    /// @notice             Manages KP3R from treasury and creates lock in vKP3R
+    /// @param _amount      Amount of KP3R that will be managed from treasury and used to create lock
+    /// @param _unlockTime  Timestamp at which lock will be over
+    function createLock(uint256 _amount, uint256 _unlockTime) external onlyGuardian {
 
         // retrieve amount of KP3R from treasury
-        treasury.manage(KP3R, amount); 
+        treasury.manage(address(KP3R), _amount); 
 
         // approve and deposit into curve
-        IERC20(KP3R).approve(address(KP3RVault), amount); 
+        KP3R.approve(address(KP3RVault), _amount); 
 
-        KP3RVault.create_lock(amount, unlockTime);
+        KP3RVault.create_lock(_amount, _unlockTime);
     }
 
-    /**
-     * @notice withdraws KP3R from treasury and adds to already created vault
-     */
-    function increaseAmount(uint256 amount) external onlyGuardian {
+    /// @notice         Manages KP3R from treasury adds to already exisiting lock
+    /// @param _amount  Amount of KP3R that will be managed from treasury and used to add to already existing lock
+    function increaseAmount(uint256 _amount) external onlyGuardian {
 
         // retrieve amount of KP3R from treasury
-        treasury.manage(KP3R, amount); 
+        treasury.manage(address(KP3R), _amount); 
 
         // approve and deposit into curve
-        IERC20(KP3R).approve(address(KP3RVault), amount); 
+        KP3R.approve(address(KP3RVault), _amount); 
 
-        KP3RVault.increase_amount(amount);
+        KP3RVault.increase_amount(_amount);
     }
 
-    /**
-     * @notice Increases lock time on vault
-     */
-    function increaseLockTime(uint256 unlockTime) external onlyGuardian {
-
-        KP3RVault.increase_unlock_time(unlockTime);
+    /// @notice             Increases unlock time of existing lock
+    /// @param _unlockTime  Updated Timestamp at which lock will be over
+    function increaseLockTime(uint256 _unlockTime) external onlyGuardian {
+        KP3RVault.increase_unlock_time(_unlockTime);
     }
 
-    /**
-     * @notice After timelock is over withdraw KP3R to treasury
-     */
-    function withdraw() external onlyGuardian {
+    /// @notice  After timelock is over unlock KP3R and transfer to treasury
+    function unlockKP3R() external onlyGuardian {
         KP3RVault.withdraw();
 
-        uint amount = IERC20(KP3R).balanceOf(address(this));
+        uint amount = KP3R.balanceOf(address(this));
 
-        IERC20(KP3R).transfer(address(treasury), amount);
+        KP3R.safeTransfer(address(treasury), amount);
     }
 
+    /// @notice         Transfers specified ERC20 and amount to treaury
+    /// @param _asset   Addres of asset to transfer to treasury
+    /// @param _amount  Amount of `_asset` to be transfered to treasury
+    function withdraw(IERC20 _asset, uint256 _amount) external onlyGuardian {
+        _asset.safeTransfer(address(treasury), _amount);
+    }
 
-    /**
-     * @notice Vote in Fixed Forex Gauge
-     */
+    /// @notice            Vote in Fixed Forex Gauge
+    /// @param _tokenVote  Addresses of tokens that are being voted on
+    /// @param _weights    Weight of vote each corresponding token recieves
     function vote(address[] calldata _tokenVote, uint[] calldata _weights) external onlyGuardian {
         gauge.vote(_tokenVote, _weights);
     }
