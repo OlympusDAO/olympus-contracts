@@ -224,21 +224,46 @@ describe("LUSDAllocator", () => {
         it("harvest testing", async () => {
           const AMOUNT = 12345;
           const WETH_TO_TREASURY = 8147; //AMOUNT * .66 = 8147.7, truncated to 8147
+          const LQTY_REWARDS = 444;
+          const LUSD_REWARDS = 555;
+          const LUSD_REWARDS_VALUE = LUSD_REWARDS * (10 ** 8);
           
           lusdTokenFake.decimals.returns(1);
+          stabilityPoolFake.getDepositorETHGain.returns(AMOUNT);
+          lqtyTokenFake.balanceOf.returns(LQTY_REWARDS);  //Non-zero forces a call to staking contract
+          lusdTokenFake.balanceOf.returns(LUSD_REWARDS);
+
           wethTokenFake.balanceOf.returns(WETH_TO_TREASURY);
           wethTokenFake.approve.returns(true);
           wethTokenFake.transfer.returns(true);
           swapRouterFake.exactInput.returns(222);
-          stabilityPoolFake.getDepositorETHGain.returns(AMOUNT);
-
+         
+          
           await alice.sendTransaction({
             to: lusdAllocator.address,
             value: AMOUNT,
           });          
           await lusdAllocator.connect(owner).harvest();
 
+          /**
+        1.  Harvest from LUSD StabilityPool to get ETH+LQTY rewards
+        2.  Stake LQTY rewards from #1.  This txn will also give out any outstanding ETH+LUSD rewards from prior staking
+        3.  If we have eth, convert to weth, then swap a percentage of it to LUSD.  If swap successul then send all remaining WETH to treasury
+        4.  Deposit LUSD from #2 and potentially #3 into StabilityPool
+           */
+
+          // Step #1
+          expect(stabilityPoolFake.withdrawFromSP).to.be.calledWith(0);
+          // Step #2
+          expect(lqtyStakingFake.stake).to.be.calledWith(LQTY_REWARDS);
+          // Step #3
           expect(wethTokenFake.transfer).to.be.calledWith(treasuryFake.address, WETH_TO_TREASURY);          
+          // Step #4
+          expect(stabilityPoolFake.provideToSP).to.be.calledWith(LUSD_REWARDS, ZERO_ADDRESS);
+          // Step #4 - bookkeeping
+          expect(await lusdAllocator.totalAmountDeployed()).to.equal(LUSD_REWARDS);
+          expect(await lusdAllocator.totalValueDeployed()).to.equal(LUSD_REWARDS_VALUE);
+     
         });
       });
 

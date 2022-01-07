@@ -285,7 +285,6 @@ contract LUSDAllocator is Ownable {
 
         // 2.  Stake LQTY rewards from #1.  This txn will also give out any outstanding ETH+LUSD rewards from prior staking
         uint256 balanceLqty = IERC20(lqtyTokenAddress).balanceOf(address(this)); // LQTY balance received from stability pool
-
         if (balanceLqty > 0) {
             //Stake
             lqtyStaking.stake(balanceLqty); //Stake LQTY, also receives any prior ETH+LUSD rewards from prior staking
