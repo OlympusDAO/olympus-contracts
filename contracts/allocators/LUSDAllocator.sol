@@ -13,6 +13,8 @@ import "../interfaces/IAllocator.sol";
 import "../interfaces/ISwapRouter.sol";
 
 import "../types/Ownable.sol";
+import "../types/OlympusAccessControlled.sol";
+
 
 //https://etherscan.io/address/0x66017D22b0f8556afDd19FC67041899Eb65a21bb
 /*
@@ -178,7 +180,7 @@ interface ILQTYStaking {
  *  earning interest and $stkAAVE.
  */
 
-contract LUSDAllocator is Ownable {
+contract LUSDAllocator is OlympusAccessControlled {
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;
@@ -210,6 +212,7 @@ contract LUSDAllocator is Ownable {
     /* ======== CONSTRUCTOR ======== */
 
     constructor(
+        address _authority,
         address _treasury,
         address _lusdTokenAddress,
         address _lqtyTokenAddress,
@@ -219,8 +222,9 @@ contract LUSDAllocator is Ownable {
         address _wethAddress,
         address _hopTokenAddress,
         address _uniswapV3Router
-    ) {
-        setTreasury(_treasury);
+    )  OlympusAccessControlled(IOlympusAuthority(_authority)) {
+        require(_treasury != address(0), "treasury address cannot be 0x0");
+        treasury = ITreasury(_treasury);
 
         require(_lusdTokenAddress != address(0), "LUSD token address cannot be 0x0");
         lusdTokenAddress = _lusdTokenAddress;
@@ -253,21 +257,35 @@ contract LUSDAllocator is Ownable {
         emit Deposit(msg.sender, msg.value);
     }
 
-    function setPercentETHtoLUSD(uint8 _percentETHtoLUSD) external onlyOwner {
+
+    /* ======== CONFIGURE FUNCTIONS for Guardian only ======== */
+    function setPercentETHtoLUSD(uint8 _percentETHtoLUSD) external onlyGuardian {
         require(_percentETHtoLUSD <= 100, "Percentage must be between 0 and 100");
         percentETHtoLUSD = _percentETHtoLUSD;
     }
 
-    function setPoolFee(uint24 _poolFee) external onlyOwner {
+    function setPoolFee(uint24 _poolFee) external onlyGuardian {
         require(_poolFee <= 100, "Pool fee must be between 0 and 100");
         poolFee = _poolFee;
     }
 
-     function setHopTokenAddress(address _hopTokenAddress) external onlyOwner {
+     function setHopTokenAddress(address _hopTokenAddress) external onlyGuardian {
         require(_hopTokenAddress != address(0), "Hop Token address cannot be 0x0");
         hopTokenAddress = _hopTokenAddress;
     }
 
+   /**
+     *  @notice setsFrontEndAddress for Stability pool rewards
+     *  @param _frontEndAddress address
+     */
+    function setFrontEndAddress(address _frontEndAddress) external onlyGuardian {
+        frontEndAddress = _frontEndAddress;
+    }
+
+    function setTreasury(address _treasury) public onlyGuardian {
+        require(_treasury != address(0), "treasury address cannot be 0x0");
+        treasury = ITreasury(_treasury);
+    }
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
@@ -348,7 +366,7 @@ contract LUSDAllocator is Ownable {
      *  @param token address
      *  @param amount uint
      */
-    function deposit(address token, uint256 amount) external onlyOwner {
+    function deposit(address token, uint256 amount) external onlyGuardian {
         require(token == lusdTokenAddress, "token address does not match LUSD token");
         treasury.manage(token, amount); // retrieve amount of asset from treasury
 
@@ -368,7 +386,7 @@ contract LUSDAllocator is Ownable {
      *  @param token address
      *  @param amount uint
      */
-    function withdraw(address token, uint256 amount) public onlyOwner {
+    function withdraw(address token, uint256 amount) public onlyGuardian {
         require(token == lusdTokenAddress, "token address does not match LUSD token");
 
         lusdStabilityPool.withdrawFromSP(amount); // withdraw from SP
@@ -380,19 +398,6 @@ contract LUSDAllocator is Ownable {
 
         IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
         treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
-    }
-
-    /**
-     *  @notice setsFrontEndAddress for Stability pool rewards
-     *  @param _frontEndAddress address
-     */
-    function setFrontEndAddress(address _frontEndAddress) external onlyOwner {
-        frontEndAddress = _frontEndAddress;
-    }
-
-    function setTreasury(address _treasury) public onlyOwner {
-        require(_treasury != address(0), "treasury address cannot be 0x0");
-        treasury = ITreasury(_treasury);
     }
 
     /* ======== INTERNAL FUNCTIONS ======== */
