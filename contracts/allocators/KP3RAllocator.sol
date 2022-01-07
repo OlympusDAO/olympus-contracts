@@ -32,6 +32,12 @@ interface IKP3RVault {
      function withdraw() external;
 }
 
+interface IGauge {
+
+    function vote(address[] calldata _tokenVote, uint256[] calldata _weights) external;
+
+}
+
 contract KP3RAllocator is OlympusAccessControlled {
     /* ======== DEPENDENCIES ======== */
 
@@ -42,6 +48,8 @@ contract KP3RAllocator is OlympusAccessControlled {
 
     // KP3RVault deposit contract
     IKP3RVault internal immutable KP3RVault = IKP3RVault(0x2FC52C61fB0C03489649311989CE2689D93dC1a2); 
+    // Foxed Forex Gauge contract
+    IGauge internal immutable gauge = IGauge(0x81a8CAb6bb568fC94bCa70C9AdbFCF05592dEd7b);
     // Olympus Treasury
     ITreasury internal treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef); 
 
@@ -105,6 +113,14 @@ contract KP3RAllocator is OlympusAccessControlled {
         uint amount = IERC20(KP3R).balanceOf(address(this));
 
         IERC20(KP3R).transfer(address(treasury), amount);
+    }
+
+
+    /**
+     * @notice Vote in Fixed Forex Gauge
+     */
+    function vote(address[] calldata _tokenVote, uint[] calldata _weights) external onlyGuardian {
+        gauge.vote(_tokenVote, _weights);
     }
 
 }
