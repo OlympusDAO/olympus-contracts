@@ -247,8 +247,7 @@ describe.only("YieldDirector", async () => {
         await tyche.withdraw(principal, bob.address);
 
         // Verify donor and recipient data is properly updated
-        const donationInfo1 = await tyche.donationInfo(deployer.address, "0");
-        await expect(donationInfo1.deposit).is.equal("0");
+        await expect(tyche.donationInfo(deployer.address, "0")).to.be.reverted
 
         const recipientInfo2 = await tyche.recipientInfo(bob.address);
         await expect(recipientInfo2.agnosticDebt).is.equal("9990009"); // .009~
@@ -257,13 +256,13 @@ describe.only("YieldDirector", async () => {
         await expect(await tyche.redeemableBalance(bob.address)).is.equal(donatedAmount);
     });
 
-    // TODO
     it("should redeem tokens", async () => {
         // Deposit 100 sOHM into Tyche and donate to Bob
-        const principal = "100000000000"; // 100
+        const principal = BigNumber.from("100000000000") // 100
         await tyche.deposit(principal, bob.address);
         await triggerRebase();
         await tyche.connect(bob).redeem();
+        expect(await sOhm.balanceOf(bob.address)).to.equal(principal.div(1000))
     });
 
     it("should withdraw tokens before recipient redeems", async () => {
@@ -421,8 +420,25 @@ describe.only("YieldDirector", async () => {
         await expect(await tyche.redeemableBalance(bob.address)).is.equal(donated);
     });
 
+    it("should redirect deposit to another recipient", async () => {
+        const principal = "100000000000"; //100sOhm
+
+        await tyche.deposit(principal, alice.address);
+
+        await triggerRebase();
+
+        await expect(await tyche.redeemableBalance(alice.address)).is.equal("100000000");
+        await tyche.redirectDeposit(alice.address, bob.address, principal)
+
+        await triggerRebase();
+        await expect(await tyche.redeemableBalance(alice.address)).is.equal("100100000");
+        await expect(await tyche.redeemableBalance(bob.address)).is.equal("100000000");
+        await expect((await tyche.recipientInfo(bob.address)).totalDebt.toString()).is.equal(principal);
+        await expect((await tyche.donationInfo(deployer.address, 0)).recipient).is.equal(bob.address);
+    });
+
     it("should withdrawAll after donating to multiple sources", async () => {
-        // Both deployer and alice deposit 100 sOHM and donate to Bob
+        // Deploter deposits 100 sOHM to donate to Alice and Bob
         const principal = "100000000000";
 
         // Deposit from 2 accounts

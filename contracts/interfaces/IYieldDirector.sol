@@ -5,6 +5,7 @@ interface IYieldDirector {
 	function deposit(uint amount_, address recipient_) external;
 	function withdraw(uint amount_, address recipient_) external;
 	function withdrawAll() external;
+	function redirectDeposit(address oldRecipient_, address newRecipient_, uint amount_) external;
 	function depositsTo(address donor_, address recipient_) external view returns ( uint256 );
     function getAllDeposits(address donor_) external view returns ( address[] memory, uint256[] memory );
 	function totalDeposits(address donor_) external view returns ( uint256 );
