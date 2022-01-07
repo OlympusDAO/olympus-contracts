@@ -17,12 +17,8 @@ import {
 const { fork_network, fork_reset } = require("../utils/network_fork");
 const impersonateAccount = require("../utils/impersonate_account");
 const { advanceBlock, duration, increase } = require("../utils/advancement");
-const wethAbi = require("../../abis/weth.json");
 const lusdAbi = require("../../abis/lusd.json");
 const lusdStabilityPoolAbi = require("../../abis/lusd_stability_pool.json");
-const lusdTroveManagerAbi = require("../../abis/lusd_trove_manager.json");
-const lusdActivePoolAbi = require("../../abis/lusd_active_pool.json");
-const lusdDefaultPoolAbi = require("../../abis/lusd_default_pool.json");
 const oldTreasuryAbi = require("../../abis/old_treasury_abi.json");
 
 chai.use(smock.matchers);
@@ -41,6 +37,7 @@ describe("LUSDAllocator", () => {
     let lusdTokenFake: FakeContract<IERC20Metadata>;
     let lqtyTokenFake: FakeContract<IERC20>;
     let wethTokenFake: FakeContract<IERC20>;
+    let daiTokenFake: FakeContract<IERC20>;
     let swapRouterFake: FakeContract<ISwapRouter>;
     let lusdAllocator: LUSDAllocator;    
 
@@ -52,6 +49,7 @@ describe("LUSDAllocator", () => {
       lusdTokenFake = await smock.fake<IERC20Metadata>("IERC20Metadata");
       lqtyTokenFake = await smock.fake<IERC20>("IERC20");
       wethTokenFake = await smock.fake<IERC20>("IERC20");
+      daiTokenFake = await smock.fake<IERC20>("IERC20");
       swapRouterFake = await smock.fake<ISwapRouter>("ISwapRouter");
     });
 
@@ -65,6 +63,7 @@ describe("LUSDAllocator", () => {
           lqtyStakingFake.address,
           ZERO_ADDRESS,
           wethTokenFake.address,
+          daiTokenFake.address,
           swapRouterFake.address
         );
         expect(await lusdAllocator.lusdTokenAddress()).to.equal(lusdTokenFake.address);
@@ -79,6 +78,7 @@ describe("LUSDAllocator", () => {
           lqtyStakingFake.address,
           ZERO_ADDRESS,
           wethTokenFake.address,
+          daiTokenFake.address,
           swapRouterFake.address
         )).to.be.revertedWith("treasury address cannot be 0x0");
       });
@@ -92,6 +92,7 @@ describe("LUSDAllocator", () => {
           lqtyStakingFake.address,
           ZERO_ADDRESS,
           wethTokenFake.address,
+          daiTokenFake.address,
           swapRouterFake.address
         )).to.be.revertedWith("stabilityPool address cannot be 0x0");
       });
@@ -105,6 +106,7 @@ describe("LUSDAllocator", () => {
           lqtyStakingFake.address,
           ZERO_ADDRESS,
           wethTokenFake.address,
+          daiTokenFake.address,
           swapRouterFake.address
         )).to.be.revertedWith("LUSD token address cannot be 0x0");
       });
@@ -118,6 +120,7 @@ describe("LUSDAllocator", () => {
           lqtyStakingFake.address,
           ZERO_ADDRESS,
           wethTokenFake.address,
+          daiTokenFake.address,
           swapRouterFake.address
         )).to.be.revertedWith("LQTY token address cannot be 0x0");
       });
@@ -131,6 +134,7 @@ describe("LUSDAllocator", () => {
           ZERO_ADDRESS,
           ZERO_ADDRESS,
           wethTokenFake.address,
+          daiTokenFake.address,
           swapRouterFake.address
         )).to.be.revertedWith("LQTY staking address cannot be 0x0");
       });
@@ -144,6 +148,7 @@ describe("LUSDAllocator", () => {
           lqtyStakingFake.address,
           ZERO_ADDRESS,
           ZERO_ADDRESS,
+          daiTokenFake.address,
           swapRouterFake.address
         )).to.be.revertedWith("WETH token address cannot be 0x0");
       });
@@ -157,6 +162,7 @@ describe("LUSDAllocator", () => {
           lqtyStakingFake.address,
           ZERO_ADDRESS,
           wethTokenFake.address,
+          daiTokenFake.address,
           ZERO_ADDRESS
         )).to.be.revertedWith("UniswapV3Router address cannot be 0x0");
       });
@@ -173,6 +179,7 @@ describe("LUSDAllocator", () => {
           lqtyStakingFake.address,
           ZERO_ADDRESS,
           wethTokenFake.address,
+          daiTokenFake.address,
           swapRouterFake.address
         );
       });
@@ -217,10 +224,13 @@ describe("LUSDAllocator", () => {
       describe("harvest", () => {
         it("harvest testing", async () => {
           const AMOUNT = 12345;
+          const WETH_TO_TREASURY = 8147; //AMOUNT * .66 = 8147.7, truncated to 8147
           
           lusdTokenFake.decimals.returns(1);
-          wethTokenFake.approve.whenCalledWith(lusdAllocator.address, AMOUNT).returns(true);
-          wethTokenFake.transfer.whenCalledWith(treasuryFake.address, AMOUNT).returns(true);
+          wethTokenFake.balanceOf.returns(WETH_TO_TREASURY);
+          wethTokenFake.approve.returns(true);
+          wethTokenFake.transfer.returns(true);
+          swapRouterFake.exactInput.returns(222);
           stabilityPoolFake.getDepositorETHGain.returns(AMOUNT);
 
           await alice.sendTransaction({
@@ -229,7 +239,7 @@ describe("LUSDAllocator", () => {
           });          
           await lusdAllocator.connect(owner).harvest();
 
-          expect(wethTokenFake.transfer).to.be.calledWith(treasuryFake.address, AMOUNT);          
+          expect(wethTokenFake.transfer).to.be.calledWith(treasuryFake.address, WETH_TO_TREASURY);          
         });
       });
 
@@ -294,20 +304,6 @@ describe("LUSDAllocator", () => {
     address: string;
   }
 
-  interface ITroveManager {
-    connect: any;
-    address: string;
-  }
-
-  interface IActivePool {
-    connect: any;
-    address: string;
-  }
-  interface IDefaultPool {
-    connect: any;
-    address: string;
-  }
-
   async function advance(count: number) {
     for (let i = 0; i < count; i++) {
       await advanceBlock();
@@ -321,15 +317,11 @@ describe("LUSDAllocator", () => {
     let oldTreasury: IOldTreasury;
     let lusd: IERC20;
     let lusdStabilityPool: IStabilityPool;
-    let lusdTroveManager: ITroveManager;
-    let lusdActivePool: IActivePool;
-    let lusdDefaultPool: IDefaultPool;
 
     const LUSD_TOKEN_ADDRESS = "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0";
-    const STABILITY_POOL_ADDRESS = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb";
-    const TROVE_MANAGER = "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2";
-    const ACTIVE_POOL = "0x741d21A9dd5dcc14cc5cd84cD91fd74638AFA313";
-    const DEFAULT_POOL = "0x896a3F03176f05CFbb4f006BfCd8723F2B0D741C";
+    const STABILITY_POOL_ADDRESS = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb";  
+    // const ACTIVE_POOL = "0x741d21A9dd5dcc14cc5cd84cD91fd74638AFA313";
+    // const DEFAULT_POOL = "0x896a3F03176f05CFbb4f006BfCd8723F2B0D741C";
 
     before(async () => {
       await fork_network(13797676); 
@@ -339,6 +331,7 @@ describe("LUSDAllocator", () => {
       const LQTY_TOKEN_ADDRESS = "0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D";
       const LQTY_STAKING_ADDRESS = "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d";
       const WETH_ADDRESS = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
+      const DAI_ADDRESS = "0x6b175474e89094c44da98b954eedeac495271d0f";
       const UNISWAPV3_ROUTER_ADDRESS = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
 
 
@@ -351,15 +344,13 @@ describe("LUSDAllocator", () => {
         LQTY_STAKING_ADDRESS,
         ZERO_ADDRESS,
         WETH_ADDRESS,
+        DAI_ADDRESS,
         UNISWAPV3_ROUTER_ADDRESS
       );
 
       oldTreasury = new ethers.Contract(TREASURY_ADDRESS, oldTreasuryAbi, ethers.provider) as unknown as IOldTreasury;
       lusd = new ethers.Contract(LUSD_TOKEN_ADDRESS, lusdAbi, ethers.provider) as IERC20;
-      lusdStabilityPool = new ethers.Contract(STABILITY_POOL_ADDRESS, lusdStabilityPoolAbi, ethers.provider) as IStabilityPool;
-      lusdTroveManager = new ethers.Contract(TROVE_MANAGER, lusdTroveManagerAbi, ethers.provider) as ITroveManager;
-      lusdActivePool = new ethers.Contract(ACTIVE_POOL, lusdActivePoolAbi, ethers.provider) as IActivePool;
-      lusdDefaultPool = new ethers.Contract(DEFAULT_POOL, lusdDefaultPoolAbi, ethers.provider) as IDefaultPool;
+      lusdStabilityPool = new ethers.Contract(STABILITY_POOL_ADDRESS, lusdStabilityPoolAbi, ethers.provider) as IStabilityPool;    
 
       await impersonateAccount(TREASURY_MANAGER);
       manager = await ethers.getSigner(TREASURY_MANAGER);
@@ -387,6 +378,12 @@ describe("LUSDAllocator", () => {
       await expect(allocator.connect(owner).deposit(LUSD_TOKEN_ADDRESS, 1))
         .to.be.revertedWith("Not approved");
     });
+
+    // it.only("harvest", async () => {
+    //   await allocator.connect(owner).harvest();
+    //     // .to.be.revertedWith("Not approved");
+    // });    
+
 
     it("perform deposit, withdrawal", async () => {
      

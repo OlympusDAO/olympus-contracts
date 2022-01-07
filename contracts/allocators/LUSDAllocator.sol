@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
-
+pragma abicoder v2;
 import "../libraries/Address.sol";
 import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
@@ -168,9 +168,9 @@ interface ILQTYStaking {
     */
     function unstake(uint256 _LQTYamount) external;
 
-    function getPendingETHGain(address _user) external view returns (uint);
+    function getPendingETHGain(address _user) external view returns (uint256);
 
-    function getPendingLUSDGain(address _user) external view returns (uint);
+    function getPendingLUSDGain(address _user) external view returns (uint256);
 }
 
 /**
@@ -182,6 +182,7 @@ contract LUSDAllocator is Ownable {
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH;
     using SafeMath for uint256;
 
     event Deposit(address indexed dst, uint amount);
@@ -189,10 +190,15 @@ contract LUSDAllocator is Ownable {
     /* ======== STATE VARIABLES ======== */
     IStabilityPool immutable lusdStabilityPool;
     ILQTYStaking immutable lqtyStaking;
-    IWETH immutable weth;  // WETH address (0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2)
+    IWETH immutable weth; // WETH address (0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2)
     ISwapRouter immutable swapRouter;
     ITreasury public treasury; // Olympus Treasury
-  
+
+    uint8 public percentETHtoLUSD = 33; // 33% of ETH to LUSD
+    uint24 public poolFee = 3000; // Init the uniswap pool fee to 0.3%
+
+    address public daiAddress;
+
     // TODO(zx): I don't think we care about front-end because we're our own frontend.
     address public frontEndAddress; // frontEndAddress for potential liquity rewards
     address public lusdTokenAddress; // LUSD Address (0x5f98805A4E8be255a32880FDeC7F6728C6568bA0)
@@ -211,6 +217,7 @@ contract LUSDAllocator is Ownable {
         address _lqtyStaking,
         address _frontEndAddress,
         address _wethAddress,
+        address _daiAddress,
         address _uniswapV3Router
     ) {
         setTreasury(_treasury);
@@ -232,16 +239,28 @@ contract LUSDAllocator is Ownable {
         require(_wethAddress != address(0), "WETH token address cannot be 0x0");
         weth = IWETH(_wethAddress);
 
+        require(_daiAddress != address(0), "DAI address cannot be 0x0");
+        daiAddress = _daiAddress; // address can be 0
+
         require(_uniswapV3Router != address(0), "UniswapV3Router address cannot be 0x0");
         swapRouter = ISwapRouter(_uniswapV3Router);
     }
 
-
     /**
         StabilityPool::withdrawFromSP() and LQTYStaking::stake() will send ETH here, so capture and emit the event
      */
-    receive() external payable {        
+    receive() external payable {
         emit Deposit(msg.sender, msg.value);
+    }
+
+    function setPercentETHtoLUSD(uint8 _percentETHtoLUSD) external onlyOwner {
+        require(_percentETHtoLUSD <= 100, "Percentage must be between 0 and 100");
+        percentETHtoLUSD = _percentETHtoLUSD;
+    }
+
+    function setPoolFee(uint24 _poolFee) external onlyOwner {
+        require(_poolFee <= 100, "Pool fee must be between 0 and 100");
+        poolFee = _poolFee;
     }
 
     /* ======== OPEN FUNCTIONS ======== */
@@ -258,17 +277,19 @@ contract LUSDAllocator is Ownable {
         uint256 stabilityPoolEthRewards = getETHRewards();
         uint256 stabilityPoolLqtyRewards = getLQTYRewards();
 
+        console.log("Harvesting LUSD rewards: ", stabilityPoolEthRewards, stabilityPoolLqtyRewards);
+
         if (stabilityPoolEthRewards == 0 && stabilityPoolLqtyRewards == 0) {
             return false;
         }
         // 1.  Harvest from LUSD StabilityPool to get ETH+LQTY rewards
-        lusdStabilityPool.withdrawFromSP(0);  //Passing 0 b/c we don't want to withdraw from the pool but harvest - see https://discord.com/channels/700620821198143498/818895484956835912/908031137010581594
+        lusdStabilityPool.withdrawFromSP(0); //Passing 0 b/c we don't want to withdraw from the pool but harvest - see https://discord.com/channels/700620821198143498/818895484956835912/908031137010581594
 
         // 2.  Stake LQTY rewards from #1.  This txn will also give out any outstanding ETH+LUSD rewards from prior staking
         uint256 balanceLqty = IERC20(lqtyTokenAddress).balanceOf(address(this)); // LQTY balance received from stability pool
-        
-        uint stakingEthRewards = 0;
-        uint stakingLUSDRewards = 0;
+
+        uint256 stakingEthRewards = 0;
+        uint256 stakingLUSDRewards = 0;
         if (balanceLqty > 0) {
             stakingEthRewards = lqtyStaking.getPendingETHGain(address(this));
             stakingLUSDRewards = lqtyStaking.getPendingLUSDGain(address(this));
@@ -281,19 +302,45 @@ contract LUSDAllocator is Ownable {
             lusdStabilityPool.provideToSP(stakingLUSDRewards, frontEndAddress);
         }
 
-
-        // 4.  Move ETH from #1 and #2 to treasury 
-       if (stabilityPoolEthRewards > 0 || stakingEthRewards > 0) {    
-            // Use total balance in case we have leftover from a prior failed attempt                   
+        // 4.  Move ETH from #1 and #2 to treasury
+        if (stabilityPoolEthRewards > 0 || stakingEthRewards > 0) {
+            // Use total balance in case we have leftover from a prior failed attempt
             uint256 ethBalance = address(this).balance;
 
             // Wrap ETH to WETH
             weth.deposit{value: ethBalance}();
-            // Approve and transfer WETH to treasury
-            weth.approve(address(this), ethBalance);
-            // require(rval, "Failed to approve WETH to treasury"); //TODO need to explore why LUSDAllocator.test.ts "harvest" test fails here
-            weth.transfer(address(treasury), ethBalance);
-            // require(rval, "Failed to transfer WETH to treasury");
+
+            uint256 amountEthToSwap = ethBalance.mul(percentETHtoLUSD).div(100);
+
+            // Approve WETH to uniswap
+            weth.safeApprove(address(swapRouter), amountEthToSwap);
+
+            // Multiple pool swaps are encoded through bytes called a `path`. A path is a sequence of token addresses and poolFees that define the pools used in the swaps.
+            // The format for pool encoding is (tokenIn, fee, tokenOut/tokenIn, fee, tokenOut) where tokenIn/tokenOut parameter is the shared token across the pools.
+            // Since we are swapping WETH to DAI and then DAI to LUSD the path encoding is (WETH, 0.3%, DAI, 0.3%, LUSD).
+            ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
+                path: abi.encodePacked(address(weth), poolFee, daiAddress, poolFee, lusdTokenAddress),
+                recipient: address(treasury),
+                deadline: block.timestamp,
+                amountIn: amountEthToSwap,
+                amountOutMinimum: 0
+            });
+
+            // Executes the swap.
+            uint256 amountOut = swapRouter.exactInput(params);
+
+            // If swap was successful, send the remaining WETH to the treasury.
+            if (amountOut > 0) {
+                // Withdraw WETH
+                weth.withdraw(amountOut);
+
+                // Get updated balance, send to treasury
+                uint256 wethBalance = weth.balanceOf(address(this));
+
+                // Approve and transfer WETH to treasury
+                weth.safeApprove(address(treasury), wethBalance);
+                weth.safeTransfer(address(treasury), wethBalance);
+            }
         }
 
         return true;
