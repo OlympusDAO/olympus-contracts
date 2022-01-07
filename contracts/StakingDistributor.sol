@@ -10,13 +10,12 @@ import "./interfaces/IDistributor.sol";
 
 import "./types/OlympusAccessControlled.sol";
 
+/// @title   Distributor contract
+/// @author  Olympus
+/// @notice  Mints OHM and distributes it to specified addresses every epoch
 contract Distributor is IDistributor, OlympusAccessControlled {
-    /* ========== DEPENDENCIES ========== */
-
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
-
-    /* ====== VARIABLES ====== */
 
     IERC20 private immutable ohm;
     ITreasury private immutable treasury;
@@ -27,21 +26,34 @@ contract Distributor is IDistributor, OlympusAccessControlled {
 
     uint256 private immutable rateDenominator = 1_000_000;
 
-    /* ====== STRUCTS ====== */
+    /// STRUCTS ///
 
+    /// @notice           Reward rate for a recipient
+    /// @param rate       Percent of OHM supply to distribute
+    /// @param recipient  Address that will recieve minted OHM
     struct Info {
         uint256 rate; // in ten-thousandths ( 5000 = 0.5% )
         address recipient;
     }
     Info[] public info;
 
+    /// @notice        Adjustments for a recipient
+    /// @param add     If adding or subtracting to the reward rate
+    /// @param rate    Rate at which adjustment reaches the target
+    /// @param target  Target reward rate that is desired
     struct Adjust {
         bool add;
         uint256 rate;
         uint256 target;
     }
 
-    /* ====== CONSTRUCTOR ====== */
+    /// CONSTRUCTOR ///
+
+
+    /// @param _treasury   Address of the treasury
+    /// @param _ohm        Address of the OHM token
+    /// @param _staking    Address of staking contract
+    /// @param _authority  Address of the Olympus Authority contract
 
     constructor(
         address _treasury,
@@ -57,11 +69,9 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         staking = _staking;
     }
 
-    /* ====== PUBLIC FUNCTIONS ====== */
+    /// PUBLIC FUNCTIONS ///
 
-    /**
-        @notice send epoch reward to staking contract
-     */
+    /// @notice send epoch reward to staking contract
     function distribute() external override {
         require(msg.sender == staking, "Only staking");
         // distribute rewards to each recipient
@@ -73,6 +83,8 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         }
     }
 
+    /// @notice If upon triggering rebase there is a bounty it will be distributed here
+    /// @return Amount of OHM minted as bounty
     function retrieveBounty() external override returns (uint256) {
         require(msg.sender == staking, "Only staking");
         // If the distributor bounty is > 0, mint it for the staking contract.
@@ -83,11 +95,9 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         return bounty;
     }
 
-    /* ====== INTERNAL FUNCTIONS ====== */
+    /// INTERNAL FUNCTIONS ///
 
-    /**
-        @notice increment reward rate for collector
-     */
+    /// @notice increment reward rate for collector
     function adjust(uint256 _index) internal {
         Adjust memory adjustment = adjustments[_index];
         if (adjustment.rate != 0) {
@@ -117,22 +127,18 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         }
     }
 
-    /* ====== VIEW FUNCTIONS ====== */
+    /// VIEW FUNCTIONS ///
 
-    /**
-        @notice view function for next reward at given rate
-        @param _rate uint
-        @return uint
-     */
+    /// @notice       Returns OHM to be minted at a specified rate
+    /// @param _rate  Next reward for a specified rate
+    /// @return       Amount of OHM to be minted
     function nextRewardAt(uint256 _rate) public view override returns (uint256) {
         return ohm.totalSupply().mul(_rate).div(rateDenominator);
     }
 
-    /**
-        @notice view function for next reward for specified address
-        @param _recipient address
-        @return uint
-     */
+    /// @notice            Returns OHM to be minted at a specified recipient address
+    /// @param _recipient  Address of desired recipient
+    /// @return            Amount of OHM to be minted for `_recipient`
     function nextRewardFor(address _recipient) public view override returns (uint256) {
         uint256 reward;
         for (uint256 i = 0; i < info.length; i++) {
@@ -143,32 +149,26 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         return reward;
     }
 
-    /* ====== POLICY FUNCTIONS ====== */
+    /// POLICY FUNCTIONS ///
 
-    /**
-     * @notice set bounty to incentivize keepers
-     * @param _bounty uint256
-     */
+    /// @notice         Set bounty to incentivize keepers
+    /// @param _bounty  Amount of OHM to be set as a bounty
     function setBounty(uint256 _bounty) external override onlyGovernor {
         require(_bounty <= 2e9, "Too much");
         bounty = _bounty;
     }
 
-    /**
-        @notice adds recipient for distributions
-        @param _recipient address
-        @param _rewardRate uint
-     */
+    /// @notice             Add an address to recieve OHM each epoch at a certain rate
+    /// @param _recipient   Address of recipient
+    /// @param _rewardRate  Percent of OHM to be distributed to the sepcified address
     function addRecipient(address _recipient, uint256 _rewardRate) external override onlyGovernor {
         require(_recipient != address(0), "Zero address: Recipient");
         require(_rewardRate <= rateDenominator, "Rate cannot exceed denominator");
         info.push(Info({recipient: _recipient, rate: _rewardRate}));
     }
 
-    /**
-        @notice removes recipient for distributions
-        @param _index uint
-     */
+    /// @notice        Removes recipient for distributions
+    /// @param _index  Index of array `info` that will be removed
     function removeRecipient(uint256 _index) external override {
         require(
             msg.sender == authority.governor() || msg.sender == authority.guardian(),
@@ -179,13 +179,11 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         info[_index].rate = 0;
     }
 
-    /**
-        @notice set adjustment info for a collector's reward rate
-        @param _index uint
-        @param _add bool
-        @param _rate uint
-        @param _target uint
-     */
+    /// @notice         Set adjustment info for a collector's reward rate
+    /// @param _index   Index of array `info` to adjust
+    /// @param _add     Bool if adding or removing to the reward rate
+    /// @param _rate    Rate at which adjustments will be made
+    /// @param _target  Target reward rate that is desired
     function setAdjustment(
         uint256 _index,
         bool _add,
