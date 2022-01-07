@@ -189,16 +189,16 @@ describe.only('YieldDirector', async () => {
         // Verify donor info
         const donationInfo = await tyche.donationInfo(deployer.address, "0");
         await expect(donationInfo.recipient).is.equal(bob.address);
-        await expect(donationInfo.nonAgnosticDeposit).is.equal("10000000000000000000");
-        await expect(donationInfo.agnosticDeposit).is.equal(principal);
+        await expect(donationInfo.nonAgnosticDeposit.div("1000000000")).is.equal("10000000000000000000");
+        await expect(donationInfo.agnosticDeposit.div("1000000000")).is.equal(principal);
         await expect(donationInfo.carry).is.equal("0");
 
         //await expect(donationInfo.amount).is.equal(principal);
 
         // Verify recipient data
         const recipientInfo = await tyche.recipientInfo(bob.address);
-        await expect(recipientInfo.totalDebt).is.equal("10000000000000000000");
-        await expect(recipientInfo.agnosticDebt).is.equal(principal);
+        await expect(recipientInfo.totalDebt.div("1000000000")).is.equal("10000000000000000000");
+        await expect(recipientInfo.agnosticDebt.div("1000000000")).is.equal(principal);
         await expect(recipientInfo.totalCarry).is.equal("0");
 
         await expect(recipientInfo.indexAtLastChange).is.equal("10000000000");

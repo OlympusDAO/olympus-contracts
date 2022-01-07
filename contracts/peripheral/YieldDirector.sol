@@ -137,9 +137,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         if(amount_ >= maxWithdrawable) {
             // Report how much was donated then clear donation information
             uint256 accumulated = _toAgnostic(
-                donation.carry
-                + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange)
-            );
+                    donation.carry
+                    + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange));
             emit Donated(msg.sender, recipient_, accumulated);
 
             delete donationInfo[msg.sender][recipientIndex];
@@ -196,9 +195,9 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
             // Report amount donated
             uint256 accumulated = _toAgnostic(
-                donation.carry
-                + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange)
-            );
+                    donation.carry
+                    + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange));
+
             emit Donated(msg.sender, donation.recipient, accumulated);
         }
 
@@ -279,9 +278,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
         DonationInfo storage donation = donationInfo[donor_][recipientIndex];
         uint256 gohmDonation = _toAgnostic(
-            donation.carry
-            + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange)
-        );
+                donation.carry
+                + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange));
         return gohmDonation;
     }
 
@@ -296,9 +294,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             DonationInfo storage donation = donations[index];
 
             totalGohm += _toAgnostic(
-                donation.carry
-                + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange)
-            );
+                    donation.carry
+                    + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange));
         }
 
         return totalGohm;
