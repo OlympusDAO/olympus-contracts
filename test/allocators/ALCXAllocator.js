@@ -11,14 +11,14 @@ const ALCHEMIST = process.env.ALCHEMIST;
 const TOKEMAK_T_ALCX = process.env.TOKEMAK_T_ALCX;
 const TOKEMAK_MANAGER = process.env.TOKEMAK_MANAGER;
 const TREASURY_MANAGER = process.env.TREASURY_MANAGER;
-const OLD_TREASURY_ADDRESS = process.env.OLD_TREASURY_ADDRESS;
+const TREASURY_ADDRESS = process.env.TREASURY_ADDRESS;
 const ALCHEMIX_STAKING_POOL = process.env.ALCHEMIX_STAKING_POOL;
 
 describe('Alchemist Allocator', async () => {
     let user,
         manager,
         deployer,
-        old_treasury,
+        treasury,
         alchemist_token,
         AlchemistAllocator,
         alchemistAllocator,
@@ -29,9 +29,9 @@ describe('Alchemist Allocator', async () => {
         [deployer, user] = await ethers.getSigners();
 
         AlchemistAllocator = await ethers.getContractFactory('AlchemistAllocator');
-        alchemistAllocator = await AlchemistAllocator.deploy(OLD_TREASURY_ADDRESS, ALCHEMIST, TOKEMAK_T_ALCX, ALCHEMIX_STAKING_POOL);
+        alchemistAllocator = await AlchemistAllocator.deploy(TREASURY_ADDRESS, ALCHEMIST, TOKEMAK_T_ALCX, ALCHEMIX_STAKING_POOL);
 
-        old_treasury = await ethers.getContractAt("OlympusTreasury", OLD_TREASURY_ADDRESS);
+        treasury = await ethers.getContractAt("OlympusTreasury", TREASURY_ADDRESS);
         alchemist_token = await ethers.getContractAt("IERC20", ALCHEMIST);
         manager = await ethers.getContractAt("IManager", TOKEMAK_MANAGER);
 
@@ -43,14 +43,14 @@ describe('Alchemist Allocator', async () => {
         // 2 = RESERVETOKEN
         // 3 = RESERVEMANAGER
 
-        await old_treasury.connect(owner).enable(3, alchemistAllocator.address, alchemistAllocator.address);
-        await old_treasury.connect(owner).enable(0, alchemistAllocator.address, alchemistAllocator.address);
-        await old_treasury.connect(owner).enable(2, ALCHEMIST, ALCHEMIST);
+        await treasury.connect(owner).enable(3, alchemistAllocator.address, alchemistAllocator.address);
+        await treasury.connect(owner).enable(0, alchemistAllocator.address, alchemistAllocator.address);
+        await treasury.connect(owner).enable(2, ALCHEMIST, ALCHEMIST);
 
-        treasury_alchemist_initial_balance = await alchemist_token.balanceOf(OLD_TREASURY_ADDRESS);
+        treasury_alchemist_initial_balance = await alchemist_token.balanceOf(TREASURY_ADDRESS);
     });
 
-    it('Should fail caller is not owner address', async () => { 
+    it('Should fail if caller is not owner address', async () => { 
         await expect(
             alchemistAllocator
                 .connect(user)
@@ -151,7 +151,7 @@ describe('Alchemist Allocator', async () => {
         assert.equal(Number(tAlcx_balance_in_alchemist_pool), Number(requested_withdraw_amount));
     });
 
-    it('Should fail to withdraw Alchemist funds if requested withdrawal cycle has not yet been reach', async () => {
+    it('Should fail to withdraw Alchemist funds if requested withdrawal cycle has not yet been reached', async () => {
         await expect(
             alchemistAllocator
                 .connect(deployer)
@@ -167,7 +167,7 @@ describe('Alchemist Allocator', async () => {
         await manager.connect(onlyRollover).completeRollover(fake_IpfsHash); // used to increase tokemak cycle
 
         await alchemistAllocator.connect(deployer).withdraw();
-        const treasury_alchemist_balance_after_investment = await alchemist_token.balanceOf(OLD_TREASURY_ADDRESS);
+        const treasury_alchemist_balance_after_investment = await alchemist_token.balanceOf(TREASURY_ADDRESS);
 
         const profit_accured = Number(treasury_alchemist_balance_after_investment)
                                 - Number(treasury_alchemist_initial_balance);
