@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.8.10;
 pragma abicoder v2;
 import "../libraries/Address.sol";
-import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 
 import "../interfaces/IERC20.sol";
@@ -185,7 +184,6 @@ contract LUSDAllocator is OlympusAccessControlled {
 
     using SafeERC20 for IERC20;
     using SafeERC20 for IWETH;
-    using SafeMath for uint256;
 
     event Deposit(address indexed dst, uint amount);
 
@@ -320,7 +318,7 @@ contract LUSDAllocator is OlympusAccessControlled {
             weth.deposit{value: ethBalance}();
 
             uint256 wethBalance = weth.balanceOf(address(this));  //Base off of WETH balance in case we have leftover from a prior failed attempt
-            uint256 amountWethToSwap = wethBalance.mul(percentETHtoLUSD).div(100);
+            uint256 amountWethToSwap = wethBalance * percentETHtoLUSD / 100;
 
             // Approve WETH to uniswap
             weth.safeApprove(address(swapRouter), amountWethToSwap);
@@ -414,18 +412,18 @@ contract LUSDAllocator is OlympusAccessControlled {
         bool add
     ) internal {
         if (add) {
-            totalAmountDeployed = totalAmountDeployed.add(amount);
-            totalValueDeployed = totalValueDeployed.add(value); // track total value allocated into pools
+            totalAmountDeployed = totalAmountDeployed + amount;
+            totalValueDeployed = totalValueDeployed + value; // track total value allocated into pools
         } else {
             // track total value allocated into pools
             if (amount < totalAmountDeployed) {
-                totalAmountDeployed = totalAmountDeployed.sub(amount);
+                totalAmountDeployed = totalAmountDeployed - amount;
             } else {
                 totalAmountDeployed = 0;
             }
 
             if (value < totalValueDeployed) {
-                totalValueDeployed = totalValueDeployed.sub(value);
+                totalValueDeployed = totalValueDeployed - value;
             } else {
                 totalValueDeployed = 0;
             }
@@ -437,7 +435,7 @@ contract LUSDAllocator is OlympusAccessControlled {
     Implemented here so we don't have to upgrade contract later
      */
     function tokenValue(address _token, uint256 _amount) internal view returns (uint256 value_) {
-        value_ = _amount.mul(10**9).div(10**IERC20Metadata(_token).decimals());
+        value_ = _amount * (10**9) / (10**IERC20Metadata(_token).decimals());
         return value_;
     }
 
