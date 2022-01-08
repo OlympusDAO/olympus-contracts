@@ -7,7 +7,9 @@ import "../libraries/SafeERC20.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IgOHM.sol";
 import "../interfaces/IStaking.sol";
+import "../interfaces/IOlympusAuthority.sol";
 import "../types/Ownable.sol";
+
 
 interface IClaim {
     struct Term {
@@ -47,8 +49,6 @@ contract GenesisClaim is Ownable {
     IERC20 internal immutable ohm = IERC20(0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5); 
     // payment token
     IERC20 internal immutable dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F); 
-    // mints claim token
-    ITreasury internal immutable treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef); 
     // stake OHM for sOHM
     IStaking internal immutable staking = IStaking(0xB63cac384247597756545b500253ff8E607a8020); 
     // holds non-circulating supply
@@ -57,6 +57,12 @@ contract GenesisClaim is Ownable {
     IgOHM internal immutable gOHM = IgOHM(0x0ab87046fBb341D058F17CBC4c1133F25a20a52f);
     // previous deployment of contract (to migrate terms)
     IClaim internal immutable previous = IClaim(0xEaAA9d97Be33a764031eDdEbA1cB6Cb385350Ca3);
+    // olympus authority contract
+    IOlympusAuthority internal immutable authority = IOlympusAuthority(0x1c21F8EA7e39E2BA00BC12d2968D63F4acb38b7A);
+    // mints claim token
+    ITreasury internal treasury; 
+
+    
 
     // track 1/10 as static. governance can disable if desired.
     bool public useStatic;
@@ -69,7 +75,10 @@ contract GenesisClaim is Ownable {
     // maximum portion of supply can allocate. == 7.8%
     uint256 public maximumAllocated = 78000; 
 
-    constructor() {useStatic = true;}
+    constructor() {
+        useStatic = true;
+        treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef); 
+    }
 
     /* ========== MUTABLE FUNCTIONS ========== */
     
@@ -141,6 +150,15 @@ contract GenesisClaim is Ownable {
     function approve() external {
         ohm.approve(address(staking), 1e33);
         dai.approve(address(treasury), 1e33);
+    }
+
+    /**
+     * @notice  If vault has been updated through authority contract update treasury address
+     */
+    function updateTreasury() external {
+        require(authority.vault() != address(0), "Zero address: Vault");
+        require(address(authority.vault()) != address(treasury), "No change");
+        treasury = ITreasury(authority.vault());
     }
 
     /* ========== VIEW FUNCTIONS ========== */
