@@ -37,6 +37,11 @@ interface IGauge {
     ) external;
 }
 
+interface IClaim {
+    function claim() external returns (uint256);
+    function redeem(uint id) external;
+}
+
 /// @title   Olympus KP3R Holder
 /// @author  JeffX
 /// @notice  Manages KP3R from treasury and locks into vKP3R contract
@@ -49,8 +54,12 @@ contract OlympusKP3RHolder is OlympusAccessControlled {
     IGauge internal immutable gauge = IGauge(0x81a8CAb6bb568fC94bCa70C9AdbFCF05592dEd7b);
     // KP3R token
     IERC20 internal immutable KP3R = IERC20(0x1cEB5cB57C4D4E2b2433641b95Dd330A33185A44);
+    // rKP3R distributor
+    IClaim internal immutable distributor = IClaim(0xd4260B2781e2460f49dB746112BB592ba3fb6382);
     // Olympus Treasury
-    ITreasury internal treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef); 
+    ITreasury internal treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
+
+    address internal immutable rKP3R = 0xEdB67Ee1B171c4eC66E6c10EC43EDBbA20FaE8e9;
 
 
     /// CONSTRUCTOR ///
@@ -84,10 +93,11 @@ contract OlympusKP3RHolder is OlympusAccessControlled {
 
     /// @notice         Manages KP3R from treasury adds to already exisiting lock
     /// @param _amount  Amount of KP3R that will be managed from treasury and used to add to already existing lock
-    function increaseAmount(uint256 _amount) external onlyGuardian {
-
-        // retrieve amount of KP3R from treasury
-        treasury.manage(address(KP3R), _amount); 
+    function increaseAmount(uint256 _amount, bool _treasury) external onlyGuardian {
+        if(_treasury) {
+            // retrieve amount of KP3R from treasury
+            treasury.manage(address(KP3R), _amount); 
+        }
 
         // approve and deposit into curve
         KP3R.approve(address(KP3RVault), _amount); 
@@ -123,5 +133,23 @@ contract OlympusKP3RHolder is OlympusAccessControlled {
     function vote(address[] calldata _tokenVote, uint[] calldata _weights) external onlyGuardian {
         gauge.vote(_tokenVote, _weights);
     }
+
+    function rKP3RClaim() external {
+        distributor.claim();
+    }
+
+    function oKP3Rclaim() external {
+        IClaim(rKP3R).claim();
+    }
+
+    function oKP3RRedeem(uint _id) external {
+        IClaim(rKP3R).redeem(_id);
+    }
+
+    function claim(address _distributor) external {
+        IClaim(_distributor).claim();
+    }
+
+
 
 }
