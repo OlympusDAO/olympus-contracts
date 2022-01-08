@@ -123,7 +123,7 @@ contract AlchemistAllocator is Ownable {
             treasury.manage(alchemist, amount); // retrieve amount of asset from treasury
         }
 
-        IERC20(alchemist).approve(address(tALCX), amount); // approve curve pool to spend tokens
+        IERC20(alchemist).approve(address(tALCX), amount); // approve tALCX pool to spend tokens
         tALCX.deposit(amount);
 
         totalAlchemistDeposited = totalAlchemistDeposited.add(amount);
@@ -131,8 +131,8 @@ contract AlchemistAllocator is Ownable {
         uint256 tALCX_balance = IERC20(address(tALCX)).balanceOf(address(this));
         require(tALCX_balance == amount, "received tALCX must be 1:1 ratio with deposited alchemist amount");
 
-        IERC20(address(tALCX)).approve(address(pool), tALCX_balance); // approve to deposit to convex
-        pool.deposit(_poolId, tALCX_balance); // deposit into convex
+        IERC20(address(tALCX)).approve(address(pool), tALCX_balance); // approve to deposit to Alchemist staking pool
+        pool.deposit(_poolId, tALCX_balance); // deposit into Alchemist staking pool
     }
 
     /**
