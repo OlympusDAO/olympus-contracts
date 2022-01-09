@@ -10,10 +10,23 @@ import "../types/OlympusAccessControlled.sol";
 
 interface IBond {
     function deposit( uint256 _amount, uint256 _maxPrice, address _depositor ) external returns ( uint );
+    function redeem( address _recipient, bool _stake ) external returns ( uint );
+    function pendingPayoutFor( address _depositor ) external view returns ( uint );
 }
 
+/// @title   Olympus Bonding Manager
+/// @author  Olympus
+/// @notice  Bonds to depositories on behalf of Olympus
 contract OlympusBondingManager is OlympusAccessControlled {
     using SafeERC20 for IERC20;
+
+    /// STATE VARIABLES ///
+
+    /// @notice array of all interacted with depositories
+    address[] public depositories;
+
+    /// @notice mapping if depository has been deposited to
+    mapping(address => bool) public depositoryUsed;
 
     // Olympus Treasury
     ITreasury internal treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
@@ -56,6 +69,11 @@ contract OlympusBondingManager is OlympusAccessControlled {
 
         // stake token to treasury
         IBond(_depository).deposit(_amount, _maxPrice, address(treasury));
+
+        if(!depositoryUsed[_depository]) {
+            depositoryUsed[_depository] = true;
+            depositories.push(_depository);
+        }
     }
 
     /// @notice         Transfers specified ERC20 and amount to treaury
@@ -63,6 +81,17 @@ contract OlympusBondingManager is OlympusAccessControlled {
     /// @param _amount  Amount of `_asset` to be transfered to treasury
     function withdraw(IERC20 _asset, uint256 _amount) external onlyGuardian {
         _asset.safeTransfer(address(treasury), _amount);
+    }
+
+    /// @notice  References depositories that have been deposited and redeems if redeemable balance
+    function redeem() external {
+        for(uint i; i < depositories.length; i++) {
+            IBond depository = IBond(depositories[i]);
+            uint256 pendingPayout = depository.pendingPayoutFor(address(treasury));
+            if(pendingPayout > 0) {
+                depository.redeem(address(treasury), true);
+            }
+        }
     }
 
 }
