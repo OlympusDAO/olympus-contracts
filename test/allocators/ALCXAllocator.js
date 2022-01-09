@@ -99,7 +99,7 @@ describe('Alchemix Allocator', async () => {
 
     it('Should deposit OHM treasury Alchemix funds to tokemak, stake received tALCX on Alchemix pool', async () => {   
         await alchemixAllocator.connect(guardian).deposit(treasury_alchemix_initial_balance, 8, false);
-        let tAlcx_balance_in_alchemix_pool = await alchemixAllocator.total_tAlcxDeposited(8);
+        let tAlcx_balance_in_alchemix_pool = await alchemixAllocator.totaltAlcxDeposited(8);
 
         assert.equal(Number(tAlcx_balance_in_alchemix_pool), Number(treasury_alchemix_initial_balance));
     });
@@ -113,14 +113,14 @@ describe('Alchemix Allocator', async () => {
     });
 
     it('Should claim rewards and compound it', async () => {  
-        const tAlcx_balance_in_alchemix_pool_before_tx = await alchemixAllocator.total_tAlcxDeposited(8); 
+        const tAlcx_balance_in_alchemix_pool_before_tx = await alchemixAllocator.totaltAlcxDeposited(8); 
         await advance(172800); // 2 days in seconds
 
         let pending_rewards = await alchemixAllocator.alchemixToClaim(8)
         const total_tALCX_deposited = Number(tAlcx_balance_in_alchemix_pool_before_tx) + Number(pending_rewards);
 
         await alchemixAllocator.connect(guardian).compoundReward(8);
-        const tAlcx_balance_in_alchemix_pool_after_tx = await alchemixAllocator.total_tAlcxDeposited(8); 
+        const tAlcx_balance_in_alchemix_pool_after_tx = await alchemixAllocator.totaltAlcxDeposited(8); 
 
         assert.equal(
             Number(tAlcx_balance_in_alchemix_pool_after_tx).toString().slice(0, 5), 
@@ -149,7 +149,7 @@ describe('Alchemix Allocator', async () => {
     });
 
     it('Should request for withdrawal', async () => {  
-        const tAlcx_balance_in_alchemix_pool = await alchemixAllocator.total_tAlcxDeposited(8); 
+        const tAlcx_balance_in_alchemix_pool = await alchemixAllocator.totaltAlcxDeposited(8); 
         await alchemixAllocator.connect(guardian).requestWithdraw(8, 0, true); //using true coz i am withdrawing the entire funds
 
         let {1: requested_withdraw_amount} = await alchemixAllocator.getRequestedWithdrawalInfo()

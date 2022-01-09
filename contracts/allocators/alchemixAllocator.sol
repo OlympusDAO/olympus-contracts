@@ -93,7 +93,7 @@ contract AlchemixAllocator is OlympusAccessControlled {
      *      calling the deposit function
      *  @param _poolId pool id of tALCX on Alchemix staking pool
      */
-    function compoundReward(uint256 _poolId) public onlyGuardian {
+    function compoundReward(uint256 _poolId) external onlyGuardian {
         pool.claim(_poolId);
         uint256 alchemixBalance = IERC20(alchemix).balanceOf(address(this));
 
@@ -165,7 +165,7 @@ contract AlchemixAllocator is OlympusAccessControlled {
         uint256 balance = IERC20(alchemix).balanceOf(address(this)); // balance of asset withdrawn
 
         totalAlchemixDeposited = totalAlchemixDeposited.sub(requestedAmountToWithdraw);
-        IERC20(alchemix).transfer(address(treasury), balance);
+        IERC20(alchemix).safeTransfer(address(treasury), balance);
     }
 
     function updateTreasury() external onlyGuardian {
@@ -190,7 +190,7 @@ contract AlchemixAllocator is OlympusAccessControlled {
      *  @param _poolId pool id of tALCX on Alchemix staking pool
      *  @return uint
      */
-    function total_tAlcxDeposited(uint256 _poolId) external view returns (uint256) {
+    function totaltAlcxDeposited(uint256 _poolId) external view returns (uint256) {
         return pool.getStakeTotalDeposited(address(this), _poolId);
     }
 
