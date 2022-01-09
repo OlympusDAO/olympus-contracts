@@ -30,7 +30,6 @@ interface IKP3RVault {
 }
 
 interface IGauge {
-
     function vote(
         address[] calldata _tokenVote, 
         uint256[] calldata _weights
@@ -40,6 +39,15 @@ interface IGauge {
 interface IClaim {
     function claim() external returns (uint256);
     function redeem(uint id) external;
+
+    struct option {
+        uint amount;
+        uint strike;
+        uint expiry;
+        bool exercised;
+    }
+
+    function options(uint _id) external view returns(option memory);
 }
 
 /// @title   Olympus KP3R Holder
@@ -56,10 +64,12 @@ contract OlympusKP3RHolder is OlympusAccessControlled {
     IERC20 internal immutable KP3R = IERC20(0x1cEB5cB57C4D4E2b2433641b95Dd330A33185A44);
     // rKP3R distributor
     IClaim internal immutable distributor = IClaim(0xd4260B2781e2460f49dB746112BB592ba3fb6382);
+    // USDC
+    IERC20 internal immutable USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    // rKP3R token
+    IClaim internal immutable rKP3R = IClaim(0xEdB67Ee1B171c4eC66E6c10EC43EDBbA20FaE8e9);
     // Olympus Treasury
     ITreasury internal treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
-
-    address internal immutable rKP3R = 0xEdB67Ee1B171c4eC66E6c10EC43EDBbA20FaE8e9;
 
 
     /// CONSTRUCTOR ///
@@ -93,11 +103,9 @@ contract OlympusKP3RHolder is OlympusAccessControlled {
 
     /// @notice         Manages KP3R from treasury adds to already exisiting lock
     /// @param _amount  Amount of KP3R that will be managed from treasury and used to add to already existing lock
-    function increaseAmount(uint256 _amount, bool _treasury) external onlyGuardian {
-        if(_treasury) {
-            // retrieve amount of KP3R from treasury
-            treasury.manage(address(KP3R), _amount); 
-        }
+    /// @param _manage  Bool if managing KP3R from treasury
+    function increaseAmount(uint256 _amount, bool _manage) external onlyGuardian {
+        if(_manage) { treasury.manage(address(KP3R), _amount); }
 
         // approve and deposit into curve
         KP3R.approve(address(KP3RVault), _amount); 
@@ -134,20 +142,33 @@ contract OlympusKP3RHolder is OlympusAccessControlled {
         gauge.vote(_tokenVote, _weights);
     }
 
+    /// @notice  Claim rKP3R
     function rKP3RClaim() external {
         distributor.claim();
     }
 
-    function oKP3Rclaim() external {
-        IClaim(rKP3R).claim();
+    /// @notice  Burn rKP3R and mint oKP3R
+    function oKP3Rclaim() external onlyGuardian {
+        rKP3R.claim();
     }
 
-    function oKP3RRedeem(uint _id) external {
-        IClaim(rKP3R).redeem(_id);
+    /// @notice         Exercise oKP3R, pay in USDC
+    /// @param _id      ID of option to exercise / oKP3R to burn
+    /// @param _manage  Bool if managing USDC from treasury
+    function oKP3RRedeem(uint _id, bool _manage) external onlyGuardian {
+        IClaim.option memory option = rKP3R.options(_id);
+        uint _amount = option.strike;
+
+        if(_manage) { treasury.manage(address(KP3R), _amount); }
+
+        USDC.approve(address(rKP3R), _amount);
+        rKP3R.redeem(_id);
     }
 
-    function claim(address _distributor) external {
-        IClaim(_distributor).claim();
+    /// @notice              Claim for other possible distributors
+    /// @param _distributor  Address to claim from
+    function claim(IClaim _distributor) external {
+        _distributor.claim();
     }
 
 
