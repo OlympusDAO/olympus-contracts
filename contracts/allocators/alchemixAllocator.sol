@@ -15,7 +15,7 @@ interface ITokemakManager {
     function currentCycleIndex() external view returns (uint256);
 }
 
-interface ITokemak_tALCX {
+interface ITokemaktALCX {
     function deposit(uint256 amount) external;
 
     function requestedWithdrawals(address addr) external view returns (uint256, uint256);
@@ -56,13 +56,12 @@ contract AlchemixAllocator is OlympusAccessControlled {
 
     /* ======== STATE VARIABLES ======== */
 
-    address immutable alchemix;
-    address immutable tokemakManager = 0xA86e412109f77c45a3BC1c5870b880492Fb86A14;
-    address olympusAuthority = 0x1c21F8EA7e39E2BA00BC12d2968D63F4acb38b7A;
+    address public immutable alchemix;
+    address public immutable tokemakManager = 0xA86e412109f77c45a3BC1c5870b880492Fb86A14;
 
-    ITokemak_tALCX immutable tALCX; // Tokemak tALCX deposit contract
-    IStakingPools immutable pool; // Alchemix staking contract
-    ITreasury immutable treasury; // Olympus Treasury
+    ITokemaktALCX public immutable tALCX; // Tokemak tALCX deposit contract
+    IStakingPools public immutable pool; // Alchemix staking contract
+    ITreasury public treasury; // Olympus Treasury
 
     uint256 public totalAlchemixDeposited;
 
@@ -72,13 +71,14 @@ contract AlchemixAllocator is OlympusAccessControlled {
         address _treasury,
         address _alchemix,
         address _tALCX,
-        address _pool
-    ) OlympusAccessControlled(IOlympusAuthority(olympusAuthority)) {
+        address _pool,
+        address _olympusAuthority
+    ) OlympusAccessControlled(IOlympusAuthority(_olympusAuthority)) {
         require(_treasury != address(0));
         treasury = ITreasury(_treasury);
 
         require(_tALCX != address(0));
-        tALCX = ITokemak_tALCX(_tALCX);
+        tALCX = ITokemaktALCX(_tALCX);
 
         require(_pool != address(0));
         pool = IStakingPools(_pool);
@@ -86,18 +86,14 @@ contract AlchemixAllocator is OlympusAccessControlled {
         alchemix = _alchemix;
     }
 
-    /* ======== POLICY FUNCTIONS ======== */
-
-    function setNewOlympusAuthority(address _newOlympusAuthority) external onlyPolicy {
-        olympusAuthority = _newOlympusAuthority;
-    }
+    /* ======== GUARDIAN FUNCTIONS ======== */
 
     /**
      *  @notice compound reward by claiming pending rewards and
      *      calling the deposit function
      *  @param _poolId pool id of tALCX on Alchemix staking pool
      */
-    function compoundReward(uint256 _poolId) public onlyPolicy {
+    function compoundReward(uint256 _poolId) public onlyGuardian {
         pool.claim(_poolId);
         uint256 alchemixBalance = IERC20(alchemix).balanceOf(address(this));
 
@@ -116,7 +112,7 @@ contract AlchemixAllocator is OlympusAccessControlled {
         uint256 _amount,
         uint256 _poolId,
         bool _isCompounding
-    ) public onlyPolicy {
+    ) public onlyGuardian {
         if (!_isCompounding) {
             treasury.manage(alchemix, _amount); // retrieve amount of asset from treasury
         }
@@ -142,7 +138,7 @@ contract AlchemixAllocator is OlympusAccessControlled {
         uint256 _poolId,
         uint256 _amount,
         bool _isEntireFunds
-    ) external onlyPolicy {
+    ) external onlyGuardian {
         if (_isEntireFunds) {
             pool.exit(_poolId);
         } else {
@@ -158,7 +154,7 @@ contract AlchemixAllocator is OlympusAccessControlled {
      *  @notice withdraws ALCX from Tokemak tALCX pool then deposits asset into treasury,
             ensures cycle for withdraw has been reached.
      */
-    function withdraw() external onlyPolicy {
+    function withdraw() external onlyGuardian {
         (uint256 minCycle, ) = tALCX.requestedWithdrawals(address(this));
         uint256 currentCycle = ITokemakManager(tokemakManager).currentCycleIndex();
 
@@ -168,12 +164,14 @@ contract AlchemixAllocator is OlympusAccessControlled {
         tALCX.withdraw(requestedAmountToWithdraw);
         uint256 balance = IERC20(alchemix).balanceOf(address(this)); // balance of asset withdrawn
 
-        // account for withdrawal
-        uint256 value = treasury.tokenValue(alchemix, balance);
         totalAlchemixDeposited = totalAlchemixDeposited.sub(requestedAmountToWithdraw);
+        IERC20(alchemix).transfer(address(treasury), balance);
+    }
 
-        IERC20(alchemix).approve(address(treasury), balance); // approve to deposit asset into treasury
-        treasury.deposit(balance, alchemix, value); // deposit using value as profit so no OHM is minted
+    function updateTreasury() external onlyGuardian {
+        require(authority.vault() != address(0), "Zero address: Vault");
+        require(address(authority.vault()) != address(treasury), "No change");
+        treasury = ITreasury(authority.vault());
     }
 
     /* ======== VIEW FUNCTIONS ======== */
