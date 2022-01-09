@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity >=0.7.5;
 
-import "../libraries/Address.sol";
-import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
-
 import "../interfaces/IERC20.sol";
 import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/ITreasury.sol";
-
 import "../types/OlympusAccessControlled.sol";
 
 interface ITokemakManager {
@@ -52,7 +48,6 @@ contract AlchemixAllocator is OlympusAccessControlled {
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
 
     /* ======== STATE VARIABLES ======== */
 
@@ -120,7 +115,7 @@ contract AlchemixAllocator is OlympusAccessControlled {
         IERC20(alchemix).approve(address(tALCX), _amount); // approve tALCX pool to spend tokens
         tALCX.deposit(_amount);
 
-        totalAlchemixDeposited = totalAlchemixDeposited.add(_amount);
+        totalAlchemixDeposited = totalAlchemixDeposited + _amount;
         uint256 tALCX_balance = IERC20(address(tALCX)).balanceOf(address(this));
 
         IERC20(address(tALCX)).approve(address(pool), tALCX_balance); // approve to deposit to Alchemix staking pool
@@ -164,7 +159,7 @@ contract AlchemixAllocator is OlympusAccessControlled {
         tALCX.withdraw(requestedAmountToWithdraw);
         uint256 balance = IERC20(alchemix).balanceOf(address(this)); // balance of asset withdrawn
 
-        totalAlchemixDeposited = totalAlchemixDeposited.sub(requestedAmountToWithdraw);
+        totalAlchemixDeposited = totalAlchemixDeposited - requestedAmountToWithdraw;
         IERC20(alchemix).safeTransfer(address(treasury), balance);
     }
 
