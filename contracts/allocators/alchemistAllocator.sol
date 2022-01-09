@@ -9,9 +9,9 @@ import "../interfaces/IERC20.sol";
 import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/ITreasury.sol";
 
-import "../types/Ownable.sol";
+import "../types/OlympusAccessControlled.sol";
 
-interface ITokemak_Manager {
+interface ITokemakManager {
     function currentCycleIndex() external view returns (uint256);
 }
 
@@ -40,15 +40,15 @@ interface IStakingPools {
 }
 
 /**
- *  Contract deploys Alchemist from treasury into the Tokemak tALCX pool,
- *  tALCX contract gives tALCX token in ratio 1:1 of Alchemist token deposited,
- *  Contract stake tALCX token on Alchemist staking pool and earn ALCX as reward,
+ *  Contract deploys Alchemix from treasury into the Tokemak tALCX pool,
+ *  tALCX contract gives tALCX token in ratio 1:1 of Alchemix token deposited,
+ *  Contract stake tALCX token on Alchemix staking pool and earn ALCX as reward,
  *  Contract claims reward and compound it,
- *  Contract withdraw funds from Alchemist staking pool and Tokemak tALCX pool,
- *  Sends back Alchemist token with accured reward to treasury.
+ *  Contract withdraw funds from Alchemix staking pool and Tokemak tALCX pool,
+ *  Sends back Alchemix token with accured reward to treasury.
  */
 
-contract AlchemistAllocator is Ownable {
+contract AlchemixAllocator is OlympusAccessControlled {
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;
@@ -56,23 +56,24 @@ contract AlchemistAllocator is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    address alchemist;
-    address tokemak_manager = 0xA86e412109f77c45a3BC1c5870b880492Fb86A14;
+    address immutable alchemix;
+    address immutable tokemakManager = 0xA86e412109f77c45a3BC1c5870b880492Fb86A14;
+    address olympusAuthority = 0x1c21F8EA7e39E2BA00BC12d2968D63F4acb38b7A;
 
     ITokemak_tALCX immutable tALCX; // Tokemak tALCX deposit contract
-    IStakingPools immutable pool; // Alchemist staking contract
+    IStakingPools immutable pool; // Alchemix staking contract
     ITreasury immutable treasury; // Olympus Treasury
 
-    uint256 public totalAlchemistDeposited;
+    uint256 public totalAlchemixDeposited;
 
     /* ======== CONSTRUCTOR ======== */
 
     constructor(
         address _treasury,
-        address _alchemist,
+        address _alchemix,
         address _tALCX,
         address _pool
-    ) {
+    ) OlympusAccessControlled(IOlympusAuthority(olympusAuthority)) {
         require(_treasury != address(0));
         treasury = ITreasury(_treasury);
 
@@ -82,63 +83,58 @@ contract AlchemistAllocator is Ownable {
         require(_pool != address(0));
         pool = IStakingPools(_pool);
 
-        alchemist = _alchemist;
+        alchemix = _alchemix;
     }
 
     /* ======== POLICY FUNCTIONS ======== */
 
-    /**
-     *  @notice sets Alchemist address
-     */
-    function setAlchemistAddress(address _alchemist) external onlyOwner {
-        alchemist = _alchemist;
+    function setNewOlympusAuthority(address _newOlympusAuthority) external onlyPolicy {
+        olympusAuthority = _newOlympusAuthority;
     }
 
     /**
      *  @notice compound reward by claiming pending rewards and
      *      calling the deposit function
-     *  @param _poolId pool id of tALCX on Alchemist staking pool
+     *  @param _poolId pool id of tALCX on Alchemix staking pool
      */
-    function compoundReward(uint256 _poolId) public onlyOwner {
+    function compoundReward(uint256 _poolId) public onlyPolicy {
         pool.claim(_poolId);
-        uint256 alchemist_balance = IERC20(alchemist).balanceOf(address(this));
+        uint256 alchemixBalance = IERC20(alchemix).balanceOf(address(this));
 
-        require(alchemist_balance > 0, "contract has no alchemist token");
-        deposit(alchemist_balance, _poolId, true);
+        require(alchemixBalance > 0, "contract has no alchemix token");
+        deposit(alchemixBalance, _poolId, true);
     }
 
     /**
      *  @notice withdraws asset from treasury, deposits asset into Tokemak tALCX,
-     *      then deposits tALCX into Alchemist staking pool
-     *  @param amount amount to deposit
-     *  @param _poolId pool id of tALCX on Alchemist staking pool
-     *  @param isCompounding used to indicate if the contract is compounding pending rewards
+     *      then deposits tALCX into Alchemix staking pool
+     *  @param _amount amount to deposit
+     *  @param _poolId pool id of tALCX on Alchemix staking pool
+     *  @param _isCompounding used to indicate if the contract is compounding pending rewards
      */
     function deposit(
-        uint256 amount,
+        uint256 _amount,
         uint256 _poolId,
-        bool isCompounding
-    ) public onlyOwner {
-        if (isCompounding) {} else {
-            treasury.manage(alchemist, amount); // retrieve amount of asset from treasury
+        bool _isCompounding
+    ) public onlyPolicy {
+        if (!_isCompounding) {
+            treasury.manage(alchemix, _amount); // retrieve amount of asset from treasury
         }
 
-        IERC20(alchemist).approve(address(tALCX), amount); // approve tALCX pool to spend tokens
-        tALCX.deposit(amount);
+        IERC20(alchemix).approve(address(tALCX), _amount); // approve tALCX pool to spend tokens
+        tALCX.deposit(_amount);
 
-        totalAlchemistDeposited = totalAlchemistDeposited.add(amount);
-
+        totalAlchemixDeposited = totalAlchemixDeposited.add(_amount);
         uint256 tALCX_balance = IERC20(address(tALCX)).balanceOf(address(this));
-        require(tALCX_balance == amount, "received tALCX must be 1:1 ratio with deposited alchemist amount");
 
-        IERC20(address(tALCX)).approve(address(pool), tALCX_balance); // approve to deposit to Alchemist staking pool
-        pool.deposit(_poolId, tALCX_balance); // deposit into Alchemist staking pool
+        IERC20(address(tALCX)).approve(address(pool), tALCX_balance); // approve to deposit to Alchemix staking pool
+        pool.deposit(_poolId, tALCX_balance); // deposit into Alchemix staking pool
     }
 
     /**
      *  @notice as structured by Tokemak before one withdraws you must first request withdrawal,
-            unstake tALCX from Alchemist staking pool and make a request on Tokemak tALCX pool.
-     *  @param _poolId pool id of tALCX on Alchemist staking pool
+            unstake tALCX from Alchemix staking pool and make a request on Tokemak tALCX pool.
+     *  @param _poolId pool id of tALCX on Alchemix staking pool
      *  @param _amount amount to withdraw if _isEntireFunds is false
      *  @param _isEntireFunds used to indicate if amount to with is the entire funds deposited
      */
@@ -146,7 +142,7 @@ contract AlchemistAllocator is Ownable {
         uint256 _poolId,
         uint256 _amount,
         bool _isEntireFunds
-    ) external onlyOwner {
+    ) external onlyPolicy {
         if (_isEntireFunds) {
             pool.exit(_poolId);
         } else {
@@ -162,38 +158,38 @@ contract AlchemistAllocator is Ownable {
      *  @notice withdraws ALCX from Tokemak tALCX pool then deposits asset into treasury,
             ensures cycle for withdraw has been reached.
      */
-    function withdraw() external onlyOwner {
+    function withdraw() external onlyPolicy {
         (uint256 minCycle, ) = tALCX.requestedWithdrawals(address(this));
-        uint256 current_cycle = ITokemak_Manager(tokemak_manager).currentCycleIndex();
+        uint256 currentCycle = ITokemakManager(tokemakManager).currentCycleIndex();
 
-        require(minCycle <= current_cycle, "requested withdraw cycle not reached yet");
+        require(minCycle <= currentCycle, "requested withdraw cycle not reached yet");
 
-        (, uint256 requested_amount_to_withdraw) = getRequestedWithdrawalInfo();
-        tALCX.withdraw(requested_amount_to_withdraw);
-        uint256 balance = IERC20(alchemist).balanceOf(address(this)); // balance of asset withdrawn
+        (, uint256 requestedAmountToWithdraw) = getRequestedWithdrawalInfo();
+        tALCX.withdraw(requestedAmountToWithdraw);
+        uint256 balance = IERC20(alchemix).balanceOf(address(this)); // balance of asset withdrawn
 
         // account for withdrawal
-        uint256 value = treasury.tokenValue(alchemist, balance);
-        totalAlchemistDeposited = totalAlchemistDeposited.sub(requested_amount_to_withdraw);
+        uint256 value = treasury.tokenValue(alchemix, balance);
+        totalAlchemixDeposited = totalAlchemixDeposited.sub(requestedAmountToWithdraw);
 
-        IERC20(alchemist).approve(address(treasury), balance); // approve to deposit asset into treasury
-        treasury.deposit(balance, alchemist, value); // deposit using value as profit so no OHM is minted
+        IERC20(alchemix).approve(address(treasury), balance); // approve to deposit asset into treasury
+        treasury.deposit(balance, alchemix, value); // deposit using value as profit so no OHM is minted
     }
 
     /* ======== VIEW FUNCTIONS ======== */
 
     /**
      *  @notice query all pending rewards
-     *  @param _poolId pool id of tALCX on Alchemist staking pool
+     *  @param _poolId pool id of tALCX on Alchemix staking pool
      *  @return uint
      */
-    function alchemistToClaim(uint256 _poolId) external view returns (uint256) {
+    function alchemixToClaim(uint256 _poolId) external view returns (uint256) {
         return pool.getStakeTotalUnclaimed(address(this), _poolId);
     }
 
     /**
-     *  @notice query all deposited tALCX in Alchemist staking pool
-     *  @param _poolId pool id of tALCX on Alchemist staking pool
+     *  @notice query all deposited tALCX in Alchemix staking pool
+     *  @param _poolId pool id of tALCX on Alchemix staking pool
      *  @return uint
      */
     function total_tAlcxDeposited(uint256 _poolId) external view returns (uint256) {
