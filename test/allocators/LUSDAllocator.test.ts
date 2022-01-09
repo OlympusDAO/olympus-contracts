@@ -38,7 +38,7 @@ describe("LUSDAllocator", () => {
     let stabilityPoolFake: FakeContract<IStabilityPool>;
     let lqtyStakingFake: FakeContract<ILQTYStaking>;
     let lusdTokenFake: FakeContract<IERC20Metadata>;
-    let lqtyTokenFake: FakeContract<IERC20>;
+    let lqtyTokenFake: FakeContract<IERC20Metadata>;
     let wethTokenFake: FakeContract<IERC20>;
     let daiTokenFake: FakeContract<IERC20>;
     let swapRouterFake: FakeContract<ISwapRouter>;
@@ -51,7 +51,7 @@ describe("LUSDAllocator", () => {
       stabilityPoolFake = await smock.fake<IStabilityPool>("IStabilityPool");
       lqtyStakingFake = await smock.fake<ILQTYStaking>("ILQTYStaking");
       lusdTokenFake = await smock.fake<IERC20Metadata>("IERC20Metadata");
-      lqtyTokenFake = await smock.fake<IERC20>("IERC20");
+      lqtyTokenFake = await smock.fake<IERC20Metadata>("IERC20Metadata");
       wethTokenFake = await smock.fake<IERC20>("IERC20");
       daiTokenFake = await smock.fake<IERC20>("IERC20");
       swapRouterFake = await smock.fake<ISwapRouter>("ISwapRouter");
@@ -207,7 +207,7 @@ describe("LUSDAllocator", () => {
 
         it("not guardian", async () => {
           const AMOUNT = 12345;          
-          await expect(lusdAllocator.connect(owner).deposit(lusdTokenFake.address, AMOUNT)).
+          await expect(lusdAllocator.connect(owner).deposit(AMOUNT)).
             to.be.revertedWith("UNAUTHORIZED");         
         });
 
@@ -215,7 +215,7 @@ describe("LUSDAllocator", () => {
           const AMOUNT = 12345;
           const VALUE = AMOUNT * (10 ** 8);
           lusdTokenFake.decimals.returns(1);
-          await lusdAllocator.connect(guardian).deposit(lusdTokenFake.address, AMOUNT);
+          await lusdAllocator.connect(guardian).deposit(AMOUNT);
 
           expect(treasuryFake.manage).to.be.calledWith(lusdTokenFake.address, AMOUNT);
           expect(lusdTokenFake.approve).to.be.calledWith(stabilityPoolFake.address, AMOUNT);
@@ -229,16 +229,11 @@ describe("LUSDAllocator", () => {
           const AMOUNT = 12345;
           const VALUE = AMOUNT * (10 ** 8);
           lusdTokenFake.decimals.returns(1);
-          await lusdAllocator.connect(guardian).deposit(lusdTokenFake.address, AMOUNT);
-          await lusdAllocator.connect(guardian).deposit(lusdTokenFake.address, AMOUNT);
+          await lusdAllocator.connect(guardian).deposit(AMOUNT);
+          await lusdAllocator.connect(guardian).deposit(AMOUNT);
 
           expect(await lusdAllocator.totalAmountDeployed()).to.equal(AMOUNT + AMOUNT);
           expect(await lusdAllocator.totalValueDeployed()).to.equal(VALUE + VALUE);
-        });
-
-        it("reverts if non-LUSD token is passed", async () => {
-          await expect(lusdAllocator.connect(guardian).deposit(other.address, 12345))
-            .to.be.revertedWith("token address does not match LUSD token");
         });
 
       });
@@ -250,6 +245,7 @@ describe("LUSDAllocator", () => {
           const LQTY_REWARDS = 444;
           const LUSD_REWARDS = 555;
           const LUSD_REWARDS_VALUE = LUSD_REWARDS * (10 ** 8);
+          const ETHLUSD_RATE = 3500;
           
           lusdTokenFake.decimals.returns(1);
           stabilityPoolFake.getDepositorETHGain.returns(AMOUNT);
@@ -266,7 +262,7 @@ describe("LUSDAllocator", () => {
             to: lusdAllocator.address,
             value: AMOUNT,
           });          
-          await lusdAllocator.connect(owner).harvest();
+          await lusdAllocator.connect(guardian).harvest(ETHLUSD_RATE);
 
           /**
         1.  Harvest from LUSD StabilityPool to get ETH+LQTY rewards
@@ -297,7 +293,7 @@ describe("LUSDAllocator", () => {
         beforeEach(async () => {
           lusdTokenFake.decimals.returns(1);
           // treasuryFake.tokenValue.whenCalledWith(lusdTokenFake.address, DEPOSIT_AMOUNT).returns(DEPOSIT_VALUE);
-          await lusdAllocator.connect(guardian).deposit(lusdTokenFake.address, DEPOSIT_AMOUNT);
+          await lusdAllocator.connect(guardian).deposit(DEPOSIT_AMOUNT);
         });
 
         it("not guardian", async () => {
@@ -337,9 +333,24 @@ describe("LUSDAllocator", () => {
           expect(await lusdAllocator.totalValueDeployed()).to.equal(DEPOSIT_VALUE - PARTIAL_VALUE);
         });
 
-        it("reverts if non-LUSD token is passed", async () => {
+        it("withdraw LQTY", async () => {
+          const PARTIAL_AMOUNT = 4321;
+          const PARTIAL_VALUE = PARTIAL_AMOUNT * (10 ** 8);
+          lqtyTokenFake.decimals.returns(1);
+          lqtyTokenFake.balanceOf.whenCalledWith(lusdAllocator.address).returns(PARTIAL_AMOUNT);
+          treasuryFake.tokenValue.whenCalledWith(lqtyTokenFake.address, PARTIAL_AMOUNT).returns(PARTIAL_VALUE);
+          await lusdAllocator.connect(guardian).withdraw(lqtyTokenFake.address, PARTIAL_AMOUNT);
+
+          expect(lqtyStakingFake.unstake).to.be.calledWith(PARTIAL_AMOUNT);
+          expect(treasuryFake.deposit).to.be.calledWith(PARTIAL_AMOUNT, lqtyTokenFake.address, PARTIAL_VALUE);
+          expect(lqtyTokenFake.balanceOf).to.be.calledWith(lusdAllocator.address);
+          expect(lqtyTokenFake.approve).to.be.calledWith(treasuryFake.address, PARTIAL_AMOUNT);
+          
+        });        
+
+        it("reverts if non-LUSD non-LQTY token is passed", async () => {
           await expect(lusdAllocator.connect(guardian).withdraw(other.address, 12345))
-            .to.be.revertedWith("token address does not match LUSD token");
+            .to.be.revertedWith("token address does not match LUSD nor LQTY token");
         });
         
       });
@@ -420,13 +431,9 @@ describe("LUSDAllocator", () => {
     const STABILITY_POOL_TOTAL_BALANCE = ethers.BigNumber.from("565203762859001281165529750");
     const ZERO = ethers.BigNumber.from("0");
 
-    it("cannot deposit without unless LUSD token", async () => {
-      await expect(allocator.connect(manager).deposit(ZERO_ADDRESS, 1))
-        .to.be.revertedWith("token address does not match LUSD token");
-    });
 
     it("cannot deposit without RESERVE_MANAGER role", async () => {
-      await expect(allocator.connect(manager).deposit(LUSD_TOKEN_ADDRESS, 1))
+      await expect(allocator.connect(manager).deposit(1))
         .to.be.revertedWith("Not approved");
     });
 
@@ -447,7 +454,7 @@ describe("LUSDAllocator", () => {
       const stabilityPoolBefore = await lusd.balanceOf(lusdStabilityPool.address);
       expect(stabilityPoolBefore).to.equal(STABILITY_POOL_BALANCE);
 
-      await expect(allocator.connect(manager).deposit(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT))
+      await expect(allocator.connect(manager).deposit(DEPOSIT_AMOUNT))
         .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("350461943063989161432445055694169347038"), 0, 0)
         // .not.to.emit(lusdStabilityPool, "LQTYPaidToFrontEnd").withArgs(ZERO_ADDRESS, 0)          //How to get NOT emit to work??!
         .to.emit(lusdStabilityPool, "LQTYPaidToDepositor").withArgs(allocator.address, 0)
@@ -477,7 +484,7 @@ describe("LUSDAllocator", () => {
       expect(ethRewards).to.equal(ZERO);
       expect(lqtyRewards).to.equal(ZERO);
 
-      await expect(allocator.connect(manager).deposit(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT_2))
+      await expect(allocator.connect(manager).deposit(DEPOSIT_AMOUNT_2))
         .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("350461943753146787543868841926858937250"), 0, 0)
         .to.emit(lusdStabilityPool, "DepositSnapshotUpdated").withArgs(allocator.address,
           ethers.BigNumber.from("876920926160447076"), ethers.BigNumber.from("58089263752322121983911170457988"), ethers.BigNumber.from("350461943753146787543868841926858937250"))

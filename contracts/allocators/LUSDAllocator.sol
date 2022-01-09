@@ -288,13 +288,14 @@ contract LUSDAllocator is OlympusAccessControlled {
 
     /**
      *  @notice claims LQTY & ETH Rewards
+     * @param minETHLUSDRate minimum rate of when swapping ETH->LUSD.  e.g. 3500 means we swap at least 3500 LUSD for 1 ETH
 
         1.  Harvest from LUSD StabilityPool to get ETH+LQTY rewards
         2.  Stake LQTY rewards from #1.  This txn will also give out any outstanding ETH+LUSD rewards from prior staking
         3.  If we have eth, convert to weth, then swap a percentage of it to LUSD.  If swap successul then send all remaining WETH to treasury
         4.  Deposit LUSD from #2 and potentially #3 into StabilityPool
      */
-    function harvest() public returns (bool) {
+    function harvest(uint256 minETHLUSDRate) public onlyGuardian returns (bool) {
         uint256 stabilityPoolEthRewards = getETHRewards();
         uint256 stabilityPoolLqtyRewards = getLQTYRewards();
 
@@ -323,6 +324,8 @@ contract LUSDAllocator is OlympusAccessControlled {
             // Approve WETH to uniswap
             weth.safeApprove(address(swapRouter), amountWethToSwap);
 
+            uint256 amountLUSDMin = (amountWethToSwap / 1e18) * minETHLUSDRate;  //Convert wei->ETH then multiple by rate
+
             // Multiple pool swaps are encoded through bytes called a `path`. A path is a sequence of token addresses and poolFees that define the pools used in the swaps.
             // The format for pool encoding is (tokenIn, fee, tokenOut/tokenIn, fee, tokenOut) where tokenIn/tokenOut parameter is the shared token across the pools.
             // Since we are swapping WETH to DAI and then DAI to LUSD the path encoding is (WETH, 0.3%, DAI, 0.3%, LUSD).
@@ -331,7 +334,7 @@ contract LUSDAllocator is OlympusAccessControlled {
                 recipient: address(this),  //Send LUSD here
                 deadline: block.timestamp,
                 amountIn: amountWethToSwap,
-                amountOutMinimum: 0
+                amountOutMinimum: amountLUSDMin
             });
 
             // Executes the swap
@@ -360,13 +363,11 @@ contract LUSDAllocator is OlympusAccessControlled {
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     *  @notice withdraws asset from treasury, deposits asset into stability pool
-     *  @param token address
+     *  @notice withdraws asset from treasury, deposits asset into stability pool     
      *  @param amount uint
      */
-    function deposit(address token, uint256 amount) external onlyGuardian {
-        require(token == lusdTokenAddress, "token address does not match LUSD token");
-        treasury.manage(token, amount); // retrieve amount of asset from treasury
+    function deposit(uint256 amount) external onlyGuardian {        
+        treasury.manage(lusdTokenAddress, amount); // retrieve amount of asset from treasury
 
         depositLUSD(amount); 
     }
@@ -385,17 +386,27 @@ contract LUSDAllocator is OlympusAccessControlled {
      *  @param amount uint
      */
     function withdraw(address token, uint256 amount) public onlyGuardian {
-        require(token == lusdTokenAddress, "token address does not match LUSD token");
+        require(token == lusdTokenAddress || token == lqtyTokenAddress, "token address does not match LUSD nor LQTY token");
 
-        lusdStabilityPool.withdrawFromSP(amount); // withdraw from SP
+        if (token == lusdTokenAddress){
+            lusdStabilityPool.withdrawFromSP(amount); // withdraw from SP
 
-        uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from stability pool
-        uint256 value = tokenValue(token, balance); // treasury RFV calculator
+            uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from stability pool
+            uint256 value = tokenValue(token, balance); // treasury RFV calculator
 
-        accountingFor(balance, value, false); // account for withdrawal
+            accountingFor(balance, value, false); // account for withdrawal
 
-        IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
-        treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
+            IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
+            treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
+        } else {
+            lqtyStaking.unstake(amount);
+
+            uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from stability pool
+            uint256 value = tokenValue(token, balance); // treasury RFV calculator
+
+            IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
+            treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
+        }
     }
 
     /* ======== INTERNAL FUNCTIONS ======== */
