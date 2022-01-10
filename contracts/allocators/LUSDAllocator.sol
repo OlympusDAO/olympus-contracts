@@ -326,7 +326,7 @@ contract LUSDAllocator is OlympusAccessControlled {
             // Approve WETH to uniswap
             weth.safeApprove(address(swapRouter), amountWethToSwap);
 
-            uint256 amountLUSDMin = (amountWethToSwap / 1e18) * minETHLUSDRate;  //Convert wei->ETH then multiple by rate
+            uint256 amountLUSDMin = amountWethToSwap * minETHLUSDRate;  //LUSD is 18 decimals
 
             // Multiple pool swaps are encoded through bytes called a `path`. A path is a sequence of token addresses and poolFees that define the pools used in the swaps.
             // The format for pool encoding is (tokenIn, fee, tokenOut/tokenIn, fee, tokenOut) where tokenIn/tokenOut parameter is the shared token across the pools.
