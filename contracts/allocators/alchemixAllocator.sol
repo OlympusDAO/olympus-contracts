@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity >=0.7.5;
+pragma solidity 0.8.10;
 
 import "../libraries/SafeERC20.sol";
 import "../interfaces/IERC20.sol";
-import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/ITreasury.sol";
 import "../types/OlympusAccessControlled.sol";
 
@@ -141,7 +140,6 @@ contract AlchemixAllocator is OlympusAccessControlled {
         }
 
         uint256 balance = IERC20(address(tALCX)).balanceOf(address(this));
-
         tALCX.requestWithdrawal(balance);
     }
 
