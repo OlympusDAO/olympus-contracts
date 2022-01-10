@@ -280,10 +280,12 @@ contract LUSDAllocator is OlympusAccessControlled {
         frontEndAddress = _frontEndAddress;
     }
 
-    function setTreasury(address _treasury) public onlyGuardian {
-        require(_treasury != address(0), "treasury address cannot be 0x0");
-        treasury = ITreasury(_treasury);
+    function updateTreasury() public onlyGuardian {
+        require(authority.vault() != address(0), "Zero address: Vault");
+        require(address(authority.vault()) != address(treasury), "No change");
+        treasury = ITreasury(authority.vault());
     }
+
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
@@ -385,7 +387,7 @@ contract LUSDAllocator is OlympusAccessControlled {
      *  @param token address
      *  @param amount uint
      */
-    function withdraw(address token, uint256 amount) public onlyGuardian {
+    function withdraw(address token, uint256 amount) external onlyGuardian {
         require(token == lusdTokenAddress || token == lqtyTokenAddress, "token address does not match LUSD nor LQTY token");
 
         if (token == lusdTokenAddress){
@@ -401,11 +403,9 @@ contract LUSDAllocator is OlympusAccessControlled {
         } else {
             lqtyStaking.unstake(amount);
 
-            uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from stability pool
-            uint256 value = tokenValue(token, balance); // treasury RFV calculator
-
+            uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from stability pool        
             IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
-            treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
+            IERC20(token).safeTransfer(address(treasury), balance);
         }
     }
 
