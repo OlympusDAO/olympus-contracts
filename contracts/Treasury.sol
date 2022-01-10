@@ -309,15 +309,10 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
                 bondCalculator[_address] = _calculator;
             }
 
-            (bool registered, ) = indexInRegistry(_address, _status);
-            if (!registered) {
-                registry[_status].push(_address);
-
-                if (_status == STATUS.LIQUIDITYTOKEN || _status == STATUS.RESERVETOKEN) {
-                    (bool reg, uint256 index) = indexInRegistry(_address, _status);
-                    if (reg) {
-                        delete registry[_status][index];
-                    }
+            if (_status == STATUS.LIQUIDITYTOKEN || _status == STATUS.RESERVETOKEN) {
+                (bool registered, ) = indexInRegistry(_address, _status);
+                if (!registered) {
+                    registry[_status].push(_address);
                 }
             }
         }
@@ -332,6 +327,13 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     function disable(STATUS _status, address _toDisable) external {
         require(msg.sender == authority.governor() || msg.sender == authority.guardian(), "Only governor or guardian");
         permissions[_status][_toDisable] = false;
+
+        if (_status == STATUS.LIQUIDITYTOKEN || _status == STATUS.RESERVETOKEN) {
+            (bool registered, uint256 index) = indexInRegistry(_toDisable, _status);
+            if (registered) {
+                delete registry[_status][index];
+            }
+        }
         emit Permissioned(_toDisable, _status, false);
     }
 
@@ -399,20 +401,11 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
             if (info.managing == STATUS.LIQUIDITYTOKEN) {
                 bondCalculator[info.toPermit] = info.calculator;
             }
-            (bool registered, ) = indexInRegistry(info.toPermit, info.managing);
-            if (!registered) {
-                registry[info.managing].push(info.toPermit);
-
-                if (info.managing == STATUS.LIQUIDITYTOKEN) {
-                    (bool reg, uint256 index) = indexInRegistry(info.toPermit, STATUS.RESERVETOKEN);
-                    if (reg) {
-                        delete registry[STATUS.RESERVETOKEN][index];
-                    }
-                } else if (info.managing == STATUS.RESERVETOKEN) {
-                    (bool reg, uint256 index) = indexInRegistry(info.toPermit, STATUS.LIQUIDITYTOKEN);
-                    if (reg) {
-                        delete registry[STATUS.LIQUIDITYTOKEN][index];
-                    }
+            
+            if (info.managing == STATUS.LIQUIDITYTOKEN || info.managing == STATUS.RESERVETOKEN) {
+                (bool registered, ) = indexInRegistry(info.toPermit, info.managing);
+                if (!registered) {
+                    registry[info.managing].push(info.toPermit);
                 }
             }
         }
