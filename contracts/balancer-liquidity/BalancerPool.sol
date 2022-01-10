@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.7.5;
+pragma solidity ^0.8.10;
 pragma abicoder v2;
 
-import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 
 import "../interfaces/ITreasury.sol";
@@ -62,7 +61,6 @@ interface IBalancerVault {
 
 contract BalancerLiquidty is OlympusAccessControlled {
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
 
     // Balancer Vault
     IBalancerVault internal immutable balancerVault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8); 
@@ -127,7 +125,7 @@ contract BalancerLiquidty is OlympusAccessControlled {
         );
 
         // Amount of OHM removed from liquidity
-        uint256 amountOHM = amountOHM1.add(amountOHM2);
+        uint256 amountOHM = amountOHM1 + amountOHM2;
 
         // Approve Balancer vault to spend tokens
         IERC20(OHM).approve(address(balancerVault), amountOHM);
