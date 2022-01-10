@@ -182,9 +182,9 @@ contract InvestorClaimV2 is Ownable {
             IClaim.Term memory term = previous.terms(_addresses[i]);
             setTerms(
                 _addresses[i], 
-                term.max,
                 term.percent,
-                term.wClaimed
+                term.wClaimed,
+                term.max
             );
         }
     }

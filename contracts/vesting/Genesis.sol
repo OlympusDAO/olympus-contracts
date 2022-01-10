@@ -186,10 +186,10 @@ contract GenesisClaim is Ownable {
             IClaim.Term memory term = previous.terms(_addresses[i]);
             setTerms(
                 _addresses[i], 
-                term.max,
                 term.percent,
                 term.claimed,
-                term.wClaimed
+                term.wClaimed,
+                term.max
             );
         }
     }
