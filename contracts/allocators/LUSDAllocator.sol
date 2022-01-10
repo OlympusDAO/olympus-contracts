@@ -10,7 +10,6 @@ import "../interfaces/ITreasury.sol";
 import "../interfaces/ISwapRouter.sol";
 import "../types/OlympusAccessControlled.sol";
 
-
 //https://etherscan.io/address/0x66017D22b0f8556afDd19FC67041899Eb65a21bb
 /*
  * The Stability Pool holds LUSD tokens deposited by Stability Pool depositors.
@@ -181,7 +180,7 @@ contract LUSDAllocator is OlympusAccessControlled {
     using SafeERC20 for IERC20;
     using SafeERC20 for IWETH;
 
-    event Deposit(address indexed dst, uint amount);
+    event Deposit(address indexed dst, uint256 amount);
 
     /* ======== STATE VARIABLES ======== */
     IStabilityPool immutable lusdStabilityPool;
@@ -216,7 +215,7 @@ contract LUSDAllocator is OlympusAccessControlled {
         address _wethAddress,
         address _hopTokenAddress,
         address _uniswapV3Router
-    )  OlympusAccessControlled(IOlympusAuthority(_authority)) {
+    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
         require(_treasury != address(0), "treasury address cannot be 0x0");
         treasury = ITreasury(_treasury);
 
@@ -251,7 +250,6 @@ contract LUSDAllocator is OlympusAccessControlled {
         emit Deposit(msg.sender, msg.value);
     }
 
-
     /* ======== CONFIGURE FUNCTIONS for Guardian only ======== */
     function setPercentETHtoLUSD(uint8 _percentETHtoLUSD) external onlyGuardian {
         require(_percentETHtoLUSD <= 100, "Percentage must be between 0 and 100");
@@ -263,12 +261,12 @@ contract LUSDAllocator is OlympusAccessControlled {
         poolFee = _poolFee;
     }
 
-     function setHopTokenAddress(address _hopTokenAddress) external onlyGuardian {
+    function setHopTokenAddress(address _hopTokenAddress) external onlyGuardian {
         require(_hopTokenAddress != address(0), "Hop Token address cannot be 0x0");
         hopTokenAddress = _hopTokenAddress;
     }
 
-   /**
+    /**
      *  @notice setsFrontEndAddress for Stability pool rewards
      *  @param _frontEndAddress address
      */
@@ -311,45 +309,51 @@ contract LUSDAllocator is OlympusAccessControlled {
         }
 
         // 3.  If we have eth, convert to weth, then swap a percentage of it to LUSD.  If swap successul then send all remaining WETH to treasury
-        uint256 ethBalance = address(this).balance;  // Use total balance in case we have leftover from a prior failed attempt
-        if (ethBalance > 0 && percentETHtoLUSD > 0 && percentETHtoLUSD <= 100) {
+        uint256 ethBalance = address(this).balance; // Use total balance in case we have leftover from a prior failed attempt
+        bool swappedLUSDSuccessfully;
+        if (ethBalance > 0) {
             // Wrap ETH to WETH
             weth.deposit{value: ethBalance}();
 
-            uint256 wethBalance = weth.balanceOf(address(this));  //Base off of WETH balance in case we have leftover from a prior failed attempt
-            uint256 amountWethToSwap = wethBalance * percentETHtoLUSD / 100;
+            uint256 wethBalance = weth.balanceOf(address(this)); //Base off of WETH balance in case we have leftover from a prior failed attempt
+            if (percentETHtoLUSD > 0 && percentETHtoLUSD <= 100) {
+                uint256 amountWethToSwap = (wethBalance * percentETHtoLUSD) / 100;
 
-            // Approve WETH to uniswap
-            weth.safeApprove(address(swapRouter), amountWethToSwap);
+                // Approve WETH to uniswap
+                weth.safeApprove(address(swapRouter), amountWethToSwap);
 
-            uint256 amountLUSDMin = amountWethToSwap * minETHLUSDRate;  //LUSD is 18 decimals
+                uint256 amountLUSDMin = amountWethToSwap * minETHLUSDRate; //WETH and LUSD is 18 decimals
 
-            // Multiple pool swaps are encoded through bytes called a `path`. A path is a sequence of token addresses and poolFees that define the pools used in the swaps.
-            // The format for pool encoding is (tokenIn, fee, tokenOut/tokenIn, fee, tokenOut) where tokenIn/tokenOut parameter is the shared token across the pools.
-            // Since we are swapping WETH to DAI and then DAI to LUSD the path encoding is (WETH, 0.3%, DAI, 0.3%, LUSD).
-            ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
-                path: abi.encodePacked(address(weth), poolFee, hopTokenAddress, poolFee, lusdTokenAddress),
-                recipient: address(this),  //Send LUSD here
-                deadline: block.timestamp + 25, //25 blocks, at 12 seconds per block is 5 minutes
-                amountIn: amountWethToSwap,
-                amountOutMinimum: amountLUSDMin
-            });
+                // Multiple pool swaps are encoded through bytes called a `path`. A path is a sequence of token addresses and poolFees that define the pools used in the swaps.
+                // The format for pool encoding is (tokenIn, fee, tokenOut/tokenIn, fee, tokenOut) where tokenIn/tokenOut parameter is the shared token across the pools.
+                // Since we are swapping WETH to DAI and then DAI to LUSD the path encoding is (WETH, 0.3%, DAI, 0.3%, LUSD).
+                ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
+                    path: abi.encodePacked(address(weth), poolFee, hopTokenAddress, poolFee, lusdTokenAddress),
+                    recipient: address(this), //Send LUSD here
+                    deadline: block.timestamp + 25, //25 blocks, at 12 seconds per block is 5 minutes
+                    amountIn: amountWethToSwap,
+                    amountOutMinimum: amountLUSDMin
+                });
 
-            // Executes the swap
-            uint256 amountOut = swapRouter.exactInput(params);
+                // Executes the swap
+                if (swapRouter.exactInput(params) > 0) {
+                    swappedLUSDSuccessfully = true;
+                }
+            }
+        }
+        if (percentETHtoLUSD == 0 || swappedLUSDSuccessfully) {
+            // If swap was successful (or if percent to swap is 0), send the remaining WETH to the treasury.  Crucial check otherwise we'd send all our WETH to the treasury and not respect our desired percentage
 
-            // If swap was successful, send the remaining WETH to the treasury.  Crucial check otherwise we'd send all our WETH to the treasury
-            if (amountOut > 0) {
-                // Get updated balance, send to treasury
-                wethBalance = weth.balanceOf(address(this));
-
+            // Get updated balance, send to treasury
+            uint256 wethBalance = weth.balanceOf(address(this));
+            if (wethBalance > 0) {
                 // Approve and transfer WETH to treasury
                 weth.safeApprove(address(treasury), wethBalance);
                 weth.safeTransfer(address(treasury), wethBalance);
             }
         }
 
-         // 4.  Deposit LUSD from #2 and potentially #3 into StabilityPool
+        // 4.  Deposit LUSD from #2 and potentially #3 into StabilityPool
         uint256 lusdBalance = IERC20(lusdTokenAddress).balanceOf(address(this));
         if (lusdBalance > 0) {
             depositLUSD(lusdBalance);
@@ -361,13 +365,13 @@ contract LUSDAllocator is OlympusAccessControlled {
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     *  @notice withdraws asset from treasury, deposits asset into stability pool     
+     *  @notice withdraws asset from treasury, deposits asset into stability pool
      *  @param amount uint
      */
-    function deposit(uint256 amount) external onlyGuardian {        
+    function deposit(uint256 amount) external onlyGuardian {
         treasury.manage(lusdTokenAddress, amount); // retrieve amount of asset from treasury
 
-        depositLUSD(amount); 
+        depositLUSD(amount);
     }
 
     function depositLUSD(uint256 amount) internal {
@@ -375,7 +379,7 @@ contract LUSDAllocator is OlympusAccessControlled {
         lusdStabilityPool.provideToSP(amount, frontEndAddress); //s either a front-end address OR 0x0
 
         uint256 value = tokenValue(lusdTokenAddress, amount); // treasury RFV calculator
-        accountingFor(amount, value, true); // account for deposit      
+        accountingFor(amount, value, true); // account for deposit
     }
 
     /**
@@ -384,9 +388,12 @@ contract LUSDAllocator is OlympusAccessControlled {
      *  @param amount uint
      */
     function withdraw(address token, uint256 amount) external onlyGuardian {
-        require(token == lusdTokenAddress || token == lqtyTokenAddress, "token address does not match LUSD nor LQTY token");
+        require(
+            token == lusdTokenAddress || token == lqtyTokenAddress,
+            "token address does not match LUSD nor LQTY token"
+        );
 
-        if (token == lusdTokenAddress){
+        if (token == lusdTokenAddress) {
             lusdStabilityPool.withdrawFromSP(amount); // withdraw from SP
 
             uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from stability pool
@@ -399,7 +406,7 @@ contract LUSDAllocator is OlympusAccessControlled {
         } else {
             lqtyStaking.unstake(amount);
 
-            uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from stability pool        
+            uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from stability pool
             IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
             IERC20(token).safeTransfer(address(treasury), balance);
         }
@@ -442,7 +449,7 @@ contract LUSDAllocator is OlympusAccessControlled {
     Implemented here so we don't have to upgrade contract later
      */
     function tokenValue(address _token, uint256 _amount) internal view returns (uint256 value_) {
-        value_ = _amount * (10**9) / (10**IERC20Metadata(_token).decimals());
+        value_ = (_amount * (10**9)) / (10**IERC20Metadata(_token).decimals());
         return value_;
     }
 
