@@ -93,7 +93,7 @@ contract BalancerLiquidty is OlympusAccessControlled {
         uint256[2] memory _minOHMDAI, 
         uint256 _deadline, 
         bytes memory _userData
-    ) external onlyGovernor {
+    ) external onlyGuardian {
         // Manage LPs from treasury
         treasury.manage(OHMETHSLP, _amountOHMETH);
         treasury.manage(OHMDAISLP, _amountOHMDAI);
@@ -150,8 +150,8 @@ contract BalancerLiquidty is OlympusAccessControlled {
         // Add liquidity to the Balancer pool
         balancerVault.joinPool(balancerPoolID, address(this), address(treasury), poolRequest);
 
-        // Send any leftover OHM back to governor and WETH and DAI to treasury
-        IERC20(OHM).safeTransfer(authority.governor(), amountOHM);
+        // Send any leftover OHM back to guardian and WETH and DAI to treasury
+        IERC20(OHM).safeTransfer(authority.guardian(), amountOHM);
         IERC20(WETH).safeTransfer(address(treasury), amountETH);
         IERC20(DAI).safeTransfer(address(treasury), amountDAI);
     }
