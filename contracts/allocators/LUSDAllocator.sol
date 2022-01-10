@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.10;
 pragma abicoder v2;
-import "../libraries/Address.sol";
-import "../libraries/SafeERC20.sol";
 
+import "../libraries/SafeERC20.sol";
 import "../interfaces/IERC20.sol";
 import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/IWETH.sol";
 import "../interfaces/ITreasury.sol";
-import "../interfaces/IAllocator.sol";
 import "../interfaces/ISwapRouter.sol";
-
-import "../types/Ownable.sol";
 import "../types/OlympusAccessControlled.sol";
 
 
@@ -316,7 +312,7 @@ contract LUSDAllocator is OlympusAccessControlled {
 
         // 3.  If we have eth, convert to weth, then swap a percentage of it to LUSD.  If swap successul then send all remaining WETH to treasury
         uint256 ethBalance = address(this).balance;  // Use total balance in case we have leftover from a prior failed attempt
-        if (ethBalance > 0) {
+        if (ethBalance > 0 && percentETHtoLUSD > 0 && percentETHtoLUSD <= 100) {
             // Wrap ETH to WETH
             weth.deposit{value: ethBalance}();
 
