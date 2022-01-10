@@ -338,14 +338,15 @@ describe("LUSDAllocator", () => {
           const PARTIAL_VALUE = PARTIAL_AMOUNT * (10 ** 8);
           lqtyTokenFake.decimals.returns(1);
           lqtyTokenFake.balanceOf.whenCalledWith(lusdAllocator.address).returns(PARTIAL_AMOUNT);
-          treasuryFake.tokenValue.whenCalledWith(lqtyTokenFake.address, PARTIAL_AMOUNT).returns(PARTIAL_VALUE);
+          lqtyTokenFake.transfer.whenCalledWith(treasuryFake.address, PARTIAL_AMOUNT).returns(true);
+          // treasuryFake.tokenValue.whenCalledWith(lqtyTokenFake.address, PARTIAL_AMOUNT).returns(PARTIAL_VALUE);
           await lusdAllocator.connect(guardian).withdraw(lqtyTokenFake.address, PARTIAL_AMOUNT);
 
           expect(lqtyStakingFake.unstake).to.be.calledWith(PARTIAL_AMOUNT);
-          expect(treasuryFake.deposit).to.be.calledWith(PARTIAL_AMOUNT, lqtyTokenFake.address, PARTIAL_VALUE);
+          // expect(treasuryFake.deposit).to.be.calledWith(PARTIAL_AMOUNT, lqtyTokenFake.address, PARTIAL_VALUE);
           expect(lqtyTokenFake.balanceOf).to.be.calledWith(lusdAllocator.address);
           expect(lqtyTokenFake.approve).to.be.calledWith(treasuryFake.address, PARTIAL_AMOUNT);
-          
+          expect(lqtyTokenFake.transfer).to.be.calledWith(treasuryFake.address, PARTIAL_AMOUNT);          
         });        
 
         it("reverts if non-LUSD non-LQTY token is passed", async () => {
