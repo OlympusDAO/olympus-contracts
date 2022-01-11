@@ -216,6 +216,17 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         oldDonation.agnosticDeposit = _toAgnostic(oldDonation.deposit);
         oldDonation.indexAtLastChange = sOhmIndex;
 
+        if(oldDonation.deposit == 0) {
+            delete donationInfo[msg.sender][oldRecipientIndex];
+
+            // If element was in middle of array, bring last element to deleted index
+            uint256 lastIndex = donationInfo[msg.sender].length - 1;
+            if(oldRecipientIndex != lastIndex) {
+                donationInfo[msg.sender][oldRecipientIndex] = donationInfo[msg.sender][lastIndex];
+            }
+            donationInfo[msg.sender].pop();
+        }
+
         RecipientInfo storage oldRecipient = recipientInfo[oldRecipient_];
         oldRecipient.carry += _getAccumulatedValue(oldRecipient.agnosticDebt, oldRecipient.indexAtLastChange);
         oldRecipient.totalDebt -= amount_;
