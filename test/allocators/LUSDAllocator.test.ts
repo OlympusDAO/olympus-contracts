@@ -79,112 +79,6 @@ describe("LUSDAllocator", () => {
         );
         expect(await lusdAllocator.lusdTokenAddress()).to.equal(lusdTokenFake.address);
       });
-
-      it("does not allow treasury to be 0x0", async () => {
-        await expect((new LUSDAllocator__factory(owner)).deploy(
-          authority.address,
-          ZERO_ADDRESS,
-          lusdTokenFake.address,
-          lqtyTokenFake.address,
-          stabilityPoolFake.address,
-          lqtyStakingFake.address,
-          ZERO_ADDRESS,
-          wethTokenFake.address,
-          daiTokenFake.address,
-          swapRouterFake.address
-        )).to.be.revertedWith("treasury address cannot be 0x0");
-      });
-
-      it("does not allow stability pool to be 0x0", async () => {
-        await expect((new LUSDAllocator__factory(owner)).deploy(
-          authority.address,
-          treasuryFake.address,
-          lusdTokenFake.address,
-          lqtyTokenFake.address,
-          ZERO_ADDRESS,
-          lqtyStakingFake.address,
-          ZERO_ADDRESS,
-          wethTokenFake.address,
-          daiTokenFake.address,
-          swapRouterFake.address
-        )).to.be.revertedWith("stabilityPool address cannot be 0x0");
-      });
-
-      it("does not allow LUSD token to be 0x0", async () => {
-        await expect((new LUSDAllocator__factory(owner)).deploy(
-          authority.address,
-          treasuryFake.address,
-          ZERO_ADDRESS,
-          lqtyTokenFake.address,
-          stabilityPoolFake.address,
-          lqtyStakingFake.address,
-          ZERO_ADDRESS,
-          wethTokenFake.address,
-          daiTokenFake.address,
-          swapRouterFake.address
-        )).to.be.revertedWith("LUSD token address cannot be 0x0");
-      });
-
-      it("does not allow LQTY token to be 0x0", async () => {
-        await expect((new LUSDAllocator__factory(owner)).deploy(
-          authority.address,
-          treasuryFake.address,
-          lusdTokenFake.address,
-          ZERO_ADDRESS,
-          stabilityPoolFake.address,
-          lqtyStakingFake.address,
-          ZERO_ADDRESS,
-          wethTokenFake.address,
-          daiTokenFake.address,
-          swapRouterFake.address
-        )).to.be.revertedWith("LQTY token address cannot be 0x0");
-      });
-
-      it("does not allow LQTY staking address to be 0x0", async () => {
-        await expect((new LUSDAllocator__factory(owner)).deploy(
-          authority.address,
-          treasuryFake.address,
-          lusdTokenFake.address,
-          lqtyTokenFake.address,
-          stabilityPoolFake.address,
-          ZERO_ADDRESS,
-          ZERO_ADDRESS,
-          wethTokenFake.address,
-          daiTokenFake.address,
-          swapRouterFake.address
-        )).to.be.revertedWith("LQTY staking address cannot be 0x0");
-      });
-
-      it("does not allow WETH token address to be 0x0", async () => {
-        await expect((new LUSDAllocator__factory(owner)).deploy(
-          authority.address,
-          treasuryFake.address,
-          lusdTokenFake.address,
-          lqtyTokenFake.address,
-          stabilityPoolFake.address,
-          lqtyStakingFake.address,
-          ZERO_ADDRESS,
-          ZERO_ADDRESS,
-          daiTokenFake.address,
-          swapRouterFake.address
-        )).to.be.revertedWith("WETH token address cannot be 0x0");
-      });
-
-      it("does not allow uniswapV3SwapRouter address to be 0x0", async () => {
-        await expect((new LUSDAllocator__factory(owner)).deploy(
-          authority.address,
-          treasuryFake.address,
-          lusdTokenFake.address,
-          lqtyTokenFake.address,
-          stabilityPoolFake.address,
-          lqtyStakingFake.address,
-          ZERO_ADDRESS,
-          wethTokenFake.address,
-          daiTokenFake.address,
-          ZERO_ADDRESS
-        )).to.be.revertedWith("UniswapV3Router address cannot be 0x0");
-      });
-
     });
 
     describe("post-constructor", () => {
@@ -201,6 +95,21 @@ describe("LUSDAllocator", () => {
           daiTokenFake.address,
           swapRouterFake.address
         );
+      });
+
+      describe("setter tests", () => {
+
+        it("invalid setEthToLUSDRatio", async () => {
+          const AMOUNT = 12345;
+          await expect(lusdAllocator.connect(guardian).setEthToLUSDRatio(100 * 1e6 + 1)).
+            to.be.revertedWith("Value must be between 0 and 100 * 1e6");
+        });
+
+        it("invalid poolfee", async () => {
+          const AMOUNT = 12345;
+          await expect(lusdAllocator.connect(guardian).setPoolFee(100 * 1e6 + 1)).
+            to.be.revertedWith("Value must be between 0 and 100 * 1e6");
+        });
       });
 
       describe("deposit", () => {

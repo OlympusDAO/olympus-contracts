@@ -170,8 +170,8 @@ interface ILQTYStaking {
 }
 
 /**
- *  Contract deploys reserves from treasury into the Aave lending pool,
- *  earning interest and $stkAAVE.
+ *  Contract deploys reserves from treasury into the liquity stabilty pool, and those rewards
+ *  are then paid out to the staking contract.  See harvest() function for more details.
  */
 
 contract LUSDAllocator is OlympusAccessControlled {
@@ -189,8 +189,21 @@ contract LUSDAllocator is OlympusAccessControlled {
     ISwapRouter immutable swapRouter;
     ITreasury public treasury; // Olympus Treasury
 
-    uint8 public percentETHtoLUSD = 33; // 33% of ETH to LUSD
-    uint24 public poolFee = 3000; // Init the uniswap pool fee to 0.3%
+    uint256 public constant FEE_PRECISION = 1e6;
+    /**
+     * @notice The target percent of eth to swap to LUSD at uniswap.  divide by 1e6 to get actual value.
+     * Examples:
+     * 500000 => 500000 / 1e6 = 0.50 = 50%
+     * 330000 => 330000 / 1e6 = 0.33 = 33%
+     */
+    uint256 public ethToLUSDRatio = 330000; // 33% of ETH to LUSD
+    /**
+     * @notice poolFee parameter for uniswap swaprouter, divide by 1e6 to get the actual value.  See https://docs.uniswap.org/protocol/guides/swaps/multihop-swaps#calling-the-function-1
+     * Examples:
+     * poolFee =  3000 =>  3000 / 1e6 = 0.003 = 0.3%
+     * poolFee = 30000 => 30000 / 1e6 =  0.03 = 3.0%
+     */
+    uint256 public poolFee = 3000; // Init the uniswap pool fee to 0.3%
 
     address public hopTokenAddress; //Initially DAI, could potentially be USDC
 
@@ -216,30 +229,14 @@ contract LUSDAllocator is OlympusAccessControlled {
         address _hopTokenAddress,
         address _uniswapV3Router
     ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
-        require(_treasury != address(0), "treasury address cannot be 0x0");
         treasury = ITreasury(_treasury);
-
-        require(_lusdTokenAddress != address(0), "LUSD token address cannot be 0x0");
         lusdTokenAddress = _lusdTokenAddress;
-
-        require(_lqtyTokenAddress != address(0), "LQTY token address cannot be 0x0");
         lqtyTokenAddress = _lqtyTokenAddress;
-
-        require(_stabilityPool != address(0), "stabilityPool address cannot be 0x0");
         lusdStabilityPool = IStabilityPool(_stabilityPool);
-
-        require(_lqtyStaking != address(0), "LQTY staking address cannot be 0x0");
         lqtyStaking = ILQTYStaking(_lqtyStaking);
-
         frontEndAddress = _frontEndAddress; // address can be 0
-
-        require(_wethAddress != address(0), "WETH token address cannot be 0x0");
         weth = IWETH(_wethAddress);
-
-        require(_hopTokenAddress != address(0), "Hop Token address cannot be 0x0");
         hopTokenAddress = _hopTokenAddress; // address can be 0
-
-        require(_uniswapV3Router != address(0), "UniswapV3Router address cannot be 0x0");
         swapRouter = ISwapRouter(_uniswapV3Router);
     }
 
@@ -251,18 +248,17 @@ contract LUSDAllocator is OlympusAccessControlled {
     }
 
     /* ======== CONFIGURE FUNCTIONS for Guardian only ======== */
-    function setPercentETHtoLUSD(uint8 _percentETHtoLUSD) external onlyGuardian {
-        require(_percentETHtoLUSD <= 100, "Percentage must be between 0 and 100");
-        percentETHtoLUSD = _percentETHtoLUSD;
+    function setEthToLUSDRatio(uint256 _ethToLUSDRatio) external onlyGuardian {
+        require(_ethToLUSDRatio <= 100 * FEE_PRECISION, "Value must be between 0 and 100 * 1e6");
+        ethToLUSDRatio = _ethToLUSDRatio;
     }
 
-    function setPoolFee(uint24 _poolFee) external onlyGuardian {
-        require(_poolFee <= 100, "Pool fee must be between 0 and 100");
+    function setPoolFee(uint256 _poolFee) external onlyGuardian {
+        require(_poolFee <= 100 * FEE_PRECISION, "Value must be between 0 and 100 * 1e6");
         poolFee = _poolFee;
     }
 
     function setHopTokenAddress(address _hopTokenAddress) external onlyGuardian {
-        require(_hopTokenAddress != address(0), "Hop Token address cannot be 0x0");
         hopTokenAddress = _hopTokenAddress;
     }
 
@@ -284,7 +280,7 @@ contract LUSDAllocator is OlympusAccessControlled {
 
     /**
      *  @notice claims LQTY & ETH Rewards
-     * @param minETHLUSDRate minimum rate of when swapping ETH->LUSD.  e.g. 3500 means we swap at least 3500 LUSD for 1 ETH
+     * @param minETHLUSDRate minimum rate of when swapping ETH->LUSD.  e.g. 3500 means we swap at a rate of 1 ETH for a minimum 3500 LUSD
 
         1.  Harvest from LUSD StabilityPool to get ETH+LQTY rewards
         2.  Stake LQTY rewards from #1.  This txn will also give out any outstanding ETH+LUSD rewards from prior staking
@@ -316,14 +312,15 @@ contract LUSDAllocator is OlympusAccessControlled {
             weth.deposit{value: ethBalance}();
 
             uint256 wethBalance = weth.balanceOf(address(this)); //Base off of WETH balance in case we have leftover from a prior failed attempt
-            if (percentETHtoLUSD > 0 && percentETHtoLUSD <= 100) {
-                uint256 amountWethToSwap = (wethBalance * percentETHtoLUSD) / 100;
+            if (ethToLUSDRatio > 0 && ethToLUSDRatio <= (100 * FEE_PRECISION)) {
+                uint256 amountWethToSwap = (wethBalance * ethToLUSDRatio) / FEE_PRECISION;
 
                 // Approve WETH to uniswap
                 weth.safeApprove(address(swapRouter), amountWethToSwap);
 
                 uint256 amountLUSDMin = amountWethToSwap * minETHLUSDRate; //WETH and LUSD is 18 decimals
 
+                // From https://docs.uniswap.org/protocol/guides/swaps/multihop-swaps#calling-the-function-1
                 // Multiple pool swaps are encoded through bytes called a `path`. A path is a sequence of token addresses and poolFees that define the pools used in the swaps.
                 // The format for pool encoding is (tokenIn, fee, tokenOut/tokenIn, fee, tokenOut) where tokenIn/tokenOut parameter is the shared token across the pools.
                 // Since we are swapping WETH to DAI and then DAI to LUSD the path encoding is (WETH, 0.3%, DAI, 0.3%, LUSD).
@@ -341,7 +338,7 @@ contract LUSDAllocator is OlympusAccessControlled {
                 }
             }
         }
-        if (percentETHtoLUSD == 0 || swappedLUSDSuccessfully) {
+        if (ethToLUSDRatio == 0 || swappedLUSDSuccessfully) {
             // If swap was successful (or if percent to swap is 0), send the remaining WETH to the treasury.  Crucial check otherwise we'd send all our WETH to the treasury and not respect our desired percentage
 
             // Get updated balance, send to treasury
