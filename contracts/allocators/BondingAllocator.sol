@@ -51,18 +51,14 @@ contract OlympusBondingManager is OlympusAccessControlled {
     /// @param _token       Address of token to be bonded
     /// @param _amount      Amount of `_asset` to be transfered from treasury and to bond
     /// @param _maxPrice    Max price willing to pay for bond
-    /// @param _managing    Bool if managing `_token` from treasury
     function bond(
         address _depository, 
         address _token, 
         uint256 _amount, 
-        uint256 _maxPrice, 
-        bool _managing
+        uint256 _maxPrice
     ) external onlyGuardian {
-        if(_managing) {
-            // retrieve amount of token from treasury
-            treasury.manage(_token, _amount); 
-        }
+        // retrieve amount of token from treasury
+        treasury.manage(_token, _amount); 
 
         // approve token to be spent by staking
         IERC20(_token).approve(_depository, _amount);
