@@ -278,9 +278,8 @@ contract LUSDAllocator is OlympusAccessControlled {
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
-     *  @notice claims LQTY & ETH Rewards
-     * @param minETHLUSDRate minimum rate of when swapping ETH->LUSD.  e.g. 3500 means we swap at a rate of 1 ETH for a minimum 3500 LUSD
-
+     *  @notice claims LQTY & ETH Rewards.   minETHLUSDRate minimum rate of when swapping ETH->LUSD.  e.g. 3500 means we swap at a rate of 1 ETH for a minimum 3500 LUSD
+     
         1.  Harvest from LUSD StabilityPool to get ETH+LQTY rewards
         2.  Stake LQTY rewards from #1.  This txn will also give out any outstanding ETH+LUSD rewards from prior staking
         3.  If we have eth, convert to weth, then swap a percentage of it to LUSD.  If swap successul then send all remaining WETH to treasury
