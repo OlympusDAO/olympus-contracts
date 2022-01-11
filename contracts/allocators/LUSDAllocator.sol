@@ -353,7 +353,7 @@ contract LUSDAllocator is OlympusAccessControlled {
         // 4.  Deposit LUSD from #2 and potentially #3 into StabilityPool
         uint256 lusdBalance = IERC20(lusdTokenAddress).balanceOf(address(this));
         if (lusdBalance > 0) {
-            depositLUSD(lusdBalance);
+            _depositLUSD(lusdBalance);
         }
 
         return true;
@@ -368,15 +368,7 @@ contract LUSDAllocator is OlympusAccessControlled {
     function deposit(uint256 amount) external onlyGuardian {
         treasury.manage(lusdTokenAddress, amount); // retrieve amount of asset from treasury
 
-        depositLUSD(amount);
-    }
-
-    function depositLUSD(uint256 amount) internal {
-        IERC20(lusdTokenAddress).approve(address(lusdStabilityPool), amount); // approve to deposit into stability pool
-        lusdStabilityPool.provideToSP(amount, frontEndAddress); //s either a front-end address OR 0x0
-
-        uint256 value = tokenValue(lusdTokenAddress, amount); // treasury RFV calculator
-        accountingFor(amount, value, true); // account for deposit
+        _depositLUSD(amount);
     }
 
     /**
@@ -394,9 +386,9 @@ contract LUSDAllocator is OlympusAccessControlled {
             lusdStabilityPool.withdrawFromSP(amount); // withdraw from SP
 
             uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from stability pool
-            uint256 value = tokenValue(token, balance); // treasury RFV calculator
+            uint256 value = _tokenValue(token, balance); // treasury RFV calculator
 
-            accountingFor(balance, value, false); // account for withdrawal
+            _accountingFor(balance, value, false); // account for withdrawal
 
             IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
             treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
@@ -411,13 +403,21 @@ contract LUSDAllocator is OlympusAccessControlled {
 
     /* ======== INTERNAL FUNCTIONS ======== */
 
+    function _depositLUSD(uint256 amount) internal {
+        IERC20(lusdTokenAddress).approve(address(lusdStabilityPool), amount); // approve to deposit into stability pool
+        lusdStabilityPool.provideToSP(amount, frontEndAddress); //s either a front-end address OR 0x0
+
+        uint256 value = _tokenValue(lusdTokenAddress, amount); // treasury RFV calculator
+        _accountingFor(amount, value, true); // account for deposit
+    }
+
     /**
      *  @notice accounting of deposits/withdrawals of assets
      *  @param amount uint
      *  @param value uint
      *  @param add bool
      */
-    function accountingFor(
+    function _accountingFor(
         uint256 amount,
         uint256 value,
         bool add
@@ -442,10 +442,10 @@ contract LUSDAllocator is OlympusAccessControlled {
     }
 
     /**
-    Helper method copying OlympusTreasury::tokenValue(), whose name was 'valueOf()' in v1 
+    Helper method copying OlympusTreasury::_tokenValue(), whose name was 'valueOf()' in v1 
     Implemented here so we don't have to upgrade contract later
      */
-    function tokenValue(address _token, uint256 _amount) internal view returns (uint256 value_) {
+    function _tokenValue(address _token, uint256 _amount) internal view returns (uint256 value_) {
         value_ = (_amount * (10**9)) / (10**IERC20Metadata(_token).decimals());
         return value_;
     }
