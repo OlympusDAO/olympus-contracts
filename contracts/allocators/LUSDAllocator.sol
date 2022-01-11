@@ -5,9 +5,9 @@ pragma abicoder v2;
 import "../libraries/SafeERC20.sol";
 import "../interfaces/IERC20.sol";
 import "../interfaces/IERC20Metadata.sol";
-import "../interfaces/IWETH.sol";
 import "../interfaces/ITreasury.sol";
-import "../interfaces/ISwapRouter.sol";
+import "./interfaces/ISwapRouter.sol";
+import "./interfaces/IWETH.sol";
 import "../types/OlympusAccessControlled.sol";
 
 //https://etherscan.io/address/0x66017D22b0f8556afDd19FC67041899Eb65a21bb
