@@ -401,47 +401,6 @@ describe("LUSDAllocator", () => {
 
         ;
 
-      await advance(100);
-
-      ethRewards = await allocator.getETHRewards();
-      lqtyRewards = await allocator.getLQTYRewards();
-
-      expect(ethRewards).to.equal(ZERO);
-      expect(lqtyRewards).to.equal(ZERO);
-
-        // .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("350461943063989161432445055694169347038"), 0, 0)
-        // // .not.to.emit(lusdStabilityPool, "LQTYPaidToFrontEnd").withArgs(ZERO_ADDRESS, 0)          //How to get NOT emit to work??!
-        // .to.emit(lusdStabilityPool, "LQTYPaidToDepositor").withArgs(allocator.address, 0)
-        // .to.emit(lusdStabilityPool, "FrontEndStakeChanged").withArgs(ZERO_ADDRESS, ethers.BigNumber.from("45632567909241122202977270"), allocator.address)
-        // .to.emit(lusdStabilityPool, "StabilityPoolLUSDBalanceUpdated").withArgs(STABILITY_POOL_TOTAL_BALANCE)
-        // .to.emit(lusdStabilityPool, "DepositSnapshotUpdated").withArgs(allocator.address,
-        //   ethers.BigNumber.from("876920926160447076"), ethers.BigNumber.from("58089263752322121983911170457988"), ethers.BigNumber.from("350461943063989161432445055694169347038"))
-        // .to.emit(lusdStabilityPool, "UserDepositChanged").withArgs(allocator.address, DEPOSIT_AMOUNT)
-        // .to.emit(lusdStabilityPool, "ETHGainWithdrawn").withArgs(allocator.address, ZERO, ZERO)
-        // .to.emit(oldTreasury, "ReservesUpdated").withArgs(ethers.BigNumber.from("168613073893284949"))
-        // .to.emit(oldTreasury, "ReservesManaged").withArgs(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT)
-        // ;
-
-      await allocator.connect(manager).withdraw(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT);
-        // .to.emit(lusdStabilityPool, "G_Updated").withArgs(ethers.BigNumber.from("350461943753146787543868841926858937250"), 0, 0)
-        // // .not.to.emit(lusdStabilityPool, "LQTYPaidToFrontEnd").withArgs(ZERO_ADDRESS, 0)          //How to get NOT emit to work??!
-        // .to.emit(lusdStabilityPool, "LQTYPaidToDepositor").withArgs(allocator.address, ethers.BigNumber.from("5352906630778467"))
-        // .to.emit(lusdStabilityPool, "FrontEndStakeChanged").withArgs(ZERO_ADDRESS, ethers.BigNumber.from("45625756585296556713388369"), allocator.address)
-        // .to.emit(lusdStabilityPool, "StabilityPoolLUSDBalanceUpdated").withArgs(STABILITY_POOL_BALANCE)
-        // .to.emit(lusdStabilityPool, "DepositSnapshotUpdated").withArgs(allocator.address,
-        //   ZERO, ZERO, ZERO)
-        // .to.emit(lusdStabilityPool, "UserDepositChanged").withArgs(allocator.address, ZERO)
-        // .to.emit(lusdStabilityPool, "ETHGainWithdrawn").withArgs(allocator.address, ZERO, ZERO)
-        // .to.emit(oldTreasury, "ReservesUpdated").withArgs(ethers.BigNumber.from("168619885217229514"))
-        // .to.emit(oldTreasury, "Deposit").withArgs(LUSD_TOKEN_ADDRESS, DEPOSIT_AMOUNT, ethers.BigNumber.from("6811323944565"))
-        // ;
-
-
-      ethRewards = await allocator.getETHRewards();
-      lqtyRewards = await allocator.getLQTYRewards();
-
-      expect(ethRewards).to.equal(ZERO);
-      expect(lqtyRewards).to.equal(ZERO);
     });
   });
 });
