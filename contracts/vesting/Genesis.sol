@@ -150,11 +150,11 @@ contract GenesisClaim is Ownable {
      * @param _address address
      * @return uint256
      */
-    function redeemableFor(address _address) public view returns (uint256) {
-        Term memory info = terms[_address];
-        uint256 max = circulatingSupply().mul(info.percent).mul(1e3);
+    function redeemableFor( address _address ) public view returns (uint) {
+        Term memory info = terms[ _address ];
+        uint max = circulatingSupply().mul( info.percent ).div( 1e6 );
         if (max > info.max) max = info.max;
-        return max.sub(claimed(_address).mul(1e9));
+        return max.sub( claimed( _address ) ).mul( 1e9 );
     }
 
     /**
