@@ -14,7 +14,7 @@ interface IStaking {
     function claim ( address _recipient ) external;
 }
 
-contract OlympusStakingManager is OlympusAccessControlled {
+contract MetaGovernanceAllocator is OlympusAccessControlled {
 
     using SafeERC20 for IERC20;
 
@@ -42,7 +42,7 @@ contract OlympusStakingManager is OlympusAccessControlled {
      * @notice stakes either BTRFLY or LOBI from treasury
      */
     function stake(bool _redacted, uint _amount) external onlyGuardian {
-    (address staking, address token,) = _redactedOrLobi(_redacted);
+        (address staking, address token,) = _redactedOrLobi(_redacted);
 
         // retrieve amount of token from treasury
         treasury.manage(token, _amount); 
