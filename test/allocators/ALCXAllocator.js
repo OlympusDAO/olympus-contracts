@@ -114,7 +114,7 @@ describe('Alchemix Allocator', async () => {
 
     it('Should claim rewards and compound it', async () => {  
         const tAlcx_balance_in_alchemix_pool_before_tx = await alchemixAllocator.totaltAlcxDeposited(8); 
-        await advance(172800); // 2 days in seconds
+        await advance(43200); // 2 days in seconds
 
         let pending_rewards = await alchemixAllocator.alchemixToClaim(8)
         const total_tALCX_deposited = Number(tAlcx_balance_in_alchemix_pool_before_tx) + Number(pending_rewards);
