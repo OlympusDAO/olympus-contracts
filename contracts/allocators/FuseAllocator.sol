@@ -51,8 +51,8 @@ contract FuseAllocator is OlympusAccessControlled {
 
     /* ======== CONSTRUCTOR ======== */
 
-    constructor(address _treasury, IOlympusAuthority _authority) OlympusAccessControlled(_authority) {
-        setTreasury(_treasury);
+    constructor(IOlympusAuthority _authority) OlympusAccessControlled(_authority) {
+        treasury = ITreasury(_authority.vault());
     }
 
     /* ======== POLICY FUNCTIONS ======== */
@@ -121,14 +121,5 @@ contract FuseAllocator is OlympusAccessControlled {
         token.approve(address(treasury), amount); // approve treasury to receive withdrawn tokens
         // send all withdrawn tokens to treasury
         treasury.deposit(amount, tokenAddress, treasury.tokenValue(tokenAddress, amount));
-    }
-
-    /**
-     * @notice Set the treasury address to be used.
-     * @param _treasury address The address of the Olympus treasury.
-     */
-    function setTreasury(address _treasury) public onlyGuardian returns (uint256) {
-        require(_treasury != address(0), "treasury address cannot be 0x0");
-        treasury = ITreasury(_treasury);
     }
 }
