@@ -7,14 +7,14 @@ const impersonateAccount = require("../utils/impersonate_account");
 
 chai.use(solidity);
 
-const ALCHEMIX = process.env.ALCHEMIX;
-const TOKEMAK_T_ALCX = process.env.TOKEMAK_T_ALCX;
-const TOKEMAK_MANAGER = process.env.TOKEMAK_MANAGER;
-const TREASURY_MANAGER = process.env.TREASURY_MANAGER;
-const TREASURY_ADDRESS = process.env.TREASURY_ADDRESS;
-const GUARDIAN_ADDRESS = process.env.GUARDIAN_ADDRESS;
-const OLYMPUS_AUTHORITY_ADDRESS = process.env.OLYMPUS_AUTHORITY_ADDRESS;
-const ALCHEMIX_STAKING_POOL = process.env.ALCHEMIX_STAKING_POOL;
+const ALCHEMIX = '0xdbdb4d16eda451d0503b854cf79d55697f90c8df';
+const TOKEMAK_T_ALCX = '0xD3B5D9a561c293Fb42b446FE7e237DaA9BF9AA84';
+const TOKEMAK_MANAGER = '0xA86e412109f77c45a3BC1c5870b880492Fb86A14';
+const TREASURY_MANAGER = '0x245cc372c84b3645bf0ffe6538620b04a217988b';
+const TREASURY_ADDRESS = '0x9A315BdF513367C0377FB36545857d12e85813Ef';
+const GUARDIAN_ADDRESS = '0x245cc372c84b3645bf0ffe6538620b04a217988b';
+const ALCHEMIX_STAKING_POOL = '0xAB8e74017a8Cc7c15FFcCd726603790d26d7DeCa';
+const OLYMPUS_AUTHORITY_ADDRESS = '0x1c21F8EA7e39E2BA00BC12d2968D63F4acb38b7A';
 
 describe('Alchemix Allocator', async () => {
     let user,
@@ -114,7 +114,7 @@ describe('Alchemix Allocator', async () => {
 
     it('Should claim rewards and compound it', async () => {  
         const tAlcx_balance_in_alchemix_pool_before_tx = await alchemixAllocator.totaltAlcxDeposited(8); 
-        await advance(172800); // 2 days in seconds
+        await advance(43200); // 2 days in seconds
 
         let pending_rewards = await alchemixAllocator.alchemixToClaim(8)
         const total_tALCX_deposited = Number(tAlcx_balance_in_alchemix_pool_before_tx) + Number(pending_rewards);
