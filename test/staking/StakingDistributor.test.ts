@@ -1,4 +1,4 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import chai, { expect } from "chai";
 import { ethers } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
