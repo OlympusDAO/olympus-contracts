@@ -280,7 +280,7 @@ describe("LUSDAllocator", () => {
     }
   }
 
-  describe("integration tests", () => {
+  describe.skip("integration tests", () => {
     let owner: SignerWithAddress;
     let manager: SignerWithAddress;    
     let allocator: LUSDAllocator;
