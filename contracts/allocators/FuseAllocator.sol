@@ -72,7 +72,7 @@ contract FuseAllocator is OlympusAccessControlled {
         address tokenAddress,
         address fTokenAddress,
         uint256 amount
-    ) external onlyGuardian returns (uint256) {
+    ) external onlyGuardian {
         ComptrollerInterface comptroller = ComptrollerInterface(comptrollerAddress);
         IERC20 token = IERC20(tokenAddress);
         treasury.manage(tokenAddress, amount); // withdraw specified amount of token from treasury
@@ -104,7 +104,7 @@ contract FuseAllocator is OlympusAccessControlled {
         address comptrollerAddress,
         address tokenAddress,
         address fTokenAddress
-    ) external onlyGuardian returns (uint256) {
+    ) external onlyGuardian {
         ComptrollerInterface comptroller = ComptrollerInterface(comptrollerAddress);
         require(comptroller.exitMarket(fTokenAddress) == 0, "Failed to exit pool");
 
