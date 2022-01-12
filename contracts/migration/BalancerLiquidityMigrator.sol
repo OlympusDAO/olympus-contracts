@@ -59,7 +59,7 @@ interface IBalancerVault {
     }
 }
 
-contract BalancerLiquidty is OlympusAccessControlled {
+contract BalancerLiquidityMigrator is OlympusAccessControlled {
     using SafeERC20 for IERC20;
 
     // Balancer Vault
@@ -104,24 +104,24 @@ contract BalancerLiquidty is OlympusAccessControlled {
 
         // Remove specified liquidity from OHM/ETH SLP
         (uint256 amountETH, uint256 amountOHM1) = router.removeLiquidity(
-        WETH, 
-        OHM, 
-        _amountOHMETH,
-        _minOHMETH[0], 
-        _minOHMETH[1], 
-        address(this), 
-        _deadline
+            WETH, 
+            OHM, 
+            _amountOHMETH,
+            _minOHMETH[0], 
+            _minOHMETH[1], 
+            address(this), 
+            _deadline
         );
 
         // Remove specified liquidity from OHM/DAI SLP
         (uint256 amountDAI, uint256 amountOHM2) = router.removeLiquidity(
-        DAI, 
-        OHM, 
-        _amountOHMDAI,
-        _minOHMDAI[0], 
-        _minOHMDAI[1], 
-        address(this), 
-        _deadline
+            DAI, 
+            OHM, 
+            _amountOHMDAI,
+            _minOHMDAI[0], 
+            _minOHMDAI[1], 
+            address(this), 
+            _deadline
         );
 
         // Amount of OHM removed from liquidity
