@@ -23,7 +23,7 @@ chai.use(smock.matchers);
 const ZERO_ADDRESS = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
 const MAX_TIME = 4 * 365 * 86400 + 1;
 
-describe("FraxSharesAllocator", () => {
+describe.skip("FraxSharesAllocator", () => {
     describe("unit tests", () => {
         let owner: SignerWithAddress;
         let other: SignerWithAddress;
