@@ -9,6 +9,7 @@ async function main() {
 
   //mainnet
   const constructorArgs = [
+    "", //olympus authority
       "0x0d722D813601E48b7DAcb2DF9bae282cFd98c6E7", // v1 treasury address
       "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0", // LUSD token
       "0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D", // LQTY token

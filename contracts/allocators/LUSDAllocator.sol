@@ -31,6 +31,7 @@ contract LUSDAllocator is OlympusAccessControlled {
     ITreasury public treasury; // Olympus Treasury
 
     uint256 public constant FEE_PRECISION = 1e6;
+    uint256 public constant POOL_FEE_MAX = 10000;
     /**
      * @notice The target percent of eth to swap to LUSD at uniswap.  divide by 1e6 to get actual value.
      * Examples:
@@ -40,6 +41,7 @@ contract LUSDAllocator is OlympusAccessControlled {
     uint256 public ethToLUSDRatio = 330000; // 33% of ETH to LUSD
     /**
      * @notice poolFee parameter for uniswap swaprouter, divide by 1e6 to get the actual value.  See https://docs.uniswap.org/protocol/guides/swaps/multihop-swaps#calling-the-function-1
+
      * Examples:
      * poolFee =  3000 =>  3000 / 1e6 = 0.003 = 0.3%
      * poolFee = 30000 => 30000 / 1e6 =  0.03 = 3.0%
@@ -90,12 +92,12 @@ contract LUSDAllocator is OlympusAccessControlled {
 
     /* ======== CONFIGURE FUNCTIONS for Guardian only ======== */
     function setEthToLUSDRatio(uint256 _ethToLUSDRatio) external onlyGuardian {
-        require(_ethToLUSDRatio <= 100 * FEE_PRECISION, "Value must be between 0 and 100 * 1e6");
+        require(_ethToLUSDRatio <= FEE_PRECISION, "Value must be between 0 and 1e6");
         ethToLUSDRatio = _ethToLUSDRatio;
     }
 
     function setPoolFee(uint256 _poolFee) external onlyGuardian {
-        require(_poolFee <= 100 * FEE_PRECISION, "Value must be between 0 and 100 * 1e6");
+        require(_poolFee <= POOL_FEE_MAX, "Value must be between 0 and 10000");
         poolFee = _poolFee;
     }
 
@@ -152,7 +154,7 @@ contract LUSDAllocator is OlympusAccessControlled {
             weth.deposit{value: ethBalance}();
 
             uint256 wethBalance = weth.balanceOf(address(this)); //Base off of WETH balance in case we have leftover from a prior failed attempt
-            if (ethToLUSDRatio > 0 && ethToLUSDRatio <= (100 * FEE_PRECISION)) {
+            if (ethToLUSDRatio > 0) {
                 uint256 amountWethToSwap = (wethBalance * ethToLUSDRatio) / FEE_PRECISION;
 
                 // Approve WETH to uniswap
