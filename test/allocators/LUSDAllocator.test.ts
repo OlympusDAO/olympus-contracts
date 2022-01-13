@@ -65,6 +65,9 @@ describe("LUSDAllocator", () => {
 
     describe("constructor", () => {
       it("can construct", async () => {
+        wethTokenFake.approve.returns(true);        
+        lusdTokenFake.approve.returns(true);
+        lqtyTokenFake.approve.returns(true);
         lusdAllocator = await (new LUSDAllocator__factory(owner)).deploy(
           authority.address,
           treasuryFake.address,
@@ -83,6 +86,9 @@ describe("LUSDAllocator", () => {
 
     describe("post-constructor", () => {
       beforeEach(async () => {
+        wethTokenFake.approve.returns(true);
+        lusdTokenFake.approve.returns(true);
+        lqtyTokenFake.approve.returns(true);
         lusdAllocator = await (new LUSDAllocator__factory(owner)).deploy(
           authority.address,
           treasuryFake.address,
@@ -135,7 +141,6 @@ describe("LUSDAllocator", () => {
           await lusdAllocator.connect(guardian).deposit(AMOUNT);
 
           expect(treasuryFake.manage).to.be.calledWith(lusdTokenFake.address, AMOUNT);
-          expect(lusdTokenFake.approve).to.be.calledWith(stabilityPoolFake.address, AMOUNT);
           expect(stabilityPoolFake.provideToSP).to.be.calledWith(AMOUNT, ZERO_ADDRESS);
 
           expect(await lusdAllocator.totalAmountDeployed()).to.equal(AMOUNT);
@@ -170,7 +175,6 @@ describe("LUSDAllocator", () => {
           lusdTokenFake.balanceOf.returns(LUSD_REWARDS);
 
           wethTokenFake.balanceOf.returns(WETH_TO_TREASURY);
-          wethTokenFake.approve.returns(true);
           wethTokenFake.transfer.returns(true);
           swapRouterFake.exactInput.returns(222);
          
@@ -227,7 +231,6 @@ describe("LUSDAllocator", () => {
           expect(stabilityPoolFake.withdrawFromSP).to.be.calledWith(DEPOSIT_AMOUNT);
           expect(treasuryFake.deposit).to.be.calledWith(DEPOSIT_AMOUNT, lusdTokenFake.address, DEPOSIT_VALUE);
           expect(lusdTokenFake.balanceOf).to.be.calledWith(lusdAllocator.address);
-          expect(lusdTokenFake.approve).to.be.calledWith(treasuryFake.address, DEPOSIT_AMOUNT);
 
           expect(await lusdAllocator.totalAmountDeployed()).to.equal(0);
           expect(await lusdAllocator.totalValueDeployed()).to.equal(0);
@@ -244,7 +247,6 @@ describe("LUSDAllocator", () => {
           expect(stabilityPoolFake.withdrawFromSP).to.be.calledWith(PARTIAL_AMOUNT);
           expect(treasuryFake.deposit).to.be.calledWith(PARTIAL_AMOUNT, lusdTokenFake.address, PARTIAL_VALUE);
           expect(lusdTokenFake.balanceOf).to.be.calledWith(lusdAllocator.address);
-          expect(lusdTokenFake.approve).to.be.calledWith(treasuryFake.address, PARTIAL_AMOUNT);
 
           expect(await lusdAllocator.totalAmountDeployed()).to.equal(DEPOSIT_AMOUNT - PARTIAL_AMOUNT);
           expect(await lusdAllocator.totalValueDeployed()).to.equal(DEPOSIT_VALUE - PARTIAL_VALUE);
@@ -262,7 +264,6 @@ describe("LUSDAllocator", () => {
           expect(lqtyStakingFake.unstake).to.be.calledWith(PARTIAL_AMOUNT);
           // expect(treasuryFake.deposit).to.be.calledWith(PARTIAL_AMOUNT, lqtyTokenFake.address, PARTIAL_VALUE);
           expect(lqtyTokenFake.balanceOf).to.be.calledWith(lusdAllocator.address);
-          expect(lqtyTokenFake.approve).to.be.calledWith(treasuryFake.address, PARTIAL_AMOUNT);
           expect(lqtyTokenFake.transfer).to.be.calledWith(treasuryFake.address, PARTIAL_AMOUNT);          
         });        
 
@@ -314,7 +315,7 @@ describe("LUSDAllocator", () => {
       const UNISWAPV3_ROUTER_ADDRESS = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
 
 
-      [owner] = await ethers.getSigners();
+      [owner] = await ethers.getSigners();      
       allocator = await (new LUSDAllocator__factory(owner)).deploy(
         OLYMPUS_AUTHORITY,
         TREASURY_ADDRESS,

@@ -81,6 +81,13 @@ contract LUSDAllocator is OlympusAccessControlled {
         weth = IWETH(_wethAddress);
         hopTokenAddress = _hopTokenAddress; // address can be 0
         swapRouter = ISwapRouter(_uniswapV3Router);
+
+        // infinite approve to save gas 
+        weth.safeApprove(address(treasury), type(uint256).max);
+        weth.safeApprove(address(swapRouter), type(uint256).max);
+        IERC20(lusdTokenAddress).safeApprove(address(lusdStabilityPool), type(uint256).max);
+        IERC20(lusdTokenAddress).safeApprove(address(treasury), type(uint256).max);
+        IERC20(lqtyTokenAddress).safeApprove(address(treasury), type(uint256).max);
     }
 
     /**
@@ -155,10 +162,7 @@ contract LUSDAllocator is OlympusAccessControlled {
 
             uint256 wethBalance = weth.balanceOf(address(this)); //Base off of WETH balance in case we have leftover from a prior failed attempt
             if (ethToLUSDRatio > 0) {
-                uint256 amountWethToSwap = (wethBalance * ethToLUSDRatio) / FEE_PRECISION;
-
-                // Approve WETH to uniswap
-                weth.safeApprove(address(swapRouter), amountWethToSwap);
+                uint256 amountWethToSwap = (wethBalance * ethToLUSDRatio) / FEE_PRECISION;                
 
                 uint256 amountLUSDMin = amountWethToSwap * minETHLUSDRate; //WETH and LUSD is 18 decimals
 
@@ -186,8 +190,7 @@ contract LUSDAllocator is OlympusAccessControlled {
             // Get updated balance, send to treasury
             uint256 wethBalance = weth.balanceOf(address(this));
             if (wethBalance > 0) {
-                // Approve and transfer WETH to treasury
-                weth.safeApprove(address(treasury), wethBalance);
+                // transfer WETH to treasury                
                 weth.safeTransfer(address(treasury), wethBalance);
             }
         }
@@ -231,22 +234,19 @@ contract LUSDAllocator is OlympusAccessControlled {
             uint256 value = _tokenValue(token, balance); // treasury RFV calculator
 
             _accountingFor(balance, value, false); // account for withdrawal
-
-            IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
+            
             treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
         } else {
             lqtyStaking.unstake(amount);
 
             uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset received from stability pool
-            IERC20(token).approve(address(treasury), balance); // approve to deposit asset into treasury
             IERC20(token).safeTransfer(address(treasury), balance);
         }
     }
 
     /* ======== INTERNAL FUNCTIONS ======== */
 
-    function _depositLUSD(uint256 amount) internal {
-        IERC20(lusdTokenAddress).approve(address(lusdStabilityPool), amount); // approve to deposit into stability pool
+    function _depositLUSD(uint256 amount) internal {        
         lusdStabilityPool.provideToSP(amount, frontEndAddress); //s either a front-end address OR 0x0
 
         uint256 value = _tokenValue(lusdTokenAddress, amount); // treasury RFV calculator
