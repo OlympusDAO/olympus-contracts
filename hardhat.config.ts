@@ -63,7 +63,7 @@ const config: HardhatUserConfig = {
     },
     kovan: {
       url: `https://kovan.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161`,
-      accounts: [`01bf8208ad81d814f97c66fae9d062eaf1035542fb876c381c3172a8b8ac0afd`],
+      accounts: [``],
       timeout: 20000000
     },
     rinkeby: {
@@ -74,10 +74,10 @@ const config: HardhatUserConfig = {
       url: `https://goerli.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
       accounts: [`0x${process.env.PRIVATE_KEY}`]
     },
-    localhost: {
-      url: 'http://localhost:8545',
-      accounts: ['0xad8ff5797e829885c6e54398b9da4ebedc46b68d1dc841cbad2d0e4d84557bfb']
-    }
+    // localhost: {
+    //   url: 'http://localhost:8545',
+    //   accounts: ['0xad8ff5797e829885c6e54398b9da4ebedc46b68d1dc841cbad2d0e4d84557bfb']
+    // }
   },
   paths: {
     artifacts: "./artifacts",
