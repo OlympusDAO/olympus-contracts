@@ -99,18 +99,26 @@ describe("LUSDAllocator", () => {
 
       describe("setter tests", () => {
 
-        it("invalid setEthToLUSDRatio", async () => {
-          const AMOUNT = 12345;
-          await expect(lusdAllocator.connect(guardian).setEthToLUSDRatio(100 * 1e6 + 1)).
-            to.be.revertedWith("Value must be between 0 and 100 * 1e6");
+        it("invalid setEthToLUSDRatio", async () => {          
+          await expect(lusdAllocator.connect(guardian).setEthToLUSDRatio(1e6 + 1)).
+            to.be.revertedWith("Value must be between 0 and 1e6");          
+        });
+
+        it("valid setEthToLUSDRatio", async () => {
+          await lusdAllocator.connect(guardian).setEthToLUSDRatio(1e6);
+          await lusdAllocator.connect(guardian).setEthToLUSDRatio(0);
         });
 
         it("invalid poolfee", async () => {
-          const AMOUNT = 12345;
-          await expect(lusdAllocator.connect(guardian).setPoolFee(100 * 1e6 + 1)).
-            to.be.revertedWith("Value must be between 0 and 100 * 1e6");
+          await expect(lusdAllocator.connect(guardian).setPoolFee(10000 + 1)).
+            to.be.revertedWith("Value must be between 0 and 10000");
         });
-      });
+        it("valid poolfee", async () => {
+          await lusdAllocator.connect(guardian).setPoolFee(10000);
+          await lusdAllocator.connect(guardian).setPoolFee(0);
+        });
+
+      });    
 
       describe("deposit", () => {
 
