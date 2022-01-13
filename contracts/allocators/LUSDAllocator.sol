@@ -41,10 +41,10 @@ contract LUSDAllocator is OlympusAccessControlled {
     uint256 public ethToLUSDRatio = 330000; // 33% of ETH to LUSD
     /**
      * @notice poolFee parameter for uniswap swaprouter, divide by 1e6 to get the actual value.  See https://docs.uniswap.org/protocol/guides/swaps/multihop-swaps#calling-the-function-1
-
+     * Maximum allowed value is 10000 (1%)
      * Examples:
      * poolFee =  3000 =>  3000 / 1e6 = 0.003 = 0.3%
-     * poolFee = 30000 => 30000 / 1e6 =  0.03 = 3.0%
+     * poolFee = 10000 => 10000 / 1e6 =  0.01 = 1.0%
      */
     uint256 public poolFee = 3000; // Init the uniswap pool fee to 0.3%
 
