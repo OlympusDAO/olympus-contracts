@@ -37,18 +37,12 @@ describe.only("YieldDirector", async () => {
     // const calcIndex = (principal: BigNumber, rate: number, epochs: number) =>
     //     principal * (1 + rate) ** epochs;
 
-    // TODO needs cleanup. use Bignumber.
-    // Mine block and rebase. Returns the new index.
     const triggerRebase = async () => {
-        await timeout(28800) // 8 hours per epoch
+        await network.provider.send("evm_increaseTime", [28800]) // 8 hours per rebase
+        await network.provider.send("evm_mine", [])
         await staking.rebase();
         return await sOhm.index();
     };
-
-    const timeout = async (seconds: number): Promise<void> => {
-        await network.provider.send("evm_increaseTime", [seconds])
-        await network.provider.send("evm_mine", [])
-    }
 
     let deployer: SignerWithAddress;
     let alice: SignerWithAddress;
