@@ -3,14 +3,15 @@ pragma solidity 0.7.5;
 
 import "../interfaces/IERC20.sol";
 import "../interfaces/IsOHM.sol";
-import "../interfaces/IwsOHM.sol";
 import "../interfaces/IgOHM.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IStaking.sol";
 import "../interfaces/IOwnable.sol";
 import "../interfaces/IUniswapV2Router.sol";
-import "../interfaces/IStakingV1.sol";
-import "../interfaces/ITreasuryV1.sol";
+
+import "./interfaces/IwsOHM.sol";
+import "./interfaces/IStakingV1.sol";
+import "./interfaces/ITreasuryV1.sol";
 
 import "../types/OlympusAccessControlled.sol";
 
