@@ -124,3 +124,9 @@ treasury.deposit( address(this), amountToReturn, DAI, treasury.valueOf( DAI, amo
 2. Pull the contract dependencies: ``git submodule update --init --recursive``
 2. Run ``dapp test``
 
+## Deploying contracts on kovan testnet
+
+1. ``git clone https://github.com/OlympusDAO/olympus-contracts.git ``
+2. Install dependancies: `yarn install`
+3. `npx hardhat run scripts/deployAll.js --network kovan`
+
