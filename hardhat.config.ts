@@ -64,6 +64,7 @@ const config: HardhatUserConfig = {
     kovan: {
       url: `https://kovan.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161`,
       accounts: [``],
+      // gasPrice: 4000000000,
       timeout: 20000000
     },
     rinkeby: {
@@ -74,10 +75,10 @@ const config: HardhatUserConfig = {
       url: `https://goerli.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
       accounts: [`0x${process.env.PRIVATE_KEY}`]
     },
-    // localhost: {
-    //   url: 'http://localhost:8545',
-    //   accounts: ['0xad8ff5797e829885c6e54398b9da4ebedc46b68d1dc841cbad2d0e4d84557bfb']
-    // }
+    localhost: {
+      url: 'http://localhost:8545',
+      accounts: ['0xb691908d124156c332d773be81b39dcb70d14946105c1cd0f189dc86f7748f27']
+    }
   },
   paths: {
     artifacts: "./artifacts",
@@ -133,9 +134,12 @@ const config: HardhatUserConfig = {
     outDir: "types",
     target: "ethers-v5",
   },
+  // etherscan: {
+  //   apiKey: process.env.ETHERSCAN_API_KEY,
+  // },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
-  }
+    apiKey: "1RTKZMC4BQI3TF46EGSDMWKFXWGI6ARG17",
+  },
 };
 
 export default config;

@@ -22,10 +22,12 @@ async function main() {
   const DAI = await ethers.getContractFactory("DAI");
   const dai = await DAI.deploy(0);
   await dai.mint(deployer.address, "10000000000000000000000");
+  console.log("dai deployed");
 
   const FRAX = await ethers.getContractFactory("FRAX");
   const frax = await FRAX.deploy(0);
   await frax.mint(deployer.address, "10000000000000000000000");
+  console.log("frax deployed");
 
   const Authority = await ethers.getContractFactory("OlympusAuthority");
   const authority = await Authority.deploy(
@@ -103,15 +105,25 @@ async function main() {
   console.log("BondTeller: " + bondTeller.address);
 
   await authority.deployed()
+  console.log("authority deploy verified");
   await vcash.deployed()
+  console.log("vcash deploy verified");
   await sOHM.deployed()
+  console.log("vcash deploy verified");
   await gOHM.deployed()
+  console.log("gohm deploy verified");
   await olympusTreasury.deployed()
+  console.log("treasury deploy verified");
   await staking.deployed()
+  console.log("staking deploy verified");
   await distributor.deployed()
+  console.log("distributor deploy verified");
   await bondDepository.deployed()
+  console.log("depository deploy verified");
   await bondingCalculator.deployed()
+  console.log("calculator deploy verified");
   await bondTeller.deployed()
+  console.log("teller deploy verified");
 
   await authority.pushVault(olympusTreasury.address, true); // replaces ohm.setVault(treasury.address)
   // Initialize sohm
@@ -134,134 +146,158 @@ async function main() {
   console.log("deploy finished");
 
   try {
-      await hre.run("verify:verify", {
-          address: authority.address,
-          constructorArguments: [
-              deployer.address,
-              deployer.address,
-              deployer.address,
-              deployer.address
-          ],
-      })
-  } catch(e) {
-      console.log(e)
+    await hre.run("verify:verify", {
+      address: authority.address,
+      constructorArguments: [
+        deployer.address,
+        deployer.address,
+        deployer.address,
+        deployer.address
+      ],
+    })
+    console.log("authority verify success");
+  } catch (e) {
+    console.log("authority verify error");
   }
 
   try {
-      await hre.run("verify:verify", {
-          address: vcash.address,
-          constructorArguments: [
-              authority.address
-          ],
-      })
-  } catch(e) {
-      console.log(e)
+    await hre.run("verify:verify", {
+      address: vcash.address,
+      constructorArguments: [
+        authority.address
+      ],
+    });
+    console.log("vcash verify success");
+  } catch (e) {
+    console.log("vcash verify error");
   }
 
   try {
-      await hre.run("verify:verify", {
-          address: sOHM.address,
-          constructorArguments: [
-          ],
-      })
-  } catch(e) {
-      console.log(e)
+    await hre.run("verify:verify", {
+      address: sOHM.address,
+      constructorArguments: [
+      ],
+    })
+  } catch (e) {
+    console.log(e);
   }
 
   try {
-      await hre.run("verify:verify", {
-          address: gOHM.address,
-          constructorArguments: [
-              migrator,
-              sOHM.address
-          ],
-      })
-  } catch(e) {
-      console.log(e)
+    await hre.run("verify:verify", {
+      address: gOHM.address,
+      constructorArguments: [
+        migrator,
+        sOHM.address
+      ],
+    })
+  } catch (e) {
+    console.log(e)
   }
 
   try {
-      await hre.run("verify:verify", {
-          address: olympusTreasury.address,
-          constructorArguments: [
-              vcash.address,
-              '0',
-              authority.address
-          ],
-      })
-  } catch(e) {
-      console.log(e)
+    await hre.run("verify:verify", {
+      address: olympusTreasury.address,
+      constructorArguments: [
+        vcash.address,
+        '0',
+        authority.address
+      ],
+    })
+  } catch (e) {
+    console.log(e)
   }
 
   try {
-      await hre.run("verify:verify", {
+    await hre.run("verify:verify", {
       address: staking.address,
       constructorArguments: [
-          vcash.address,
-          sOHM.address,
-          gOHM.address,
-          "2200",
-          firstEpochNumber,
-          firstBlockNumber,
-          authority.address
+        vcash.address,
+        sOHM.address,
+        gOHM.address,
+        "2200",
+        firstEpochNumber,
+        firstBlockNumber,
+        authority.address
       ],
-      })
-  } catch(e) {
-      console.log(e)
+    })
+  } catch (e) {
+    console.log(e)
   }
 
   try {
-      await hre.run("verify:verify", {
+    await hre.run("verify:verify", {
       address: distributor.address,
       constructorArguments: [
-          olympusTreasury.address,
-          vcash.address,
-          staking.address,
-          authority.address
+        olympusTreasury.address,
+        vcash.address,
+        staking.address,
+        authority.address
       ],
-      })
-  } catch(e) {
-      console.log(e)
+    })
+  } catch (e) {
+    console.log(e)
   }
 
   try {
-      await hre.run("verify:verify", {
+    await hre.run("verify:verify", {
       address: bondDepository.address,
       constructorArguments: [
-          vcash.address,
-          olympusTreasury.address,
-          authority.address
+        vcash.address,
+        olympusTreasury.address,
+        authority.address
       ],
-      })
-  } catch(e) {
-      console.log(e)
+    })
+  } catch (e) {
+    console.log(e)
   }
 
   try {
-      await hre.run("verify:verify", {
+    await hre.run("verify:verify", {
       address: bondingCalculator.address,
       constructorArguments: [
-          vcash.address,
+        vcash.address,
       ],
-      })
-  } catch(e) {
-      console.log(e)
+    })
+  } catch (e) {
+    console.log(e)
   }
 
   try {
-      await hre.run("verify:verify", {
+    await hre.run("verify:verify", {
       address: bondTeller.address,
       constructorArguments: [
-          bondDepository.address,
-          staking.address,
-          olympusTreasury.address,
-          vcash.address,
-          sOHM.address,
-          authority.address
+        bondDepository.address,
+        staking.address,
+        olympusTreasury.address,
+        vcash.address,
+        sOHM.address,
+        authority.address
       ],
-      })
-  } catch(e) {
-      console.log(e)
+    })
+  } catch (e) {
+    console.log(e)
+  }
+
+  try {
+    await hre.run("verify:verify", {
+      address: dai.address,
+      constructorArguments: [
+        0
+      ],
+    })
+  } catch (e) {
+    console.log(e)
+  }
+
+  try {
+    await hre.run("verify:verify", {
+      address: frax.address,
+      constructorArguments: [
+        0
+      ],
+    })
+  } catch (e) {
+    console.log(e)
   }
 }
 
