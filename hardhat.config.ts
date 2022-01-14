@@ -63,7 +63,7 @@ const config: HardhatUserConfig = {
     },
     kovan: {
       url: `https://kovan.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161`,
-      accounts: [``],
+      accounts: [`0x${process.env.PRIVATE_KEY}`],
       // gasPrice: 4000000000,
       timeout: 20000000
     },
@@ -134,11 +134,8 @@ const config: HardhatUserConfig = {
     outDir: "types",
     target: "ethers-v5",
   },
-  // etherscan: {
-  //   apiKey: process.env.ETHERSCAN_API_KEY,
-  // },
   etherscan: {
-    apiKey: "1RTKZMC4BQI3TF46EGSDMWKFXWGI6ARG17",
+    apiKey: process.env.ETHERSCAN_API_KEY,
   },
 };
 
