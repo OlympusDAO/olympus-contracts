@@ -35,7 +35,6 @@ describe("sOhm", () => {
     stakingFake = await smock.fake<IStaking>('IStaking');
     treasuryFake = await smock.fake<ITreasury>('ITreasury');
     gOhmFake = await smock.fake<GOHM>('gOHM');
-    console.log("IT WORKED SO FAR")
 
     const authority = await (new OlympusAuthority__factory(initializer)).deploy(initializer.address, initializer.address, initializer.address, initializer.address);
     ohm = await (new OlympusERC20Token__factory(initializer)).deploy(authority.address);
@@ -159,11 +158,8 @@ describe("sOhm", () => {
       });
     });
 
-    // FIXME
-    /*
-    describe.only("circulatingSupply", () => {
+    describe("circulatingSupply", () => {
       it("is zero when all owned by stakingFake contract", async () => {
-        console.log(stakingFake)
         await stakingFake.supplyInWarmup.returns(0);
         await gOhmFake.totalSupply.returns(0);
         await gOhmFake.balanceFrom.returns(0);
@@ -191,6 +187,5 @@ describe("sOhm", () => {
         expect(totalSupply).to.equal(50);
       });
     });
-    */
   });
 });
