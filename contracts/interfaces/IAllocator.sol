@@ -7,17 +7,27 @@ enum AllocatorStatus {
 }
 
 struct AllocatorInitData {
-    uint96 id;
     address authority;
     address token;
-    address treasury;
     address extender;
 }
 
 interface IAllocator {
+    event AllocatorDeployed(address authority, address token, address extender);
+
+    event AllocatorActivated(uint256 id);
+
+    event AllocatorDeactivated(uint256 id, bool panic);
+
+    event LossLimitViolated(uint128 lastLoss, uint128 dloss, uint256 estimatedTotalAllocated);
+
+    event MigrationExecuted(uint256 oldId, uint256 newId);
+
+    event EtherReceived(uint256 amount);
+
     function update() external;
 
-    function deallocateTokens(uint256 amount) external;
+    function deallocate(uint256 amount) external;
 
     function prepareMigration() external;
 
@@ -27,6 +37,8 @@ interface IAllocator {
 
     function deactivate(bool panic) external;
 
+    function setId(uint256 allocatorId) external;
+
     function name() external view returns (string memory);
 
     function id() external view returns (uint256);
@@ -35,13 +47,13 @@ interface IAllocator {
 
     function status() external view returns (AllocatorStatus);
 
-    // function allocateTokens(uint256 amount) external;
-
-    function getTokenAllocated() external view returns (address);
+    function getToken() external view returns (address);
 
     function utilityTokens() external view returns (address[] memory);
 
     function rewardTokens() external view returns (address[] memory);
 
-    function estimatedTotalAssets() external view returns (uint256);
+    function estimateTotalAllocated() external view returns (uint256);
+
+    function estimateTotalRewards() external view returns (uint256[] memory);
 }
