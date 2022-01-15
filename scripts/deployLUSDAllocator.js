@@ -1,48 +1,33 @@
-const hre = require("hardhat");
-const { ethers, upgrades } = hre;
+const { ethers } = require("hardhat");
 
 async function main() {
-  console.log("deploying");
-  // For Liquity addresses:
-  // mainnet: https://github.com/liquity/dev/blob/main/packages/contracts/mainnetDeployment/realDeploymentOutput/output14.txt
-  // rinkeby: https://github.com/liquity/dev/blob/main/packages/contracts/mainnetDeployment/rinkebyDeploymentOutput.json
 
-  //mainnet
-  const constructorArgs = [
-    "", //olympus authority
-      "0x0d722D813601E48b7DAcb2DF9bae282cFd98c6E7", // v1 treasury address
-      "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0", // LUSD token
-      "0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D", // LQTY token
-      "0x66017D22b0f8556afDd19FC67041899Eb65a21bb", // Liquity stability pool
-      "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d", // LQTY Staking pool 
-      "0x", // Front end address,
-      "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", // weth
-      "0x6b175474e89094c44da98b954eedeac495271d0f", //dai
-      "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45" //uniswapV3 router
-    ];
-    const LUSDAllocator = await ethers.getContractFactory("LUSDAllocator");
-    const instance = await upgrades.deployProxy(LUSDAllocator, constructorArgs);
-    await instance.deployed();
+    const [deployer] = await ethers.getSigners();
+    console.log('Deploying contracts with the account: ' + deployer.address);
 
-    await instance.transferOwnership("0x245cc372C84B3645Bf0Ffe6538620B04a217988B"); // OlympusDAO Multisig
-
-    const address = await upgrades.erc1967.getImplementationAddress(instance.address);
-
-    console.log("Deployed LUSDAllocator to", instance.address)
-    console.log("implementation at", address);
-
-    await hre.run("verify:verify", {
-        address: address,
-        constructorArguments: [],
-    });
+    const Authority = "0x1c21F8EA7e39E2BA00BC12d2968D63F4acb38b7A"
+    const V1Treasury = "0x31F8Cc382c9898b273eff4e0b7626a6987C846E8" // v1 treasury address
+    const LUSD = "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0" // LUSD token
+    const LQTY =  "0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D" // LQTY token
+    const StabilityPool = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb" // Liquity stability pool
+    const LQTYStakingPool = "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d" // LQTY Staking pool 
+    const ZeroAddress = "0x0000000000000000000000000000000000000000" // Front end address,
+    const WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2" // weth
+    const DAI = "0x6b175474e89094c44da98b954eedeac495271d0f" //dai
+    const V3Router = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45" //uniswapV3 router
 
 
-    console.log("Transferred ownership to multisig");
+    const LUSDAllocator = await ethers.getContractFactory('LUSDAllocator');
+    const lusdAllocator = await LUSDAllocator.deploy(Authority, V1Treasury, LUSD, LQTY, StabilityPool, LQTYStakingPool, ZeroAddress, WETH, DAI, V3Router);
+
+
+    console.log("LUSD Allocator: " + lusdAllocator.address);
+    
 }
 
 main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+    .then(() => process.exit())
+    .catch(error => {
+        console.error(error);
+        process.exit(1);
+})
