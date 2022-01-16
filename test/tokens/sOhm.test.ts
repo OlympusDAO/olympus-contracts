@@ -1,19 +1,17 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
 import {
-    IStaking,
-    IERC20,
-    IgOHM,
+    OlympusStaking,
+    OlympusTreasury,
     OlympusERC20Token,
     OlympusERC20Token__factory,
     SOlympus,
     SOlympus__factory,
     GOHM,
     OlympusAuthority__factory,
-    ITreasury,
 } from "../../types";
 
 const TOTAL_GONS = 5000000000000000;
@@ -21,19 +19,18 @@ const ZERO_ADDRESS = ethers.utils.getAddress("0x00000000000000000000000000000000
 
 describe("sOhm", () => {
     let initializer: SignerWithAddress;
-    let treasury: SignerWithAddress;
     let alice: SignerWithAddress;
     let bob: SignerWithAddress;
     let ohm: OlympusERC20Token;
     let sOhm: SOlympus;
     let gOhmFake: FakeContract<GOHM>;
-    let stakingFake: FakeContract<IStaking>;
-    let treasuryFake: FakeContract<ITreasury>;
+    let stakingFake: FakeContract<OlympusStaking>;
+    let treasuryFake: FakeContract<OlympusTreasury>;
 
     beforeEach(async () => {
         [initializer, alice, bob] = await ethers.getSigners();
-        stakingFake = await smock.fake<IStaking>("IStaking");
-        treasuryFake = await smock.fake<ITreasury>("ITreasury");
+        stakingFake = await smock.fake<OlympusStaking>("OlympusStaking");
+        treasuryFake = await smock.fake<OlympusTreasury>("OlympusTreasury");
         gOhmFake = await smock.fake<GOHM>("gOHM");
 
         const authority = await new OlympusAuthority__factory(initializer).deploy(
@@ -178,9 +175,8 @@ describe("sOhm", () => {
             });
         });
 
-        describe.only("circulatingSupply", () => {
+        describe("circulatingSupply", () => {
             it("is zero when all owned by stakingFake contract", async () => {
-                console.log(stakingFake);
                 await stakingFake.supplyInWarmup.returns(0);
                 await gOhmFake.totalSupply.returns(0);
                 await gOhmFake.balanceFrom.returns(0);
