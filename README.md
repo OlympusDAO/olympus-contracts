@@ -20,39 +20,20 @@ Local Setup Steps:
 
 ## Contract addresses
 
-### Mainnet addresses
+### Mainnet
+#### Core
+- OHM V2: `0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5`
+- sOHM V2: `0x04906695D6D12CF5459975d7C3C03356E4Ccd460`
+- gOHM: `0x0ab87046fBb341D058F17CBC4c1133F25a20a52f` 
+- Treasury V2: `0x9A315BdF513367C0377FB36545857d12e85813Ef`
+- Staking: `0xB63cac384247597756545b500253ff8E607a8020` 
+- Distributor: `0xeeeb97A127a342656191E0313DF33D58D06B2E05` 
+- BondDepositoryV2: `0x9025046c6fb25Fb39e720d97a8FD881ED69a1Ef6`
+- Authority: `0x1c21F8EA7e39E2BA00BC12d2968D63F4acb38b7A`
 
-|Contract       | Addresss                                                                                                            | Notes   |
-|:-------------:|:-------------------------------------------------------------------------------------------------------------------:|-------|
-|OHM            |[0x383518188c0c6d7730d91b2c03a03c837814a899](https://etherscan.io/address/0x383518188c0c6d7730d91b2c03a03c837814a899)| Main Token Contract|
-|sOHM           |[0x31932e6e45012476ba3a3a4953cba62aee77fbbe](https://etherscan.io/address/0x31932e6e45012476ba3a3a4953cba62aee77fbbe)| Staked Ohm|
-|Treasury       |[0x31F8Cc382c9898b273eff4e0b7626a6987C846E8](https://etherscan.io/address/0x31F8Cc382c9898b273eff4e0b7626a6987C846E8)| Olympus Treasury holds all the assets        |
-|OlympusStaking |[0xfd31c7d00ca47653c6ce64af53c1571f9c36566a](https://etherscan.io/address/0xfd31c7d00ca47653c6ce64af53c1571f9c36566a)| Main Staking contract responsible for calling rebases every 2200 blocks|
-|StakingHelper  |[0xc8c436271f9a6f10a5b80c8b8ed7d0e8f37a612d](https://etherscan.io/address/0xc8c436271f9a6f10a5b80c8b8ed7d0e8f37a612d)| Helper Contract to Stake with 0 warmup |
-|Aave Allocator |[0x0e1177e47151Be72e5992E0975000E73Ab5fd9D4](https://etherscan.io/address/0x0e1177e47151Be72e5992E0975000E73Ab5fd9D4)| Sends DAI from the treasury to Aave (via deposit) in exchange for aDAI and holds it. See [Allocator Guide](#allocator-guide)|
-|DAO            |[0x245cc372C84B3645Bf0Ffe6538620B04a217988B](https://etherscan.io/address/0x245cc372C84B3645Bf0Ffe6538620B04a217988B)|Storage Wallet for DAO under MS |
-|Staking Warm Up|[0x2882A5CD82AC49e06620382660f5ed932607c5f1](https://etherscan.io/address/0x2882A5CD82AC49e06620382660f5ed932607c5f1)| Instructs the Staking contract when a user can claim sOHM |
-
-
-### Bonds
-
-**_TODO_**: What are the requirements for creating a Bond Contract?
-
-All LP bonds use the Bonding Calculator contract which is used to compute RFV. 
-
-|Contract       | Addresss                                                                                                            | Notes   |
-|:-------------:|:-------------------------------------------------------------------------------------------------------------------:|-------|
-|Bond Calculator|[0xcaaA6a2d4B26067a391E7B7D65C16bb2d5FA571A](https://etherscan.io/address/0xcaaA6a2d4B26067a391E7B7D65C16bb2d5FA571A)| |
-|DAI bond|[0x575409F8d77c12B05feD8B455815f0e54797381c](https://etherscan.io/address/0x575409F8d77c12B05feD8B455815f0e54797381c)| Main bond managing serve mechanics for OHM/DAI|
-|DAI/OHM SLP Bond|[0x956c43998316b6a2F21f89a1539f73fB5B78c151](https://etherscan.io/address/0x956c43998316b6a2F21f89a1539f73fB5B78c151)| Manages mechhanism for thhe protocol to buy baack its own liquidity from the pair. |
-|FRAX Bond|[0x8510c8c2B6891E04864fa196693D44E6B6ec2514](https://etherscan.io/address/0x8510c8c2B6891E04864fa196693D44E6B6ec2514)|Similar to DAI bond but using FRAX|
-|FRAX/OHM SLP Bond|[0xc20CffF07076858a7e642E396180EC390E5A02f7](https://etherscan.io/address/0xc20CffF07076858a7e642E396180EC390E5A02f7)| Similar to DAI/OHM but using FRAX |
-
-### Old contracts
-
-sOHM: 0x31932e6e45012476ba3a3a4953cba62aee77fbbe  
-Vault: 0x886ce997aa9ee4f8c2282e182ab72a705762399d  
-Staking (v1): 0x0822f3c03dcc24d200aff33493dc08d0e1f274a2  
+#### Multisigs:
+- DAO: `0x245cc372C84B3645Bf0Ffe6538620B04a217988B`
+- Policy: `0x0cf30dc0d48604A301dF8010cdc028C055336b2E`
 
 ### Testnet addresses
 
