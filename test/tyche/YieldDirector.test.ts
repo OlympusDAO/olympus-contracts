@@ -1,5 +1,5 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
-import { BigNumber } from "ethers";
+import { BigNumber, providers } from "ethers";
 const { ethers, network } = require("hardhat");
 const { expect } = require("chai");
 import {
@@ -32,24 +32,15 @@ describe.only("YieldDirector", async () => {
     // Reward rate of .1%
     const initialRewardRate = "1000";
 
-    const mineBlock = async () => {
-        await network.provider.request({
-            method: "evm_mine",
-            params: [],
-        });
-    };
-
     // Calculate index after some number of epochs. Takes principal and rebase rate.
     // TODO verify this works
     // const calcIndex = (principal: BigNumber, rate: number, epochs: number) =>
     //     principal * (1 + rate) ** epochs;
 
-    // TODO needs cleanup. use Bignumber.
-    // Mine block and rebase. Returns the new index.
     const triggerRebase = async () => {
-        mineBlock();
+        await network.provider.send("evm_increaseTime", [28800]) // 8 hours per rebase
+        await network.provider.send("evm_mine", [])
         await staking.rebase();
-
         return await sOhm.index();
     };
 
@@ -112,13 +103,15 @@ describe.only("YieldDirector", async () => {
         ohm = await ohmFactory.deploy(auth.address);
         sOhm = await sOhmFactory.deploy();
         gOhm = await gOhmFactory.deploy(sOhm.address, sOhm.address); // Call migrate immediately
+        const blockNumBefore = await ethers.provider.getBlockNumber();
+        const blockBefore = await ethers.provider.getBlock(blockNumBefore);
         staking = await stakingFactory.deploy(
             ohm.address,
             sOhm.address,
             gOhm.address,
-            "10",
+            "28800", // 1 epoch = 8 hours
             "1",
-            "9",
+            blockBefore.timestamp + 28800, // First epoch in 8 hours. Avoids first deposit to set epoch.distribute wrong
             auth.address
         );
         treasury = await treasuryFactory.deploy(ohm.address, "0", auth.address);
@@ -173,6 +166,7 @@ describe.only("YieldDirector", async () => {
         const sohmAmount = "1000000000000";
         await ohm.approve(staking.address, sohmAmount);
         await staking.stake(deployer.address, sohmAmount, true, true);
+        await triggerRebase() // Trigger first rebase to set initial distribute amount. This rebase shouldn't update index.
 
         // Transfer 100 sOHM to alice for testing
         await sOhm.transfer(alice.address, "100000000000");
@@ -182,16 +176,13 @@ describe.only("YieldDirector", async () => {
         await sOhm.connect(alice).approve(tyche.address, LARGE_APPROVAL);
     });
 
-    it.only("should rebase properly", async () => {
+    it("should rebase properly", async () => {
         await expect(await sOhm.index()).is.equal("10000000000");
-
-        await triggerRebase();
+        await triggerRebase()
         await expect(await sOhm.index()).is.equal("10010000000");
-
-        await triggerRebase();
+        await triggerRebase()
         await expect(await sOhm.index()).is.equal("10020010000");
-
-        await triggerRebase();
+        await triggerRebase()
         await expect(await sOhm.index()).is.equal("10030030010");
     });
 
@@ -467,7 +458,7 @@ describe.only("YieldDirector", async () => {
     });
 
     it("should display total donated to recipient", async () => {
-        const principal = BigNumber.from(10 * 10 ** 9);
+        const principal = BigNumber.from(100 * 10 ** 9);
         await tyche.deposit(principal, bob.address);
         await triggerRebase();
 
