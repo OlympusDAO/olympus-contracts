@@ -4,7 +4,7 @@ const { smock } = require("@defi-wonderland/smock");
 
 const { round } = require("lodash");
 
-describe.only("Bond Depository", async () => {
+describe("Bond Depository", async () => {
     const LARGE_APPROVAL = "100000000000000000000000000000000";
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
     // Initial mint for Frax, OHM and DAI (10,000,000)
