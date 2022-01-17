@@ -8,6 +8,8 @@ import {
     IveFXSYieldDistributorV4,
     IveFXS,
     FraxSharesAllocator,
+    OlympusTreasury,
+    ERC20,
 } from "../../types";
 const { fork_network, fork_reset } = require("../utils/network_fork");
 const impersonateAccount = require("../utils/impersonate_account");
@@ -41,7 +43,7 @@ describe("FraxSharesAllocator", () => {
                 "IveFXSYieldDistributorV4"
             );
             veFXSFake = await smock.fake<IveFXS>("IveFXS");
-            fxsFake = await smock.fake<IERC20>("IERC20");
+            fxsFake = await smock.fake<IERC20>("contracts/interfaces/IERC20.sol:IERC20");
         });
 
         describe("initilize", () => {
