@@ -27,6 +27,7 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
         OlympusAccessControlledImproved(IOlympusAuthority(authorityAddress))
     {
         treasury = ITreasury(treasuryAddress);
+        allocators.push(IAllocator(address(0)));
     }
 
     //// "MODIFIERS"
