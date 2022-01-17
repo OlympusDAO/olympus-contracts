@@ -2,34 +2,18 @@ const { ethers, network } = require("hardhat");
 const { expect } = require("chai");
 const { smock } = require("@defi-wonderland/smock");
 
-const { round } = require("lodash");
-
 describe("Bond Depository", async () => {
     const LARGE_APPROVAL = "100000000000000000000000000000000";
-    const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
     // Initial mint for Frax, OHM and DAI (10,000,000)
     const initialMint = "10000000000000000000000000";
-    const initialOHM = "10000000000000000";
     const initialDeposit = "1000000000000000000000000";
 
-    const mineBlock = async () => {
-        await network.provider.request({
-            method: "evm_mine",
-            params: [],
-        });
-    };
-
     // Increase timestamp by amount determined by `offset`
-    const jump = async (offset) => {
-        await network.provider.request({
-            method: "evm_increaseTime",
-            params: [offset],
-        });
-    };
 
     let deployer, alice, bob, carol;
     let erc20Factory;
     let authFactory;
+    let gOhmFactory;
     let depositoryFactory;
 
     let auth;
@@ -39,7 +23,6 @@ describe("Bond Depository", async () => {
     let treasury;
     let gOHM;
     let staking;
-    let sOHM;
 
     let capacity = 10000e9;
     let initialPrice = 400e9;
@@ -47,7 +30,7 @@ describe("Bond Depository", async () => {
 
     let vesting = 100;
     let timeToConclusion = 60 * 60 * 24;
-    let conclusion = round(Date.now() / 1000, 0) + timeToConclusion;
+    let conclusion;
 
     let depositInterval = 60 * 60 * 4;
     let tuneInterval = 60 * 60;
@@ -69,6 +52,9 @@ describe("Bond Depository", async () => {
         gOhmFactory = await smock.mock("MockGOhm");
 
         depositoryFactory = await ethers.getContractFactory("OlympusBondDepositoryV2");
+
+        const block = await ethers.provider.getBlock("latest");
+        conclusion = block.timestamp + timeToConclusion;
     });
 
     beforeEach(async () => {
@@ -81,7 +67,7 @@ describe("Bond Depository", async () => {
             deployer.address
         );
         ohm = await erc20Factory.deploy("Olympus", "OHM", 9);
-        treasury = await smock.fake("OlympusTreasury");
+        treasury = await smock.fake("ITreasury");
         gOHM = await gOhmFactory.deploy("50000000000"); // Set index as 50
         staking = await smock.fake("OlympusStaking");
         depository = await depositoryFactory.deploy(
@@ -130,18 +116,19 @@ describe("Bond Depository", async () => {
     });
 
     it("should conclude in correct amount of time", async () => {
-        [, , , concludes] = await depository.terms(bid);
+        let [, , , concludes] = await depository.terms(bid);
         expect(concludes).to.equal(conclusion);
-        [, , length, , , ,] = await depository.metadata(bid);
+        let [, , length, , , ,] = await depository.metadata(bid);
         // timestamps are a bit inaccurate with tests
         var upperBound = timeToConclusion * 1.0033;
         var lowerBound = timeToConclusion * 0.9967;
+        console.log(Number(length));
         expect(Number(length)).to.be.greaterThan(lowerBound);
         expect(Number(length)).to.be.lessThan(upperBound);
     });
 
     it("should set max payout to correct % of capacity", async () => {
-        [, , , , maxPayout, ,] = await depository.markets(bid);
+        let [, , , , maxPayout, ,] = await depository.markets(bid);
         var upperBound = (capacity * 1.0033) / 6;
         var lowerBound = (capacity * 0.9967) / 6;
         expect(Number(maxPayout)).to.be.greaterThan(lowerBound);
@@ -157,7 +144,7 @@ describe("Bond Depository", async () => {
             [vesting, conclusion],
             [depositInterval, tuneInterval]
         );
-        [first, second] = await depository.liveMarkets();
+        let [first, second] = await depository.liveMarkets();
         expect(Number(first)).to.equal(0);
         expect(Number(second)).to.equal(1);
     });
@@ -196,12 +183,12 @@ describe("Bond Depository", async () => {
     });
 
     it("should decay debt", async () => {
-        [, , , totalDebt, , ,] = await depository.markets(0);
+        let [, , , totalDebt, , ,] = await depository.markets(0);
 
         await network.provider.send("evm_increaseTime", [100]);
         await depository.connect(bob).deposit(bid, "0", initialPrice, bob.address, carol.address);
 
-        [, , , newTotalDebt, , ,] = await depository.markets(0);
+        let [, , , newTotalDebt, , ,] = await depository.markets(0);
         expect(Number(totalDebt)).to.be.greaterThan(Number(newTotalDebt));
     });
 
@@ -218,7 +205,7 @@ describe("Bond Depository", async () => {
         await depository
             .connect(bob)
             .deposit(bid, amount, initialPrice * 2, bob.address, carol.address);
-        [change, lastAdjustment, timeToAdjusted, active] = await depository.adjustments(bid);
+        let [change, lastAdjustment, timeToAdjusted, active] = await depository.adjustments(bid);
         expect(Boolean(active)).to.equal(false);
     });
 
@@ -228,39 +215,39 @@ describe("Bond Depository", async () => {
         await depository
             .connect(bob)
             .deposit(bid, amount, initialPrice, bob.address, carol.address);
-        [change, lastAdjustment, timeToAdjusted, active] = await depository.adjustments(bid);
+        let [change, lastAdjustment, timeToAdjusted, active] = await depository.adjustments(bid);
         expect(Boolean(active)).to.equal(true);
     });
 
     it("adjustment should lower control variable by change in tune interval if behind", async () => {
         await network.provider.send("evm_increaseTime", [tuneInterval]);
-        [, controlVariable, , ,] = await depository.terms(bid);
+        let [, controlVariable, , ,] = await depository.terms(bid);
         let amount = "10000000000000000000000"; // 10,000
         await depository
             .connect(bob)
             .deposit(bid, amount, initialPrice, bob.address, carol.address);
         await network.provider.send("evm_increaseTime", [tuneInterval]);
-        [change, lastAdjustment, timeToAdjusted, active] = await depository.adjustments(bid);
+        let [change, lastAdjustment, timeToAdjusted, active] = await depository.adjustments(bid);
         await depository
             .connect(bob)
             .deposit(bid, amount, initialPrice, bob.address, carol.address);
-        [, newControlVariable, , ,] = await depository.terms(bid);
+        let [, newControlVariable, , ,] = await depository.terms(bid);
         expect(newControlVariable).to.equal(controlVariable.sub(change));
     });
 
     it("adjustment should lower control variable by half of change in half of a tune interval", async () => {
         await network.provider.send("evm_increaseTime", [tuneInterval]);
-        [, controlVariable, , ,] = await depository.terms(bid);
+        let [, controlVariable, , ,] = await depository.terms(bid);
         let amount = "10000000000000000000000"; // 10,000
         await depository
             .connect(bob)
             .deposit(bid, amount, initialPrice, bob.address, carol.address);
-        [change, lastAdjustment, timeToAdjusted, active] = await depository.adjustments(bid);
+        let [change, lastAdjustment, timeToAdjusted, active] = await depository.adjustments(bid);
         await network.provider.send("evm_increaseTime", [tuneInterval / 2]);
         await depository
             .connect(bob)
             .deposit(bid, amount, initialPrice, bob.address, carol.address);
-        [, newControlVariable, , ,] = await depository.terms(bid);
+        let [, newControlVariable, , ,] = await depository.terms(bid);
         let lowerBound = (controlVariable - change / 2) * 0.999;
         expect(Number(newControlVariable)).to.lessThanOrEqual(
             Number(controlVariable.sub(change.div(2)))
@@ -275,7 +262,7 @@ describe("Bond Depository", async () => {
         await depository
             .connect(bob)
             .deposit(bid, amount, initialPrice, bob.address, carol.address);
-        [change, lastAdjustment, timeToAdjusted, active] = await depository.adjustments(bid);
+        let [change, lastAdjustment, timeToAdjusted, active] = await depository.adjustments(bid);
 
         await network.provider.send("evm_increaseTime", [tuneInterval / 2]);
         await depository
@@ -286,7 +273,7 @@ describe("Bond Depository", async () => {
         await depository
             .connect(bob)
             .deposit(bid, amount, initialPrice, bob.address, carol.address);
-        [, newControlVariable, , ,] = await depository.terms(bid);
+        let [, newControlVariable, , ,] = await depository.terms(bid);
         expect(newControlVariable).to.equal(controlVariable.sub(change));
     });
 
@@ -318,7 +305,7 @@ describe("Bond Depository", async () => {
 
     it("should redeem after vested", async () => {
         let amount = "10000000000000000000000"; // 10,000
-        [expectedPayout, expiry, index] = await depository
+        let [expectedPayout, expiry, index] = await depository
             .connect(bob)
             .callStatic.deposit(bid, amount, initialPrice, bob.address, carol.address);
 
@@ -338,7 +325,7 @@ describe("Bond Depository", async () => {
         let daoBalance = await ohm.balanceOf(deployer.address);
         let refBalance = await ohm.balanceOf(carol.address);
         let amount = "10000000000000000000000"; // 10,000
-        [payout, expiry, index] = await depository
+        let [payout, expiry, index] = await depository
             .connect(bob)
             .callStatic.deposit(bid, amount, initialPrice, bob.address, carol.address);
         await depository
@@ -364,7 +351,7 @@ describe("Bond Depository", async () => {
     });
 
     it("should decay a max payout in target deposit interval", async () => {
-        [, , , , , maxPayout, ,] = await depository.markets(bid);
+        let [, , , , , maxPayout, ,] = await depository.markets(bid);
         let price = await depository.marketPrice(bid);
         let amount = maxPayout * price;
         await depository.connect(bob).deposit(
