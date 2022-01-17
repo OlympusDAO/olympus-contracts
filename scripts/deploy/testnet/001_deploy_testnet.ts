@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { CONTRACTS, INITIAL_MINT } from "../../constants";
+import { CONTRACTS, INITIAL_MINT, TOKEN_DECIMAL } from "../../constants";
 import { OlympusERC20Token__factory, OlympusTreasury__factory, DAI__factory } from "../../../types";
 import { waitFor } from "../../txHelper";
 
@@ -39,14 +39,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     if (faucetBalance.gt(10000)) {
         // short circuit if faucet balance is above 10k ohm
         console.log("Sufficient faucet balance");
-        console.log("Faucet Balance: ", faucetBalance.toString());
+        console.log("Faucet Balance: ", ethers.utils.formatUnits(faucetBalance, TOKEN_DECIMAL));
         return;
     }
     // Mint Dai
     const daiAmount = INITIAL_MINT;
     await waitFor(mockDai.mint(deployer, daiAmount));
     const daiBalance = await mockDai.balanceOf(deployer);
-    console.log("Dai minted: ", daiBalance.toString());
+    console.log("Dai minted: ", ethers.utils.formatUnits(daiBalance, TOKEN_DECIMAL));
 
     // Treasury Actions
     await waitFor(treasury.enable(0, deployer, ethers.constants.AddressZero)); // Enable the deployer to deposit reserve tokens
@@ -56,14 +56,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await waitFor(mockDai.approve(treasury.address, daiAmount)); // Approve treasury to use the dai
     await waitFor(treasury.deposit(daiAmount, daiDeployment.address, 0)); // Deposit Dai into treasury
     const ohmMinted = await ohm.balanceOf(deployer);
-    console.log("Ohm minted: ", ohmMinted.toString());
+    console.log("Ohm minted: ", ethers.utils.formatUnits(ohmMinted, TOKEN_DECIMAL));
 
     // Fund faucet w/ newly minted dai.
     await waitFor(ohm.approve(faucetDeployment.address, ohmMinted));
     await waitFor(ohm.transfer(faucetDeployment.address, ohmMinted));
 
     faucetBalance = await ohm.balanceOf(faucetDeployment.address);
-    console.log("Faucet balance:", faucetBalance.toString());
+    console.log("Faucet balance:", ethers.utils.formatUnits(faucetBalance, TOKEN_DECIMAL));
 };
 
 func.tags = ["faucet", "testnet"];
