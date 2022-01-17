@@ -6,5 +6,6 @@ const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 const usdt = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const mim = "0x99D8a9C45b2ecA8864373A26D1459e3Dff1e17F3";
 const weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+const frax = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
 
-export const coins = { ohm, gohm, sohm, dai, usdc, usdt, mim, weth };
+export const coins = { ohm, gohm, sohm, dai, usdc, usdt, mim, weth, frax };

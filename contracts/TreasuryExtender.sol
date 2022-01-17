@@ -36,6 +36,10 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
         require(AllocatorStatus.ACTIVATED == status, "TreasuryExtender::AllocatorOffline");
     }
 
+    function _allocatorOffline(AllocatorStatus status) internal pure {
+        require(AllocatorStatus.OFFLINE == status, "TreasuryExtender::AllocatorActivated");
+    }
+
     function _onlyAllocator(uint256 id, address sender) internal view {
         require(IAllocator(sender) == allocators[id], "TreasuryExtender::OnlyAllocator");
     }
@@ -163,7 +167,7 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
     function _setAllocatorLimits(IAllocator allocator, AllocatorLimits memory limits) internal {
         // checks
         _onlyGuardian();
-        _allocatorActivated(allocator.status());
+        _allocatorOffline(allocator.status());
 
         // effects
         allocatorData[allocator].limits = limits;
