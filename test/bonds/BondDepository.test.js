@@ -122,7 +122,6 @@ describe("Bond Depository", async () => {
         // timestamps are a bit inaccurate with tests
         var upperBound = timeToConclusion * 1.0033;
         var lowerBound = timeToConclusion * 0.9967;
-        console.log(Number(length), timeToConclusion);
         expect(Number(length)).to.be.greaterThan(lowerBound);
         expect(Number(length)).to.be.lessThan(upperBound);
     });
