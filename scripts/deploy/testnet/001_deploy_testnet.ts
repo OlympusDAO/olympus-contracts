@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { CONTRACTS, INITIAL_MINT, INITIAL_MINT_PROFIT, TOKEN_DECIMAL } from "../../constants";
+import { CONTRACTS, INITIAL_MINT, INITIAL_MINT_PROFIT } from "../../constants";
 import { OlympusERC20Token__factory, OlympusTreasury__factory, DAI__factory } from "../../../types";
 import { waitFor } from "../../txHelper";
 
@@ -36,17 +36,18 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const faucetDeployment = await deployments.get(faucetContract);
 
     let faucetBalance = await ohm.balanceOf(faucetDeployment.address);
-    if (faucetBalance.gt(10000)) {
+    const minOhm = ethers.BigNumber.from(10000 * 1e9);
+    if (faucetBalance.gt(minOhm)) {
         // short circuit if faucet balance is above 10k ohm
         console.log("Sufficient faucet balance");
-        console.log("Faucet Balance: ", ethers.utils.formatUnits(faucetBalance, TOKEN_DECIMAL));
+        console.log("Faucet Balance: ", faucetBalance.toString());
         return;
     }
     // Mint Dai
     const daiAmount = INITIAL_MINT;
     await waitFor(mockDai.mint(deployer, daiAmount));
     const daiBalance = await mockDai.balanceOf(deployer);
-    console.log("Dai minted: ", ethers.utils.formatUnits(daiBalance, TOKEN_DECIMAL));
+    console.log("Dai minted: ", daiBalance.toString());
 
     // Treasury Actions
     await waitFor(treasury.enable(0, deployer, ethers.constants.AddressZero)); // Enable the deployer to deposit reserve tokens
@@ -56,14 +57,14 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await waitFor(mockDai.approve(treasury.address, daiAmount)); // Approve treasury to use the dai
     await waitFor(treasury.deposit(daiAmount, daiDeployment.address, INITIAL_MINT_PROFIT)); // Deposit Dai into treasury, with a profit set, so that we have reserves for staking
     const ohmMinted = await ohm.balanceOf(deployer);
-    console.log("Ohm minted: ", ethers.utils.formatUnits(ohmMinted, TOKEN_DECIMAL));
+    console.log("Ohm minted: ", ohmMinted.toString());
 
     // Fund faucet w/ newly minted dai.
     await waitFor(ohm.approve(faucetDeployment.address, ohmMinted));
     await waitFor(ohm.transfer(faucetDeployment.address, ohmMinted));
 
     faucetBalance = await ohm.balanceOf(faucetDeployment.address);
-    console.log("Faucet balance:", ethers.utils.formatUnits(faucetBalance, TOKEN_DECIMAL));
+    console.log("Faucet balance:", faucetBalance.toString());
 };
 
 func.tags = ["faucet", "testnet"];
