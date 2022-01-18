@@ -36,7 +36,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const faucetDeployment = await deployments.get(faucetContract);
 
     let faucetBalance = await ohm.balanceOf(faucetDeployment.address);
-    if (faucetBalance.gt(10000)) {
+    const minOhm = ethers.BigNumber.from(10000 * 1e9);
+    if (faucetBalance.gt(minOhm)) {
         // short circuit if faucet balance is above 10k ohm
         console.log("Sufficient faucet balance");
         console.log("Faucet Balance: ", faucetBalance.toString());
