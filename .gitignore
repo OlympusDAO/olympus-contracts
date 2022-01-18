@@ -25,4 +25,7 @@ deployments/**/solcinputs
 
 /.dapp
 
+
+# OpenZeppelin upgradeable files
+.openzeppelin/unknown-*.json
 /flatten
