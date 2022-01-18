@@ -258,6 +258,9 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
         // interactions
         token.safeTransferFrom(address(allocator), address(this), amount);
 
+        // needs approve check will fix tomorrow
+        token.approve(address(treasury), type(uint256).max);
+
         assert(treasury.deposit(amount, address(token), value) == 0);
 
         // events
