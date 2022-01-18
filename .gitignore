@@ -19,8 +19,6 @@ yarn-error.log
 yalc.lock
 
 contractsInfo.json
-deployments/hardhat
-deployments/localhost
 deployments/**/solcinputs
 
 /.dapp
