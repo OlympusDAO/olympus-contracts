@@ -44,7 +44,7 @@ Local Setup Steps (with Docker):
 -   BondDepositoryV2: `0x9025046c6fb25Fb39e720d97a8FD881ED69a1Ef6`
 -   Authority: `0x1c21F8EA7e39E2BA00BC12d2968D63F4acb38b7A`
 
-#### Multisigs:
+#### Multisigs
 
 -   DAO: `0x245cc372C84B3645Bf0Ffe6538620B04a217988B`
 -   Policy: `0x0cf30dc0d48604A301dF8010cdc028C055336b2E`
