@@ -173,7 +173,7 @@ contract LUSDAllocator is OlympusAccessControlled {
                 ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
                     path: abi.encodePacked(address(weth), poolFee, hopTokenAddress, poolFee, lusdTokenAddress),
                     recipient: address(this), //Send LUSD here
-                    deadline: block.timestamp + 25, //25 blocks, at 12 seconds per block is 5 minutes
+                    deadline: block.timestamp + 5 minutes,
                     amountIn: amountWethToSwap,
                     amountOutMinimum: amountLUSDMin
                 });
