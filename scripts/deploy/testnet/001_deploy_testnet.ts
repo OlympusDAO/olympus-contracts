@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { CONTRACTS, INITIAL_MINT } from "../../constants";
+import { CONTRACTS, INITIAL_MINT, INITIAL_MINT_PROFIT } from "../../constants";
 import { OlympusERC20Token__factory, OlympusTreasury__factory, DAI__factory } from "../../../types";
 import { waitFor } from "../../txHelper";
 
@@ -55,7 +55,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     // Deposit and mint ohm
     await waitFor(mockDai.approve(treasury.address, daiAmount)); // Approve treasury to use the dai
-    await waitFor(treasury.deposit(daiAmount, daiDeployment.address, 0)); // Deposit Dai into treasury
+    await waitFor(treasury.deposit(daiAmount, daiDeployment.address, INITIAL_MINT_PROFIT)); // Deposit Dai into treasury, with a profit set, so that we have reserves for staking
     const ohmMinted = await ohm.balanceOf(deployer);
     console.log("Ohm minted: ", ohmMinted.toString());
 

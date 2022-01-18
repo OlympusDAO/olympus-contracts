@@ -26,3 +26,4 @@ export const INITIAL_REWARD_RATE = "4000";
 export const INITIAL_INDEX = "45000000000";
 export const INITIAL_MINT = "60000" + "0".repeat(18); // 60K deposit.
 export const BOUNTY_AMOUNT = "100000000";
+export const INITIAL_MINT_PROFIT = "1000000000000";
