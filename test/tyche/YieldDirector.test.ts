@@ -1,20 +1,10 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
-import { BigNumber, providers } from "ethers";
-const { ethers, network } = require("hardhat");
-const { expect } = require("chai");
+import { BigNumber, ContractFactory } from "ethers";
+import { ethers, network } from "hardhat";
+import { expect } from "chai";
 import {
-    DAI__factory,
     OlympusStaking,
-    OlympusStaking__factory,
     OlympusERC20Token,
-    OlympusERC20Token__factory,
-    SOlympus__factory,
     GOHM,
-    GOHM__factory,
-    OlympusTreasury__factory,
-    Distributor__factory,
-    OlympusAuthority__factory,
-    YieldDirector__factory,
     OlympusAuthority,
     DAI,
     SOlympus,
@@ -22,9 +12,10 @@ import {
     Distributor,
     YieldDirector,
 } from "../../types";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 //const { FakeContract, smock } = require("@defi-wonderland/smock");
 
-describe.only("YieldDirector", async () => {
+describe("YieldDirector", async () => {
     const LARGE_APPROVAL = "100000000000000000000000000000000";
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
     // Initial mint for Frax and DAI (10,000,000)
@@ -38,8 +29,8 @@ describe.only("YieldDirector", async () => {
     //     principal * (1 + rate) ** epochs;
 
     const triggerRebase = async () => {
-        await network.provider.send("evm_increaseTime", [28800]) // 8 hours per rebase
-        await network.provider.send("evm_mine", [])
+        await network.provider.send("evm_increaseTime", [28800]); // 8 hours per rebase
+        await network.provider.send("evm_mine", []);
         await staking.rebase();
         return await sOhm.index();
     };
@@ -47,15 +38,15 @@ describe.only("YieldDirector", async () => {
     let deployer: SignerWithAddress;
     let alice: SignerWithAddress;
     let bob: SignerWithAddress;
-    let erc20Factory: DAI__factory;
-    let stakingFactory: OlympusStaking__factory;
-    let ohmFactory: OlympusERC20Token__factory;
-    let sOhmFactory: SOlympus__factory;
-    let gOhmFactory: GOHM__factory;
-    let treasuryFactory: OlympusTreasury__factory;
-    let distributorFactory: Distributor__factory;
-    let authFactory: OlympusAuthority__factory;
-    let tycheFactory: YieldDirector__factory;
+    let erc20Factory: ContractFactory;
+    let stakingFactory: ContractFactory;
+    let ohmFactory: ContractFactory;
+    let sOhmFactory: ContractFactory;
+    let gOhmFactory: ContractFactory;
+    let treasuryFactory: ContractFactory;
+    let distributorFactory: ContractFactory;
+    let authFactory: ContractFactory;
+    let tycheFactory: ContractFactory;
     // let mockSOhmFactory: MockSOHM__factory;
 
     let auth: OlympusAuthority;
@@ -90,22 +81,22 @@ describe.only("YieldDirector", async () => {
     beforeEach(async () => {
         //dai = await smock.fake(erc20Factory);
         //lpToken = await smock.fake(erc20Factory);
-        dai = await erc20Factory.deploy(0);
+        dai = (await erc20Factory.deploy(0)) as DAI;
         // lpToken = await erc20Factory.deploy(0);
 
         // TODO use promise.all
-        auth = await authFactory.deploy(
+        auth = (await authFactory.deploy(
             deployer.address,
             deployer.address,
             deployer.address,
             deployer.address
-        ); // TODO
-        ohm = await ohmFactory.deploy(auth.address);
-        sOhm = await sOhmFactory.deploy();
-        gOhm = await gOhmFactory.deploy(sOhm.address, sOhm.address); // Call migrate immediately
+        )) as OlympusAuthority; // TODO
+        ohm = (await ohmFactory.deploy(auth.address)) as OlympusERC20Token;
+        sOhm = (await sOhmFactory.deploy()) as SOlympus;
+        gOhm = (await gOhmFactory.deploy(sOhm.address, sOhm.address)) as GOHM; // Call migrate immediately
         const blockNumBefore = await ethers.provider.getBlockNumber();
         const blockBefore = await ethers.provider.getBlock(blockNumBefore);
-        staking = await stakingFactory.deploy(
+        staking = (await stakingFactory.deploy(
             ohm.address,
             sOhm.address,
             gOhm.address,
@@ -113,15 +104,19 @@ describe.only("YieldDirector", async () => {
             "1",
             blockBefore.timestamp + 28800, // First epoch in 8 hours. Avoids first deposit to set epoch.distribute wrong
             auth.address
-        );
-        treasury = await treasuryFactory.deploy(ohm.address, "0", auth.address);
-        distributor = await distributorFactory.deploy(
+        )) as OlympusStaking;
+        treasury = (await treasuryFactory.deploy(
+            ohm.address,
+            "0",
+            auth.address
+        )) as OlympusTreasury;
+        distributor = (await distributorFactory.deploy(
             treasury.address,
             ohm.address,
             staking.address,
             auth.address
-        );
-        tyche = await tycheFactory.deploy(sOhm.address, auth.address);
+        )) as Distributor;
+        tyche = (await tycheFactory.deploy(sOhm.address, auth.address)) as YieldDirector;
 
         // Setup for each component
 
@@ -166,7 +161,7 @@ describe.only("YieldDirector", async () => {
         const sohmAmount = "1000000000000";
         await ohm.approve(staking.address, sohmAmount);
         await staking.stake(deployer.address, sohmAmount, true, true);
-        await triggerRebase() // Trigger first rebase to set initial distribute amount. This rebase shouldn't update index.
+        await triggerRebase(); // Trigger first rebase to set initial distribute amount. This rebase shouldn't update index.
 
         // Transfer 100 sOHM to alice for testing
         await sOhm.transfer(alice.address, "100000000000");
@@ -178,11 +173,11 @@ describe.only("YieldDirector", async () => {
 
     it("should rebase properly", async () => {
         await expect(await sOhm.index()).is.equal("10000000000");
-        await triggerRebase()
+        await triggerRebase();
         await expect(await sOhm.index()).is.equal("10010000000");
-        await triggerRebase()
+        await triggerRebase();
         await expect(await sOhm.index()).is.equal("10020010000");
-        await triggerRebase()
+        await triggerRebase();
         await expect(await sOhm.index()).is.equal("10030030010");
     });
 

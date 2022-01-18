@@ -1,9 +1,11 @@
-import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
+import "@nomiclabs/hardhat-ethers";
+import "@nomiclabs/hardhat-waffle";
+import "@nomiclabs/hardhat-etherscan";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
-import "@nomiclabs/hardhat-etherscan";
-import "@nomiclabs/hardhat-ethers";
+import "@openzeppelin/hardhat-upgrades";
+
 import "hardhat-deploy";
 
 import { resolve } from "path";
@@ -50,7 +52,7 @@ const config: HardhatUserConfig = {
             forking: {
                 url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`,
             },
-             chainId: chainIds.hardhat,
+            chainId: chainIds.hardhat,
         },
         // Uncomment for testing. Commented due to CI issues
         // mainnet: getChainConfig("mainnet"),
@@ -67,6 +69,18 @@ const config: HardhatUserConfig = {
     },
     solidity: {
         compilers: [
+            {
+                version: "0.8.10",
+                settings: {
+                    metadata: {
+                        bytecodeHash: "none",
+                    },
+                    optimizer: {
+                        enabled: true,
+                        runs: 800,
+                    },
+                },
+            },
             {
                 version: "0.8.10",
                 settings: {
@@ -130,6 +144,9 @@ const config: HardhatUserConfig = {
     },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,
+    },
+    mocha: {
+        timeout: 1000000,
     },
 };
 

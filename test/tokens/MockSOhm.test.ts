@@ -1,10 +1,9 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
-import { expect } from 'chai';
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+import { expect } from "chai";
 import { ethers } from "hardhat";
-import { MockSOHM__factory, MockSOHM } from '../../types';
+import { MockSOHM__factory, MockSOHM } from "../../types";
 
 describe("Mock sOhm Tests", () => {
-
     // 100 sOHM
     const INITIAL_AMOUNT = "100000000000";
 
@@ -12,13 +11,12 @@ describe("Mock sOhm Tests", () => {
     let alice: SignerWithAddress;
     let bob: SignerWithAddress;
     let sOhm: MockSOHM;
-    
 
     beforeEach(async () => {
         [initializer, alice, bob] = await ethers.getSigners();
 
         // Initialize to index of 1 and rebase percentage of 1%
-        sOhm = await (new MockSOHM__factory(initializer)).deploy("1000000000", "10000000");
+        sOhm = await new MockSOHM__factory(initializer).deploy("1000000000", "10000000");
 
         // Mint 100 sOHM for intializer account
         await sOhm.mint(initializer.address, INITIAL_AMOUNT);
