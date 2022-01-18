@@ -18,6 +18,7 @@ RUN yarn install --frozen-lockfile
 COPY hardhat.config.ts .
 COPY contracts contracts
 COPY scripts scripts
+COPY deployments/localhost deployments/localhost
 
 EXPOSE 8545
 

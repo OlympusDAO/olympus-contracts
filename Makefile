@@ -1,7 +1,7 @@
 include .env
 export
 
-DOCKER_IMAGE=OlympusDAO/olympus-contracts
+DOCKER_IMAGE=olympusdao/olympus-contracts
 # Use the branch name as the tag
 DOCKER_TAG=$(shell git branch --show-current)
 DOCKER_VOLUMES=--volume $(shell pwd)/contracts:/opt/contracts/ --volume $(shell pwd)/scripts:/opt/scripts/
