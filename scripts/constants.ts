@@ -12,6 +12,7 @@ export const CONTRACTS: Record<string, string> = {
     migrator: "OlympusTokenMigrator",
     FRAX: "Frax",
     DAI: "DAI",
+    lusdAllocator: "LUSDAllocator",
 };
 
 // Constructor Arguments
