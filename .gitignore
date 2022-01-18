@@ -3,7 +3,7 @@ cache/
 artifacts/
 
 coverage*
-types/
+/types/
 
 .vscode/*
 !.vscode/settings.json.default
@@ -23,4 +23,7 @@ deployments/**/solcinputs
 
 /.dapp
 
+
+# OpenZeppelin upgradeable files
+.openzeppelin/unknown-*.json
 /flatten
