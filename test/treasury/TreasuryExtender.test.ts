@@ -19,54 +19,18 @@ import {
 // data
 import { coins } from "../utils/coins";
 import { olympus } from "../utils/olympus";
+import {
+    impersonate,
+    snapshot,
+    revert,
+    getCoin,
+    bne,
+    pinBlock,
+    addressZero,
+} from "../utils/scripts";
 
 chai.should();
 chai.use(smock.matchers);
-
-async function impersonate(address: string): Promise<SignerWithAddress> {
-    await network.provider.send("hardhat_impersonateAccount", [address]);
-    return await ethers.getSigner(address);
-}
-
-async function snapshot(): Promise<number> {
-    return await network.provider.send("evm_snapshot", []);
-}
-
-async function revert(moment: number): Promise<void> {
-    await network.provider.send("evm_revert", [moment]);
-}
-
-async function getCoin(address: string): Promise<MockERC20> {
-    return (await ethers.getContractAt("MockERC20", address)) as MockERC20;
-}
-
-async function getCoins(addresses: string[]): Promise<MockERC20[]> {
-    const result: MockERC20[] = [];
-
-    for (const address of addresses) {
-        result.push(await getCoin(address));
-    }
-
-    return result;
-}
-
-function bnn(num: number): BigNumber {
-    return BigNumber.from(num);
-}
-
-function bne(base: number, expo: number): BigNumber {
-    let bn: BigNumber = bnn(base);
-    for (expo; expo > 0; expo--) bn = bn.mul(base);
-    return bn;
-}
-
-async function pinBlock(bnum: number, url: string): Promise<void> {
-    await network.provider.send("hardhat_reset", [
-        { forking: { jsonRpcUrl: url, blockNumber: bnum } },
-    ]);
-}
-
-const addressZero = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
 
 describe("TreasuryExtender", () => {
     // signers
