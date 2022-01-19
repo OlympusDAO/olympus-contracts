@@ -18,6 +18,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const stabilityPool = "0xFd0dB2BA8BEaC72d45f12A76f40c345BBf5f6F8d";
     const stakingPool = "0x35D3293EA6dD210b8Ca25668ae266ca4C834Ea1b";
     const weth = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
+    const hopTokenAddress = "0x6b175474e89094c44da98b954eedeac495271d0f"; // DAI
 
     await deploy(CONTRACTS.lusdAllocator, {
         from: deployer,
@@ -30,7 +31,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
             stakingPool,
             "0x0000000000000000000000000000000000000000",
             weth,
-            "0x0000000000000000000000000000000000000000",
+            hopTokenAddress,
             "0x0000000000000000000000000000000000000000",
         ],
         log: true,
