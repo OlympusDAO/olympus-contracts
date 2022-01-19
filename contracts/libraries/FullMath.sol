@@ -43,7 +43,7 @@ library FullMath {
 
         if (h == 0) return l / d;
 
-        require(h < d, 'FullMath: FULLDIV_OVERFLOW');
+        require(h < d, "FullMath: FULLDIV_OVERFLOW");
         return fullDiv(l, h, d);
     }
 }

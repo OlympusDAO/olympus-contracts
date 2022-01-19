@@ -16,7 +16,7 @@ contract FraxSharesAllocatorVNext is Initializable, OwnableUpgradeable {
     /* !!!! UPGRADABLE CONTRACT !!!! */
     /* NEW STATE VARIABLES MUST BE APPENDED TO END */
 
-    uint256 constant private MAX_TIME = 4 * 365 * 86400 + 1;  // 4 years and 1 second
+    uint256 private constant MAX_TIME = 4 * 365 * 86400 + 1; // 4 years and 1 second
     ITreasury public treasury;
     IERC20 public fxs; // $FXS token
     IveFXS public veFXS; // $veFXS token
@@ -26,7 +26,7 @@ contract FraxSharesAllocatorVNext is Initializable, OwnableUpgradeable {
     uint256 public totalAmountDeployed;
     uint256 public lockEnd; // tracks the expiry of veFXS to know if can be extended
 
-    function didUpgrade() external pure returns(bool) {
+    function didUpgrade() external pure returns (bool) {
         return true;
     }
 }

@@ -10,7 +10,7 @@ async function main() {
 
 main()
     .then(() => process.exit())
-    .catch(error => {
+    .catch((error) => {
         console.error(error);
         process.exit(1);
-})
+    });

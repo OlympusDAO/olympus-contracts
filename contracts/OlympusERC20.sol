@@ -13,10 +13,11 @@ import "./types/OlympusAccessControlled.sol";
 contract OlympusERC20Token is ERC20Permit, IOHM, OlympusAccessControlled {
     using SafeMath for uint256;
 
-    constructor(address _authority) 
-    ERC20("Olympus", "OHM", 9) 
-    ERC20Permit("Olympus") 
-    OlympusAccessControlled(IOlympusAuthority(_authority)) {}
+    constructor(address _authority)
+        ERC20("Olympus", "OHM", 9)
+        ERC20Permit("Olympus")
+        OlympusAccessControlled(IOlympusAuthority(_authority))
+    {}
 
     function mint(address account_, uint256 amount_) external override onlyVault {
         _mint(account_, amount_);
@@ -31,7 +32,10 @@ contract OlympusERC20Token is ERC20Permit, IOHM, OlympusAccessControlled {
     }
 
     function _burnFrom(address account_, uint256 amount_) internal {
-        uint256 decreasedAllowance_ = allowance(account_, msg.sender).sub(amount_, "ERC20: burn amount exceeds allowance");
+        uint256 decreasedAllowance_ = allowance(account_, msg.sender).sub(
+            amount_,
+            "ERC20: burn amount exceeds allowance"
+        );
 
         _approve(account_, msg.sender, decreasedAllowance_);
         _burn(account_, amount_);

@@ -17,7 +17,6 @@ import "../types/OlympusAccessControlled.sol";
 import "../libraries/SafeMath.sol";
 import "../libraries/SafeERC20.sol";
 
-
 contract OlympusTokenMigrator is OlympusAccessControlled {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -199,7 +198,7 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
 
         uint256 balance = oldOHM.balanceOf(address(this));
 
-        if(balance > oldSupply) {
+        if (balance > oldSupply) {
             oldSupply = 0;
         } else {
             oldSupply -= balance;
@@ -254,12 +253,12 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
 
         IERC20(pair).approve(address(router), oldLPAmount);
         (uint256 amountA, uint256 amountB) = router.removeLiquidity(
-            token, 
-            address(oldOHM), 
+            token,
+            address(oldOHM),
             oldLPAmount,
-            _minA, 
-            _minB, 
-            address(this), 
+            _minA,
+            _minB,
+            address(this),
             block.timestamp
         );
 
@@ -269,13 +268,13 @@ contract OlympusTokenMigrator is OlympusAccessControlled {
         newOHM.approve(address(router), amountB);
 
         router.addLiquidity(
-            token, 
-            address(newOHM), 
-            amountA, 
-            amountB, 
-            amountA, 
-            amountB, 
-            address(newTreasury), 
+            token,
+            address(newOHM),
+            amountA,
+            amountB,
+            amountA,
+            amountB,
+            address(newTreasury),
             block.timestamp
         );
     }

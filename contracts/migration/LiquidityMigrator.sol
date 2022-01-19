@@ -57,12 +57,12 @@ contract LiquidityMigrator is OlympusAccessControlled {
         // Remove the V1 liquidity
         IERC20(pair).approve(address(routerFrom), oldLPAmount);
         (uint256 amountToken, uint256 amountOHM) = routerFrom.removeLiquidity(
-            token, 
-            address(oldOHM), 
+            token,
+            address(oldOHM),
             oldLPAmount,
-            _minA, 
-            _minB, 
-            address(this), 
+            _minA,
+            _minB,
+            address(this),
             _deadline
         );
 
@@ -75,13 +75,13 @@ contract LiquidityMigrator is OlympusAccessControlled {
         IERC20(token).approve(address(routerTo), amountToken);
         newOHM.approve(address(routerTo), amountNewOHM);
         routerTo.addLiquidity(
-            token, 
-            address(newOHM), 
-            amountToken, 
-            amountNewOHM, 
-            amountToken, 
-            amountNewOHM, 
-            address(newTreasury), 
+            token,
+            address(newOHM),
+            amountToken,
+            amountNewOHM,
+            amountToken,
+            amountNewOHM,
+            address(newTreasury),
             _deadline
         );
 

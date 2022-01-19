@@ -7,3 +7,5 @@ node_modules/
 package.json
 typechain/
 dapp_test/test.sol
+contracts/governance/GovernorAlpha.sol
+contracts/governance/GovernorOHMegaDelegate.sol
