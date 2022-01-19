@@ -5,7 +5,7 @@ import { smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
 
 // types
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { FakeContract } from "@defi-wonderland/smock";
 import {
     OlympusTreasury,
@@ -37,7 +37,7 @@ async function revert(moment: number): Promise<void> {
 }
 
 async function getCoin(address: string): Promise<MockERC20> {
-    return await ethers.getContractAt("MockERC20", address);
+    return (await ethers.getContractAt("MockERC20", address)) as MockERC20;
 }
 
 async function getCoins(addresses: string[]): Promise<MockERC20[]> {
@@ -118,12 +118,18 @@ describe("TreasuryExtender", () => {
         fakeAllocator.estimateTotalAllocated.returns(0);
         fakeAllocator.estimateTotalRewards.returns(0);
 
-        treasury = await ethers.getContractAt("OlympusTreasury", olympus.treasury);
-        authority = await ethers.getContractAt("OlympusAuthority", olympus.authority);
+        treasury = (await ethers.getContractAt(
+            "OlympusTreasury",
+            olympus.treasury
+        )) as OlympusTreasury;
+        authority = (await ethers.getContractAt(
+            "OlympusAuthority",
+            olympus.authority
+        )) as OlympusAuthority;
 
-        const extenderFactory: TreasuryExtender__factory = await ethers.getContractFactory(
+        const extenderFactory: TreasuryExtender__factory = (await ethers.getContractFactory(
             "TreasuryExtender"
-        );
+        )) as TreasuryExtender__factory;
 
         extender = await extenderFactory.deploy(treasury.address, authority.address);
 
@@ -281,6 +287,7 @@ describe("TreasuryExtender", () => {
     });
 
     let rewardAllocator: FakeContract<BaseAllocator>;
+    let daiWhale: SignerWithAddress;
 
     describe("returnRewardsToTreasury", async () => {
         before(async () => {
@@ -311,9 +318,7 @@ describe("TreasuryExtender", () => {
         });
 
         it("pre: should set up balance", async () => {
-            let daiWhale: SignerWithAddress = await impersonate(
-                "0x1dDb61FD4E70426eDb59e7ECDDf0f049d9cF3906"
-            );
+            daiWhale = await impersonate("0x1dDb61FD4E70426eDb59e7ECDDf0f049d9cF3906");
 
             await network.provider.send("hardhat_setBalance", [
                 rewardAllocator.address,
@@ -353,6 +358,20 @@ describe("TreasuryExtender", () => {
                     bne(10, 21).mul(5)
                 )
             ).to.changeTokenBalance(dai, treasury, bne(10, 21).mul(5));
+
+            expect(await dai.balanceOf(extender.address)).to.equal(0);
+        });
+
+        it("passing: should return all if guardian asks for too much", async () => {
+            await expect(() =>
+                extender["returnRewardsToTreasury(uint256,address,uint256)"](
+                    1,
+                    coins.dai,
+                    bne(10, 24).mul(5)
+                )
+            ).to.changeTokenBalance(dai, treasury, bne(10, 21).mul(5));
+
+            expect(await dai.balanceOf(extender.address)).to.equal(0);
         });
 
         after(async () => {
@@ -414,8 +433,6 @@ describe("TreasuryExtender", () => {
         });
 
         it("revert: check if it will revert if not guardian, offline or above limit", async () => {
-            const innerStart = await snapshot();
-
             // UNAUTHORIZED
             extender = extender.connect(owner);
             await expect(
@@ -436,8 +453,6 @@ describe("TreasuryExtender", () => {
             await expect(
                 extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 25))
             ).to.be.revertedWith("TreasuryExtender::MaxAllocation");
-
-            revert(innerStart);
         });
 
         it("passing: should be able to transfer", async () => {
@@ -484,6 +499,439 @@ describe("TreasuryExtender", () => {
             );
             expect(await extender.getAllocatorAllocated(2)).to.equal(balance);
             expect(await usdc.balanceOf(extender.address)).to.equal(0);
+        });
+    });
+
+    describe("report", () => {
+        before(async () => {
+            await network.provider.send("hardhat_setBalance", [
+                fakeAllocator.address,
+                bne(10, 22)._hex,
+            ]);
+            await network.provider.send("hardhat_setBalance", [
+                veryfakeAllocator.address,
+                bne(10, 22)._hex,
+            ]);
+        });
+
+        it("initial: performance should be 0", async () => {
+            let perf1: any = await extender.getAllocatorPerformance(1);
+            let perf2: any = await extender.getAllocatorPerformance(2);
+
+            expect(perf1[0]).to.equal(0);
+            expect(perf1[0]).to.equal(0);
+            expect(perf2[1]).to.equal(0);
+            expect(perf2[1]).to.equal(0);
+        });
+
+        it("passing: should return on 0 reported gain + loss", async () => {
+            // would revert if it passed initial check
+            extender = extender.connect(owner);
+
+            const response1 = await extender.report(1, 0, 0);
+            const response2 = await extender.report(2, 0, 0);
+
+            const receipt1 = await response1.wait();
+            const receipt2 = await response2.wait();
+
+            expect(receipt1.events!.length).to.equal(0);
+            expect(receipt2.events!.length).to.equal(0);
+        });
+
+        it("revert: should revert if allocator offline or allocator not sender", async () => {
+            let input: BigNumber = bne(10, 22);
+
+            await expect(extender.report(0, input, 0)).to.be.revertedWith(
+                "TreasuryExtender::OnlyAllocator"
+            );
+            await expect(extender.report(0, 0, input)).to.be.revertedWith(
+                "TreasuryExtender::OnlyAllocator"
+            );
+            await expect(extender.report(0, input, input)).to.be.revertedWith(
+                "TreasuryExtender::OnlyAllocator"
+            );
+
+            extender = extender.connect(veryfakeAllocator.wallet);
+
+            await expect(extender.report(1, input, 0)).to.be.revertedWith(
+                "TreasuryExtender::OnlyAllocator"
+            );
+            await expect(extender.report(1, 0, input)).to.be.revertedWith(
+                "TreasuryExtender::OnlyAllocator"
+            );
+            await expect(extender.report(1, input, input)).to.be.revertedWith(
+                "TreasuryExtender::OnlyAllocator"
+            );
+
+            extender = extender.connect(fakeAllocator.wallet);
+
+            await expect(extender.report(2, input, 0)).to.be.revertedWith(
+                "TreasuryExtender::OnlyAllocator"
+            );
+            await expect(extender.report(2, 0, input)).to.be.revertedWith(
+                "TreasuryExtender::OnlyAllocator"
+            );
+            await expect(extender.report(2, input, input)).to.be.revertedWith(
+                "TreasuryExtender::OnlyAllocator"
+            );
+        });
+
+        it("passing: should properly accept gain or loss report", async () => {
+            // note down balances, set vars
+            let allocated1: BigNumber = await extender.getAllocatorAllocated(1);
+            let allocated2: BigNumber = await extender.getAllocatorAllocated(2);
+
+            let gain: BigNumber = bne(10, 20);
+            let loss: BigNumber = bne(10, 22);
+
+            // gain reporting
+            // fakeAllocator
+            const tv1 = await extender.getTotalValueAllocated();
+            const response1 = await extender.report(1, gain, 0);
+            const receipt1 = await response1.wait();
+
+            expect(receipt1.events![0].event).to.equal("AllocatorReportedGain");
+            expect(await extender.getAllocatorAllocated(1)).to.equal(allocated1);
+
+            let performance1: any = await extender.getAllocatorPerformance(1);
+
+            expect(performance1[0]).to.equal(gain);
+            expect(performance1[1]).to.equal(0);
+
+            const tv2 = await extender.getTotalValueAllocated();
+
+            expect(tv1).to.be.lt(tv2);
+
+            // loss reporting
+            // fakeAllocator
+            const tv3 = await extender.getTotalValueAllocated();
+            const response2 = await extender.report(1, 0, loss);
+            const receipt2 = await response2.wait();
+
+            allocated1 = allocated1.sub(loss);
+
+            expect(receipt2.events![0].event).to.equal("AllocatorReportedLoss");
+            expect(await extender.getAllocatorAllocated(1)).to.equal(allocated1);
+
+            performance1 = await extender.getAllocatorPerformance(1);
+
+            expect(performance1[0]).to.equal(gain);
+            expect(performance1[1]).to.equal(loss);
+
+            const tv4 = await extender.getTotalValueAllocated();
+
+            expect(tv3).to.be.gt(tv4);
+
+            // gain reporting
+            // veryfakeAllocator
+            extender = extender.connect(veryfakeAllocator.wallet);
+
+            const tv5 = await extender.getTotalValueAllocated();
+            const response3 = await extender.report(2, gain, 0);
+            const receipt3 = await response3.wait();
+
+            expect(receipt3.events![0].event).to.equal("AllocatorReportedGain");
+            expect(await extender.getAllocatorAllocated(2)).to.equal(allocated2);
+
+            let performance2: any = await extender.getAllocatorPerformance(2);
+
+            expect(performance2[0]).to.equal(gain);
+            expect(performance2[1]).to.equal(0);
+
+            const tv6 = await extender.getTotalValueAllocated();
+
+            expect(tv5).to.be.lt(tv6);
+
+            // loss reporting
+            // veryfakeAllocator
+            const tv7 = await extender.getTotalValueAllocated();
+            const response4 = await extender.report(2, 0, loss);
+            const receipt4 = await response4.wait();
+
+            allocated2 = allocated2.sub(loss);
+
+            expect(receipt4.events![0].event).to.equal("AllocatorReportedLoss");
+            expect(await extender.getAllocatorAllocated(2)).to.equal(allocated2);
+
+            performance2 = await extender.getAllocatorPerformance(2);
+
+            expect(performance2[0]).to.equal(gain);
+            expect(performance2[1]).to.equal(loss);
+
+            const tv8 = await extender.getTotalValueAllocated();
+
+            expect(tv7).to.be.gt(tv8);
+        });
+    });
+
+    describe("returnFundsToTreasury", () => {
+        it("pre: transfer rewards to simulate them actually having rewards, and remove loss", async () => {
+            const balancef: BigNumber = await extender.getAllocatorAllocated(1);
+            const balancev: BigNumber = await extender.getAllocatorAllocated(2);
+
+            const performancef: any = await extender.getAllocatorPerformance(1);
+            const performancev: any = await extender.getAllocatorPerformance(2);
+
+            const fraxWhale: SignerWithAddress = await impersonate(
+                "0x0e274455110A233Bb7577c73Aa58d75a0939F56E"
+            );
+
+            frax = frax.connect(fraxWhale);
+            dai = dai.connect(daiWhale);
+
+            // add rewards
+            await expect(() =>
+                frax.transfer(fakeAllocator.address, performancef[0])
+            ).to.changeTokenBalance(frax, fakeAllocator, performancef[0]);
+            await expect(() =>
+                dai.transfer(veryfakeAllocator.address, performancev[0])
+            ).to.changeTokenBalance(dai, veryfakeAllocator, performancev[0]);
+
+            // remove loss
+            expect(await frax.balanceOf(fakeAllocator.address)).to.equal(
+                balancef.add(performancef[1]).add(performancef[0])
+            );
+            expect(await dai.balanceOf(veryfakeAllocator.address)).to.equal(
+                balancev.add(performancev[1]).add(performancef[0])
+            );
+
+            frax = frax.connect(fakeAllocator.wallet);
+            dai = dai.connect(veryfakeAllocator.wallet);
+
+            await expect(() => frax.transfer(owner.address, performancef[1])).to.changeTokenBalance(
+                frax,
+                fakeAllocator,
+                performancef[1].mul(-1)
+            );
+            await expect(() => dai.transfer(owner.address, performancev[1])).to.changeTokenBalance(
+                dai,
+                veryfakeAllocator,
+                performancev[1].mul(-1)
+            );
+
+            await frax.approve(extender.address, balancef.add(performancef[0]));
+            await dai.approve(extender.address, balancev.add(performancev[0]));
+        });
+
+        it("revert: should revert if sender not guardian", async () => {
+            extender = extender.connect(owner);
+            await expect(
+                extender["returnFundsToTreasury(uint256,uint256)"](1, 1)
+            ).to.be.revertedWith("UNAUTHORIZED");
+            await expect(
+                extender["returnFundsToTreasury(uint256,uint256)"](2, 1)
+            ).to.be.revertedWith("UNAUTHORIZED");
+            extender = extender.connect(guardian);
+        });
+
+        it("passing: if 0 withdrawn, everything stays them", async () => {
+            const internalSnap: number = await snapshot();
+
+            let balf: BigNumber = await extender.getAllocatorAllocated(1);
+            let balv: BigNumber = await extender.getAllocatorAllocated(2);
+
+            let tvf: BigNumber = await treasury.tokenValue(frax.address, balf);
+            let tvv: BigNumber = await treasury.tokenValue(dai.address, balv);
+
+            let pf: any = await extender.getAllocatorPerformance(1);
+            let pv: any = await extender.getAllocatorPerformance(2);
+
+            await expect(() =>
+                extender["returnFundsToTreasury(uint256,uint256)"](1, 0)
+            ).to.changeTokenBalance(frax, treasury, 0);
+            await expect(() =>
+                extender["returnFundsToTreasury(uint256,uint256)"](2, 0)
+            ).to.changeTokenBalance(dai, treasury, 0);
+
+            let balfe: BigNumber = await extender.getAllocatorAllocated(1);
+            let balve: BigNumber = await extender.getAllocatorAllocated(2);
+
+            let tvfe: BigNumber = await treasury.tokenValue(frax.address, balfe);
+            let tvve: BigNumber = await treasury.tokenValue(dai.address, balve);
+
+            let pfe: any = await extender.getAllocatorPerformance(1);
+            let pve: any = await extender.getAllocatorPerformance(2);
+
+            let res: any[] = [balf, balv];
+            let rese: any[] = [balfe, balve];
+
+            res = res.concat(pf).concat(pv).concat([tvf, tvv]);
+            rese = rese.concat(pfe).concat(pve).concat([tvfe, tvve]);
+
+            for (let i = 0; i < res.length; i++) {
+                expect(res[i]).to.equal(rese[i]);
+            }
+
+            await revert(internalSnap);
+        });
+
+        it("passing: withdraw allocated partially", async () => {
+            const internalSnap: number = await snapshot();
+
+            let balf: BigNumber = await extender.getAllocatorAllocated(1);
+            let balv: BigNumber = await extender.getAllocatorAllocated(2);
+
+            let tv: BigNumber = await extender.getTotalValueAllocated();
+
+            let pf: any = await extender.getAllocatorPerformance(1);
+            let pv: any = await extender.getAllocatorPerformance(2);
+
+            let withf: BigNumber = balf.sub(balf.div(2));
+            let withv: BigNumber = balv.sub(balv.div(2));
+
+            await expect(() =>
+                extender["returnFundsToTreasury(uint256,uint256)"](1, withf)
+            ).to.changeTokenBalance(frax, treasury, withf);
+            await expect(() =>
+                extender["returnFundsToTreasury(uint256,uint256)"](2, withv)
+            ).to.changeTokenBalance(dai, treasury, withv);
+
+            let balfe: BigNumber = await extender.getAllocatorAllocated(1);
+            let balve: BigNumber = await extender.getAllocatorAllocated(2);
+
+            let tve: BigNumber = await extender.getTotalValueAllocated();
+
+            let pfe: any = await extender.getAllocatorPerformance(1);
+            let pve: any = await extender.getAllocatorPerformance(2);
+
+            expect(tv).to.be.gte(tve);
+
+            expect(balfe).to.equal(balf.sub(withf));
+            expect(balve).to.equal(balv.sub(withv));
+
+            expect(pf[0]).to.equal(pfe[0]);
+            expect(pf[1]).to.equal(pfe[1]);
+
+            expect(pv[0]).to.equal(pve[0]);
+            expect(pv[1]).to.equal(pve[1]);
+
+            await revert(internalSnap);
+        });
+
+        it("passing: if withdrawing only allocated, gain stays in tact", async () => {
+            const internalSnap: number = await snapshot();
+
+            let balf: BigNumber = await extender.getAllocatorAllocated(1);
+            let balv: BigNumber = await extender.getAllocatorAllocated(2);
+
+            let tv: BigNumber = await extender.getTotalValueAllocated();
+
+            let pf: any = await extender.getAllocatorPerformance(1);
+            let pv: any = await extender.getAllocatorPerformance(2);
+
+            await expect(() =>
+                extender["returnFundsToTreasury(uint256,uint256)"](1, balf)
+            ).to.changeTokenBalance(frax, treasury, balf);
+            await expect(() =>
+                extender["returnFundsToTreasury(uint256,uint256)"](2, balv)
+            ).to.changeTokenBalance(dai, treasury, balv);
+
+            let balfe: BigNumber = await extender.getAllocatorAllocated(1);
+            let balve: BigNumber = await extender.getAllocatorAllocated(2);
+
+            let tve: BigNumber = await extender.getTotalValueAllocated();
+
+            let pfe: any = await extender.getAllocatorPerformance(1);
+            let pve: any = await extender.getAllocatorPerformance(2);
+
+            expect(tv).to.be.gte(tve);
+
+            expect(balfe).to.equal(0);
+            expect(balve).to.equal(0);
+
+            expect(pf[0]).to.equal(pfe[0]);
+            expect(pf[1]).to.equal(pfe[1]);
+
+            expect(pv[0]).to.equal(pve[0]);
+            expect(pv[1]).to.equal(pve[1]);
+
+            await revert(internalSnap);
+        });
+
+        it("passing: if withdrawing gain, it properly decrements together with allocated", async () => {
+            const internalSnap: number = await snapshot();
+
+            let balf: BigNumber = await extender.getAllocatorAllocated(1);
+            let balv: BigNumber = await extender.getAllocatorAllocated(2);
+
+            let tv: BigNumber = await extender.getTotalValueAllocated();
+
+            let pf: any = await extender.getAllocatorPerformance(1);
+            let pv: any = await extender.getAllocatorPerformance(2);
+
+            let withf: BigNumber = balf.add(pf[0].div(2));
+            let withv: BigNumber = balv.add(pv[0].div(2));
+
+            await expect(() =>
+                extender["returnFundsToTreasury(uint256,uint256)"](1, withf)
+            ).to.changeTokenBalance(frax, treasury, withf);
+
+            await expect(() =>
+                extender["returnFundsToTreasury(uint256,uint256)"](2, withv)
+            ).to.changeTokenBalance(dai, treasury, withv);
+
+            let balfe: BigNumber = await extender.getAllocatorAllocated(1);
+            let balve: BigNumber = await extender.getAllocatorAllocated(2);
+
+            let tve: BigNumber = await extender.getTotalValueAllocated();
+
+            let pfe: any = await extender.getAllocatorPerformance(1);
+            let pve: any = await extender.getAllocatorPerformance(2);
+
+            expect(tv).to.be.gte(tve);
+
+            expect(balfe).to.equal(0);
+            expect(balve).to.equal(0);
+
+            expect(balf.add(pf[0]).sub(withf)).to.equal(pfe[0]);
+            expect(balv.add(pv[0]).sub(withv)).to.equal(pve[0]);
+
+            expect(pv[1]).to.equal(pve[1]);
+            expect(pf[1]).to.equal(pfe[1]);
+
+            await revert(internalSnap);
+        });
+
+        it("passing: withdrawing everything", async () => {
+            const internalSnap: number = await snapshot();
+
+            let balf: BigNumber = await extender.getAllocatorAllocated(1);
+            let balv: BigNumber = await extender.getAllocatorAllocated(2);
+
+            let pf: any = await extender.getAllocatorPerformance(1);
+            let pv: any = await extender.getAllocatorPerformance(2);
+
+            let withf: BigNumber = balf.add(pf[0]);
+            let withv: BigNumber = balv.add(pv[0]);
+
+            await expect(() =>
+                extender["returnFundsToTreasury(uint256,uint256)"](1, withf)
+            ).to.changeTokenBalance(frax, treasury, withf);
+
+            await expect(() =>
+                extender["returnFundsToTreasury(uint256,uint256)"](2, withv)
+            ).to.changeTokenBalance(dai, treasury, withv);
+
+            let balfe: BigNumber = await extender.getAllocatorAllocated(1);
+            let balve: BigNumber = await extender.getAllocatorAllocated(2);
+
+            let tve: BigNumber = await extender.getTotalValueAllocated();
+
+            let pfe: any = await extender.getAllocatorPerformance(1);
+            let pve: any = await extender.getAllocatorPerformance(2);
+
+            expect(tve).to.equal(0);
+
+            expect(balfe).to.equal(0);
+            expect(balve).to.equal(0);
+
+            expect(pfe[0]).to.equal(0);
+            expect(pve[0]).to.equal(0);
+
+            expect(pv[1]).to.equal(pve[1]);
+            expect(pf[1]).to.equal(pfe[1]);
+
+            await revert(internalSnap);
         });
     });
 });
