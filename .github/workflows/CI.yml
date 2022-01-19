@@ -29,6 +29,7 @@ jobs:
                   key: ${{ matrix.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
                   restore-keys: |
                       ${{ matrix.os }}-yarn-
+            - run: yarn format
             - run: yarn --frozen-lockfile
             - run: yarn compile
             - run: cp .env.example .env
