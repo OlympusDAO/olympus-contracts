@@ -78,21 +78,20 @@ contract ConvexAllocator is OlympusAccessControlled {
     /* ======== STATE VARIABLES ======== */
 
     // Convex deposit contract
-    IConvex internal immutable booster = IConvex(0xF403C135812408BFbE8713b5A23a04b3D48AAE31); 
+    IConvex internal immutable booster = IConvex(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
     // Curve 3Pool
-    ICurve3Pool internal immutable curve3Pool = ICurve3Pool(0xA79828DF1850E8a3A3064576f380D90aECDD3359); 
+    ICurve3Pool internal immutable curve3Pool = ICurve3Pool(0xA79828DF1850E8a3A3064576f380D90aECDD3359);
     // Olympus Treasury
-    ITreasury internal treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef); 
+    ITreasury internal treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
 
     // info for deposited tokens
-    mapping(address => TokenData) public tokenInfo; 
+    mapping(address => TokenData) public tokenInfo;
     // convex pid for token
-    mapping(address => uint256) public pidForReserve; 
+    mapping(address => uint256) public pidForReserve;
     // total RFV deployed into lending pool
-    uint256 public totalValueDeployed; 
+    uint256 public totalValueDeployed;
     // timelock to raise deployment limit
-    uint256 public immutable timelockInBlocks = 6600; 
-
+    uint256 public immutable timelockInBlocks = 6600;
 
     /* ======== CONSTRUCTOR ======== */
 
@@ -104,10 +103,10 @@ contract ConvexAllocator is OlympusAccessControlled {
      * @notice claims accrued CVX rewards for all tracked crvTokens
      */
     function harvest(address[] memory tokens) external {
-        for(uint256 i; i < tokens.length; i++) {
+        for (uint256 i; i < tokens.length; i++) {
             TokenData memory tokenData = tokenInfo[tokens[i]];
             address[] memory rewardTokens = tokenData.rewardTokens;
-            
+
             tokenData.rewardPool.getReward();
 
             for (uint256 r = 0; r < rewardTokens.length; r++) {
@@ -141,18 +140,18 @@ contract ConvexAllocator is OlympusAccessControlled {
         address curveToken = tokenInfo[token].curveToken;
 
         // retrieve amount of asset from treasury
-        treasury.manage(token, amount); 
+        treasury.manage(token, amount);
 
         // account for deposit
         uint256 value = treasury.tokenValue(token, amount);
         accountingFor(token, amount, value, true);
 
         // approve and deposit into curve
-        IERC20(token).approve(address(curve3Pool), amount); 
-        uint256 curveAmount = curve3Pool.add_liquidity(curveToken, amounts, minAmount); 
+        IERC20(token).approve(address(curve3Pool), amount);
+        uint256 curveAmount = curve3Pool.add_liquidity(curveToken, amounts, minAmount);
 
         // approve and deposit into convex
-        IERC20(curveToken).approve(address(booster), curveAmount); 
+        IERC20(curveToken).approve(address(booster), curveAmount);
         booster.deposit(pidForReserve[token], curveAmount, true);
     }
 
@@ -168,10 +167,10 @@ contract ConvexAllocator is OlympusAccessControlled {
         address curveToken = tokenInfo[token].curveToken;
 
         // withdraw from convex
-        tokenInfo[token].rewardPool.withdrawAndUnwrap(amount, false); 
+        tokenInfo[token].rewardPool.withdrawAndUnwrap(amount, false);
 
         // approve and withdraw from curve
-        IERC20(curveToken).approve(address(curve3Pool), amount); 
+        IERC20(curveToken).approve(address(curve3Pool), amount);
         curve3Pool.remove_liquidity_one_coin(curveToken, amount, tokenInfo[token].index, minAmount);
 
         uint256 balance = IERC20(token).balanceOf(address(this));
@@ -182,7 +181,7 @@ contract ConvexAllocator is OlympusAccessControlled {
 
         if (reserve) {
             // approve and deposit asset into treasury
-            IERC20(token).approve(address(treasury), balance); 
+            IERC20(token).approve(address(treasury), balance);
             treasury.deposit(balance, token, value);
         } else IERC20(token).safeTransfer(address(treasury), balance);
     }

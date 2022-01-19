@@ -6,7 +6,6 @@ import "../../../contracts/OlympusERC20.sol";
 
 import "../../../contracts/OlympusAuthority.sol";
 
-
 contract OlymppusERC20TokenTest is DSTest {
     OlympusERC20Token internal ohmContract;
 
@@ -14,13 +13,12 @@ contract OlymppusERC20TokenTest is DSTest {
 
     address internal UNAUTHORIZED_USER = address(0x1);
 
-
     function test_erc20() public {
         authority = new OlympusAuthority(address(this), address(this), address(this), address(this));
         ohmContract = new OlympusERC20Token(address(authority));
         assertEq("Olympus", ohmContract.name());
         assertEq("OHM", ohmContract.symbol());
-        assertEq(9, int(ohmContract.decimals()));
+        assertEq(9, int256(ohmContract.decimals()));
     }
 
     function testCannot_mint() public {
@@ -40,7 +38,7 @@ contract OlymppusERC20TokenTest is DSTest {
         authority = new OlympusAuthority(address(this), address(this), address(this), address(this));
         ohmContract = new OlympusERC20Token(address(authority));
         uint256 supplyBefore = ohmContract.totalSupply();
-         // TODO look into https://dapphub.chat/channel/dev?msg=HWrPJqxp8BHMiKTbo
+        // TODO look into https://dapphub.chat/channel/dev?msg=HWrPJqxp8BHMiKTbo
         // ohmContract.setVault(address(this)); //TODO WTF msg.sender doesn't propigate from .dapprc $DAPP_TEST_CALLER config via mint() call, must use this value
         ohmContract.mint(address(this), amount);
         assertEq(supplyBefore + amount, ohmContract.totalSupply());
@@ -53,7 +51,7 @@ contract OlymppusERC20TokenTest is DSTest {
         uint256 supplyBefore = ohmContract.totalSupply();
         // ohmContract.setVault(address(this));  //TODO WTF msg.sender doesn't propigate from .dapprc $DAPP_TEST_CALLER config via mint() call, must use this value
         ohmContract.mint(address(this), mintAmount);
-        if (burnAmount <= mintAmount){
+        if (burnAmount <= mintAmount) {
             ohmContract.burn(burnAmount);
             assertEq(supplyBefore + mintAmount - burnAmount, ohmContract.totalSupply());
         } else {

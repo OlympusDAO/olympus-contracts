@@ -17,7 +17,7 @@ async function main() {
 
     const address = await upgrades.erc1967.getImplementationAddress(instance.address);
 
-    console.log("Deployed FraxSharesAllocator to", instance.address)
+    console.log("Deployed FraxSharesAllocator to", instance.address);
     console.log("implementation at", address);
 
     await hre.run("verify:verify", {
@@ -25,13 +25,12 @@ async function main() {
         constructorArguments: [],
     });
 
-
     console.log("Transferred ownership to multisig");
 }
 
 main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+    .then(() => process.exit(0))
+    .catch((error) => {
+        console.error(error);
+        process.exit(1);
+    });
