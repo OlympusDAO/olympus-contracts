@@ -97,6 +97,8 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
         AllocatorPerformance memory perf = allocatorData[allocator].performance;
 
         // checks
+        // above could send in any id with gain == 0 and loss == 0, but he could only fake
+        // address(0) in that case, otherwise, all allocators need to be registered by guardian
         _onlyAllocator(id, msg.sender);
         _allocatorActivated(allocator.status());
 
@@ -106,7 +108,12 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
 
         allocatorData[allocator].performance = perf;
 
-        if (loss != 0) allocatorData[allocator].holdings.allocated -= loss;
+        if (gain > 0) totalValueAllocated += treasury.tokenValue(allocator.getToken(), gain);
+
+        if (loss != 0) {
+            allocatorData[allocator].holdings.allocated -= loss;
+            totalValueAllocated -= treasury.tokenValue(allocator.getToken(), loss);
+        }
 
         if (gain > loss) emit AllocatorReportedGain(id, gain);
         else emit AllocatorReportedLoss(id, loss);
@@ -226,6 +233,7 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
 
         // checks
         _onlyGuardian();
+        _allowTreasuryWithdrawal(IERC20(tokenAllocated));
 
         // interaction (withdrawing)
         IERC20(tokenAllocated).safeTransferFrom(address(allocator), address(this), amount);
@@ -254,17 +262,18 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
 
         // checks
         _onlyGuardian();
+        _allowTreasuryWithdrawal(token);
 
         // interactions
         token.safeTransferFrom(address(allocator), address(this), amount);
-
-        // needs approve check will fix tomorrow
-        token.approve(address(treasury), type(uint256).max);
-
         assert(treasury.deposit(amount, address(token), value) == 0);
 
         // events
         emit AllocatorRewardsWithdrawal(allocator.id(), amount, value);
+    }
+
+    function _allowTreasuryWithdrawal(IERC20 token) internal {
+        if (token.allowance(address(this), address(treasury)) == 0) token.approve(address(treasury), type(uint256).max);
     }
 
     function _allocatorBelowLimit(AllocatorData memory data, uint256 amount) internal pure {
