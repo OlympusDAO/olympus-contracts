@@ -33,11 +33,7 @@ interface IManager {
     event PoolUnregistered(address pool);
     event CycleDurationSet(uint256 duration);
     event LiquidityMovedToManager(address pool, uint256 amount);
-    event DeploymentStepExecuted(
-        bytes32 controller,
-        address adapaterAddress,
-        bytes data
-    );
+    event DeploymentStepExecuted(bytes32 controller, address adapaterAddress, bytes data);
     event LiquidityMovedToPool(address pool, uint256 amount);
     event CycleRolloverStarted(uint256 blockNumber);
     event CycleRolloverComplete(uint256 blockNumber);
@@ -92,10 +88,7 @@ interface IManager {
     ///@notice Gets reward hash by cycle index
     ///@param index Cycle index to retrieve rewards hash
     ///@return String memory hash
-    function cycleRewardsHashes(uint256 index)
-        external
-        view
-        returns (string memory);
+    function cycleRewardsHashes(uint256 index) external view returns (string memory);
 
     ///@notice Gets current starting block
     ///@return uint256 with block number
@@ -113,8 +106,7 @@ interface IManager {
     ///@return Bool representing whether cycle is rolling over or not
     function getRolloverStatus() external view returns (bool);
 
-    function setDestinations(address destinationOnL1, address destinationOnL2)
-        external;
+    function setDestinations(address destinationOnL1, address destinationOnL2) external;
 
     /// @notice Sets state variable that tells contract if it can send data to EventProxy
     /// @param eventSendSet Bool to set state variable to

@@ -9,9 +9,11 @@ import "../interfaces/ITreasury.sol";
 import "../types/OlympusAccessControlled.sol";
 
 interface IStaking {
-    function stake( uint _amount, address _recipient ) external returns ( bool );
-    function unstake( uint _amount, bool _trigger ) external;
-    function claim ( address _recipient ) external;
+    function stake(uint256 _amount, address _recipient) external returns (bool);
+
+    function unstake(uint256 _amount, bool _trigger) external;
+
+    function claim(address _recipient) external;
 }
 
 /// @title   Meta Governance Allocator
@@ -52,11 +54,11 @@ contract MetaGovernanceAllocator is OlympusAccessControlled {
     /// @notice           Stakes either BTRFLY or LOBI from treasury
     /// @param _redacted  Bool if staking to redacted or lobi
     /// @param _amount    Amount of token that will be withdrawn from treasury and staked
-    function stake(bool _redacted, uint _amount) external onlyGuardian {
-        (address staking, address token,) = _redactedOrLobi(_redacted);
+    function stake(bool _redacted, uint256 _amount) external onlyGuardian {
+        (address staking, address token, ) = _redactedOrLobi(_redacted);
 
         // retrieve amount of token from treasury
-        treasury.manage(token, _amount); 
+        treasury.manage(token, _amount);
 
         // approve token to be spent by staking
         IERC20(token).approve(staking, _amount);
@@ -71,11 +73,11 @@ contract MetaGovernanceAllocator is OlympusAccessControlled {
     /// @notice           Unstakes either BTRFLY or LOBI from treasury
     /// @param _redacted  Bool if unstakiung to redacted or lobi
     /// @param _amount    Amount of token that will be withdrawn from treasury and unstaked
-    function unstake(bool _redacted, uint _amount) external onlyGuardian {
+    function unstake(bool _redacted, uint256 _amount) external onlyGuardian {
         (address staking, address token, address stakedToken) = _redactedOrLobi(_redacted);
-        
+
         // retrieve amount of staked token from treasury
-        treasury.manage(stakedToken, _amount); 
+        treasury.manage(stakedToken, _amount);
 
         // approve staked token to be spent by staking contract
         IERC20(stakedToken).approve(staking, _amount);
@@ -87,7 +89,6 @@ contract MetaGovernanceAllocator is OlympusAccessControlled {
         IERC20(token).safeTransfer(address(treasury), _amount);
     }
 
-
     /// INTERNAL VIEW FUNCTIONS ///
 
     /// @notice              Returns addresses depending on wanting to interact with redacted or lobi
@@ -95,8 +96,16 @@ contract MetaGovernanceAllocator is OlympusAccessControlled {
     /// @return staking      Address of staking contract
     /// @return token        Address of native token
     /// @return stakedToken  Address of staked token
-    function _redactedOrLobi(bool _redacted) internal view returns (address staking, address token, address stakedToken) {
-        if(_redacted) {
+    function _redactedOrLobi(bool _redacted)
+        internal
+        view
+        returns (
+            address staking,
+            address token,
+            address stakedToken
+        )
+    {
+        if (_redacted) {
             staking = redactedStaking;
             token = BTRFLY;
             stakedToken = xBTRFLY;
@@ -106,5 +115,4 @@ contract MetaGovernanceAllocator is OlympusAccessControlled {
             stakedToken = sLOBI;
         }
     }
-
 }

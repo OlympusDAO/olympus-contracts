@@ -4,8 +4,7 @@ pragma solidity 0.7.5;
 import "../types/OlympusAccessControlled.sol";
 
 contract AccessControlledMock is OlympusAccessControlled {
-
-    constructor( address _auth ) OlympusAccessControlled(IOlympusAuthority(_auth)) {}
+    constructor(address _auth) OlympusAccessControlled(IOlympusAuthority(_auth)) {}
 
     bool public governorOnlyTest;
 
@@ -24,7 +23,7 @@ contract AccessControlledMock is OlympusAccessControlled {
         guardianOnlyTest = true;
         return guardianOnlyTest;
     }
-    
+
     function policyTest() external onlyPolicy returns (bool) {
         policyOnlyTest = true;
         return policyOnlyTest;

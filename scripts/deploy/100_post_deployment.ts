@@ -27,7 +27,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const treasuryDeployment = await deployments.get(CONTRACTS.treasury);
     const stakingDeployment = await deployments.get(CONTRACTS.staking);
     const lusdAllocatorDeployment = await deployments.get(CONTRACTS.lusdAllocator);
-    
 
     const authorityContract = await OlympusAuthority__factory.connect(
         authorityDeployment.address,

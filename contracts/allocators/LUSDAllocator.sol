@@ -82,7 +82,7 @@ contract LUSDAllocator is OlympusAccessControlled {
         hopTokenAddress = _hopTokenAddress; // address can be 0
         swapRouter = ISwapRouter(_uniswapV3Router);
 
-        // infinite approve to save gas 
+        // infinite approve to save gas
         weth.safeApprove(address(treasury), type(uint256).max);
         weth.safeApprove(address(swapRouter), type(uint256).max);
         IERC20(lusdTokenAddress).safeApprove(address(lusdStabilityPool), type(uint256).max);
@@ -162,7 +162,7 @@ contract LUSDAllocator is OlympusAccessControlled {
 
             uint256 wethBalance = weth.balanceOf(address(this)); //Base off of WETH balance in case we have leftover from a prior failed attempt
             if (ethToLUSDRatio > 0) {
-                uint256 amountWethToSwap = (wethBalance * ethToLUSDRatio) / FEE_PRECISION;                
+                uint256 amountWethToSwap = (wethBalance * ethToLUSDRatio) / FEE_PRECISION;
 
                 uint256 amountLUSDMin = amountWethToSwap * minETHLUSDRate; //WETH and LUSD is 18 decimals
 
@@ -190,7 +190,7 @@ contract LUSDAllocator is OlympusAccessControlled {
             // Get updated balance, send to treasury
             uint256 wethBalance = weth.balanceOf(address(this));
             if (wethBalance > 0) {
-                // transfer WETH to treasury                
+                // transfer WETH to treasury
                 weth.safeTransfer(address(treasury), wethBalance);
             }
         }
@@ -234,7 +234,7 @@ contract LUSDAllocator is OlympusAccessControlled {
             uint256 value = _tokenValue(token, balance); // treasury RFV calculator
 
             _accountingFor(balance, value, false); // account for withdrawal
-            
+
             treasury.deposit(balance, token, value); // deposit using value as profit so no OHM is minted
         } else {
             lqtyStaking.unstake(amount);
@@ -246,7 +246,7 @@ contract LUSDAllocator is OlympusAccessControlled {
 
     /* ======== INTERNAL FUNCTIONS ======== */
 
-    function _depositLUSD(uint256 amount) internal {        
+    function _depositLUSD(uint256 amount) internal {
         lusdStabilityPool.provideToSP(amount, frontEndAddress); //s either a front-end address OR 0x0
 
         uint256 value = _tokenValue(lusdTokenAddress, amount); // treasury RFV calculator

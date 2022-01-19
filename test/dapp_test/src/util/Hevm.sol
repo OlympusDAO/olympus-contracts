@@ -5,7 +5,7 @@ pragma solidity 0.7.5;
 // Have only implemented one, can add more as we need from that list
 abstract contract Hevm {
     // @notice Sets the block timestamp to x
-    function warp(uint x) public virtual;
+    function warp(uint256 x) public virtual;
 
     // @notice Sets the block number to x.
     function roll(uint256) public virtual;
