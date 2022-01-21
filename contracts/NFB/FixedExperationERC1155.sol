@@ -9,8 +9,22 @@ import "../libraries/SafeERC20.sol";
 contract FixedTermERC1155 is ERC1155 {
     using SafeERC20 for IERC20;
 
+    /// ERRORS ///
+
     error NotMatured();
     error NotOwner();
+
+
+    /// STRUCTS ///
+
+    struct IDDetails {
+        uint256 payout;
+        uint256 expiry;
+        uint256 note;
+    }
+
+
+    /// STATE VARIABLES ///
 
     /// @notice Olympus Bond Depository
     address internal immutable bondDepository = 0x9025046c6fb25Fb39e720d97a8FD881ED69a1Ef6;
@@ -19,13 +33,10 @@ contract FixedTermERC1155 is ERC1155 {
     /// @notice Governance OHM
     address internal immutable gOHM = 0x0ab87046fBb341D058F17CBC4c1133F25a20a52f;
 
-    struct IDDetails {
-        uint256 payout;
-        uint256 expiry;
-        uint256 note;
-    }
+    /// @notice NFT ID to its bond details
     mapping(uint256 => IDDetails) public idDetails;
 
+    /// @notice Next ID of NFT that will be minted
     uint public nextID;
 
 
@@ -43,6 +54,7 @@ contract FixedTermERC1155 is ERC1155 {
     /// @param _user      Address NFT is sent to
     /// @param _referral  Address front end referral
     /// @param _token     Address of token being bonded
+    /// @return id_       ID of NFT that has been minted for bond
     function deposit(
         uint256 _bid,
         uint256 _amount,
@@ -70,6 +82,11 @@ contract FixedTermERC1155 is ERC1155 {
         nextID++;
     }
 
+    /// @notice           Burns NFT and sends payout for bond to `_to`
+    /// @param _id        ID to burn and redeem for
+    /// @param _to        Address to send payout to
+    /// @param _sendgOHM  Bool if to send payout in gOHM in sOHM
+    /// @return payout_   Payout that was sent
     function redeem(
         uint256 _id,
         address _to,
@@ -79,6 +96,8 @@ contract FixedTermERC1155 is ERC1155 {
         returns(uint256 payout_)
     {
         if(balanceOf(msg.sender, _id) != 1) revert NotOwner();
+
+        _burn(msg.sender, _id, 1);
 
         IDDetails memory idDetail = idDetails[_id];
 
