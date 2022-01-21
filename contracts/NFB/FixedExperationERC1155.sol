@@ -2,13 +2,22 @@ pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "../interfaces/IBondDepository.sol";
+import "../interfaces/INoteKeeper.sol";
+import "../interfaces/IgOHM.sol";
 import "../libraries/SafeERC20.sol";
 
 contract FixedTermERC1155 is ERC1155 {
     using SafeERC20 for IERC20;
 
+    error NotMatured();
+    error NotOwner();
+
     /// @notice Olympus Bond Depository
-    IBondDepository internal immutable bondDepository = IBondDepository(0x9025046c6fb25Fb39e720d97a8FD881ED69a1Ef6);
+    address internal immutable bondDepository = 0x9025046c6fb25Fb39e720d97a8FD881ED69a1Ef6;
+    /// @notice Staked OHM
+    IERC20 internal immutable sOHM = IERC20(0x04906695D6D12CF5459975d7C3C03356E4Ccd460);
+    /// @notice Governance OHM
+    address internal immutable gOHM = 0x0ab87046fBb341D058F17CBC4c1133F25a20a52f;
 
     struct IDDetails {
         uint256 payout;
@@ -45,8 +54,8 @@ contract FixedTermERC1155 is ERC1155 {
         external
         returns(uint256 id_)
     {
-        _token.approve(address(bondDepository), _amount);
-        (uint256 payout_, uint256 expiry_, uint256 note_) = bondDepository.deposit(_bid, _amount, _maxPrice, address(this), _referral);
+        _token.approve(bondDepository, _amount);
+        (uint256 payout_, uint256 expiry_, uint256 note_) = IBondDepository(bondDepository).deposit(_bid, _amount, _maxPrice, address(this), _referral);
 
         id_ = nextID;
         IDDetails memory idDetail;
@@ -59,5 +68,44 @@ contract FixedTermERC1155 is ERC1155 {
         _mint(_user, id_, 1, "");
 
         nextID++;
+    }
+
+    function redeem(
+        uint256 _id,
+        address _to,
+        bool _sendgOHM
+    ) 
+        external
+        returns(uint256 payout_)
+    {
+        if(balanceOf(msg.sender, _id) != 1) revert NotOwner();
+
+        IDDetails memory idDetail = idDetails[_id];
+
+        payout_ = idDetail.payout;
+
+        (uint256 pendingPayout_, bool matured_) = INoteKeeper(bondDepository).pendingFor(address(this), idDetail.note);
+
+        uint[] memory ids = new uint[](1);
+        ids[1] = _id;
+
+        if(pendingPayout_ > 0 && !matured_) {
+            revert NotMatured();
+        } else if(matured_) {
+            INoteKeeper(bondDepository).redeem(address(this), ids, _sendgOHM);
+            if(_sendgOHM) {
+                IERC20(gOHM).safeTransfer(_to, payout_);
+            } else {
+                payout_ = IgOHM(gOHM).balanceFrom(payout_);
+                sOHM.safeTransfer(_to, payout_);
+            }
+        } else {
+            if(_sendgOHM && IERC20(gOHM).balanceOf(address(this)) >= payout_) {
+                IERC20(gOHM).safeTransfer(_to, payout_);
+            } else {
+                payout_ = IgOHM(gOHM).balanceFrom(payout_);
+                sOHM.safeTransfer(_to, payout_);
+            }
+        }
     }
 }
