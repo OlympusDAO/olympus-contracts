@@ -10,11 +10,19 @@ contract FixedTermERC1155 is ERC1155 {
     /// @notice Olympus Bond Depository
     IBondDepository internal immutable bondDepository = IBondDepository(0x9025046c6fb25Fb39e720d97a8FD881ED69a1Ef6);
 
+    struct IDDetails {
+        uint256 payout;
+        uint256 expiry;
+        uint256 note;
+    }
+    mapping(uint256 => IDDetails) public idDetails;
+
+    uint public nextID;
+
 
     /// CONSTRUCTOR ///
 
-    /// @param _name  Name of ERC1155 token
-    constructor(string memory _name) ERC1155(_name){}
+    constructor() ERC1155(""){}
 
 
     /// USER FUNCTIONS ///
@@ -23,7 +31,7 @@ contract FixedTermERC1155 is ERC1155 {
     /// @param _bid       Bond ID that will be deposited
     /// @param _amount    Amount of tokens that are being bonded
     /// @param _maxPrice  Max price willing to purhcase bond
-    /// @param _user      Address bond is redeemable for
+    /// @param _user      Address NFT is sent to
     /// @param _referral  Address front end referral
     /// @param _token     Address of token being bonded
     function deposit(
@@ -34,12 +42,22 @@ contract FixedTermERC1155 is ERC1155 {
         address _referral,
         IERC20 _token
     ) 
-        external 
+        external
+        returns(uint256 id_)
     {
-
         _token.approve(address(bondDepository), _amount);
-        bondDepository.deposit(_bid, _amount, _maxPrice, _user, _referral);
+        (uint256 payout_, uint256 expiry_, uint256 note_) = bondDepository.deposit(_bid, _amount, _maxPrice, address(this), _referral);
 
+        id_ = nextID;
+        IDDetails memory idDetail;
+        idDetail.payout = payout_;
+        idDetail.expiry = expiry_;
+        idDetail.note = note_;
 
+        idDetails[id_] = idDetail;
+
+        _mint(_user, id_, 1, "");
+
+        nextID++;
     }
 }
