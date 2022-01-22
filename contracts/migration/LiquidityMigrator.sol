@@ -5,6 +5,7 @@ import "../interfaces/IERC20.sol";
 import "../interfaces/IUniswapV2Router.sol";
 import "../interfaces/IOlympusAuthority.sol";
 import "../interfaces/ITreasury.sol";
+import "../interfaces/IOHM.sol";
 import "../types/OlympusAccessControlled.sol";
 import "../libraries/SafeERC20.sol";
 
@@ -13,7 +14,7 @@ contract LiquidityMigrator is OlympusAccessControlled {
 
     ITreasury internal immutable oldTreasury = ITreasury(0x31F8Cc382c9898b273eff4e0b7626a6987C846E8);
     ITreasury internal immutable newTreasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
-    IERC20 internal immutable oldOHM = IERC20(0x383518188C0C6d7730D91b2c03a03C837814a899);
+    IOHM internal immutable oldOHM = IOHM(0x383518188C0C6d7730D91b2c03a03C837814a899);
 
     constructor(IOlympusAuthority _authority) OlympusAccessControlled(_authority) {}
 
@@ -48,8 +49,7 @@ contract LiquidityMigrator is OlympusAccessControlled {
         token.approve(address(newTreasury), amountToken);
         newTreasury.deposit(amountToken, address(token), newTreasury.tokenValue(address(token), amountToken));
 
-        // transfer the OHM to the governor
-        // it will be burned, or migrated and burned, from there
-        oldOHM.safeTransfer(authority.governor(), oldOHM.balanceOf(address(this)));
+        // burn the OHM
+        oldOHM.burn(oldOHM.balanceOf(address(this)));
     }
 }
