@@ -26,7 +26,7 @@ interface IveFXS is IERC20 {
 
     /**
      * @notice Extend the unlock time for `msg.sender` to `_unlock_time`
-     * @param _unlock_time New epoch time for unlocking 
+     * @param _unlock_time New epoch time for unlocking
      */
     function increase_unlock_time(uint256 _unlock_time) external;
 
@@ -35,7 +35,7 @@ interface IveFXS is IERC20 {
      * @param _addr wallet address
      * @return Epoch time of the lock end
      */
-     function locked__end(address _addr) external view returns (uint256);
+    function locked__end(address _addr) external view returns (uint256);
 }
 
 interface IveFXSYieldDistributorV4 {
@@ -70,10 +70,10 @@ interface IveFXSYieldDistributorV4 {
     /**
      * @notice returns the number of seconds until a reward is fully distributed
      */
-    function yieldDuration() external returns(uint256);
+    function yieldDuration() external returns (uint256);
 }
 
-contract  FraxSharesAllocator is Initializable, OwnableUpgradeable {
+contract FraxSharesAllocator is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
     using SafeMathUpgradeable for uint256;
 
@@ -81,7 +81,7 @@ contract  FraxSharesAllocator is Initializable, OwnableUpgradeable {
     /* !!!! UPGRADABLE CONTRACT !!!! */
     /* NEW STATE VARIABLES MUST BE APPENDED TO END */
 
-    uint256 constant private MAX_TIME = 4 * 365 * 86400 + 1;  // 4 years and 1 second
+    uint256 private constant MAX_TIME = 4 * 365 * 86400 + 1; // 4 years and 1 second
     ITreasury public treasury;
     IERC20 public fxs; // $FXS token
     IveFXS public veFXS; // $veFXS token
@@ -135,7 +135,7 @@ contract  FraxSharesAllocator is Initializable, OwnableUpgradeable {
             }
         }
     }
-    
+
     /**
      *  @notice withdraws FXS from treasury, locks as veFXS for maximum time (4 years).
      *  @param _amount uint

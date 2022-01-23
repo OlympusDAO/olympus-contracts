@@ -8,7 +8,6 @@ import "hardhat/console.sol";
  * A mock version of sOHM, with an over-simplified rebase mechanism, for testing purposes only
  */
 contract MockSOHM is ERC20 {
-
     uint256 public immutable DECIMALS;
     uint256 public _index; // 9 decimals
     uint256 public _rebasePct; // 9 decimals
@@ -17,14 +16,11 @@ contract MockSOHM is ERC20 {
     mapping(address => uint256) public _agnosticBalance;
     mapping(address => mapping(address => uint256)) public _allowedValue;
 
-
-    constructor(uint256 initialIndex_, uint256 rebasePct_)
-        ERC20("Mock sOHM", "sOHM")
-    {
+    constructor(uint256 initialIndex_, uint256 rebasePct_) ERC20("Mock sOHM", "sOHM") {
         require(initialIndex_ > 0, "initial index must be greater than 0");
         require(rebasePct_ > 0, "rebase percentage must be greater than 0");
 
-        DECIMALS = 10 ** decimals();
+        DECIMALS = 10**decimals();
         _index = initialIndex_;
         _rebasePct = rebasePct_;
     }
@@ -39,7 +35,7 @@ contract MockSOHM is ERC20 {
     }
 
     function mint(address to_, uint256 amount_) public returns (uint256) {
-        uint256 amount = amount_ * DECIMALS / _index;
+        uint256 amount = (amount_ * DECIMALS) / _index;
 
         _agnosticBalance[to_] += amount;
         _mint(to_, amount);
@@ -54,7 +50,11 @@ contract MockSOHM is ERC20 {
         return true;
     }
 
-    function transferFrom(address from_, address to_, uint256 value_) public override returns (bool) {
+    function transferFrom(
+        address from_,
+        address to_,
+        uint256 value_
+    ) public override returns (bool) {
         require(from_ != address(0), "ERC20: transfer from the zero address");
         require(to_ != address(0), "ERC20: transfer to the zero address");
 
@@ -63,8 +63,12 @@ contract MockSOHM is ERC20 {
         return true;
     }
 
-    function _transfer(address from_, address to_, uint256 value_) internal override {
-        uint256 amount = value_ * DECIMALS / _index;
+    function _transfer(
+        address from_,
+        address to_,
+        uint256 value_
+    ) internal override {
+        uint256 amount = (value_ * DECIMALS) / _index;
 
         _agnosticBalance[from_] -= amount;
         _agnosticBalance[to_] += amount;
@@ -73,16 +77,16 @@ contract MockSOHM is ERC20 {
     }
 
     function balanceOf(address owner_) public view override returns (uint256) {
-        return _agnosticBalance[owner_] * _index / DECIMALS;
+        return (_agnosticBalance[owner_] * _index) / DECIMALS;
     }
 
     function totalSupply() public view override returns (uint256) {
-        return _totalAgnosticSupply * _index / DECIMALS;
+        return (_totalAgnosticSupply * _index) / DECIMALS;
     }
 
     // Rebase all balances by rebase percentage
     function rebase() external {
-        _index += _index * _rebasePct / DECIMALS;
+        _index += (_index * _rebasePct) / DECIMALS;
     }
 
     // Set rebase percentage to new amount. Percentage has 9 decimal places.

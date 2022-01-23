@@ -30,6 +30,7 @@ jobs:
                   restore-keys: |
                       ${{ matrix.os }}-yarn-
             - run: yarn --frozen-lockfile
+            - run: yarn format
             - run: yarn compile
             - run: cp .env.example .env
             - run: yarn test

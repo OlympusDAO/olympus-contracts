@@ -4,21 +4,20 @@ pragma solidity >=0.7.5;
 import "./Ownable.sol";
 
 contract VaultOwned is Ownable {
-    
-  address internal _vault;
+    address internal _vault;
 
-  function setVault( address vault_ ) external onlyOwner() returns ( bool ) {
-    _vault = vault_;
+    function setVault(address vault_) external onlyOwner returns (bool) {
+        _vault = vault_;
 
-    return true;
-  }
+        return true;
+    }
 
-  function vault() public view returns (address) {
-    return _vault;
-  }
+    function vault() public view returns (address) {
+        return _vault;
+    }
 
-  modifier onlyVault() {
-    require( _vault == msg.sender, "VaultOwned: caller is not the Vault" );
-    _;
-  }
+    modifier onlyVault() {
+        require(_vault == msg.sender, "VaultOwned: caller is not the Vault");
+        _;
+    }
 }

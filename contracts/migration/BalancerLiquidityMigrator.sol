@@ -63,7 +63,7 @@ contract BalancerLiquidityMigrator is OlympusAccessControlled {
     using SafeERC20 for IERC20;
 
     // Balancer Vault
-    IBalancerVault internal immutable balancerVault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8); 
+    IBalancerVault internal immutable balancerVault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     // Olympus Treasury
     ITreasury internal immutable treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
@@ -72,7 +72,7 @@ contract BalancerLiquidityMigrator is OlympusAccessControlled {
     IUniswapV2Router internal immutable router = IUniswapV2Router(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
 
     // Balancer 50OHM-25DAI-25WETH poolID
-    bytes32 internal immutable balancerPoolID = 0xc45d42f801105e861e86658648e3678ad7aa70f900010000000000000000011e; 
+    bytes32 internal immutable balancerPoolID = 0xc45d42f801105e861e86658648e3678ad7aa70f900010000000000000000011e;
 
     address internal immutable OHMETHSLP = 0x69b81152c5A8d35A67B32A4D3772795d96CaE4da;
     address internal immutable OHMDAISLP = 0x055475920a8c93CfFb64d039A8205F7AcC7722d3;
@@ -83,15 +83,15 @@ contract BalancerLiquidityMigrator is OlympusAccessControlled {
     constructor(IOlympusAuthority _authority) OlympusAccessControlled(_authority) {}
 
     /**
-     * @notice Removes liquidity from OHM/ETH SLP and OHM/DAI SLP, then adds liquidty to 
-     * 50OHM-25DAI-25WETH Balancer pool. 
+     * @notice Removes liquidity from OHM/ETH SLP and OHM/DAI SLP, then adds liquidty to
+     * 50OHM-25DAI-25WETH Balancer pool.
      */
     function moveLiquidity(
-        uint256 _amountOHMETH, 
-        uint256 _amountOHMDAI, 
-        uint256[2] memory _minOHMETH, 
-        uint256[2] memory _minOHMDAI, 
-        uint256 _deadline, 
+        uint256 _amountOHMETH,
+        uint256 _amountOHMDAI,
+        uint256[2] memory _minOHMETH,
+        uint256[2] memory _minOHMDAI,
+        uint256 _deadline,
         bytes memory _userData
     ) external onlyGuardian {
         // Manage LPs from treasury
@@ -104,23 +104,23 @@ contract BalancerLiquidityMigrator is OlympusAccessControlled {
 
         // Remove specified liquidity from OHM/ETH SLP
         (uint256 amountETH, uint256 amountOHM1) = router.removeLiquidity(
-            WETH, 
-            OHM, 
+            WETH,
+            OHM,
             _amountOHMETH,
-            _minOHMETH[0], 
-            _minOHMETH[1], 
-            address(this), 
+            _minOHMETH[0],
+            _minOHMETH[1],
+            address(this),
             _deadline
         );
 
         // Remove specified liquidity from OHM/DAI SLP
         (uint256 amountDAI, uint256 amountOHM2) = router.removeLiquidity(
-            DAI, 
-            OHM, 
+            DAI,
+            OHM,
             _amountOHMDAI,
-            _minOHMDAI[0], 
-            _minOHMDAI[1], 
-            address(this), 
+            _minOHMDAI[0],
+            _minOHMDAI[1],
+            address(this),
             _deadline
         );
 
@@ -131,7 +131,7 @@ contract BalancerLiquidityMigrator is OlympusAccessControlled {
         IERC20(OHM).approve(address(balancerVault), amountOHM);
         IERC20(WETH).approve(address(balancerVault), amountETH);
         IERC20(DAI).approve(address(balancerVault), amountDAI);
-        
+
         // Array of tokens that liquidty will be added for
         address[] memory tokens = new address[](3);
         tokens[0] = OHM;
@@ -145,7 +145,12 @@ contract BalancerLiquidityMigrator is OlympusAccessControlled {
         amounts[2] = amountETH;
 
         // Struct that is passed in when adding to the pool
-        IBalancerVault.JoinPoolRequest memory poolRequest = IBalancerVault.JoinPoolRequest(tokens, amounts, _userData, false);
+        IBalancerVault.JoinPoolRequest memory poolRequest = IBalancerVault.JoinPoolRequest(
+            tokens,
+            amounts,
+            _userData,
+            false
+        );
 
         // Add liquidity to the Balancer pool
         balancerVault.joinPool(balancerPoolID, address(this), address(treasury), poolRequest);
