@@ -7,12 +7,18 @@ import "./interfaces/IAllocator.sol";
 import "./interfaces/ITreasuryExtender.sol";
 
 // types
-import "./types/OlympusAccessControlledImproved.sol";
+import "./types/OlympusAccessControlledV2.sol";
 
 // libraries
 import "./libraries/SafeERC20.sol";
 
-contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender {
+error TreasuryExtender_AllocatorOffline(AllocatorStatus status);
+error TreasuryExtender_AllocatorActivated(AllocatorStatus status);
+error TreasuryExtender_OnlyAllocator(uint256 id, address sender);
+error TreasuryExtender_AllocatorRegistered(uint256 id);
+error TreasuryExtender_MaxAllocation(uint256 allocated, uint256 limit);
+
+contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     using SafeERC20 for IERC20;
 
     ITreasury immutable treasury;
@@ -24,7 +30,7 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
     uint256 private totalValueAllocated;
 
     constructor(address treasuryAddress, address authorityAddress)
-        OlympusAccessControlledImproved(IOlympusAuthority(authorityAddress))
+        OlympusAccessControlledV2(IOlympusAuthority(authorityAddress))
     {
         treasury = ITreasury(treasuryAddress);
         allocators.push(IAllocator(address(0)));
@@ -33,15 +39,15 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
     //// "MODIFIERS"
 
     function _allocatorActivated(AllocatorStatus status) internal pure {
-        require(AllocatorStatus.ACTIVATED == status, "TreasuryExtender::AllocatorOffline");
+        if (AllocatorStatus.ACTIVATED != status) revert TreasuryExtender_AllocatorOffline(status);
     }
 
     function _allocatorOffline(AllocatorStatus status) internal pure {
-        require(AllocatorStatus.OFFLINE == status, "TreasuryExtender::AllocatorActivated");
+        if (AllocatorStatus.OFFLINE != status) revert TreasuryExtender_AllocatorActivated(status);
     }
 
     function _onlyAllocator(uint256 id, address sender) internal view {
-        require(IAllocator(sender) == allocators[id], "TreasuryExtender::OnlyAllocator");
+        if (IAllocator(sender) != allocators[id]) revert TreasuryExtender_OnlyAllocator(id, sender);
     }
 
     //// FUNCTIONS
@@ -49,10 +55,11 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
     function registerAllocator(address newAllocatorAddress) external override {
         // reads
         IAllocator allocator = IAllocator(newAllocatorAddress);
+        uint256 id = allocator.id();
 
         // checks
         _onlyGuardian();
-        require(allocator.id() == 0, "TreasuryExtender::AllocatorRegistered");
+        if (id != 0) revert TreasuryExtender_AllocatorRegistered(id);
 
         // effects
         allocators.push(allocator);
@@ -89,9 +96,6 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
         uint128 gain,
         uint128 loss
     ) external override {
-        // check before reading because might be common in some
-        if (gain == 0 && loss == 0) return;
-
         // reads
         IAllocator allocator = allocators[id];
         AllocatorPerformance memory perf = allocatorData[allocator].performance;
@@ -277,6 +281,8 @@ contract TreasuryExtender is OlympusAccessControlledImproved, ITreasuryExtender 
     }
 
     function _allocatorBelowLimit(AllocatorData memory data, uint256 amount) internal pure {
-        require(data.holdings.allocated + amount <= data.limits.allocated, "TreasuryExtender::MaxAllocation");
+        uint256 newAllocated = data.holdings.allocated + amount;
+        if (newAllocated > data.limits.allocated)
+            revert TreasuryExtender_MaxAllocation(newAllocated, data.limits.allocated);
     }
 }

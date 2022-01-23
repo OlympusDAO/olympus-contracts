@@ -207,14 +207,14 @@ describe("TreasuryExtender", () => {
                     allocated: bne(10, 27),
                     loss: bne(10, 20),
                 })
-            ).to.be.revertedWith("TreasuryExtender::AllocatorActivated");
+            ).to.be.revertedWith("TreasuryExtender_AllocatorActivated(1)");
 
             await expect(
                 extender["setAllocatorLimits(uint256,(uint128,uint128))"](1, {
                     allocated: bne(10, 27),
                     loss: bne(10, 20),
                 })
-            ).to.be.revertedWith("TreasuryExtender::AllocatorActivated");
+            ).to.be.revertedWith("TreasuryExtender_AllocatorActivated(1)");
 
             fakeAllocator.status.returns(0);
         });
@@ -408,7 +408,7 @@ describe("TreasuryExtender", () => {
             fakeAllocator.status.returns(0);
             await expect(
                 extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 21))
-            ).to.be.revertedWith("TreasuryExtender::AllocatorOffline");
+            ).to.be.revertedWith("TreasuryExtender_AllocatorOffline(0)");
             fakeAllocator.status.returns(1);
 
             // LIMIT
@@ -416,7 +416,9 @@ describe("TreasuryExtender", () => {
 
             await expect(
                 extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 25))
-            ).to.be.revertedWith("TreasuryExtender::MaxAllocation");
+            ).to.be.revertedWith(
+                "TreasuryExtender_MaxAllocation(100000000000000000000000000, 1000000000000000000000000)"
+            );
         });
 
         it("passing: should be able to transfer", async () => {
@@ -446,7 +448,9 @@ describe("TreasuryExtender", () => {
             // now try adding literally 1
             await expect(
                 extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 21))
-            ).to.be.revertedWith("TreasuryExtender::MaxAllocation");
+            ).to.be.revertedWith(
+                "TreasuryExtender_MaxAllocation(1010000000000000000000000, 1000000000000000000000000)"
+            );
         });
 
         it("passing: stay correct over multiple allocators", async () => {
@@ -488,55 +492,43 @@ describe("TreasuryExtender", () => {
             expect(perf2[1]).to.equal(0);
         });
 
-        it("passing: should return on 0 reported gain + loss", async () => {
-            // would revert if it passed initial check
-            extender = extender.connect(owner);
-
-            const response1 = await extender.report(1, 0, 0);
-            const response2 = await extender.report(2, 0, 0);
-
-            const receipt1 = await response1.wait();
-            const receipt2 = await response2.wait();
-
-            expect(receipt1.events!.length).to.equal(0);
-            expect(receipt2.events!.length).to.equal(0);
-        });
-
         it("revert: should revert if allocator offline or allocator not sender", async () => {
             let input: BigNumber = bne(10, 22);
 
             await expect(extender.report(0, input, 0)).to.be.revertedWith(
-                "TreasuryExtender::OnlyAllocator"
+                'TreasuryExtender_OnlyAllocator(0, "0x245cc372C84B3645Bf0Ffe6538620B04a217988B")'
             );
             await expect(extender.report(0, 0, input)).to.be.revertedWith(
-                "TreasuryExtender::OnlyAllocator"
+                'TreasuryExtender_OnlyAllocator(0, "0x245cc372C84B3645Bf0Ffe6538620B04a217988B")'
             );
             await expect(extender.report(0, input, input)).to.be.revertedWith(
-                "TreasuryExtender::OnlyAllocator"
+                'TreasuryExtender_OnlyAllocator(0, "0x245cc372C84B3645Bf0Ffe6538620B04a217988B")'
             );
 
             extender = extender.connect(veryfakeAllocator.wallet);
 
             await expect(extender.report(1, input, 0)).to.be.revertedWith(
-                "TreasuryExtender::OnlyAllocator"
+                `TreasuryExtender_OnlyAllocator(1, \"${veryfakeAllocator.address}\")`
             );
+
             await expect(extender.report(1, 0, input)).to.be.revertedWith(
-                "TreasuryExtender::OnlyAllocator"
+                `TreasuryExtender_OnlyAllocator(1, \"${veryfakeAllocator.address}\")`
             );
+
             await expect(extender.report(1, input, input)).to.be.revertedWith(
-                "TreasuryExtender::OnlyAllocator"
+                `TreasuryExtender_OnlyAllocator(1, \"${veryfakeAllocator.address}\")`
             );
 
             extender = extender.connect(fakeAllocator.wallet);
 
             await expect(extender.report(2, input, 0)).to.be.revertedWith(
-                "TreasuryExtender::OnlyAllocator"
+                `TreasuryExtender_OnlyAllocator(2, \"${fakeAllocator.address}\")`
             );
             await expect(extender.report(2, 0, input)).to.be.revertedWith(
-                "TreasuryExtender::OnlyAllocator"
+                `TreasuryExtender_OnlyAllocator(2, \"${fakeAllocator.address}\")`
             );
             await expect(extender.report(2, input, input)).to.be.revertedWith(
-                "TreasuryExtender::OnlyAllocator"
+                `TreasuryExtender_OnlyAllocator(2, \"${fakeAllocator.address}\")`
             );
         });
 
