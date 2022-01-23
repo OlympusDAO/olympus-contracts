@@ -7,12 +7,12 @@ import "../interfaces/IAllocator.sol";
 import "../interfaces/ITreasuryExtender.sol";
 
 // types
-import "../types/OlympusAccessControlledImproved.sol";
+import "../types/OlympusAccessControlledV2.sol";
 
 // libraries
 import "../libraries/SafeERC20.sol";
 
-abstract contract BaseAllocator is OlympusAccessControlledImproved, IAllocator {
+abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     using SafeERC20 for IERC20;
 
     uint256 public id;
@@ -23,7 +23,7 @@ abstract contract BaseAllocator is OlympusAccessControlledImproved, IAllocator {
 
     ITreasuryExtender public extender;
 
-    constructor(AllocatorInitData memory data) OlympusAccessControlledImproved(IOlympusAuthority(data.authority)) {
+    constructor(AllocatorInitData memory data) OlympusAccessControlledV2(IOlympusAuthority(data.authority)) {
         token = IERC20(data.token);
         extender = ITreasuryExtender(data.extender);
 
@@ -106,7 +106,7 @@ abstract contract BaseAllocator is OlympusAccessControlledImproved, IAllocator {
         // interactions
         // there is no interactions happening inside of report
         // so allocator has no state changes to make after it
-        extender.report(id, gain, loss);
+        if (gain + loss > 0) extender.report(id, gain, loss);
     }
 
     function prepareMigration() external override {
