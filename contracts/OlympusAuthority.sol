@@ -6,8 +6,6 @@ import "./interfaces/IOlympusAuthority.sol";
 import "./types/OlympusAccessControlled.sol";
 
 contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
-
-
     /* ========== STATE VARIABLES ========== */
 
     address public override governor;
@@ -26,7 +24,6 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
 
     address public newVault;
 
-
     /* ========== Constructor ========== */
 
     constructor(
@@ -34,7 +31,7 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
         address _guardian,
         address _policy,
         address _vault
-    ) OlympusAccessControlled( IOlympusAuthority(address(this)) ) {
+    ) OlympusAccessControlled(IOlympusAuthority(address(this))) {
         governor = _governor;
         emit GovernorPushed(address(0), governor, true);
         guardian = _guardian;
@@ -45,33 +42,31 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
         emit VaultPushed(address(0), vault, true);
     }
 
-
     /* ========== GOV ONLY ========== */
 
     function pushGovernor(address _newGovernor, bool _effectiveImmediately) external onlyGovernor {
-        if( _effectiveImmediately ) governor = _newGovernor;
+        if (_effectiveImmediately) governor = _newGovernor;
         newGovernor = _newGovernor;
         emit GovernorPushed(governor, newGovernor, _effectiveImmediately);
     }
 
     function pushGuardian(address _newGuardian, bool _effectiveImmediately) external onlyGovernor {
-        if( _effectiveImmediately ) guardian = _newGuardian;
+        if (_effectiveImmediately) guardian = _newGuardian;
         newGuardian = _newGuardian;
         emit GuardianPushed(guardian, newGuardian, _effectiveImmediately);
     }
 
     function pushPolicy(address _newPolicy, bool _effectiveImmediately) external onlyGovernor {
-        if( _effectiveImmediately ) policy = _newPolicy;
+        if (_effectiveImmediately) policy = _newPolicy;
         newPolicy = _newPolicy;
         emit PolicyPushed(policy, newPolicy, _effectiveImmediately);
     }
 
     function pushVault(address _newVault, bool _effectiveImmediately) external onlyGovernor {
-        if( _effectiveImmediately ) vault = _newVault;
+        if (_effectiveImmediately) vault = _newVault;
         newVault = _newVault;
         emit VaultPushed(vault, newVault, _effectiveImmediately);
     }
-
 
     /* ========== PENDING ROLE ONLY ========== */
 
