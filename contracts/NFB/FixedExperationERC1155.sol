@@ -14,8 +14,8 @@ contract FixedTermERC1155 is ERC1155 {
 
     /// @notice Error for if bond has not yet matured
     error NotMatured();
-    /// @notice Error for if not the owner of NFT or has already been burned
-    error NotOwnerOrBurned();
+    /// @notice Error for if when redeeming user does not have enough parts to redeem
+    error NotEnoughParts();
     /// @notice Error for if trying to bond or redeem with no parts
     error NoParts();
 
@@ -113,7 +113,7 @@ contract FixedTermERC1155 is ERC1155 {
         external
         returns(uint256 payout_)
     {
-        if(balanceOf(msg.sender, _id) < _parts) revert NotOwnerOrBurned();
+        if(balanceOf(msg.sender, _id) < _parts) revert NotEnoughParts();
         if(_parts < 0) revert NoParts();
 
         _burn(msg.sender, _id, _parts);
@@ -127,8 +127,11 @@ contract FixedTermERC1155 is ERC1155 {
         uint[] memory ids = new uint[](1);
         ids[1] = _id;
 
+        // Check if bond has either not been matured or has already been redeemed through bond contract itself
         if(pendingPayout_ > 0 && !matured_) {
             revert NotMatured();
+
+        // Check if bond has matured and is redeemable through bond contract itself
         } else if(matured_) {
             INoteKeeper(bondDepository).redeem(address(this), ids, _sendgOHM);
             if(_sendgOHM) {
@@ -138,8 +141,11 @@ contract FixedTermERC1155 is ERC1155 {
                 sOHM.safeTransfer(_to, payout_);
             }
         } else {
+            // Check if user wants to be sent gOHM and if there is enough to send
             if(_sendgOHM && IERC20(gOHM).balanceOf(address(this)) >= payout_) {
                 IERC20(gOHM).safeTransfer(_to, payout_);
+
+            // Send sOHM
             } else {
                 payout_ = IgOHM(gOHM).balanceFrom(payout_);
                 sOHM.safeTransfer(_to, payout_);
