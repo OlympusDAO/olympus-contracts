@@ -86,6 +86,7 @@ describe("TreasuryExtender", () => {
             "OlympusTreasury",
             olympus.treasury
         )) as OlympusTreasury;
+
         authority = (await ethers.getContractAt(
             "OlympusAuthority",
             olympus.authority
@@ -207,14 +208,14 @@ describe("TreasuryExtender", () => {
                     allocated: bne(10, 27),
                     loss: bne(10, 20),
                 })
-            ).to.be.revertedWith("TreasuryExtender_AllocatorActivated(1)");
+            ).to.be.revertedWith("TreasuryExtender_AllocatorActivated()");
 
             await expect(
                 extender["setAllocatorLimits(uint256,(uint128,uint128))"](1, {
                     allocated: bne(10, 27),
                     loss: bne(10, 20),
                 })
-            ).to.be.revertedWith("TreasuryExtender_AllocatorActivated(1)");
+            ).to.be.revertedWith("TreasuryExtender_AllocatorActivated()");
 
             fakeAllocator.status.returns(0);
         });
@@ -408,7 +409,7 @@ describe("TreasuryExtender", () => {
             fakeAllocator.status.returns(0);
             await expect(
                 extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 21))
-            ).to.be.revertedWith("TreasuryExtender_AllocatorOffline(0)");
+            ).to.be.revertedWith("TreasuryExtender_AllocatorOffline()");
             fakeAllocator.status.returns(1);
 
             // LIMIT

@@ -12,6 +12,13 @@ import "../types/OlympusAccessControlledV2.sol";
 // libraries
 import "../libraries/SafeERC20.sol";
 
+error BaseAllocator_AllocatorOffline();
+error BaseAllocator_AllocatorActivated();
+error BaseAllocator_Migrating();
+error BaseAllocator_NotMigrating();
+error BaseAllocator_OnlyExtender(address sender);
+error BaseAllocator_IdInitialized(uint256 id);
+
 abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     using SafeERC20 for IERC20;
 
@@ -35,23 +42,23 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     /////// "MODIFIERS"
 
     function _onlyExtender(address sender) internal view {
-        require(sender == address(extender), "BaseAllocator::OnlyExtender");
+        if (sender != address(extender)) revert BaseAllocator_OnlyExtender(sender);
     }
 
     function _onlyActivated(AllocatorStatus inputStatus) internal pure {
-        require(inputStatus == AllocatorStatus.ACTIVATED, "BaseAllocator::AllocatorOffline");
+        if (inputStatus != AllocatorStatus.ACTIVATED) revert BaseAllocator_AllocatorOffline();
     }
 
     function _onlyOffline(AllocatorStatus inputStatus) internal pure {
-        require(inputStatus == AllocatorStatus.OFFLINE, "BaseAllocator::AllocatorActivated");
+        if (inputStatus != AllocatorStatus.OFFLINE) revert BaseAllocator_AllocatorActivated();
     }
 
     function _notMigrating(AllocatorStatus inputStatus) internal pure {
-        require(inputStatus != AllocatorStatus.MIGRATING, "BaseAllocator::Migrating");
+        if (inputStatus == AllocatorStatus.MIGRATING) revert BaseAllocator_Migrating();
     }
 
     function _isMigrating(AllocatorStatus inputStatus) internal pure {
-        require(inputStatus == AllocatorStatus.MIGRATING, "BaseAllocator::NotMigrating");
+        if (inputStatus != AllocatorStatus.MIGRATING) revert BaseAllocator_NotMigrating();
     }
 
     /////// VIRTUAL FUNCTIONS WHICH NEED TO BE IMPLEMENTED
@@ -155,7 +162,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
 
     function setId(uint256 allocatorId) external override {
         _onlyExtender(msg.sender);
-        require(id == 0, "BaseAllocator::IdInitialized");
+        if (id != 0) revert BaseAllocator_IdInitialized(id);
         id = allocatorId;
     }
 
