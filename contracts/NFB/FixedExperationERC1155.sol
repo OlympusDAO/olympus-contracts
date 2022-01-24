@@ -6,21 +6,32 @@ import "../interfaces/INoteKeeper.sol";
 import "../interfaces/IgOHM.sol";
 import "../libraries/SafeERC20.sol";
 
+
 contract FixedTermERC1155 is ERC1155 {
     using SafeERC20 for IERC20;
 
     /// ERRORS ///
 
+    /// @notice Error for if bond has not yet matured
     error NotMatured();
-    error NotOwner();
+    /// @notice Error for if not the owner of NFT or has already been burned
+    error NotOwnerOrBurned();
+    /// @notice Error for if trying to bond or redeem with no parts
+    error NoParts();
 
 
     /// STRUCTS ///
 
+    /// @notice            Details of bond an ID represents
+    /// @param payout      Payout in gOHM for bond
+    /// @param expiry      Timestamp at which bond matures
+    /// @param note        Index in bond contract that represents bond's payout
+    /// @param totalParts  Amount of pieces bond was broken into
     struct IDDetails {
         uint256 payout;
         uint256 expiry;
         uint256 note;
+        uint256 totalParts;
     }
 
 
@@ -28,10 +39,10 @@ contract FixedTermERC1155 is ERC1155 {
 
     /// @notice Olympus Bond Depository
     address internal immutable bondDepository = 0x9025046c6fb25Fb39e720d97a8FD881ED69a1Ef6;
-    /// @notice Staked OHM
-    IERC20 internal immutable sOHM = IERC20(0x04906695D6D12CF5459975d7C3C03356E4Ccd460);
     /// @notice Governance OHM
     address internal immutable gOHM = 0x0ab87046fBb341D058F17CBC4c1133F25a20a52f;
+    /// @notice Staked OHM
+    IERC20 internal immutable sOHM = IERC20(0x04906695D6D12CF5459975d7C3C03356E4Ccd460);
 
     /// @notice NFT ID to its bond details
     mapping(uint256 => IDDetails) public idDetails;
@@ -50,6 +61,7 @@ contract FixedTermERC1155 is ERC1155 {
     /// @notice           Deposits into Olympus Bond Depo and mints token that represents the bond
     /// @param _bid       Bond ID that will be deposited
     /// @param _amount    Amount of tokens that are being bonded
+    /// @param _parts     Amount of pieces bond will be broken into to
     /// @param _maxPrice  Max price willing to purhcase bond
     /// @param _user      Address NFT is sent to
     /// @param _referral  Address front end referral
@@ -58,6 +70,7 @@ contract FixedTermERC1155 is ERC1155 {
     function deposit(
         uint256 _bid,
         uint256 _amount,
+        uint256 _parts,
         uint256 _maxPrice,
         address _user,
         address _referral,
@@ -66,6 +79,8 @@ contract FixedTermERC1155 is ERC1155 {
         external
         returns(uint256 id_)
     {
+        if(_parts < 0) revert NoParts();
+
         _token.approve(bondDepository, _amount);
         (uint256 payout_, uint256 expiry_, uint256 note_) = IBondDepository(bondDepository).deposit(_bid, _amount, _maxPrice, address(this), _referral);
 
@@ -74,34 +89,38 @@ contract FixedTermERC1155 is ERC1155 {
         idDetail.payout = payout_;
         idDetail.expiry = expiry_;
         idDetail.note = note_;
+        idDetail.totalParts = _parts;
 
         idDetails[id_] = idDetail;
 
-        _mint(_user, id_, 1, "");
+        _mint(_user, id_, _parts, "");
 
         nextID++;
     }
 
     /// @notice           Burns NFT and sends payout for bond to `_to`
     /// @param _id        ID to burn and redeem for
+    /// @param _parts     Amount of pieces to redeem
     /// @param _to        Address to send payout to
     /// @param _sendgOHM  Bool if to send payout in gOHM in sOHM
     /// @return payout_   Payout that was sent
     function redeem(
         uint256 _id,
+        uint256 _parts,
         address _to,
         bool _sendgOHM
     ) 
         external
         returns(uint256 payout_)
     {
-        if(balanceOf(msg.sender, _id) != 1) revert NotOwner();
+        if(balanceOf(msg.sender, _id) < _parts) revert NotOwnerOrBurned();
+        if(_parts < 0) revert NoParts();
 
-        _burn(msg.sender, _id, 1);
+        _burn(msg.sender, _id, _parts);
 
         IDDetails memory idDetail = idDetails[_id];
 
-        payout_ = idDetail.payout;
+        payout_ = idDetail.payout * _parts / idDetail.totalParts;
 
         (uint256 pendingPayout_, bool matured_) = INoteKeeper(bondDepository).pendingFor(address(this), idDetail.note);
 
