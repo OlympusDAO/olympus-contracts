@@ -10,6 +10,7 @@ import "./interfaces/IDistributor.sol";
 
 import "./types/OlympusAccessControlled.sol";
 
+/// @notice Patched distributor for fixing rebase miscalculation error
 contract Distributor is IDistributor, OlympusAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
@@ -26,6 +27,10 @@ contract Distributor is IDistributor, OlympusAccessControlled {
     uint256 public override bounty;
 
     uint256 private immutable rateDenominator = 1_000_000;
+
+    // Used as patch for staking inconsistency bug. Restricts `rebase` logic to
+    // only be called from here.
+    bool private unlockRebase;
 
     /* ====== STRUCTS ====== */
 
@@ -60,10 +65,26 @@ contract Distributor is IDistributor, OlympusAccessControlled {
     /* ====== PUBLIC FUNCTIONS ====== */
 
     /**
+        @notice Patch to trigger rebases via distributor. There is an error in the staking's
+                `stake` function which, if it triggers a rebase, pulls forward part of the
+                rebase for the next epoch. This patch triggers a rebase by calling unstake
+                (which does not have the issue). The patch also restricts `distribute` to
+                only be able to be called from a tx originating this function.
+     */
+    function triggerRebase() external {
+        require(IStaking(staking).epoch.end >= block.timestamp, "Epoch has not ended yet");
+        unlockRebase = true;
+        IStaking(staking).unstake(address(this), 0, true, true);
+        unlockRebase = false;
+    }
+
+    /**
         @notice send epoch reward to staking contract
      */
     function distribute() external override {
         require(msg.sender == staking, "Only staking");
+        require(unlockRebase, "Rebase locked. Must call from distributor");
+
         // distribute rewards to each recipient
         for (uint256 i = 0; i < info.length; i++) {
             if (info[i].rate > 0) {
