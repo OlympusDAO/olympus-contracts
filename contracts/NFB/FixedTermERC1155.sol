@@ -6,7 +6,9 @@ import "../interfaces/INoteKeeper.sol";
 import "../interfaces/IgOHM.sol";
 import "../libraries/SafeERC20.sol";
 
-
+/// @title   ERC1155 Bond Wrapper
+/// @notice  Mints an ERC1155 to reprsent a bond in the Olympus bond depository
+/// @author  JeffX
 contract FixedTermERC1155 is ERC1155 {
     using SafeERC20 for IERC20;
 
@@ -60,11 +62,11 @@ contract FixedTermERC1155 is ERC1155 {
 
     /// @notice           Deposits into Olympus Bond Depo and mints token that represents the bond
     /// @param _bid       Bond ID that will be deposited
-    /// @param _amount    Amount of tokens that are being bonded
+    /// @param _amount    Amount of `_token` that are being bonded
     /// @param _parts     Amount of pieces bond will be broken into to
     /// @param _maxPrice  Max price willing to purhcase bond
-    /// @param _user      Address NFT is sent to
-    /// @param _referral  Address front end referral
+    /// @param _user      Address ERC1155 is sent to
+    /// @param _referral  Address for front end referral
     /// @param _token     Address of token being bonded
     /// @return id_       ID of NFT that has been minted for bond
     function deposit(
@@ -120,12 +122,9 @@ contract FixedTermERC1155 is ERC1155 {
 
         IDDetails memory idDetail = idDetails[_id];
 
-        payout_ = idDetail.payout * _parts / idDetail.totalParts;
-
         (uint256 pendingPayout_, bool matured_) = INoteKeeper(bondDepository).pendingFor(address(this), idDetail.note);
 
-        uint[] memory ids = new uint[](1);
-        ids[1] = _id;
+        payout_ = idDetail.payout * _parts / idDetail.totalParts;
 
         // Check if bond has either not been matured or has already been redeemed through bond contract itself
         if(pendingPayout_ > 0 && !matured_) {
@@ -133,6 +132,8 @@ contract FixedTermERC1155 is ERC1155 {
 
         // Check if bond has matured and is redeemable through bond contract itself
         } else if(matured_) {
+            uint[] memory ids = new uint[](1);
+            ids[1] = _id;
             INoteKeeper(bondDepository).redeem(address(this), ids, _sendgOHM);
             if(_sendgOHM) {
                 IERC20(gOHM).safeTransfer(_to, payout_);
