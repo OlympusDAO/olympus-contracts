@@ -17,7 +17,6 @@ error BaseAllocator_AllocatorActivated();
 error BaseAllocator_Migrating();
 error BaseAllocator_NotMigrating();
 error BaseAllocator_OnlyExtender(address sender);
-error BaseAllocator_IdInitialized(uint256 id);
 
 abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     using SafeERC20 for IERC20;
@@ -162,7 +161,6 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
 
     function setId(uint256 allocatorId) external override {
         _onlyExtender(msg.sender);
-        if (id != 0) revert BaseAllocator_IdInitialized(id);
         id = allocatorId;
     }
 
