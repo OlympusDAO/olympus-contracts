@@ -20,6 +20,8 @@ contract FixedTermERC1155 is ERC1155 {
     error NotEnoughParts();
     /// @notice Error for if trying to bond or redeem with no parts
     error NoParts();
+    /// @notice Error if when trying to redeem id and parts are different lengths
+    error DifferentLength();
 
 
     /// STRUCTS ///
@@ -101,56 +103,53 @@ contract FixedTermERC1155 is ERC1155 {
     }
 
     /// @notice           Burns NFT and sends payout for bond to `_to`
-    /// @param _id        ID to burn and redeem for
-    /// @param _parts     Amount of pieces to redeem
+    /// @param _id[]      Array of IDs to burn and redeem for
+    /// @param _parts[]   Array of amounts of pieces to redeem
     /// @param _to        Address to send payout to
     /// @param _sendgOHM  Bool if to send payout in gOHM in sOHM
     /// @return payout_   Payout that was sent
     function redeem(
-        uint256 _id,
-        uint256 _parts,
+        uint256[] calldata _id,
+        uint256[] calldata _parts,
         address _to,
         bool _sendgOHM
     ) 
         external
         returns(uint256 payout_)
     {
-        if(balanceOf(msg.sender, _id) < _parts) revert NotEnoughParts();
-        if(_parts < 0) revert NoParts();
+        if(_id.length != _parts.length) revert DifferentLength();
 
-        _burn(msg.sender, _id, _parts);
+        for(uint i = 0; _id.length > i; i++) {
+            IDDetails memory idDetail = idDetails[_id[i]];
 
-        IDDetails memory idDetail = idDetails[_id];
+            (uint256 pendingPayout_, bool matured_) = INoteKeeper(bondDepository).pendingFor(address(this), idDetail.note); 
 
-        (uint256 pendingPayout_, bool matured_) = INoteKeeper(bondDepository).pendingFor(address(this), idDetail.note);
-
-        payout_ = idDetail.payout * _parts / idDetail.totalParts;
-
-        // Check if bond has either not been matured or has already been redeemed through bond contract itself
-        if(pendingPayout_ > 0 && !matured_) {
-            revert NotMatured();
-
-        // Check if bond has matured and is redeemable through bond contract itself
-        } else if(matured_) {
-            uint[] memory ids = new uint[](1);
-            ids[1] = _id;
-            INoteKeeper(bondDepository).redeem(address(this), ids, _sendgOHM);
-            if(_sendgOHM) {
-                IERC20(gOHM).safeTransfer(_to, payout_);
-            } else {
-                payout_ = IgOHM(gOHM).balanceFrom(payout_);
-                sOHM.safeTransfer(_to, payout_);
+            // Check if bond has either not been matured or has already been redeemed through bond contract itself
+            if(pendingPayout_ > 0 && !matured_) {
+                revert NotMatured(); 
             }
+        }
+
+        INoteKeeper(bondDepository).redeem(address(this), _id, _sendgOHM);
+
+        for(uint i = 0; _id.length > i; i++) {
+            if(balanceOf(msg.sender, _id[i]) < _parts[i]) revert NotEnoughParts();
+            if(_parts[i] < 0) revert NoParts();
+
+            _burn(msg.sender, _id[i], _parts[i]);
+
+            IDDetails memory idDetail = idDetails[_id[i]];
+
+            payout_ += idDetail.payout * _parts[i] / idDetail.totalParts;
+        }
+
+        // Check if user wants to be sent gOHM and if there is enough to send
+        if(_sendgOHM && IERC20(gOHM).balanceOf(address(this)) >= payout_ || !_sendgOHM && sOHM.balanceOf(address(this)) < IgOHM(gOHM).balanceFrom(payout_)) {
+            IERC20(gOHM).safeTransfer(_to, payout_);
+        // Send sOHM
         } else {
-            // Check if user wants to be sent gOHM and if there is enough to send
-            if(_sendgOHM && IERC20(gOHM).balanceOf(address(this)) >= payout_) {
-                IERC20(gOHM).safeTransfer(_to, payout_);
-
-            // Send sOHM
-            } else {
-                payout_ = IgOHM(gOHM).balanceFrom(payout_);
-                sOHM.safeTransfer(_to, payout_);
-            }
+            payout_ = IgOHM(gOHM).balanceFrom(payout_);
+            sOHM.safeTransfer(_to, payout_);
         }
     }
 }
