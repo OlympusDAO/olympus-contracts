@@ -1,5 +1,5 @@
 import { ethers, network } from "hardhat";
-import { BigNumber } from "ethers";
+import { BigNumber, BaseContract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { MockERC20 } from "../../types";
 
@@ -43,6 +43,18 @@ export function bne(base: number, expo: number): BigNumber {
 export async function pinBlock(bnum: number, url: string): Promise<void> {
     await network.provider.send("hardhat_reset", [
         { forking: { jsonRpcUrl: url, blockNumber: bnum } },
+    ]);
+}
+
+export async function setStorage(
+    address: string,
+    slot: BigNumber,
+    value: BigNumber
+): Promise<void> {
+    await network.provider.send("hardhat_setStorageAt", [
+        address,
+        "0x" + slot._hex.slice(2).replace(/^0+/, ""),
+        "0x" + value._hex.slice(2).padStart(64, "0"),
     ]);
 }
 
