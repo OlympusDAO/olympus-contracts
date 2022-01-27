@@ -142,6 +142,9 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
             utilityToken.safeTransfer(newAllocator, utilityToken.balanceOf(address(this)));
         }
 
+        // report migration
+        extender.report(id, 1, 1);
+
         deactivate(false);
 
         emit MigrationExecuted(id, IAllocator(newAllocator).id());
