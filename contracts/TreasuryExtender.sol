@@ -91,6 +91,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     // so either gain > loss, loss == 0,
     // or gain < loss, gain == 0
     // or gain == 0 && loss == 0
+    // if gain > 0 && loss > 0, this case covers migration then
     function report(
         uint256 id,
         uint128 gain,
@@ -112,7 +113,13 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
 
         allocatorData[allocator].performance = perf;
 
-        if (gain > 0) totalValueAllocated += treasury.tokenValue(allocator.getToken(), gain);
+        if (gain > 0) {
+            if (loss > 0) {
+                loss = uint128(allocatorData[allocator].holdings.allocated);
+            } else {
+                totalValueAllocated += treasury.tokenValue(allocator.getToken(), gain);
+            }
+        }
 
         if (loss != 0) {
             allocatorData[allocator].holdings.allocated -= loss;
