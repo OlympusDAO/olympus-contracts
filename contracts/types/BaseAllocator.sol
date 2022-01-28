@@ -23,7 +23,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
 
     uint256 public id;
 
-    IERC20 private immutable token;
+    IERC20 internal immutable token;
 
     AllocatorStatus public status;
 

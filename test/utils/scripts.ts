@@ -58,4 +58,8 @@ export async function setStorage(
     ]);
 }
 
+export async function addEth(address: string, value: BigNumber): Promise<void> {
+    await network.provider.send("hardhat_setBalance", [address, value._hex]);
+}
+
 export const addressZero = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
