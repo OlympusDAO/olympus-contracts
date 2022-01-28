@@ -83,7 +83,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
      */
     function distribute() external override {
         require(msg.sender == staking, "Only staking");
-        require(unlockRebase, "Rebase locked. Must call from distributor");
+        require(unlockRebase, "Rebase locked. Must call from `triggerRebase`.");
 
         // distribute rewards to each recipient
         for (uint256 i = 0; i < info.length; i++) {
@@ -146,7 +146,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         @return uint
      */
     function nextRewardAt(uint256 _rate) public view override returns (uint256) {
-        return ohm.totalSupply().mul(_rate).div(rateDenominator);
+        return treasury.baseSupply().mul(_rate).div(rateDenominator);
     }
 
     /**
