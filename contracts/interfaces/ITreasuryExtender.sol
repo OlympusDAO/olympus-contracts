@@ -20,21 +20,56 @@ struct AllocatorData {
     AllocatorPerformance performance;
 }
 
+/**
+ * @title Interface for the TreasuryExtender
+ */
 interface ITreasuryExtender {
+    /**
+     * @notice
+     *  Emitted when a new Allocator is registered.
+     */
     event NewAllocatorRegistered(address allocatorAddress, address allocatorToken, uint256 allocatorId);
 
+    /**
+     * @notice
+     *  Emitted when an Allocator is funded
+     */
     event AllocatorFunded(uint256 allocatorId, uint256 amount, uint256 value);
 
+    /**
+     * @notice
+     *  Emitted when allocated funds are withdrawn from an Allocator
+     */
     event AllocatorWithdrawal(uint256 allocatorId, uint256 amount, uint256 value);
 
+    /**
+     * @notice
+     *  Emitted when rewards are withdrawn from an Allocator
+     */
     event AllocatorRewardsWithdrawal(uint256 allocatorId, uint256 amount, uint256 value);
 
+    /**
+     * @notice
+     *  Emitted when an Allocator reports a gain
+     */
     event AllocatorReportedGain(uint256 allocatorId, uint128 gain);
 
+    /**
+     * @notice
+     *  Emitted when an Allocator reports a loss
+     */
     event AllocatorReportedLoss(uint256 allocatorId, uint128 loss);
 
+    /**
+     * @notice
+     *  Emitted when an Allocator reports a migration
+     */
     event AllocatorReportedMigration(uint256 allocatorId);
 
+    /**
+     * @notice
+     *  Emitted when an Allocator limits are modified
+     */
     event AllocatorLimitsChanged(uint256 allocatorId, uint128 allocationLimit, uint128 lossLimit);
 
     function registerAllocator(address newAllocatorAddress) external;
