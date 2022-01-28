@@ -9,7 +9,7 @@ import {IYieldDirector} from "../interfaces/IYieldDirector.sol";
 import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 
 
-// Because of truncation in the ones place for both agnosticDeposit and agnosticDebt we lose
+// Because of truncation in the ones place for both gohmDeposit and gohmDebt we lose
 // 1e-18 units of precision. Potential solution is to round up redeemable amount by 1e-18
 /**
     @title YieldDirector (codename Tyche) 
@@ -26,22 +26,24 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     address public immutable sOHM;
     address public immutable gOHM;
 
+    uint256 private constant INDEX_DECIMALS = 1e9;
+
     bool public depositDisabled;
     bool public withdrawDisabled;
     bool public redeemDisabled;
 
     struct DonationInfo {
         address recipient;
-        uint256 nonAgnosticDeposit; // Total non-agnostic amount deposited
-        uint256 agnosticDeposit; // gOHM amount deposited
+        uint256 sohmDeposit; // Total non-agnostic amount deposited    change to just sohmDeposit
+        uint256 gohmDeposit; // gOHM amount deposited     change to gohmDeposit
         uint256 carry; // Amount of sOHM accumulated over on deposit/withdraw
         uint256 indexAtLastChange; // Index of last deposit/withdraw
     }
 
     struct RecipientInfo {
-        uint256 totalDebt; // Non-agnostic debt
+        uint256 sohmDebt; // Non-agnostic debt
         uint256 totalCarry; // Total non-agnostic value donating to recipient
-        uint256 agnosticDebt; // Total agnostic value of carry + debt
+        uint256 gohmDebt; // Total agnostic value of carry + debt
         uint256 indexAtLastChange; // Index when agnostic value changed
     }
 
@@ -82,7 +84,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
 
-        uint256 index = IsOHM(sOHM).index();
+        uint256 index = IsOHM(sOHM).index(); // need to find chainlink oracle
 
         // Record donors's issued debt to recipient address
         DonationInfo[] storage donations = donationInfo[msg.sender];
@@ -92,8 +94,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             donations.push(
                 DonationInfo({
                     recipient: recipient_,
-                    nonAgnosticDeposit: _fromAgnostic(amount_),
-                    agnosticDeposit: amount_,
+                    sohmDeposit: _fromAgnostic(amount_),
+                    gohmDeposit: amount_,
                     carry: 0,
                     indexAtLastChange: index
                 })
@@ -101,18 +103,18 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         } else {
             DonationInfo storage donation = donations[recipientIndex];
 
-            donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
-            donation.nonAgnosticDeposit += _fromAgnostic(amount_);
-            donation.agnosticDeposit = _toAgnostic(donation.nonAgnosticDeposit);
+            donation.carry += _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange);
+            donation.sohmDeposit += _fromAgnostic(amount_);
+            donation.gohmDeposit = _toAgnostic(donation.sohmDeposit); // think this is inefficient
             donation.indexAtLastChange = index;
         }
 
         RecipientInfo storage recipient = recipientInfo[recipient_];
 
         // Calculate value carried over since last change
-        recipient.totalCarry += _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange);
-        recipient.totalDebt += _fromAgnostic(amount_);
-        recipient.agnosticDebt = _toAgnostic(recipient.totalDebt + recipient.totalCarry);
+        recipient.totalCarry += _getAccumulatedValue(recipient.gohmDebt, recipient.indexAtLastChange);
+        recipient.sohmDebt += _fromAgnostic(amount_);
+        recipient.gohmDebt = _toAgnostic(recipient.sohmDebt + recipient.totalCarry);
         recipient.indexAtLastChange = index;
 
         emit Deposited(msg.sender, recipient_, amount_);
@@ -131,14 +133,17 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         uint256 recipientIndex = _getRecipientIndex(msg.sender, recipient_);
         require(recipientIndex != MAX_UINT256, "No donations to recipient");
 
+        // Check withdrawal size
         DonationInfo storage donation = donationInfo[msg.sender][recipientIndex];
-        uint256 maxWithdrawable = _toAgnostic(donation.nonAgnosticDeposit);
+        uint256 maxWithdrawable = _toAgnostic(donation.sohmDeposit);
+
+        uint256 newGohmDeposit = _toAgnostic(donation.sohmDeposit) - amount_;
 
         if(amount_ >= maxWithdrawable) {
             // Report how much was donated then clear donation information
             uint256 accumulated = _toAgnostic(
                     donation.carry
-                    + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange));
+                    + _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange));
             emit Donated(msg.sender, recipient_, accumulated);
 
             delete donationInfo[msg.sender][recipientIndex];
@@ -150,17 +155,17 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
                 donationInfo[msg.sender].pop();
             }
         } else {
-            donation.carry += _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange);
-            donation.nonAgnosticDeposit = _fromAgnostic(_toAgnostic(donation.nonAgnosticDeposit) - amount_);
-            donation.agnosticDeposit = _toAgnostic(donation.nonAgnosticDeposit);
+            donation.carry += _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange);
+            donation.sohmDeposit = _fromAgnostic(newGohmDeposit);
+            donation.gohmDeposit = newGohmDeposit;
             donation.indexAtLastChange = index;
         }
 
         // Recipient accounting
         RecipientInfo storage recipient = recipientInfo[recipient_];
-        recipient.totalCarry += _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange);
-        recipient.totalDebt = _fromAgnostic(_toAgnostic(recipient.totalDebt) - amount_);
-        recipient.agnosticDebt = _toAgnostic(recipient.totalDebt + recipient.totalCarry);
+        recipient.totalCarry += _getAccumulatedValue(recipient.gohmDebt, recipient.indexAtLastChange);
+        recipient.sohmDebt = _fromAgnostic(_toAgnostic(recipient.sohmDebt) - amount_); // LEFT OFF HERE, CAN THESE BE MADE SIMPLER??
+        recipient.gohmDebt = _toAgnostic(recipient.sohmDebt + recipient.totalCarry);
         recipient.indexAtLastChange = index;
 
         IERC20(gOHM).safeTransfer(msg.sender, amount_);
@@ -185,18 +190,18 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         for (uint256 index = 0; index < donationsLength; index++) {
             DonationInfo storage donation = donations[index];
 
-            gohmTotal += _toAgnostic(donation.nonAgnosticDeposit);
+            gohmTotal += _toAgnostic(donation.sohmDeposit);
 
             RecipientInfo storage recipient = recipientInfo[donation.recipient];
-            recipient.totalCarry += _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange);
-            recipient.totalDebt -= donation.nonAgnosticDeposit;
-            recipient.agnosticDebt -= donation.agnosticDeposit;
+            recipient.totalCarry += _getAccumulatedValue(recipient.gohmDebt, recipient.indexAtLastChange);
+            recipient.sohmDebt -= donation.sohmDeposit;
+            recipient.gohmDebt -= donation.gohmDeposit;
             recipient.indexAtLastChange = sOhmIndex;
 
             // Report amount donated
             uint256 accumulated = _toAgnostic(
                     donation.carry
-                    + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange));
+                    + _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange));
 
             emit Donated(msg.sender, donation.recipient, accumulated);
         }
@@ -215,7 +220,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             return 0;
         }
 
-        return _toAgnostic(donationInfo[donor_][recipientIndex].nonAgnosticDeposit);
+        return _toAgnostic(donationInfo[donor_][recipientIndex].sohmDeposit);
     }
 
     /**
@@ -227,7 +232,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             return 0;
         }
 
-        return _toAgnostic(donationInfo[donor_][recipientIndex].nonAgnosticDeposit); // is this what we want or do we want to report raw agnostic value?
+        return _toAgnostic(donationInfo[donor_][recipientIndex].sohmDeposit); // is this what we want or do we want to report raw agnostic value?
     }
 
     /**
@@ -241,7 +246,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
         uint256 gohmTotal = 0;
         for (uint256 index = 0; index < donations.length; index++) {
-            gohmTotal += _toAgnostic(donations[index].nonAgnosticDeposit); // is this what we want or do we want to report raw agnostic value?
+            gohmTotal += _toAgnostic(donations[index].sohmDeposit); // is this what we want or do we want to report raw agnostic value?
         }
 
         return gohmTotal;
@@ -261,7 +266,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
         for (uint256 index = 0; index < len; index++) {
             addresses[index] = donations[index].recipient;
-            gohmDeposits[index] = _toAgnostic(donations[index].nonAgnosticDeposit); // is this what we want or do we want to report raw agnostic value?
+            gohmDeposits[index] = _toAgnostic(donations[index].sohmDeposit); // is this what we want or do we want to report raw agnostic value?
         }
 
         return (addresses, gohmDeposits);
@@ -278,8 +283,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
         DonationInfo storage donation = donationInfo[donor_][recipientIndex];
         uint256 gohmDonation = _toAgnostic(
-                donation.carry
-                + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange));
+            donation.carry
+            + _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange));
         return gohmDonation;
     }
 
@@ -291,11 +296,11 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         uint256 totalGohm = 0;
 
         for (uint256 index = 0; index < donations.length; index++) {
-            DonationInfo storage donation = donations[index];
+            DonationInfo memory donation = donations[index];
 
             totalGohm += _toAgnostic(
-                    donation.carry
-                    + _getAccumulatedValue(donation.agnosticDeposit, donation.indexAtLastChange));
+                donation.carry
+                + _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange));
         }
 
         return totalGohm;
@@ -311,7 +316,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     function redeemableBalance(address recipient_) public override view returns ( uint256 ) {
         RecipientInfo storage recipient = recipientInfo[recipient_];
         uint gohmRedeemable = _toAgnostic(recipient.totalCarry
-                + _getAccumulatedValue(recipient.agnosticDebt, recipient.indexAtLastChange));
+                + _getAccumulatedValue(recipient.gohmDebt, recipient.indexAtLastChange));
 
         return gohmRedeemable;
     }
@@ -329,7 +334,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         require(redeemable > 0, "No redeemable balance");
 
         RecipientInfo storage recipient = recipientInfo[msg.sender];
-        recipient.agnosticDebt = _toAgnostic(recipient.totalDebt);
+        recipient.gohmDebt = _toAgnostic(recipient.sohmDebt);
         recipient.totalCarry = 0;
         recipient.indexAtLastChange = IsOHM(sOHM).index();
 
@@ -369,11 +374,12 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     /**
         @notice Convert flat sOHM value to agnostic value at current index
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
-             1e18 is because sOHM has 18 decimals.
+             1e9 is because sOHM index has 9 decimals and this will preserve the
+             right number of decimals.
      */
     function _toAgnostic(uint256 amount_) internal view returns ( uint256 ) {
         return amount_
-            * 1e9
+            * INDEX_DECIMALS
             / (IsOHM(sOHM).index());
     }
 
@@ -385,7 +391,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     function _fromAgnostic(uint256 amount_) internal view returns ( uint256 ) {
         return amount_
             * (IsOHM(sOHM).index())
-            / 1e9;
+            / INDEX_DECIMALS;
     }
 
     /**
@@ -396,7 +402,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     function _fromAgnosticAtIndex(uint256 amount_, uint256 index_) internal pure returns ( uint256 ) {
         return amount_
             * index_
-            / 1e9;
+            / INDEX_DECIMALS;
     }
 
     /************************
