@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.7.5;
+pragma abicoder v2;
 
 import "./libraries/SafeERC20.sol";
 import "./libraries/SafeMath.sol";
@@ -7,8 +8,20 @@ import "./libraries/SafeMath.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IDistributor.sol";
+import "./interfaces/IStaking.sol";
 
 import "./types/OlympusAccessControlled.sol";
+
+interface IEpoch {
+    struct Epoch {
+        uint256 length; // in seconds
+        uint256 number; // since inception
+        uint256 end; // timestamp
+        uint256 distribute; // amount
+    }
+
+    function epoch() external returns (Epoch memory);
+}
 
 /// @notice Patched distributor for fixing rebase miscalculation error
 contract Distributor is IDistributor, OlympusAccessControlled {
@@ -72,7 +85,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
                 only be able to be called from a tx originating this function.
      */
     function triggerRebase() external {
-        require(IStaking(staking).epoch.end >= block.timestamp, "Epoch has not ended yet");
+        require(IEpoch(staking).epoch().end >= block.timestamp, "Epoch has not ended yet");
         unlockRebase = true;
         IStaking(staking).unstake(address(this), 0, true, true);
         unlockRebase = false;
