@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import {IERC20} from "../interfaces/IERC20.sol";
 import {IsOHM} from "../interfaces/IsOHM.sol";
 import {IgOHM} from "../interfaces/IgOHM.sol";
+import {IStaking} from "./interfaces/IStaking.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
 import {IYieldDirector} from "../interfaces/IYieldDirector.sol";
 import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
@@ -23,8 +24,9 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     uint256 private constant MAX_UINT256 = type(uint256).max;
 
     // drop sOHM for mainnet launch
-    address public immutable sOHM;
-    address public immutable gOHM;
+    address internal immutable sOHM;
+    address internal immutable gOHM;
+    IStaking internal immutable staking;
 
     uint256 private constant INDEX_DECIMALS = 1e9;
 
@@ -34,17 +36,17 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
     struct DonationInfo {
         address recipient;
-        uint256 sohmDeposit; // Total non-agnostic amount deposited    change to just sohmDeposit
-        uint256 gohmDeposit; // gOHM amount deposited     change to gohmDeposit
+        uint256 sohmDeposit; // Total sOHM equivalent amount deposited
+        uint256 gohmDeposit; // gOHM amount deposited
         uint256 carry; // Amount of sOHM accumulated over on deposit/withdraw
         uint256 indexAtLastChange; // Index of last deposit/withdraw
     }
 
     struct RecipientInfo {
-        uint256 sohmDebt; // Non-agnostic debt
-        uint256 totalCarry; // Total non-agnostic value donating to recipient
-        uint256 gohmDebt; // Total agnostic value of carry + debt
-        uint256 indexAtLastChange; // Index when agnostic value changed
+        uint256 sohmDebt; // sOHM equivalent debt
+        uint256 totalCarry; // Total sOHM equivalent value donating to recipient
+        uint256 gohmDebt; // Total gOHM value of carry + debt
+        uint256 indexAtLastChange; // Index when gOHM value last changed
     }
 
     mapping(address => DonationInfo[]) public donationInfo;
@@ -57,15 +59,21 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     event Redeemed(address indexed recipient_, uint256 amount_);
     event EmergencyShutdown(bool active_);
 
-    // drop sOhm_ for mainnet launch
-    constructor (address sOhm_, address gOhm_, address authority_)
+    constructor (
+    	address sOhm_,
+    	address gOhm_,
+    	address staking_,
+    	address authority_
+    )
         OlympusAccessControlled(IOlympusAuthority(authority_))
     {
         require(sOhm_ != address(0), "Invalid address for sOHM");
         require(gOhm_ != address(0), "Invalid address for gOHM");
+        require(staking_ != address(0), "Invalid address for staking");
 
-        sOHM = sOhm_; // drop for mainnet launch
+        sOHM = sOhm_;
         gOHM = gOhm_;
+        staking = IStaking(staking_);
     }
 
     /************************
@@ -104,8 +112,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             DonationInfo storage donation = donations[recipientIndex];
 
             donation.carry += _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange);
+            donation.gohmDeposit = _toAgnostic(donation.sohmDeposit) + amount;
             donation.sohmDeposit += _fromAgnostic(amount_);
-            donation.gohmDeposit = _toAgnostic(donation.sohmDeposit); // think this is inefficient
             donation.indexAtLastChange = index;
         }
 
@@ -118,6 +126,11 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         recipient.indexAtLastChange = index;
 
         emit Deposited(msg.sender, recipient_, amount_);
+    }
+
+    function depositSohm(uint256 amount_, address recipient_) external override {
+    	staking.wrap(address(this), amount_);
+    	// fill in the rest
     }
 
     /**
@@ -135,11 +148,8 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
         // Check withdrawal size
         DonationInfo storage donation = donationInfo[msg.sender][recipientIndex];
-        uint256 maxWithdrawable = _toAgnostic(donation.sohmDeposit);
 
-        uint256 newGohmDeposit = _toAgnostic(donation.sohmDeposit) - amount_;
-
-        if(amount_ >= maxWithdrawable) {
+        if(newGohmDeposit <= 0) {
             // Report how much was donated then clear donation information
             uint256 accumulated = _toAgnostic(
                     donation.carry
@@ -156,15 +166,15 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
             }
         } else {
             donation.carry += _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange);
-            donation.sohmDeposit = _fromAgnostic(newGohmDeposit);
-            donation.gohmDeposit = newGohmDeposit;
+            donation.gohmDeposit = _toAgnostic(donation.sohmDeposit) - amount;
+            donation.sohmDeposit -= _fromAgnostic(amount_);
             donation.indexAtLastChange = index;
         }
 
         // Recipient accounting
         RecipientInfo storage recipient = recipientInfo[recipient_];
         recipient.totalCarry += _getAccumulatedValue(recipient.gohmDebt, recipient.indexAtLastChange);
-        recipient.sohmDebt = _fromAgnostic(_toAgnostic(recipient.sohmDebt) - amount_); // LEFT OFF HERE, CAN THESE BE MADE SIMPLER??
+        recipient.sohmDebt -= _fromAgnostic(amount_);
         recipient.gohmDebt = _toAgnostic(recipient.sohmDebt + recipient.totalCarry);
         recipient.indexAtLastChange = index;
 
@@ -214,7 +224,10 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         emit AllWithdrawn(msg.sender, gohmTotal);
     }
 
-    function withdrawableGohm(address donor_, address recipient_) external override view returns ( uint256 ) {
+    /**
+        @notice Get deposited gOHM amounts for specific recipient (updated to current index based on sOHM equivalent amount deposit)
+     */
+    function depositsTo(address donor_, address recipient_) external override view returns ( uint256 ) {
         uint256 recipientIndex = _getRecipientIndex(donor_, recipient_);
         if (recipientIndex == MAX_UINT256) {
             return 0;
@@ -224,19 +237,7 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     }
 
     /**
-        @notice Get deposited sOHM and gOHM amounts for specific recipient
-     */
-    function depositsTo(address donor_, address recipient_) external override view returns ( uint256 ) {
-        uint256 recipientIndex = _getRecipientIndex(donor_, recipient_);
-        if (recipientIndex == MAX_UINT256) {
-            return 0;
-        }
-
-        return _toAgnostic(donationInfo[donor_][recipientIndex].sohmDeposit); // is this what we want or do we want to report raw agnostic value?
-    }
-
-    /**
-        @notice Return total amount of donor's sOHM and gOHM deposited
+        @notice Return total amount of donor's gOHM deposited (updated to current index based on sOHM equivalent amount deposits)
      */
     function totalDeposits(address donor_) external override view returns ( uint256 ) {
         DonationInfo[] storage donations = donationInfo[donor_];
@@ -246,27 +247,31 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
 
         uint256 gohmTotal = 0;
         for (uint256 index = 0; index < donations.length; index++) {
-            gohmTotal += _toAgnostic(donations[index].sohmDeposit); // is this what we want or do we want to report raw agnostic value?
+            gohmTotal += _toAgnostic(donations[index].sohmDeposit);
         }
 
         return gohmTotal;
     }
     
     /**
-        @notice Return arrays of donor's recipients and deposit amounts, matched by index
+        @notice Return arrays of donor's recipients and deposit amounts (gOHM value based on sOHM equivalent deposit), matched by index
      */
     function getAllDeposits(address donor_) external override view returns ( address[] memory, uint256[] memory ) {
         DonationInfo[] storage donations = donationInfo[donor_];
-        require(donations.length != 0, "No deposits");
 
-        uint256 len = donations.length;
+        uint256 len = donations.length == 0 ? 1 : donations.length;
 
         address[] memory addresses = new address[](len);
         uint256[] memory gohmDeposits = new uint256[](len);
 
-        for (uint256 index = 0; index < len; index++) {
-            addresses[index] = donations[index].recipient;
-            gohmDeposits[index] = _toAgnostic(donations[index].sohmDeposit); // is this what we want or do we want to report raw agnostic value?
+        if (donations.length == 0) {
+        	addresses[0] = address(0);
+        	gohmDeposits[0] = 0;
+        } else {
+	        for (uint256 index = 0; index < len; index++) {
+	            addresses[index] = donations[index].recipient;
+	            gohmDeposits[index] = _toAgnostic(donations[index].sohmDeposit);
+	        }
         }
 
         return (addresses, gohmDeposits);
