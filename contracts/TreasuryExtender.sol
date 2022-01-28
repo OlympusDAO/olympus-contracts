@@ -100,12 +100,13 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         // reads
         IAllocator allocator = allocators[id];
         AllocatorPerformance memory perf = allocatorData[allocator].performance;
+        AllocatorStatus status = allocator.status();
 
         // checks
         // above could send in any id with gain == 0 and loss == 0, but he could only fake
         // address(0) in that case, otherwise, all allocators need to be registered by guardian
         _onlyAllocator(id, msg.sender);
-        _allocatorActivated(allocator.status());
+        if (status == AllocatorStatus.OFFLINE) revert TreasuryExtender_AllocatorOffline();
 
         // effect
         perf.gain += gain;
@@ -127,7 +128,10 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         }
 
         if (gain > loss) emit AllocatorReportedGain(id, gain);
-        else emit AllocatorReportedLoss(id, loss);
+        else {
+            if (gain != loss) emit AllocatorReportedLoss(id, loss);
+            else emit AllocatorReportedMigration(id);
+        }
     }
 
     function requestFundsFromTreasury(uint256 id, uint256 amount) external override {

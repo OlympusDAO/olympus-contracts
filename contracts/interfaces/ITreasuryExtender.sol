@@ -33,6 +33,8 @@ interface ITreasuryExtender {
 
     event AllocatorReportedLoss(uint256 allocatorId, uint128 loss);
 
+    event AllocatorReportedMigration(uint256 allocatorId);
+
     event AllocatorLimitsChanged(uint256 allocatorId, uint128 allocationLimit, uint128 lossLimit);
 
     function registerAllocator(address newAllocatorAddress) external;

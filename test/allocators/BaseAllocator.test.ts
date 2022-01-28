@@ -2,7 +2,7 @@
 import { ethers, waffle, network, config } from "hardhat";
 import chai, { expect } from "chai";
 import { smock } from "@defi-wonderland/smock";
-import { BigNumber, BaseContract } from "ethers";
+import { BigNumber, BaseContract, ContractFactory, Contract } from "ethers";
 
 // types
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -31,6 +31,7 @@ import {
     pinBlock,
     addressZero,
     setStorage,
+    addEth,
 } from "../utils/scripts";
 
 describe("BaseAllocator", async () => {
@@ -43,7 +44,7 @@ describe("BaseAllocator", async () => {
     let extender: TreasuryExtender;
     let treasury: OlympusTreasury;
     let authority: OlympusAuthority;
-    let allocator: MockContract<SimplestMockAllocator>;
+    let allocator: SimplestMockAllocator;
 
     // tokens
     let frax: MockERC20;
@@ -57,7 +58,8 @@ describe("BaseAllocator", async () => {
     let url: string = config.networks.hardhat.forking!.url;
 
     // variables
-    let start: number = 0;
+    let snapshotId: number = 0;
+    let localSnapId: number = 0;
 
     before(async () => {
         await pinBlock(14026252, url);
@@ -97,9 +99,9 @@ describe("BaseAllocator", async () => {
         treasury.enable(3, extender.address, addressZero);
         treasury.enable(0, extender.address, addressZero);
 
-        let simplestFactory: MockContractFactory<SimplestMockAllocator__factory> = await smock.mock(
+        let simplestFactory: SimplestMockAllocator__factory = (await ethers.getContractFactory(
             "SimplestMockAllocator"
-        );
+        )) as SimplestMockAllocator__factory;
 
         simplestFactory = simplestFactory.connect(guardian);
 
@@ -108,12 +110,14 @@ describe("BaseAllocator", async () => {
             token: frax.address,
             extender: extender.address,
         });
+    });
 
-        // now set up allocator functions up
+    beforeEach(async () => {
+        snapshotId = await snapshot();
+    });
 
-        allocator.rewardTokens.returns([dai.address]);
-        allocator.utilityTokens.returns([dai.address]);
-        allocator.name.returns("SimpleFraxAllocator");
+    afterEach(async () => {
+        await revert(snapshotId);
     });
 
     it("initial: proper contract config", async () => {
@@ -142,33 +146,15 @@ describe("BaseAllocator", async () => {
         });
     });
 
-    let snapshotId: number = 0;
-
     describe("activate", () => {
-        before(async () => {
-            snapshotId = await snapshot();
-
-            await extender.registerAllocator(allocator.address);
-            //           await extender["setAllocatorLimits(uint256,(uint128,uint128))"](1, {
-            //               allocated: bne(10, 22),
-            //               loss: bne(10, 21),
-            //           });
-        });
-
         it("revert: should revert if sender is not guardian or already activated", async () => {
-            // revertedWith doesn't work so need hacky solution
-
-            try {
-                await allocator.connect(owner).activate();
-                expect(false).to.be.true;
-            } catch (e: any) {}
+            await expect(allocator.connect(owner).activate()).to.be.revertedWith("UNAUTHORIZED()");
 
             await setStorage(allocator.address, bnn(2), bnn(1));
 
-            try {
-                await allocator.activate();
-                expect(false).to.be.true;
-            } catch (e: any) {}
+            await expect(allocator.activate()).to.be.revertedWith(
+                "BaseAllocator_AllocatorActivated()"
+            );
 
             await setStorage(allocator.address, bnn(2), bnn(0));
         });
@@ -177,16 +163,17 @@ describe("BaseAllocator", async () => {
             await allocator.activate();
             expect(await allocator.status()).to.equal(1);
         });
-
-        after(async () => {
-            await revert(snapshotId);
-        });
     });
 
     describe("update", async () => {
         before(async () => {
-            snapshotId = await snapshot();
+            localSnapId = await snapshot();
+
             await extender.registerAllocator(allocator.address);
+            await extender["setAllocatorLimits(uint256,(uint128,uint128))"](1, {
+                allocated: bne(10, 35),
+                loss: bne(10, 35),
+            });
             await allocator.activate();
         });
 
@@ -195,23 +182,140 @@ describe("BaseAllocator", async () => {
         });
 
         it("revert: should revert if sender is not guardian or if offline", async () => {
-            try {
-                await allocator.connect(owner).update();
-                expect(false).to.be.true;
-            } catch (e: any) {}
+            await expect(allocator.connect(owner).update()).to.be.revertedWith("UNAUTHORIZED()");
 
             await setStorage(allocator.address, bnn(2), bnn(0));
 
-            try {
-                await allocator.update();
-                expect(false).to.be.true;
-            } catch (e: any) {}
+            expect(await allocator.status()).to.equal(0);
+
+            await expect(allocator.update()).to.be.revertedWith("BaseAllocator_AllocatorOffline()");
 
             await setStorage(allocator.address, bnn(2), bnn(1));
+
+            expect(await allocator.status()).to.equal(1);
+        });
+
+        it("passing: should do nothing if gain and loss zero", async () => {
+            const response = await allocator.update();
+            const receipt = await response.wait();
+            expect(receipt.events!.length).to.equal(0);
+        });
+
+        it("passing: should report gain", async () => {
+            await allocator.setGL(bne(10, 23), 0);
+
+            const response = await allocator.update();
+            const receipt = await response.wait();
+
+            expect(receipt.events!.length).to.equal(1);
+            expect((await extender.getAllocatorPerformance(1))[0]).to.equal(bne(10, 23));
+        });
+
+        it("passing: should report loss, but no limit triggered", async () => {
+            await allocator.setGL(0, bne(10, 21));
+
+            // so we don't revert
+            await extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 23));
+
+            const response = await allocator.update();
+            const receipt = await response.wait();
+
+            expect(receipt.events!.length).to.equal(1);
+
+            expect((await extender.getAllocatorPerformance(1))[1]).to.equal(bne(10, 21));
+            expect(await extender.getAllocatorAllocated(1)).to.equal(bne(10, 23).sub(bne(10, 21)));
+            expect(await extender.getTotalValueAllocated()).to.equal(
+                await treasury.tokenValue(coins.frax, bne(10, 23).sub(bne(10, 21)))
+            );
+        });
+
+        it("passing: should report loss and trigger panic", async () => {
+            await allocator.deactivate(false);
+            await extender["setAllocatorLimits(uint256,(uint128,uint128))"](1, {
+                allocated: bne(10, 35),
+                loss: bne(10, 23).div(2),
+            });
+            await allocator.activate();
+
+            await allocator.setGL(0, bne(10, 23).div(2));
+            await extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 23));
+
+            const response = await allocator.update();
+            const receipt = await response.wait();
+
+            expect(receipt.events!.length).to.equal(3);
         });
 
         after(async () => {
-            await revert(snapshotId);
+            await revert(localSnapId);
+        });
+    });
+
+    describe("prepareMigration + migrate", async () => {
+        before(async () => {
+            localSnapId = await snapshot();
+            await extender.registerAllocator(allocator.address);
+            await extender["setAllocatorLimits(uint256,(uint128,uint128))"](1, {
+                allocated: bne(10, 35),
+                loss: bne(10, 35),
+            });
+            await allocator.activate();
+        });
+
+        it("revert: prepareMigration: guardian, migrating", async () => {
+            await expect(allocator.connect(owner).prepareMigration()).to.be.revertedWith(
+                "UNAUTHORIZED()"
+            );
+            await allocator.prepareMigration();
+            await expect(allocator.prepareMigration()).to.be.revertedWith(
+                "BaseAllocator_Migrating()"
+            );
+        });
+
+        it("revert: migrate: guardian, not migrating", async () => {
+            await expect(allocator.connect(owner).migrate(owner.address)).to.be.revertedWith(
+                "UNAUTHORIZED()"
+            );
+            await expect(allocator.migrate(owner.address)).to.be.revertedWith(
+                "BaseAllocator_NotMigrating()"
+            );
+        });
+
+        it("passing: prepareMigration: should change contract status", async () => {
+            await allocator.prepareMigration();
+            expect(await allocator.status()).to.equal(2);
+        });
+
+        it("passing: migrate: should migrate funds", async () => {
+            let fakeAllocator: FakeContract<BaseAllocator> = await smock.fake<BaseAllocator>(
+                "BaseAllocator"
+            );
+            fakeAllocator.id.returns(2);
+
+            const treasuryWallet: SignerWithAddress = await impersonate(treasury.address);
+            await addEth(treasuryWallet.address, bne(10, 23));
+
+            await extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 23));
+            await dai.connect(treasuryWallet).transfer(allocator.address, bne(10, 22));
+
+            const amount1: BigNumber = bne(10, 23);
+            const amount2: BigNumber = bne(10, 22);
+
+            await allocator.prepareMigration();
+
+            const response = await allocator.migrate(fakeAllocator.address);
+            const receipt = await response.wait();
+
+            const allocated = await extender.getAllocatorAllocated(1);
+
+            expect(await frax.balanceOf(fakeAllocator.address)).to.equal(amount1);
+            expect(await dai.balanceOf(fakeAllocator.address)).to.equal(amount2);
+            expect(allocated).to.equal(0);
+            expect(receipt.events!.length).to.equal(5);
+        });
+
+        after(async () => {
+            await revert(localSnapId);
         });
     });
 });
