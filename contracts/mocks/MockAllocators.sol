@@ -26,7 +26,7 @@ contract SimplestMockAllocator is BaseAllocator {
         loss = losses;
     }
 
-    function deallocate(uint256 amount) public override {}
+    function deallocate(uint256[] memory amounts) public override {}
 
     function _deactivate(bool panic) internal override {
         if (panic) emit PanicTriggered();

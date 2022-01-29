@@ -273,12 +273,8 @@ describe("BaseAllocator", async () => {
         });
 
         it("revert: migrate: guardian, not migrating", async () => {
-            await expect(allocator.connect(owner).migrate(owner.address)).to.be.revertedWith(
-                "UNAUTHORIZED()"
-            );
-            await expect(allocator.migrate(owner.address)).to.be.revertedWith(
-                "BaseAllocator_NotMigrating()"
-            );
+            await expect(allocator.connect(owner).migrate()).to.be.revertedWith("UNAUTHORIZED()");
+            await expect(allocator.migrate()).to.be.revertedWith("BaseAllocator_NotMigrating()");
         });
 
         it("passing: prepareMigration: should change contract status", async () => {
@@ -290,7 +286,11 @@ describe("BaseAllocator", async () => {
             let fakeAllocator: FakeContract<BaseAllocator> = await smock.fake<BaseAllocator>(
                 "BaseAllocator"
             );
+
+            await extender.registerAllocator(fakeAllocator.address);
+
             fakeAllocator.id.returns(2);
+            fakeAllocator.status.returns(1);
 
             const treasuryWallet: SignerWithAddress = await impersonate(treasury.address);
             await addEth(treasuryWallet.address, bne(10, 23));
@@ -303,7 +303,7 @@ describe("BaseAllocator", async () => {
 
             await allocator.prepareMigration();
 
-            const response = await allocator.migrate(fakeAllocator.address);
+            const response = await allocator.migrate();
             const receipt = await response.wait();
 
             const allocated = await extender.getAllocatorAllocated(1);
