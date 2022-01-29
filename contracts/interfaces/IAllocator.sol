@@ -27,11 +27,11 @@ interface IAllocator {
 
     function update() external;
 
-    function deallocate(uint256 amount) external;
+    function deallocate(uint256[] memory amounts) external;
 
     function prepareMigration() external;
 
-    function migrate(address newAllocator) external;
+    function migrate() external;
 
     function activate() external;
 
