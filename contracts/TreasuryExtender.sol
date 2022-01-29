@@ -165,7 +165,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  (gain + loss) == 0, the Allocator will NEVER report this state
      *  gain > loss, gain is reported and gain + totalValueAllocated is incremented but allocated not.
      *  loss > gain, loss is reported, allocated, totalValueAllocated is decremented and loss incremented
-     *  loss == gain, (loss + gain) > 0, migration case, set gain & loss to 1 and zero out allocated
+     *  loss == gain, (loss + gain) > 0, migration case, zero out gain, loss, allocated
      *
      *  note when migrating the next Allocator should report his state to the Extender, in say an `_activate` call.
      *
@@ -180,7 +180,8 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     ) external override {
         // reads
         IAllocator allocator = allocators[id];
-        AllocatorPerformance memory perf = allocatorData[allocator].performance;
+        AllocatorData storage data = allocatorData[allocator];
+        AllocatorPerformance memory perf = data.performance;
         AllocatorStatus status = allocator.status();
 
         // checks
@@ -189,30 +190,41 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         _onlyAllocator(id, msg.sender);
         if (status == AllocatorStatus.OFFLINE) revert TreasuryExtender_AllocatorOffline();
 
-        // effect
-        perf.gain += gain;
-        perf.loss += loss;
+        // EFFECTS
+        if (gain >= loss) {
+            // MIGRATION
+            if (loss != 0) {
+                AllocatorData storage newAllocatorData = allocatorData[allocators[allocators.length - 1]];
 
-        allocatorData[allocator].performance = perf;
+                newAllocatorData.holdings.allocated = data.holdings.allocated;
+                newAllocatorData.performance.gain = data.performance.gain;
+                data.holdings.allocated = 0;
 
-        if (gain > 0) {
-            if (loss > 0) {
-                loss = uint128(allocatorData[allocator].holdings.allocated);
+                perf.gain = 0;
+                perf.loss = 0;
+
+                emit AllocatorReportedMigration(id);
+
+                // GAIN
             } else {
                 totalValueAllocated += treasury.tokenValue(allocator.getToken(), gain);
+
+                perf.gain += gain;
+
+                emit AllocatorReportedGain(id, gain);
             }
-        }
 
-        if (loss != 0) {
-            allocatorData[allocator].holdings.allocated -= loss;
+            // LOSS
+        } else {
+            data.holdings.allocated -= loss;
             totalValueAllocated -= treasury.tokenValue(allocator.getToken(), loss);
+
+            perf.loss += loss;
+
+            emit AllocatorReportedLoss(id, loss);
         }
 
-        if (gain > loss) emit AllocatorReportedGain(id, gain);
-        else {
-            if (gain != loss) emit AllocatorReportedLoss(id, loss);
-            else emit AllocatorReportedMigration(id);
-        }
+        data.performance = perf;
     }
 
     /**
@@ -313,6 +325,19 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
 
     /**
      * @notice
+     *  Get the `totalValueAllocated` to Allocators by the Treasury.
+     * @dev
+     *  For each individual incrementation, the value allocated is calculated by the
+     *  `tokenValue` function of the treasury, which returns the OHM valuation of the asset.
+     *  Thus, totalValueAllocated could also be called "totalOHMValueAllocated", the name is for simplicity.
+     * @return the TotalValueAllocated
+     */
+    function getTotalValueAllocated() external view override returns (uint256) {
+        return totalValueAllocated;
+    }
+
+    /**
+     * @notice
      *  Get an Allocators address by it's ID.
      * @dev
      *  Our first Allocator is at index 1, 0 is a placeholder.
@@ -325,15 +350,13 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
 
     /**
      * @notice
-     *  Get the `totalValueAllocated` to Allocators by the Treasury.
+     *  Get the total number of Allocators ever registered.
      * @dev
-     *  For each individual incrementation, the value allocated is calculated by the
-     *  `tokenValue` function of the treasury, which returns the OHM valuation of the asset.
-     *  Thus, totalValueAllocated could also be called "totalOHMValueAllocated", the name is for simplicity.
-     * @return the TotalValueAllocated
+     *  Our first Allocator is at index 1, 0 is a placeholder.
+     * @return total number of allocators ever registered
      */
-    function getTotalValueAllocated() external view override returns (uint256) {
-        return totalValueAllocated;
+    function getTotalAllocatorCount() external view returns (uint256) {
+        return allocators.length;
     }
 
     /**
