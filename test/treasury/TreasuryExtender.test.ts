@@ -496,15 +496,11 @@ describe("TreasuryExtender", () => {
         it("revert: should revert if allocator offline or allocator not sender", async () => {
             let input: BigNumber = bne(10, 22);
 
-            await expect(extender.report(0, input, 0)).to.be.revertedWith(
-                'TreasuryExtender_OnlyAllocator(0, "0x245cc372C84B3645Bf0Ffe6538620B04a217988B")'
-            );
-            await expect(extender.report(0, 0, input)).to.be.revertedWith(
-                'TreasuryExtender_OnlyAllocator(0, "0x245cc372C84B3645Bf0Ffe6538620B04a217988B")'
-            );
-            await expect(extender.report(0, input, input)).to.be.revertedWith(
-                'TreasuryExtender_OnlyAllocator(0, "0x245cc372C84B3645Bf0Ffe6538620B04a217988B")'
-            );
+            await expect(extender.report(0, input, 0)).to.be.reverted;
+
+            await expect(extender.report(0, 0, input)).to.be.reverted;
+
+            await expect(extender.report(0, input, input)).to.be.reverted;
 
             extender = extender.connect(veryfakeAllocator.wallet);
 
