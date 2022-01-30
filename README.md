@@ -53,8 +53,8 @@ make run
 
 ## 📜 Contract Addresses
 
- - For [Ethereum Mainnet](./docs/deployments/ethereum).
- - For [Rinkeby Testnet](./docs/deployments/rinkeby).
+ - For [Ethereum Mainnet](./docs/deployments/ethereum.md).
+ - For [Rinkeby Testnet](./docs/deployments/rinkeby.md).
 
 ### Notes for `localhost`
 -   The `deployments/localhost` directory is included in the git repository,
