@@ -124,13 +124,14 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  Updates an Allocators state.
      * @dev
      *  This function should be implemented by the developer of the Allocator.
-     *  What this function should do:
+     *  This function should fulfill the following purposes:
      *   - invest all tokens deposited in the contract
      *   - handle rebalancing / harvesting as needed
-     *   - calculate gain / loss and return
+     *   - calculate gain / loss and return those values
+     *   - handle any other necessary runtime calculations, such as fees etc.
      *
      *  In essence, this function should update the main runtime state of the Allocator
-     *  so that everything is properly, invested, harvested, accounted for.
+     *  so that everything is properly invested, harvested, accounted for.
      */
     function _update() internal virtual returns (uint128 gain, uint128 loss);
 
@@ -141,7 +142,10 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  This function should deallocate (withdraw) `amounts` of each token so that they may be withdrawn
      *  by the TreasuryExtender. Otherwise, this function may also prepare the withdrawl if it is time-bound.
      *
-     *  NOTE (IMPORTANT): amounts[0] is to be considered the amount of `token` to withdraw
+     *  NOTE (IMPORTANT): amounts[0] is to be considered the amount of `token` to withdraw,
+     *                    the rest should be utility tokens. This serves as a reminder that
+     *  we consider reward tokens to either be harvested into allocated or simply contained
+     *  in the contract.
      */
     function deallocate(uint256[] memory amounts) public virtual;
 
@@ -154,30 +158,38 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     /**
      * @notice
      *  Handles migration preparatory logic.
+     * @dev
+     *  Within this function, the developer should arrange the withdrawal of all assets for migration.
+     *  A useful function, say, to be passed into this could be `deallocate` with all of the amounts,
+     *  so with n places for n-1 utility tokens + 1 allocated token, maxed out.
      */
     function _prepareMigration() internal virtual;
 
     /**
      * @notice
-     *  Should estimate total rewards in reward tokens
+     *  Should estimate total rewards in reward tokens.
      */
     function estimateTotalRewards() public view virtual returns (uint256[] memory);
 
     /**
      * @notice
      *  Should estimate total amount of Allocated tokens
+     * @dev
+     *  The difference between this and `treasury.getAllocatorAllocated`, is that the latter is a static
+     *  value recorded during reporting, but no data is available on _new_ amounts after reporting.
+     *  Thus, this should take into consideration the new amounts. This can be used for say aTokens.
      */
     function estimateTotalAllocated() public view virtual returns (uint256);
 
     /**
      * @notice
-     *  Should return all reward tokens
+     *  Should return all reward token addresses
      */
     function rewardTokens() public view virtual returns (address[] memory);
 
     /**
      * @notice
-     *  Should return all utility tokens
+     *  Should return all utility token addresses
      */
     function utilityTokens() public view virtual returns (address[] memory);
 
@@ -189,6 +201,12 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
 
     /////// IMPLEMENTATION OPTIONAL
 
+    /**
+     * @notice
+     *  Should handle activation logic
+     * @dev
+     *  If there is a need to handle any logic during activation, this is the function you should implement it into
+     */
     function _activate() internal virtual {}
 
     /////// FUNCTIONS
