@@ -92,7 +92,7 @@ describe.only('YieldDirector', async () => {
         staking = await stakingFactory.deploy(ohm.address, sOhm.address, gOhm.address, "10", "1", "9", auth.address);
         treasury = await treasuryFactory.deploy(ohm.address, "0", auth.address);
         distributor = await distributorFactory.deploy(treasury.address, ohm.address, staking.address, auth.address);
-        tyche = await tycheFactory.deploy(sOhm.address, gOhm.address, auth.address);
+        tyche = await tycheFactory.deploy(sOhm.address, gOhm.address, staking.address, auth.address);
 
         // Call migrate
         gOhm.migrate(staking.address, sOhm.address);
@@ -120,6 +120,7 @@ describe.only('YieldDirector', async () => {
         await staking.setDistributor(distributor.address);
 
         // queue and toggle reward manager
+        await treasury.initialize();
         await treasury.queueTimelock('8', distributor.address, ZERO_ADDRESS);
         await treasury.execute('0');
         // queue and toggle deployer reserve depositor
@@ -162,16 +163,20 @@ describe.only('YieldDirector', async () => {
         // TODO Transfer gOHM to alice for testing
     });
 
-    it('should rebase properly', async () => {
+    it.only('should rebase properly', async () => {
         await expect(await sOhm.index()).is.equal("10000000000");
+        console.log((await sOhm.index()).toNumber());
 
         await triggerRebase();
+        console.log((await sOhm.index()).toNumber());
         await expect(await sOhm.index()).is.equal("10010000000");
 
         await triggerRebase();
+        console.log((await sOhm.index()).toNumber());
         await expect(await sOhm.index()).is.equal("10020010000");
 
         await triggerRebase();
+        console.log((await sOhm.index()).toNumber());
         await expect(await sOhm.index()).is.equal("10030030010");
     });
 
@@ -181,7 +186,7 @@ describe.only('YieldDirector', async () => {
         expect(await tyche.gOHM()).to.equal(gOhm.address);
     });
 
-    it.only('should deposit gOHM tokens to recipient correctly', async () => {
+    it('should deposit gOHM tokens to recipient correctly', async () => {
         // Deposit 1 gOHM into Tyche and donate to Bob
         const principal = "1000000000000000000";
         await tyche.deposit(principal, bob.address);
@@ -204,7 +209,7 @@ describe.only('YieldDirector', async () => {
         await expect(recipientInfo.indexAtLastChange).is.equal("10000000000");
     });
 
-    it.only('should withdraw tokens', async () => {
+    it('should withdraw tokens', async () => {
         // Deposit 1 gOHM into Tyche and donate to Bob
         const principal = "1000000000000000000";
         await tyche.deposit(principal, bob.address);
@@ -255,7 +260,7 @@ describe.only('YieldDirector', async () => {
         await tyche.connect(bob).redeem();
     });
 
-    it.only('should withdraw tokens before recipient redeems', async () => {
+    it('should withdraw tokens before recipient redeems', async () => {
         // Deposit 1 gOHM into Tyche and donate to Bob
         const principal = "1000000000000000000";
         await tyche.deposit(principal, bob.address);
@@ -289,7 +294,7 @@ describe.only('YieldDirector', async () => {
         await expect(await tyche.redeemableBalance(bob.address)).is.equal("0");
    });
 
-    it.only('withdawable balance plus redeemable balance should equal deposited gOHM', async () => {
+    it('withdawable balance plus redeemable balance should equal deposited gOHM', async () => {
         // Deposit 1 gOHM into Tyche and donate to Bob
         const principal = "1000000000000000000";
         await tyche.deposit(principal, bob.address);
@@ -303,7 +308,7 @@ describe.only('YieldDirector', async () => {
    });
 
 
-    it.only('should withdraw tokens after recipient redeems', async () => {
+    it('should withdraw tokens after recipient redeems', async () => {
         // Deposit 1 gOHM into Tyche and donate to Bob
         const principal = "1000000000000000000";
         await tyche.deposit(principal, bob.address);

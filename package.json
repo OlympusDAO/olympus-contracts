@@ -10,10 +10,13 @@
   },
   "devDependencies": {
     "@defi-wonderland/smock": "^2.0.7",
-    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
+    "@nomiclabs/hardhat-ethers": "2.0.4",
     "@nomiclabs/hardhat-etherscan": "^2.1.7",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/contracts": "^4.3.2",
+    "@openzeppelin/contracts": "^4.4.2",
+    "@openzeppelin/contracts-upgradeable": "^3.4.2",
+    "@openzeppelin/hardhat-upgrades": "^1.12.0",
+    "@rari-capital/solmate": "^6.2.0",
     "@typechain/ethers-v5": "^7.1.2",
     "@typechain/hardhat": "^2.3.0",
     "@types/chai": "^4.2.22",
@@ -63,7 +66,9 @@
     "sourcify:mainnet": "hardhat --network mainnet sourcify",
     "sourcify:rinkeby": "hardhat --network rinkeby sourcify",
     "etherscan:mainnet": "hardhat --network mainnet etherscan-verify",
-    "etherscan:rinkeby": "hardhat --network rinkeby etherscan-verify"
+    "etherscan:rinkeby": "hardhat --network rinkeby etherscan-verify",
+    "prestart": "yarn run typechain",
+    "start": "hardhat node --network hardhat"
   },
   "repository": {
     "type": "git",

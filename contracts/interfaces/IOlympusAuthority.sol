@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 // SPDX-License-Identifier: AGPL-3.0-or-later
+=======
+// SPDX-License-Identifier: AGPL-3.0
+>>>>>>> 9c427d8 (Fleshing out deposit and withdraw sOHM functions)
 pragma solidity >=0.7.5;
 
 interface IOlympusAuthority {
