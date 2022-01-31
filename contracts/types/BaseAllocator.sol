@@ -77,7 +77,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     uint256 public id;
 
     // The allocated (underlying) token of the Allocator
-    IERC20 internal immutable token;
+    IERC20 internal token;
 
     // Allocator status: OFFLINE, ACTIVATED, MIGRATING
     AllocatorStatus public status;
