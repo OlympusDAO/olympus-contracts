@@ -1,7 +1,15 @@
 FROM node:14-buster-slim
 
 # Needed for npm dependencies
-RUN apt-get update && apt-get install -y python3.7 make gcc g++ git
+RUN apt-get update && \
+    apt-get install -y \
+    python3.7 \
+    make \
+    gcc \
+    g++ \
+    git \
+    curl
+
 ENV PYTHON="/usr/bin/python3.7"
 
 # Install dependencies
@@ -22,7 +30,7 @@ COPY deployments/localhost deployments/localhost
 
 EXPOSE 8545
 
-HEALTHCHECK --interval=10s --timeout=15s --start-period=10s --retries=3 CMD curl -f http://localhost:8545/ || exit 1
+HEALTHCHECK --interval=10s --timeout=15s --start-period=60s --retries=6 CMD curl -f http://localhost:8545/ || exit 1
 
 # Run the node by default
 ENTRYPOINT yarn run start
