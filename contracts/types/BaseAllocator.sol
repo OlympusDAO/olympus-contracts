@@ -1,10 +1,8 @@
 pragma solidity ^0.8.10;
 
 // interfaces
-import "../interfaces/IERC20.sol";
-import "../interfaces/ITreasury.sol";
 import "../interfaces/IAllocator.sol";
-import "../interfaces/ITreasuryExtender.sol";
+import "../interfaces/ITreasury.sol";
 
 // types
 import "../types/OlympusAccessControlledV2.sol";
@@ -74,10 +72,10 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     using SafeERC20 for IERC20;
 
     // The id of the Allocator as present in `TreasuryExtender`, `allocators`.
-    uint256 public id;
+    uint256[] internal _ids;
 
     // The allocated (underlying) token of the Allocator
-    IERC20 internal token;
+    IERC20[] internal _tokens;
 
     // Allocator status: OFFLINE, ACTIVATED, MIGRATING
     AllocatorStatus public status;
@@ -85,13 +83,15 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     // The extender with which the Allocator communicates.
     ITreasuryExtender public extender;
 
-    constructor(AllocatorInitData memory data) OlympusAccessControlledV2(IOlympusAuthority(data.authority)) {
-        token = IERC20(data.token);
-        extender = ITreasuryExtender(data.extender);
+    constructor(AllocatorInitData memory data) OlympusAccessControlledV2(data.authority) {
+        _tokens = data.tokens;
+        extender = data.extender;
 
-        token.safeApprove(data.extender, type(uint256).max);
+        for (uint256 i; i < data.tokens.length; i++) {
+            data.tokens[i].safeApprove(address(data.extender), type(uint256).max);
+        }
 
-        emit AllocatorDeployed(data.authority, data.token, data.extender);
+        emit AllocatorDeployed(address(data.authority), address(data.extender));
     }
 
     /////// "MODIFIERS"
@@ -133,7 +133,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  In essence, this function should update the main runtime state of the Allocator
      *  so that everything is properly invested, harvested, accounted for.
      */
-    function _update() internal virtual returns (uint128 gain, uint128 loss);
+    function _update(uint256 id) internal virtual returns (uint128 gain, uint128 loss);
 
     /**
      * @notice
@@ -167,31 +167,25 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
 
     /**
      * @notice
-     *  Should estimate total rewards in reward tokens.
-     */
-    function estimateTotalRewards() public view virtual returns (uint256[] memory);
-
-    /**
-     * @notice
      *  Should estimate total amount of Allocated tokens
      * @dev
      *  The difference between this and `treasury.getAllocatorAllocated`, is that the latter is a static
      *  value recorded during reporting, but no data is available on _new_ amounts after reporting.
      *  Thus, this should take into consideration the new amounts. This can be used for say aTokens.
      */
-    function estimateTotalAllocated() public view virtual returns (uint256);
+    function amountAllocated(uint256 id) public view virtual returns (uint256);
 
     /**
      * @notice
      *  Should return all reward token addresses
      */
-    function rewardTokens() public view virtual returns (address[] memory);
+    function rewardTokens() public view virtual returns (IERC20[] memory);
 
     /**
      * @notice
      *  Should return all utility token addresses
      */
-    function utilityTokens() public view virtual returns (address[] memory);
+    function utilityTokens() public view virtual returns (IERC20[] memory);
 
     /**
      * @notice
@@ -239,7 +233,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  Lastly, the Allocator reports its state to the Extender, which handles gain, loss, allocated logic.
      *  The documentation on this can be found in `TreasuryExtender.sol`.
      */
-    function update() external override {
+    function update(uint256 id) external override {
         // checks
         _onlyGuardian();
         _onlyActivated(status);
@@ -249,9 +243,9 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
         // if gain is in allocated then gain > 0 otherwise gain == 0
         // we only use so we know initia
         // loss always in allocated
-        (uint128 gain, uint128 loss) = _update();
+        (uint128 gain, uint128 loss) = _update(id);
 
-        if (_lossLimitViolated(loss)) {
+        if (_lossLimitViolated(id, loss)) {
             deactivate(true);
             return;
         }
@@ -305,7 +299,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      */
     function migrate() external override {
         // reads
-        address[] memory utilityTokensArray = utilityTokens();
+        IERC20[] memory utilityTokensArray = utilityTokens();
         address newAllocator = extender.getAllocatorByID(extender.getTotalAllocatorCount() - 1);
 
         // checks
@@ -313,20 +307,23 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
         _isMigrating(status);
 
         // interactions
-        token.safeTransfer(newAllocator, token.balanceOf(address(this)));
+        for (uint256 i; i < _ids.length; i++) {
+            uint256 id = _ids[i];
+            IERC20 token = _tokens[id];
 
-        for (uint256 i; i < utilityTokensArray.length; i++) {
-            IERC20 utilityToken = IERC20(utilityTokensArray[i]);
-            utilityToken.safeTransfer(newAllocator, utilityToken.balanceOf(address(this)));
+            token.safeTransfer(newAllocator, token.balanceOf(address(this)));
+            extender.report(id, 1, 1);
         }
 
-        // report migration
-        extender.report(id, 1, 1);
+        for (uint256 i; i < utilityTokensArray.length; i++) {
+            IERC20 utilityToken = utilityTokensArray[i];
+            utilityToken.safeTransfer(newAllocator, utilityToken.balanceOf(address(this)));
+        }
 
         // turn off Allocator
         deactivate(false);
 
-        emit MigrationExecuted(id, IAllocator(newAllocator).id());
+        emit MigrationExecuted(newAllocator);
     }
 
     /**
@@ -347,19 +344,27 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
         _activate();
         status = AllocatorStatus.ACTIVATED;
 
-        emit AllocatorActivated(id);
+        emit AllocatorActivated();
     }
 
     /**
      * @notice
-     *  Sets the ID of the Allocator.
+     *  Adds a deposit ID to the Allocator.
      * @dev
      *  Only the Extender calls this.
-     * @param allocatorId id of the allocator, to be set once.
+     * @param id id to add to the allocator
      */
-    function setId(uint256 allocatorId) external override {
+    function addId(uint256 id) external override {
         _onlyExtender(msg.sender);
-        id = allocatorId;
+        _ids.push(id);
+    }
+
+    function ids() external view override returns (uint256[] memory) {
+        return _ids;
+    }
+
+    function tokens() external view override returns (IERC20[] memory) {
+        return _tokens;
     }
 
     /**
@@ -381,16 +386,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
         _deactivate(panic);
         status = AllocatorStatus.OFFLINE;
 
-        emit AllocatorDeactivated(id, panic);
-    }
-
-    /**
-     * @notice
-     *  Getter for allocated Token
-     * @return the address of the allocated (underlying) token
-     */
-    function getToken() external view override returns (address) {
-        return address(token);
+        emit AllocatorDeactivated(panic);
     }
 
     /**
@@ -411,13 +407,13 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      * @param loss the amount of newly sustained loss
      * @return true if the the loss limit has been broken
      */
-    function _lossLimitViolated(uint128 loss) internal returns (bool) {
+    function _lossLimitViolated(uint256 id, uint128 loss) internal returns (bool) {
         // read
         uint128 lastLoss = extender.getAllocatorPerformance(id).loss;
 
         // events
         if ((loss + lastLoss) >= extender.getAllocatorLimits(id).loss) {
-            emit LossLimitViolated(lastLoss, loss, estimateTotalAllocated());
+            emit LossLimitViolated(lastLoss, loss, amountAllocated(id));
             return true;
         }
 

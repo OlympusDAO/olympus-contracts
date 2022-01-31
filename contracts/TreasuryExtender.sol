@@ -57,7 +57,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     IAllocator[] public allocators;
 
     // Get an AllocatorData for an Allocator
-    mapping(IAllocator => AllocatorData) public allocatorData;
+    mapping(IAllocator => mapping(uint256 => AllocatorData)) public allocatorData;
 
     // The total value allocated according to `treasury.tokenValue`
     // (see Treasury.sol)
@@ -92,63 +92,49 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  Does not activate the Allocator.
      * @dev
      *  Calls `setId` from `IAllocator` with the index of the Allocator in `allocators`
-     * @param newAllocatorAddress the Allocator to be registered
+     * @param newAllocator the Allocator to be registered
      */
-    function registerAllocator(address newAllocatorAddress) external override {
+    function registerAllocator(address newAllocator) external override {
         // reads
-        IAllocator allocator = IAllocator(newAllocatorAddress);
-        uint256 id = allocator.id();
+        IAllocator allocator = IAllocator(newAllocator);
+        uint256 id = allocators.length - 1;
 
         // checks
         _onlyGuardian();
-        if (id != 0) revert TreasuryExtender_AllocatorRegistered(id);
 
         // effects
         allocators.push(allocator);
 
         // interactions
-        allocator.setId(allocators.length - 1);
+        allocator.addId(id);
 
         // events
-        emit NewAllocatorRegistered(newAllocatorAddress, allocator.getToken(), allocator.id());
+        emit NewAllocatorRegistered(newAllocator, address(allocator.tokens()[id]), id);
     }
 
     /**
      * @notice
-     *  Sets an Allocators limits.
-     *  Also see `_seeAllocatorLimits`.
+     *  Sets an Allocators AllocatorLimits.
+     *  AllocatorLimits is part of AllocatorData, variable meanings follow:
+     *  allocated - The maximum amount a Guardian may allocate this Allocator from Treasury.
+     *  loss - The maximum loss amount this Allocator can take.
      * @dev
-     *  External hook: Logic is handled in the internal function.
      *  Can only be called while the Allocator is offline.
-     *  Can only be called by the Guardian.
-     * @param allocatorAddress the address of the Allocator to set AllocatorLimits for
+     * @param id the id to set AllocatorLimits for
      * @param limits the AllocatorLimits to set
      */
-    function setAllocatorLimits(address allocatorAddress, AllocatorLimits memory limits) external override {
-        // reads
-        IAllocator allocator = IAllocator(allocatorAddress);
-
-        // interactions
-        _setAllocatorLimits(allocator, limits);
-    }
-
-    /**
-     * @notice
-     *  Sets an Allocators limits.
-     *  Also see `_seeAllocatorLimits`.
-     * @dev
-     *  External hook: Logic is handled in the internal function.
-     *  Can only be called while the Allocator is offline.
-     *  Can only be called by the Guardian.
-     * @param id the id of the Allocator to set AllocatorLimits for
-     * @param limits the AllocatorLimits to set
-     */
-    function setAllocatorLimits(uint256 id, AllocatorLimits memory limits) external override {
-        // reads
+    function setAllocatorLimits(uint256 id, AllocatorLimits memory limits) external {
         IAllocator allocator = allocators[id];
 
-        // interactions
-        _setAllocatorLimits(allocator, limits);
+        // checks
+        _onlyGuardian();
+        _allocatorOffline(allocator.status());
+
+        // effects
+        allocatorData[allocator][id].limits = limits;
+
+        // events
+        emit AllocatorLimitsChanged(id, limits.allocated, limits.loss);
     }
 
     /**
@@ -180,9 +166,10 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     ) external override {
         // reads
         IAllocator allocator = allocators[id];
-        AllocatorData storage data = allocatorData[allocator];
+        AllocatorData storage data = allocatorData[allocator][id];
         AllocatorPerformance memory perf = data.performance;
         AllocatorStatus status = allocator.status();
+        address token = address(allocator.tokens()[id]);
 
         // checks
         // above could send in any id with gain == 0 and loss == 0, but he could only fake
@@ -194,7 +181,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         if (gain >= loss) {
             // MIGRATION
             if (loss != 0) {
-                AllocatorData storage newAllocatorData = allocatorData[allocators[allocators.length - 1]];
+                AllocatorData storage newAllocatorData = allocatorData[allocators[allocators.length - 1]][id];
 
                 newAllocatorData.holdings.allocated = data.holdings.allocated;
                 newAllocatorData.performance.gain = data.performance.gain;
@@ -207,7 +194,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
 
                 // GAIN
             } else {
-                totalValueAllocated += treasury.tokenValue(allocator.getToken(), gain);
+                totalValueAllocated += treasury.tokenValue(token, gain);
 
                 perf.gain += gain;
 
@@ -217,7 +204,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
             // LOSS
         } else {
             data.holdings.allocated -= loss;
-            totalValueAllocated -= treasury.tokenValue(allocator.getToken(), loss);
+            totalValueAllocated -= treasury.tokenValue(token, loss);
 
             perf.loss += loss;
 
@@ -230,59 +217,104 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     /**
      * @notice
      *  Requests funds from the Olympus Treasury to fund an Allocator.
-     *  Also see `_requestFundsFromTreasury`.
      * @dev
-     *  External hook: Logic is handled in the internal function.
      *  Can only be called while the Allocator is activated.
      *  Can only be called by the Guardian.
-     * @param id the id of the Allocator to request funds for
+     *
+     *  This function is going to allocate an `amount` of tokens to the Allocator and
+     *  properly record this in storage. This done so that at any point, we know exactly
+     *  how much was initially allocated and also how much value is allocated in total.
+     *
+     *  The related functions are `getAllocatorAllocated` and `getTotalValueAllocated`.
+     *
+     *  To note is also the `_allocatorBelowLimit` check.
+     * @param id the id of the allocator to fund
      * @param amount the amount of token to withdraw, the token is known in the Allocator
      */
     function requestFundsFromTreasury(uint256 id, uint256 amount) external override {
-        _requestFundsFromTreasury(allocators[id], amount);
-    }
+        // reads
+        IAllocator allocator = allocators[id];
+        AllocatorData memory data = allocatorData[allocator][id];
+        address token = address(allocator.tokens()[id]);
+        uint256 value = treasury.tokenValue(token, amount);
 
-    /**
-     * @notice
-     *  Requests funds from the Olympus Treasury to fund an Allocator.
-     *  Also see `_returnFundsToTreasury`.
-     * @dev
-     *  External hook: Logic is handled in the internal function.
-     *  Can only be called while the Allocator is activated.
-     *  Can only be called by the Guardian.
-     * @param allocatorAddress the address of the Allocator to returns funds from
-     * @param amount the amount of token to withdraw, the token is known in the Allocator
-     */
-    function requestFundsFromTreasury(address allocatorAddress, uint256 amount) external override {
-        _requestFundsFromTreasury(IAllocator(allocatorAddress), amount);
+        // checks
+        _onlyGuardian();
+        _allocatorActivated(allocator.status());
+        _allocatorBelowLimit(data, amount);
+
+        // interaction (withdrawing)
+        treasury.manage(token, amount);
+
+        // effects
+        totalValueAllocated += value;
+        allocatorData[allocator][id].holdings.allocated += amount;
+
+        // interaction (depositing)
+        IERC20(token).safeTransfer(address(allocator), amount);
+
+        // events
+        emit AllocatorFunded(id, amount, value);
     }
 
     /**
      * @notice
      *  Returns funds from an Allocator to the Treasury.
-     *  Also see `_returnFundsToTreasury`.
      * @dev
      *  External hook: Logic is handled in the internal function.
      *  Can only be called by the Guardian.
-     * @param id the id of the Allocator to returns funds from
+     *
+     *  This function is going to withdraw `amount` of allocated token from an Allocator
+     *  back to the Treasury. Prior to calling this function, `deallocate` should be called,
+     *  in order to prepare the funds for withdrawal.
+     *
+     *  The maximum amount which can be withdrawn is `gain` + `allocated`.
+     *  `allocated` is decremented first after which `gain` is decremented in the case
+     *  that `allocated` is not sufficient. The `totalValueAllocated` is also decremented.
+     * @param id the id of the allocator to return funds from
      * @param amount the amount of token to withdraw, the token is known in the Allocator
      */
     function returnFundsToTreasury(uint256 id, uint256 amount) external override {
-        _returnFundsToTreasury(allocators[id], amount);
-    }
+        // reads
+        IAllocator allocator = allocators[id];
+        uint256 allocated = allocatorData[allocator][id].holdings.allocated;
+        uint128 gain = allocatorData[allocator][id].performance.gain;
+        address token = address(allocator.tokens()[id]);
 
-    /**
-     * @notice
-     *  Returns funds from an Allocator to the Treasury.
-     *  Also see `_returnFundsToTreasury`.
-     * @dev
-     *  External hook: Logic is handled in the internal function.
-     *  Can only be called by the Guardian.
-     * @param allocatorAddress the address of the Allocator to returns funds from
-     * @param amount the amount of token to withdraw, the token is known in the Allocator
-     */
-    function returnFundsToTreasury(address allocatorAddress, uint256 amount) external override {
-        _returnFundsToTreasury(IAllocator(allocatorAddress), amount);
+        if (amount > allocated) {
+            amount -= allocated;
+            if (amount > gain) {
+                amount = allocated + gain;
+                gain = 0;
+            } else {
+                // yes, amount should never > gain, we have safemath
+                gain -= uint128(amount);
+                amount += allocated;
+            }
+            allocated = 0;
+        } else {
+            allocated -= amount;
+        }
+
+        uint256 value = treasury.tokenValue(token, amount);
+
+        // checks
+        _onlyGuardian();
+        _allowTreasuryWithdrawal(IERC20(token));
+
+        // interaction (withdrawing)
+        IERC20(token).safeTransferFrom(address(allocator), address(this), amount);
+
+        // effects
+        totalValueAllocated -= value;
+        allocatorData[allocator][id].holdings.allocated = allocated;
+        if (allocated == 0) allocatorData[allocator][id].performance.gain = gain;
+
+        // interaction (depositing)
+        assert(treasury.deposit(amount, token, value) == 0);
+
+        // events
+        emit AllocatorWithdrawal(id, amount, value);
     }
 
     /**
@@ -367,7 +399,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @return the Allocator's limits
      */
     function getAllocatorLimits(uint256 id) external view override returns (AllocatorLimits memory) {
-        return allocatorData[allocators[id]].limits;
+        return allocatorData[allocators[id]][id].limits;
     }
 
     /**
@@ -381,7 +413,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @return the Allocator's performance
      */
     function getAllocatorPerformance(uint256 id) external view override returns (AllocatorPerformance memory) {
-        return allocatorData[allocators[id]].performance;
+        return allocatorData[allocators[id]][id].performance;
     }
 
     /**
@@ -392,7 +424,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @return the Allocator's amount allocated
      */
     function getAllocatorAllocated(uint256 id) external view override returns (uint256) {
-        return allocatorData[allocators[id]].holdings.allocated;
+        return allocatorData[allocators[id]][id].holdings.allocated;
     }
 
     /**
@@ -403,120 +435,21 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  loss - The maximum loss amount this Allocator can take.
      * @dev
      *  Can only be called while the Allocator is offline.
-     * @param allocator the Allocator to set AllocatorLimits for
+     * @param id the id to set AllocatorLimits for
      * @param limits the AllocatorLimits to set
      */
-    function _setAllocatorLimits(IAllocator allocator, AllocatorLimits memory limits) internal {
+    function _setAllocatorLimits(uint256 id, AllocatorLimits memory limits) internal {
+        IAllocator allocator = allocators[id];
+
         // checks
         _onlyGuardian();
         _allocatorOffline(allocator.status());
 
         // effects
-        allocatorData[allocator].limits = limits;
+        allocatorData[allocator][id].limits = limits;
 
         // events
-        emit AllocatorLimitsChanged(allocator.id(), limits.allocated, limits.loss);
-    }
-
-    /**
-     * @notice
-     *  Requests funds from the Olympus Treasury to fund an Allocator.
-     * @dev
-     *  Can only be called while the Allocator is activated.
-     *  Can only be called by the Guardian.
-     *
-     *  This function is going to allocate an `amount` of tokens to the Allocator and
-     *  properly record this in storage. This done so that at any point, we know exactly
-     *  how much was initially allocated and also how much value is allocated in total.
-     *
-     *  The related functions are `getAllocatorAllocated` and `getTotalValueAllocated`.
-     *
-     *  To note is also the `_allocatorBelowLimit` check.
-     * @param allocator the address of the allocator to fund
-     * @param amount the amount of token to withdraw, the token is known in the Allocator
-     */
-    function _requestFundsFromTreasury(IAllocator allocator, uint256 amount) internal {
-        // reads
-        AllocatorData memory data = allocatorData[allocator];
-        address tokenAllocated = allocator.getToken();
-        uint256 value = treasury.tokenValue(tokenAllocated, amount);
-
-        // checks
-        _onlyGuardian();
-        _allocatorActivated(allocator.status());
-        _allocatorBelowLimit(data, amount);
-
-        // interaction (withdrawing)
-        treasury.manage(tokenAllocated, amount);
-
-        // effects
-        totalValueAllocated += value;
-        allocatorData[allocator].holdings.allocated += amount;
-
-        // interaction (depositing)
-        IERC20(tokenAllocated).safeTransfer(address(allocator), amount);
-
-        // events
-        emit AllocatorFunded(allocator.id(), amount, value);
-    }
-
-    /**
-     * @notice
-     *  Returns funds from an Allocator to the Treasury.
-     * @dev
-     *  External hook: Logic is handled in the internal function.
-     *  Can only be called by the Guardian.
-     *
-     *  This function is going to withdraw `amount` of allocated token from an Allocator
-     *  back to the Treasury. Prior to calling this function, `deallocate` should be called,
-     *  in order to prepare the funds for withdrawal.
-     *
-     *  The maximum amount which can be withdrawn is `gain` + `allocated`.
-     *  `allocated` is decremented first after which `gain` is decremented in the case
-     *  that `allocated` is not sufficient. The `totalValueAllocated` is also decremented.
-     * @param allocator the address of the allocator to return funds from
-     * @param amount the amount of token to withdraw, the token is known in the Allocator
-     */
-    function _returnFundsToTreasury(IAllocator allocator, uint256 amount) internal {
-        // reads
-        uint256 allocated = allocatorData[allocator].holdings.allocated;
-        uint128 gain = allocatorData[allocator].performance.gain;
-
-        if (amount > allocated) {
-            amount -= allocated;
-            if (amount > gain) {
-                amount = allocated + gain;
-                gain = 0;
-            } else {
-                // yes, amount should never > gain, we have safemath
-                gain -= uint128(amount);
-                amount += allocated;
-            }
-            allocated = 0;
-        } else {
-            allocated -= amount;
-        }
-
-        address tokenAllocated = allocator.getToken();
-        uint256 value = treasury.tokenValue(tokenAllocated, amount);
-
-        // checks
-        _onlyGuardian();
-        _allowTreasuryWithdrawal(IERC20(tokenAllocated));
-
-        // interaction (withdrawing)
-        IERC20(tokenAllocated).safeTransferFrom(address(allocator), address(this), amount);
-
-        // effects
-        totalValueAllocated -= value;
-        allocatorData[allocator].holdings.allocated = allocated;
-        if (allocated == 0) allocatorData[allocator].performance.gain = gain;
-
-        // interaction (depositing)
-        assert(treasury.deposit(amount, tokenAllocated, value) == 0);
-
-        // events
-        emit AllocatorWithdrawal(allocator.id(), amount, value);
+        emit AllocatorLimitsChanged(id, limits.allocated, limits.loss);
     }
 
     /**
@@ -553,7 +486,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         assert(treasury.deposit(amount, address(token), value) == 0);
 
         // events
-        emit AllocatorRewardsWithdrawal(allocator.id(), amount, value);
+        emit AllocatorRewardsWithdrawal(address(allocator), amount, value);
     }
 
     /**

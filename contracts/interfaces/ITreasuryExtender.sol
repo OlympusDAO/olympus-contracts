@@ -28,55 +28,53 @@ interface ITreasuryExtender {
      * @notice
      *  Emitted when a new Allocator is registered.
      */
-    event NewAllocatorRegistered(address allocatorAddress, address allocatorToken, uint256 allocatorId);
+    event NewAllocatorRegistered(address allocatorAddress, address allocatorToken, uint256 id);
 
     /**
      * @notice
      *  Emitted when an Allocator is funded
      */
-    event AllocatorFunded(uint256 allocatorId, uint256 amount, uint256 value);
+    event AllocatorFunded(uint256 id, uint256 amount, uint256 value);
 
     /**
      * @notice
      *  Emitted when allocated funds are withdrawn from an Allocator
      */
-    event AllocatorWithdrawal(uint256 allocatorId, uint256 amount, uint256 value);
+    event AllocatorWithdrawal(uint256 id, uint256 amount, uint256 value);
 
     /**
      * @notice
      *  Emitted when rewards are withdrawn from an Allocator
      */
-    event AllocatorRewardsWithdrawal(uint256 allocatorId, uint256 amount, uint256 value);
+    event AllocatorRewardsWithdrawal(address allocator, uint256 amount, uint256 value);
 
     /**
      * @notice
      *  Emitted when an Allocator reports a gain
      */
-    event AllocatorReportedGain(uint256 allocatorId, uint128 gain);
+    event AllocatorReportedGain(uint256 id, uint128 gain);
 
     /**
      * @notice
      *  Emitted when an Allocator reports a loss
      */
-    event AllocatorReportedLoss(uint256 allocatorId, uint128 loss);
+    event AllocatorReportedLoss(uint256 id, uint128 loss);
 
     /**
      * @notice
      *  Emitted when an Allocator reports a migration
      */
-    event AllocatorReportedMigration(uint256 allocatorId);
+    event AllocatorReportedMigration(uint256 id);
 
     /**
      * @notice
      *  Emitted when an Allocator limits are modified
      */
-    event AllocatorLimitsChanged(uint256 allocatorId, uint128 allocationLimit, uint128 lossLimit);
+    event AllocatorLimitsChanged(uint256 id, uint128 allocationLimit, uint128 lossLimit);
 
-    function registerAllocator(address newAllocatorAddress) external;
+    function registerAllocator(address newAllocator) external;
 
-    function setAllocatorLimits(address allocatorAddress, AllocatorLimits memory limits) external;
-
-    function setAllocatorLimits(uint256 allocatorId, AllocatorLimits memory limits) external;
+    function setAllocatorLimits(uint256 id, AllocatorLimits memory limits) external;
 
     function report(
         uint256 id,
@@ -84,22 +82,12 @@ interface ITreasuryExtender {
         uint128 loss
     ) external;
 
-    function requestFundsFromTreasury(uint256 allocatorId, uint256 amount) external;
+    function requestFundsFromTreasury(uint256 id, uint256 amount) external;
 
-    function requestFundsFromTreasury(address allocatorAddress, uint256 amount) external;
-
-    function returnFundsToTreasury(uint256 allocatorId, uint256 amount) external;
-
-    function returnFundsToTreasury(address allocatorAddress, uint256 amount) external;
+    function returnFundsToTreasury(uint256 id, uint256 amount) external;
 
     function returnRewardsToTreasury(
-        uint256 allocatorId,
-        address token,
-        uint256 amount
-    ) external;
-
-    function returnRewardsToTreasury(
-        address allocatorAddress,
+        uint256 id,
         address token,
         uint256 amount
     ) external;
@@ -108,7 +96,7 @@ interface ITreasuryExtender {
 
     function getTotalAllocatorCount() external view returns (uint256);
 
-    function getAllocatorByID(uint256 allocatorId) external view returns (address);
+    function getAllocatorByID(uint256 id) external view returns (address);
 
     function getAllocatorAllocated(uint256 id) external view returns (uint256);
 

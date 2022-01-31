@@ -21,7 +21,7 @@ contract SimplestMockAllocator is BaseAllocator {
         losses = loss;
     }
 
-    function _update() internal override returns (uint128 gain, uint128 loss) {
+    function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
         gain = gains;
         loss = losses;
     }
@@ -34,25 +34,19 @@ contract SimplestMockAllocator is BaseAllocator {
 
     function _prepareMigration() internal override {}
 
-    function estimateTotalRewards() public view override returns (uint256[] memory) {
-        uint256[] memory balances = new uint256[](1);
-        balances[0] = IERC20(DAI).balanceOf(address(this));
-        return balances;
+    function amountAllocated(uint256 id) public view override returns (uint256) {
+        return _tokens[id].balanceOf(address(this));
     }
 
-    function estimateTotalAllocated() public view override returns (uint256) {
-        return token.balanceOf(address(this));
-    }
-
-    function rewardTokens() public view override returns (address[] memory) {
-        address[] memory coin = new address[](1);
-        coin[0] = DAI;
+    function rewardTokens() public view override returns (IERC20[] memory) {
+        IERC20[] memory coin = new IERC20[](1);
+        coin[0] = IERC20(DAI);
         return coin;
     }
 
-    function utilityTokens() public view override returns (address[] memory) {
-        address[] memory coin = new address[](1);
-        coin[0] = DAI;
+    function utilityTokens() public view override returns (IERC20[] memory) {
+        IERC20[] memory coin = new IERC20[](1);
+        coin[0] = IERC20(DAI);
         return coin;
     }
 
