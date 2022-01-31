@@ -1,5 +1,10 @@
 pragma solidity >=0.8.0;
 
+// interfaces
+import "./IERC20.sol";
+import "./ITreasuryExtender.sol";
+import "./IOlympusAuthority.sol";
+
 enum AllocatorStatus {
     OFFLINE,
     ACTIVATED,
@@ -7,9 +12,9 @@ enum AllocatorStatus {
 }
 
 struct AllocatorInitData {
-    address authority;
-    address token;
-    address extender;
+    IOlympusAuthority authority;
+    ITreasuryExtender extender;
+    IERC20[] tokens;
 }
 
 /**
@@ -25,19 +30,19 @@ interface IAllocator {
      * @notice
      *  Emitted when the Allocator is deployed.
      */
-    event AllocatorDeployed(address authority, address token, address extender);
+    event AllocatorDeployed(address authority, address extender);
 
     /**
      * @notice
      *  Emitted when the Allocator is activated.
      */
-    event AllocatorActivated(uint256 id);
+    event AllocatorActivated();
 
     /**
      * @notice
      *  Emitted when the Allocator is deactivated.
      */
-    event AllocatorDeactivated(uint256 id, bool panic);
+    event AllocatorDeactivated(bool panic);
 
     /**
      * @notice
@@ -51,7 +56,7 @@ interface IAllocator {
      * @dev
      *  After this also `AllocatorDeactivated` should follow.
      */
-    event MigrationExecuted(uint256 oldId, uint256 newId);
+    event MigrationExecuted(address allocator);
 
     /**
      * @notice
@@ -61,7 +66,7 @@ interface IAllocator {
      */
     event EtherReceived(uint256 amount);
 
-    function update() external;
+    function update(uint256 id) external;
 
     function deallocate(uint256[] memory amounts) external;
 
@@ -73,23 +78,21 @@ interface IAllocator {
 
     function deactivate(bool panic) external;
 
-    function setId(uint256 allocatorId) external;
+    function addId(uint256 id) external;
 
     function name() external view returns (string memory);
 
-    function id() external view returns (uint256);
+    function ids() external view returns (uint256[] memory);
 
     function version() external view returns (string memory);
 
     function status() external view returns (AllocatorStatus);
 
-    function getToken() external view returns (address);
+    function tokens() external view returns (IERC20[] memory);
 
-    function utilityTokens() external view returns (address[] memory);
+    function utilityTokens() external view returns (IERC20[] memory);
 
-    function rewardTokens() external view returns (address[] memory);
+    function rewardTokens() external view returns (IERC20[] memory);
 
-    function estimateTotalAllocated() external view returns (uint256);
-
-    function estimateTotalRewards() external view returns (uint256[] memory);
+    function amountAllocated(uint256 id) external view returns (uint256);
 }
