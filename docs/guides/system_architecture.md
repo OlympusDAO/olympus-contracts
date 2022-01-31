@@ -1,0 +1,1 @@
+![old_image](../resources/box-diagram.png)
