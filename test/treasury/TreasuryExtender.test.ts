@@ -73,14 +73,13 @@ describe("TreasuryExtender", () => {
         fakeAllocator = await smock.fake<BaseAllocator>("BaseAllocator");
 
         fakeAllocator.name.returns("FakeAllocator");
-        fakeAllocator.id.returns(0);
+        fakeAllocator.ids.returns([0]);
         fakeAllocator.version.returns("v2.0.0");
         fakeAllocator.status.returns(0);
-        fakeAllocator.getToken.returns(coins.frax);
+        fakeAllocator.tokens.returns([coins.frax]);
         fakeAllocator.utilityTokens.returns([coins.usdc, coins.dai, coins.usdt, coins.weth]);
         fakeAllocator.rewardTokens.returns(coins.weth);
-        fakeAllocator.estimateTotalAllocated.returns(0);
-        fakeAllocator.estimateTotalRewards.returns(0);
+        fakeAllocator.amountAllocated.returns(0);
 
         treasury = (await ethers.getContractAt(
             "OlympusTreasury",
@@ -135,8 +134,8 @@ describe("TreasuryExtender", () => {
         it("passing: should be able to register the allocator", async () => {
             await extender.registerAllocator(fakeAllocator.address);
 
-            expect(fakeAllocator.setId).to.have.been.calledOnce;
-            expect(fakeAllocator.setId).to.have.been.calledWith(1);
+            expect(fakeAllocator.addId).to.have.been.calledOnce;
+            expect(fakeAllocator.addId).to.have.been.calledWith(1);
             expect(await extender.getAllocatorByID(1)).to.equal(fakeAllocator.address);
 
             const performance: any = await extender.getAllocatorPerformance(1);
@@ -148,10 +147,13 @@ describe("TreasuryExtender", () => {
         it("passing: should try registering another allocator", async () => {
             const fakeAllocatorTwo = await smock.fake<BaseAllocator>("BaseAllocator");
 
+            fakeAllocatorTwo.tokenIds.returns(0);
+            fakeAllocatorTwo.tokens.returns([coins.frax]);
+
             await extender.registerAllocator(fakeAllocatorTwo.address);
 
-            expect(fakeAllocatorTwo.setId).to.have.been.calledOnce;
-            expect(fakeAllocatorTwo.setId).to.have.been.calledWith(2);
+            expect(fakeAllocatorTwo.addId).to.have.been.calledOnce;
+            expect(fakeAllocatorTwo.addId).to.have.been.calledWith(2);
 
             expect(await extender.getAllocatorByID(2)).to.equal(fakeAllocatorTwo.address);
         });
@@ -165,7 +167,7 @@ describe("TreasuryExtender", () => {
         before(async () => {
             start = await snapshot();
             await extender.registerAllocator(fakeAllocator.address);
-            fakeAllocator.id.returns(1);
+            fakeAllocator.ids.returns([1]);
         });
 
         it("pre: should check if setup ok", async () => {
@@ -184,17 +186,7 @@ describe("TreasuryExtender", () => {
             extender = extender.connect(owner);
 
             await expect(
-                extender["setAllocatorLimits(address,(uint128,uint128))"](fakeAllocator.address, {
-                    allocated: bne(10, 27),
-                    loss: bne(10, 20),
-                })
-            ).to.be.revertedWith("UNAUTHORIZED");
-
-            await expect(
-                extender["setAllocatorLimits(uint256,(uint128,uint128))"](1, {
-                    allocated: bne(10, 27),
-                    loss: bne(10, 20),
-                })
+                extender.setAllocatorLimits(1, { allocated: bne(10, 27), loss: bne(10, 20) })
             ).to.be.revertedWith("UNAUTHORIZED");
 
             extender = extender.connect(guardian);
@@ -204,17 +196,7 @@ describe("TreasuryExtender", () => {
             fakeAllocator.status.returns(1);
 
             await expect(
-                extender["setAllocatorLimits(address,(uint128,uint128))"](fakeAllocator.address, {
-                    allocated: bne(10, 27),
-                    loss: bne(10, 20),
-                })
-            ).to.be.revertedWith("TreasuryExtender_AllocatorActivated()");
-
-            await expect(
-                extender["setAllocatorLimits(uint256,(uint128,uint128))"](1, {
-                    allocated: bne(10, 27),
-                    loss: bne(10, 20),
-                })
+                extender.setAllocatorLimits(1, { allocated: bne(10, 27), loss: bne(10, 20) })
             ).to.be.revertedWith("TreasuryExtender_AllocatorActivated()");
 
             fakeAllocator.status.returns(0);
@@ -224,7 +206,7 @@ describe("TreasuryExtender", () => {
             const _allocated: BigNumber = bne(10, 27);
             const _loss: BigNumber = bne(10, 20);
 
-            await extender["setAllocatorLimits(address,(uint128,uint128))"](fakeAllocator.address, {
+            await extender.setAllocatorLimits(1, {
                 allocated: _allocated,
                 loss: _loss,
             });
@@ -233,21 +215,11 @@ describe("TreasuryExtender", () => {
 
             expect(result[0]).to.equal(_allocated);
             expect(result[1]).to.equal(_loss);
-
-            await extender["setAllocatorLimits(uint256,(uint128,uint128))"](1, {
-                allocated: _allocated,
-                loss: _loss,
-            });
-
-            result = await extender.getAllocatorLimits(1);
-
-            expect(result[0]).to.equal(_allocated);
-            expect(result[1]).to.equal(_loss);
         });
 
         after(async () => {
             await revert(start);
-            fakeAllocator.id.returns(0);
+            fakeAllocator.ids.returns([0]);
         });
     });
 
@@ -261,20 +233,19 @@ describe("TreasuryExtender", () => {
             rewardAllocator = await smock.fake<BaseAllocator>("BaseAllocator");
 
             rewardAllocator.name.returns("RewardAllocator");
-            rewardAllocator.id.returns(0);
+            rewardAllocator.ids.returns([0]);
             rewardAllocator.version.returns("v2.0.0");
             rewardAllocator.status.returns(0);
-            rewardAllocator.getToken.returns(coins.frax);
+            rewardAllocator.tokens.returns([coins.frax]);
             rewardAllocator.utilityTokens.returns([coins.usdc, coins.dai, coins.usdt, coins.weth]);
             rewardAllocator.rewardTokens.returns(coins.dai);
-            rewardAllocator.estimateTotalAllocated.returns(0);
-            rewardAllocator.estimateTotalRewards.returns(0);
+            rewardAllocator.amountAllocated.returns(0);
 
             await extender.registerAllocator(rewardAllocator.address);
 
-            rewardAllocator.id.returns(1);
+            rewardAllocator.ids.returns([1]);
 
-            await extender["setAllocatorLimits(uint256,(uint128,uint128))"](1, {
+            await extender.setAllocatorLimits(1, {
                 allocated: bne(10, 23),
                 loss: bne(10, 20),
             });
@@ -341,7 +312,7 @@ describe("TreasuryExtender", () => {
 
         after(async () => {
             await revert(start);
-            rewardAllocator.id.returns(0);
+            rewardAllocator.ids.returns([0]);
             rewardAllocator.status.returns(0);
         });
     });
@@ -354,9 +325,9 @@ describe("TreasuryExtender", () => {
 
             await extender.registerAllocator(fakeAllocator.address);
 
-            fakeAllocator.id.returns(1);
+            fakeAllocator.ids.returns([1]);
 
-            await extender["setAllocatorLimits(uint256,(uint128,uint128))"](1, {
+            await extender.setAllocatorLimits(1, {
                 allocated: bne(10, 23),
                 loss: bne(10, 20),
             });
@@ -365,20 +336,19 @@ describe("TreasuryExtender", () => {
 
             veryfakeAllocator = await smock.fake<BaseAllocator>("BaseAllocator");
             veryfakeAllocator.name.returns("VeryfakeAllocator");
-            veryfakeAllocator.id.returns(0);
+            veryfakeAllocator.ids.returns(0);
             veryfakeAllocator.version.returns("v2.0.0");
             veryfakeAllocator.status.returns(0);
-            veryfakeAllocator.getToken.returns(coins.dai);
+            veryfakeAllocator.tokens.returns([coins.dai]);
             veryfakeAllocator.utilityTokens.returns([coins.weth]);
             veryfakeAllocator.rewardTokens.returns(coins.weth);
-            veryfakeAllocator.estimateTotalAllocated.returns(0);
-            veryfakeAllocator.estimateTotalRewards.returns(0);
+            veryfakeAllocator.amountAllocated.returns(0);
 
             await extender.registerAllocator(veryfakeAllocator.address);
 
-            veryfakeAllocator.id.returns(2);
+            veryfakeAllocator.ids.returns([2]);
 
-            await extender["setAllocatorLimits(uint256,(uint128,uint128))"](2, {
+            await extender.setAllocatorLimits(2, {
                 allocated: bne(10, 24),
                 loss: bne(10, 21),
             });
@@ -393,38 +363,36 @@ describe("TreasuryExtender", () => {
             }
 
             expect(await extender.getAllocatorAllocated(1)).to.equal(0);
-            expect(await fakeAllocator.getToken()).to.equal(frax.address);
+            expect((await fakeAllocator.tokens())[0]).to.equal(frax.address);
             expect(await extender.getTotalValueAllocated()).to.equal(0);
         });
 
         it("revert: check if it will revert if not guardian, offline or above limit", async () => {
             // UNAUTHORIZED
             extender = extender.connect(owner);
-            await expect(
-                extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 21))
-            ).to.be.revertedWith("UNAUTHORIZED");
+            await expect(extender.requestFundsFromTreasury(1, bne(10, 21))).to.be.revertedWith(
+                "UNAUTHORIZED"
+            );
             extender = extender.connect(guardian);
 
             // OFFLINE
             fakeAllocator.status.returns(0);
-            await expect(
-                extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 21))
-            ).to.be.revertedWith("TreasuryExtender_AllocatorOffline()");
+            await expect(extender.requestFundsFromTreasury(1, bne(10, 21))).to.be.revertedWith(
+                "TreasuryExtender_AllocatorOffline()"
+            );
             fakeAllocator.status.returns(1);
 
             // LIMIT
             expect((await extender.getAllocatorLimits(1))[0]).to.equal(bne(10, 23));
 
-            await expect(
-                extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 25))
-            ).to.be.revertedWith(
+            await expect(extender.requestFundsFromTreasury(1, bne(10, 25))).to.be.revertedWith(
                 "TreasuryExtender_MaxAllocation(100000000000000000000000000, 1000000000000000000000000)"
             );
         });
 
         it("passing: should be able to transfer", async () => {
             await expect(() =>
-                extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 21).mul(99))
+                extender.requestFundsFromTreasury(1, bne(10, 21).mul(99))
             ).to.changeTokenBalance(frax, fakeAllocator.wallet, bne(10, 21).mul(99));
 
             expect(await extender.getTotalValueAllocated()).to.equal(
@@ -437,7 +405,7 @@ describe("TreasuryExtender", () => {
         it("revert: should revert if we add exactly enough to hit limit", async () => {
             // add exactly to 10^23
             await expect(() =>
-                extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 21))
+                extender.requestFundsFromTreasury(1, bne(10, 21))
             ).to.changeTokenBalance(frax, fakeAllocator.wallet, bne(10, 21));
 
             expect(await extender.getTotalValueAllocated()).to.equal(
@@ -447,9 +415,7 @@ describe("TreasuryExtender", () => {
             expect(await frax.balanceOf(extender.address)).to.equal(0);
 
             // now try adding literally 1
-            await expect(
-                extender["requestFundsFromTreasury(uint256,uint256)"](1, bne(10, 21))
-            ).to.be.revertedWith(
+            await expect(extender.requestFundsFromTreasury(1, bne(10, 21))).to.be.revertedWith(
                 "TreasuryExtender_MaxAllocation(1010000000000000000000000, 1000000000000000000000000)"
             );
         });
@@ -457,9 +423,11 @@ describe("TreasuryExtender", () => {
         it("passing: stay correct over multiple allocators", async () => {
             let balance: BigNumber = bne(10, 22).mul(76);
 
-            await expect(() =>
-                extender["requestFundsFromTreasury(uint256,uint256)"](2, balance)
-            ).to.changeTokenBalance(dai, veryfakeAllocator.wallet, balance);
+            await expect(() => extender.requestFundsFromTreasury(2, balance)).to.changeTokenBalance(
+                dai,
+                veryfakeAllocator.wallet,
+                balance
+            );
 
             expect(await extender.getTotalValueAllocated()).to.equal(
                 (await treasury.tokenValue(coins.dai, balance)).add(
@@ -668,12 +636,8 @@ describe("TreasuryExtender", () => {
 
         it("revert: should revert if sender not guardian", async () => {
             extender = extender.connect(owner);
-            await expect(
-                extender["returnFundsToTreasury(uint256,uint256)"](1, 1)
-            ).to.be.revertedWith("UNAUTHORIZED");
-            await expect(
-                extender["returnFundsToTreasury(uint256,uint256)"](2, 1)
-            ).to.be.revertedWith("UNAUTHORIZED");
+            await expect(extender.returnFundsToTreasury(1, 1)).to.be.revertedWith("UNAUTHORIZED");
+            await expect(extender.returnFundsToTreasury(2, 1)).to.be.revertedWith("UNAUTHORIZED");
             extender = extender.connect(guardian);
         });
 
@@ -689,12 +653,16 @@ describe("TreasuryExtender", () => {
             let pf: any = await extender.getAllocatorPerformance(1);
             let pv: any = await extender.getAllocatorPerformance(2);
 
-            await expect(() =>
-                extender["returnFundsToTreasury(uint256,uint256)"](1, 0)
-            ).to.changeTokenBalance(frax, treasury, 0);
-            await expect(() =>
-                extender["returnFundsToTreasury(uint256,uint256)"](2, 0)
-            ).to.changeTokenBalance(dai, treasury, 0);
+            await expect(() => extender.returnFundsToTreasury(1, 0)).to.changeTokenBalance(
+                frax,
+                treasury,
+                0
+            );
+            await expect(() => extender.returnFundsToTreasury(2, 0)).to.changeTokenBalance(
+                dai,
+                treasury,
+                0
+            );
 
             let balfe: BigNumber = await extender.getAllocatorAllocated(1);
             let balve: BigNumber = await extender.getAllocatorAllocated(2);
@@ -732,12 +700,16 @@ describe("TreasuryExtender", () => {
             let withf: BigNumber = balf.sub(balf.div(2));
             let withv: BigNumber = balv.sub(balv.div(2));
 
-            await expect(() =>
-                extender["returnFundsToTreasury(uint256,uint256)"](1, withf)
-            ).to.changeTokenBalance(frax, treasury, withf);
-            await expect(() =>
-                extender["returnFundsToTreasury(uint256,uint256)"](2, withv)
-            ).to.changeTokenBalance(dai, treasury, withv);
+            await expect(() => extender.returnFundsToTreasury(1, withf)).to.changeTokenBalance(
+                frax,
+                treasury,
+                withf
+            );
+            await expect(() => extender.returnFundsToTreasury(2, withv)).to.changeTokenBalance(
+                dai,
+                treasury,
+                withv
+            );
 
             let balfe: BigNumber = await extender.getAllocatorAllocated(1);
             let balve: BigNumber = await extender.getAllocatorAllocated(2);
@@ -772,12 +744,16 @@ describe("TreasuryExtender", () => {
             let pf: any = await extender.getAllocatorPerformance(1);
             let pv: any = await extender.getAllocatorPerformance(2);
 
-            await expect(() =>
-                extender["returnFundsToTreasury(uint256,uint256)"](1, balf)
-            ).to.changeTokenBalance(frax, treasury, balf);
-            await expect(() =>
-                extender["returnFundsToTreasury(uint256,uint256)"](2, balv)
-            ).to.changeTokenBalance(dai, treasury, balv);
+            await expect(() => extender.returnFundsToTreasury(1, balf)).to.changeTokenBalance(
+                frax,
+                treasury,
+                balf
+            );
+            await expect(() => extender.returnFundsToTreasury(2, balv)).to.changeTokenBalance(
+                dai,
+                treasury,
+                balv
+            );
 
             let balfe: BigNumber = await extender.getAllocatorAllocated(1);
             let balve: BigNumber = await extender.getAllocatorAllocated(2);
@@ -815,13 +791,17 @@ describe("TreasuryExtender", () => {
             let withf: BigNumber = balf.add(pf[0].div(2));
             let withv: BigNumber = balv.add(pv[0].div(2));
 
-            await expect(() =>
-                extender["returnFundsToTreasury(uint256,uint256)"](1, withf)
-            ).to.changeTokenBalance(frax, treasury, withf);
+            await expect(() => extender.returnFundsToTreasury(1, withf)).to.changeTokenBalance(
+                frax,
+                treasury,
+                withf
+            );
 
-            await expect(() =>
-                extender["returnFundsToTreasury(uint256,uint256)"](2, withv)
-            ).to.changeTokenBalance(dai, treasury, withv);
+            await expect(() => extender.returnFundsToTreasury(2, withv)).to.changeTokenBalance(
+                dai,
+                treasury,
+                withv
+            );
 
             let balfe: BigNumber = await extender.getAllocatorAllocated(1);
             let balve: BigNumber = await extender.getAllocatorAllocated(2);
@@ -857,13 +837,17 @@ describe("TreasuryExtender", () => {
             let withf: BigNumber = balf.add(pf[0]);
             let withv: BigNumber = balv.add(pv[0]);
 
-            await expect(() =>
-                extender["returnFundsToTreasury(uint256,uint256)"](1, withf)
-            ).to.changeTokenBalance(frax, treasury, withf);
+            await expect(() => extender.returnFundsToTreasury(1, withf)).to.changeTokenBalance(
+                frax,
+                treasury,
+                withf
+            );
 
-            await expect(() =>
-                extender["returnFundsToTreasury(uint256,uint256)"](2, withv)
-            ).to.changeTokenBalance(dai, treasury, withv);
+            await expect(() => extender.returnFundsToTreasury(2, withv)).to.changeTokenBalance(
+                dai,
+                treasury,
+                withv
+            );
 
             let balfe: BigNumber = await extender.getAllocatorAllocated(1);
             let balve: BigNumber = await extender.getAllocatorAllocated(2);

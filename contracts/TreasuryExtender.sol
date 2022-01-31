@@ -97,7 +97,6 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     function registerAllocator(address newAllocator) external override {
         // reads
         IAllocator allocator = IAllocator(newAllocator);
-        uint256 id = allocators.length - 1;
 
         // checks
         _onlyGuardian();
@@ -105,11 +104,13 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         // effects
         allocators.push(allocator);
 
+        uint256 id = allocators.length - 1;
+
         // interactions
         allocator.addId(id);
 
         // events
-        emit NewAllocatorRegistered(newAllocator, address(allocator.tokens()[id]), id);
+        emit NewAllocatorRegistered(newAllocator, address(allocator.tokens()[allocator.tokenIds(id)]), id);
     }
 
     /**
@@ -123,7 +124,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @param id the id to set AllocatorLimits for
      * @param limits the AllocatorLimits to set
      */
-    function setAllocatorLimits(uint256 id, AllocatorLimits memory limits) external {
+    function setAllocatorLimits(uint256 id, AllocatorLimits memory limits) external override {
         IAllocator allocator = allocators[id];
 
         // checks
@@ -169,7 +170,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         AllocatorData storage data = allocatorData[allocator][id];
         AllocatorPerformance memory perf = data.performance;
         AllocatorStatus status = allocator.status();
-        address token = address(allocator.tokens()[id]);
+        address token = address(allocator.tokens()[allocator.tokenIds(id)]);
 
         // checks
         // above could send in any id with gain == 0 and loss == 0, but he could only fake
@@ -235,7 +236,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         // reads
         IAllocator allocator = allocators[id];
         AllocatorData memory data = allocatorData[allocator][id];
-        address token = address(allocator.tokens()[id]);
+        address token = address(allocator.tokens()[allocator.tokenIds(id)]);
         uint256 value = treasury.tokenValue(token, amount);
 
         // checks
@@ -279,7 +280,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         IAllocator allocator = allocators[id];
         uint256 allocated = allocatorData[allocator][id].holdings.allocated;
         uint128 gain = allocatorData[allocator][id].performance.gain;
-        address token = address(allocator.tokens()[id]);
+        address token = address(allocator.tokens()[allocator.tokenIds(id)]);
 
         if (amount > allocated) {
             amount -= allocated;

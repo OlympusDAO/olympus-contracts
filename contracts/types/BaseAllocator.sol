@@ -77,6 +77,9 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     // The allocated (underlying) token of the Allocator
     IERC20[] internal _tokens;
 
+    // From id to the token's id
+    mapping(uint256 => uint256) public tokenIds;
+
     // Allocator status: OFFLINE, ACTIVATED, MIGRATING
     AllocatorStatus public status;
 
@@ -308,11 +311,10 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
 
         // interactions
         for (uint256 i; i < _ids.length; i++) {
-            uint256 id = _ids[i];
-            IERC20 token = _tokens[id];
+            IERC20 token = _tokens[i];
 
             token.safeTransfer(newAllocator, token.balanceOf(address(this)));
-            extender.report(id, 1, 1);
+            extender.report(_ids[i], 1, 1);
         }
 
         for (uint256 i; i < utilityTokensArray.length; i++) {
@@ -357,6 +359,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     function addId(uint256 id) external override {
         _onlyExtender(msg.sender);
         _ids.push(id);
+        tokenIds[id] = _ids.length - 1;
     }
 
     function ids() external view override returns (uint256[] memory) {
@@ -413,7 +416,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
 
         // events
         if ((loss + lastLoss) >= extender.getAllocatorLimits(id).loss) {
-            emit LossLimitViolated(lastLoss, loss, amountAllocated(id));
+            emit LossLimitViolated(lastLoss, loss, amountAllocated(tokenIds[id]));
             return true;
         }
 
