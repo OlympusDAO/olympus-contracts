@@ -18,6 +18,9 @@ import "../../../contracts/OlympusAuthority.sol";
 import "./util/Hevm.sol";
 import "./util/MockContract.sol";
 
+// Note (z): Staking/Unstaking @ rebase will fail because of the patch on distributor.
+// Tests have been converted to `testFail`
+// See @notice on StakingDistributor.triggerRebase();
 contract StakingTest is DSTest {
     using FixedPoint for *;
     using SafeMath for uint256;
@@ -114,7 +117,7 @@ contract StakingTest is DSTest {
         assertEq(amountStaked, AMOUNT);
     }
 
-    function testStakeAtRebaseToGohm() public {
+    function testFailStakeAtRebaseToGohm() public {
         // Move into next rebase window
         hevm.warp(EPOCH_LENGTH);
 
@@ -123,11 +126,13 @@ contract StakingTest is DSTest {
         bool claim = true;
         uint256 gOHMRecieved = staking.stake(address(this), AMOUNT, isSohm, claim);
 
+        // NOTE(z): StakingDistributor patch: fails at this point
+
         uint256 expectedAmount = gohm.balanceTo(AMOUNT.add(BOUNTY));
         assertEq(gOHMRecieved, expectedAmount);
     }
 
-    function testStakeAtRebase() public {
+    function testFailStakeAtRebase() public {
         // Move into next rebase window
         hevm.warp(EPOCH_LENGTH);
 
@@ -135,6 +140,8 @@ contract StakingTest is DSTest {
         bool isSohm = true;
         bool claim = true;
         uint256 amountStaked = staking.stake(address(this), AMOUNT, isSohm, claim);
+
+        // NOTE(z): StakingDistributor patch: fails at this point
 
         uint256 expectedAmount = AMOUNT.add(BOUNTY);
         assertEq(amountStaked, expectedAmount);
@@ -168,7 +175,7 @@ contract StakingTest is DSTest {
         assertEq(sOhmBalance, 0);
     }
 
-    function testUnstakeAtRebase() public {
+    function testFailUnstakeAtRebase() public {
         bool triggerRebase = true;
         bool isSohm = true;
         bool claim = true;
@@ -193,6 +200,8 @@ contract StakingTest is DSTest {
         sohm.approve(address(staking), sOhmBalance);
         staking.unstake(address(this), sOhmBalance, triggerRebase, isSohm);
 
+        // NOTE(z): StakingDistributor patch: fails at this point
+
         // Validate balances post unstake
         ohmBalance = ohm.balanceOf(address(this));
         sOhmBalance = sohm.balanceOf(address(this));
@@ -201,7 +210,7 @@ contract StakingTest is DSTest {
         assertEq(sOhmBalance, 0);
     }
 
-    function testUnstakeAtRebaseFromGohm() public {
+    function testFailUnstakeAtRebaseFromGohm() public {
         bool triggerRebase = true;
         bool isSohm = false;
         bool claim = true;
@@ -227,11 +236,33 @@ contract StakingTest is DSTest {
         gohm.approve(address(staking), gohmBalance);
         staking.unstake(address(this), gohmBalance, triggerRebase, isSohm);
 
+        // NOTE(z): StakingDistributor patch: fails at this point
+
         // Validate balances post unstake
         ohmBalance = ohm.balanceOf(address(this));
         gohmBalance = gohm.balanceOf(address(this));
         uint256 expectedOhm = initialOhmBalance.add(BOUNTY); // Rebase earns a bounty
         assertEq(ohmBalance, expectedOhm);
         assertEq(gohmBalance, 0);
+    }
+
+    /**
+        StakingDistributor Patch Tests
+        The following tests validate patched distributor behavior. 
+     */
+    function testFailRebaseBeforeEpoch() public {
+        distributor.triggerRebase();
+    }
+
+    function testRebaseAfterEpoch() public {
+        uint256 currentTimestamp = block.timestamp;
+        hevm.warp(EPOCH_LENGTH);
+        assertEq(block.timestamp, currentTimestamp.add(EPOCH_LENGTH));
+
+        // Triggering a rebase causes this address to hold the bounty amount in OHM.
+        uint256 currentBalance = ohm.balanceOf(address(this));
+        distributor.triggerRebase();
+        uint256 newBalance = ohm.balanceOf(address(this));
+        assertEq(newBalance.sub(currentBalance), BOUNTY);
     }
 }

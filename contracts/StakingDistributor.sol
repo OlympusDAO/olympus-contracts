@@ -83,11 +83,13 @@ contract Distributor is IDistributor, OlympusAccessControlled {
                 rebase for the next epoch. This patch triggers a rebase by calling unstake
                 (which does not have the issue). The patch also restricts `distribute` to
                 only be able to be called from a tx originating this function.
+
+                Unfortunately this is the _only_ way to resolve this bug without a migrate.
      */
     function triggerRebase() external {
-        require(IEpoch(staking).epoch().end >= block.timestamp, "Epoch has not ended yet");
+        require(IEpoch(staking).epoch().end <= block.timestamp, "Epoch has not ended yet");
         unlockRebase = true;
-        IStaking(staking).unstake(address(this), 0, true, true);
+        IStaking(staking).unstake(msg.sender, 0, true, true); // Give the caller the bounty ohm.
         unlockRebase = false;
     }
 
