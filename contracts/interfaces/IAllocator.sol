@@ -84,6 +84,8 @@ interface IAllocator {
 
     function ids() external view returns (uint256[] memory);
 
+    function tokenIds(uint256 id) external view returns (uint256);
+
     function version() external view returns (string memory);
 
     function status() external view returns (AllocatorStatus);
