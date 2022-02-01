@@ -6,7 +6,7 @@ import {IsOHM} from "../interfaces/IsOHM.sol";
 import {IgOHM} from "../interfaces/IgOHM.sol";
 import {IStaking} from "../interfaces/IStaking.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
-import {IYieldDirector} from "../interfaces/IYieldDirector.sol";
+import {YieldSplitter} from "../types/YieldSplitter.sol";
 import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 
 
@@ -18,41 +18,19 @@ import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccess
             to any address. Donors will be able to withdraw their principal
             sOHM at any time. Donation recipients can also redeem accrued rebases at any time.
  */
-contract YieldDirector is IYieldDirector, OlympusAccessControlled {
+contract YieldDirector is YieldSplitter, OlympusAccessControlled {
     using SafeERC20 for IERC20;
 
-    uint256 private constant MAX_UINT256 = type(uint256).max;
-
     // drop sOHM for mainnet launch
-    address internal immutable sOHM;
-    address internal immutable gOHM;
-    IStaking internal immutable staking;
-
-    uint256 private constant INDEX_DECIMALS = 1e9;
+    address public immutable sOHM;
+    IStaking public immutable staking;
 
     bool public depositDisabled;
     bool public withdrawDisabled;
     bool public redeemDisabled;
 
-    struct DonationInfo {
-        address recipient;
-        uint256 sohmDeposit; // Total sOHM equivalent amount deposited
-        uint256 gohmDeposit; // gOHM amount deposited
-        uint256 carry; // Amount of sOHM accumulated over on deposit/withdraw
-        uint256 indexAtLastChange; // Index of last deposit/withdraw
-    }
-
-    struct RecipientInfo {
-        uint256 sohmDebt; // sOHM equivalent debt
-        uint256 totalCarry; // Total sOHM equivalent value donating to recipient
-        uint256 gohmDebt; // Total gOHM value of carry + debt
-        uint256 indexAtLastChange; // Index when gOHM value last changed
-    }
-
-    mapping(address => DonationInfo[]) public donationInfo;
-    mapping(address => RecipientInfo) public recipientInfo;
-
     event Deposited(address indexed donor_, address indexed recipient_, uint256 amount_);
+    event DepositUpdated(address indexed donor_, uint256 indexed id_, uint256 amount_);
     event Withdrawn(address indexed donor_, address indexed recipient_, uint256 amount_);
     event AllWithdrawn(address indexed donor_, uint256 indexed amount_);
     event Donated(address indexed donor_, address indexed recipient_, uint256 amount_);
@@ -66,14 +44,37 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
     	address authority_
     )
         OlympusAccessControlled(IOlympusAuthority(authority_))
+        YieldSplitter(gOhm_)
     {
         require(sOhm_ != address(0), "Invalid address for sOHM");
         require(gOhm_ != address(0), "Invalid address for gOHM");
         require(staking_ != address(0), "Invalid address for staking");
 
         sOHM = sOhm_;
-        gOHM = gOhm_;
         staking = IStaking(staking_);
+    }
+
+    /************************
+    * Modifiers
+    ************************/
+    modifier isValidDeposit(uint256 amount_, address recipient_) {
+        require(!depositDisabled, "Deposits currently disabled");
+        require(amount_ > 0, "Invalid deposit amount");
+        require(recipient_ != address(0), "Invalid recipient address");
+        _;
+    }
+
+    modifier isValidUpdate(uint256 id_, uint256 amount_) {
+        require(!depositDisabled, "Deposits currently disabled");
+        require(amount_ > 0, "Invalid deposit amount");
+        require(depositInfo[id_].depositor != address(0), "Invalid deposit ID");
+        _;
+    }
+
+    modifier isValidWithdrawal(uint256 amount_) {
+        require(!withdrawDisabled, "Withdraws currently disabled");
+        require(amount_ > 0, "Invalid withdraw amount");
+        _;
     }
 
     /************************
@@ -85,13 +86,21 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @param amount_ Amount of gOHM debt issued from donor to recipient
         @param recipient_ Address to direct staking yield and vault shares to
     */
-    function deposit(uint256 amount_, address recipient_) external override {
-        require(!depositDisabled, "Deposits currently disabled");
-        require(amount_ > 0, "Invalid deposit amount");
-        require(recipient_ != address(0), "Invalid recipient address");
-            
+    function deposit(uint256 amount_, address recipient_) external isValidDeposit(amount_, recipient_) returns(uint256 depositId) {
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
-        _deposit(msg.sender, amount_, recipient_);
+        depositId = _deposit(msg.sender, recipient_, amount_);
+        emit Deposited(msg.sender, recipient_, amount_);
+    }
+
+    /**
+        @notice Deposit additional gOHM, and update deposit record
+        @param id_ Deposit ID to direct additional gOHM to
+        @param amount_ Amount of new gOHM debt issued from donor to recipient
+     */
+    function addToDeposit(uint256 id_, uint256 amount_) external isValidUpdate(id_, amount_) {
+        IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
+        _addToDeposit(id_, amount_);
+        emit DepositUpdated(msg.sender, id_, amount_);
     }
 
     /**
@@ -99,343 +108,239 @@ contract YieldDirector is IYieldDirector, OlympusAccessControlled {
         @param amount_ Amount of sOHM debt issued from donor to recipient
         @param recipient_ Address to direct staking yield and vault shares to
      */
-    function depositSohm(uint256 amount_, address recipient_) external override {
-        require(!depositDisabled, "Deposits currently disabled");
-        require(amount_ > 0, "Invalid deposit amount");
-        require(recipient_ != address(0), "Invalid recipient address");
-
+    function depositSohm(uint256 amount_, address recipient_) external isValidDeposit(amount_, recipient_) returns(uint256 depositId) {
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
     	uint256 gohmAmount = staking.wrap(address(this), amount_);
-    	_deposit(msg.sender, gohmAmount, recipient_);
+    	depositId = _deposit(msg.sender, recipient_, gohmAmount);
+        emit Deposited(msg.sender, recipient_, amount_);
+    }
+
+    /**
+        @notice Deposit additional sOHM, wrap to gOHM, and update deposit record
+        @param id_ Deposit ID to direct additional gOHM to
+        @param amount_ Amount of new sOHM debt issued from donor to recipient
+     */
+    function addToSohmDeposit(uint256 id_, uint256 amount_) external isValidUpdate(id_, amount_) {
+        IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
+        uint256 gohmAmount = staking.wrap(address(this), amount_);
+        _addToDeposit(id_, gohmAmount);
+        emit DepositUpdated(msg.sender, id_, amount_);
     }
 
     /**
         @notice Withdraw donor's gOHM from vault and subtracts debt from recipient
+        @param id_ Deposit ID to remove gOHM debt from
+        @param amount_ Amount of gOHM debt to remove and return to donor
      */
-    function withdraw(uint256 amount_, address recipient_) external override {
-        require(!withdrawDisabled, "Withdraws currently disabled");
-        require(amount_ > 0, "Invalid withdraw amount");
-
-        _withdraw(msg.sender, amount_, recipient_);
+    function withdrawPrincipal(uint256 id_, uint256 amount_) external isValidWithdrawal(amount_) {
+        DepositInfo storage currDeposit = depositInfo[id_];
+        _withdrawPrincipal(id_, amount_);
+        if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
+            (uint256 principal, uint256 agnosticAmount) = _closeDeposit(id_);
+            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(principal, agnosticAmount));   
+        }
         IERC20(gOHM).safeTransfer(msg.sender, amount_);
-        emit Withdrawn(msg.sender, recipient_, amount_);
+        emit Withdrawn(msg.sender, currDeposit.recipient, amount_);
     }
 
     /**
-        @notice Withdraw donor's gOHM from vault, and return it as sOHM 
+        @notice Withdraw donor's gOHM from vault, and return it as sOHM
+        @param id_ Deposit ID to remove gOHM debt from
+        @param amount_ Amount of gOHM debt to remove and return to donor as sOHM
      */
-    function withdrawSohm(uint256 amount_, address recipient_) external override {
-        require(!withdrawDisabled, "Withdraws currently disabled");
-        require(amount_ > 0, "Invalid withdraw amount");
-
-        _withdraw(msg.sender, amount_, recipient_);
+    function withdrawPrincipalAsSohm(uint256 id_, uint256 amount_) external isValidWithdrawal(amount_) {
+        DepositInfo storage currDeposit = depositInfo[id_];
+        _withdrawPrincipal(id_, amount_); // need to add _closeDeposit if amount_ > principal
+        if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
+            (uint256 principal, uint256 agnosticAmount) = _closeDeposit(id_);
+            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(principal, agnosticAmount));
+        }
         staking.unwrap(msg.sender, amount_);
-        emit Withdrawn(msg.sender, recipient_, amount_);
+        emit Withdrawn(msg.sender, currDeposit.recipient, amount_);
     }
 
     /**
         @notice Withdraw from all donor positions
      */
-    function withdrawAll() external override {
+    function withdrawAll() external {
         require(!withdrawDisabled, "Withdraws currently disabled");
 
-        DonationInfo[] storage donations = donationInfo[msg.sender];
+        uint256[] storage depositIds = depositorIds[msg.sender];
 
-        uint256 donationsLength = donations.length;
-        require(donationsLength != 0, "User not donating to anything");
+        uint256 depositsLength = depositIds.length;
+        require(depositsLength != 0, "User not donating to anything");
 
-        uint256 sOhmIndex = IsOHM(sOHM).index();
-        uint256 gohmTotal = 0;
+        uint256 principalTotal = 0;
 
-        for (uint256 index = 0; index < donationsLength; index++) {
-            DonationInfo storage donation = donations[index];
-
-            gohmTotal += _toAgnostic(donation.sohmDeposit);
-
-            RecipientInfo storage recipient = recipientInfo[donation.recipient];
-            recipient.totalCarry += _getAccumulatedValue(recipient.gohmDebt, recipient.indexAtLastChange);
-            recipient.sohmDebt -= donation.sohmDeposit;
-            recipient.gohmDebt -= donation.gohmDeposit;
-            recipient.indexAtLastChange = sOhmIndex;
-
-            // Report amount donated
-            uint256 accumulated = _toAgnostic(
-                    donation.carry
-                    + _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange));
-
-            emit Donated(msg.sender, donation.recipient, accumulated);
+        for (uint256 index = 0; index < depositsLength; index++) {
+            DepositInfo storage currDeposit = depositInfo[depositIds[index]];
+            (uint256 principal, uint256 agnosticAmount) = _closeDeposit(index);
+            principalTotal += principal;
+            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(principal, agnosticAmount));
         }
 
-        // Delete donor's entire donations array
-        delete donationInfo[msg.sender];
+        IERC20(gOHM).safeTransfer(msg.sender, principalTotal);
 
-        IERC20(gOHM).safeTransfer(msg.sender, gohmTotal);
-
-        emit AllWithdrawn(msg.sender, gohmTotal);
+        emit AllWithdrawn(msg.sender, principalTotal);
     }
 
     /**
         @notice Get deposited gOHM amounts for specific recipient (updated to current index based on sOHM equivalent amount deposit)
+        @param donor_ Address of user donating yield
+        @param recipient_ Address of user receiving donated yield
      */
-    function depositsTo(address donor_, address recipient_) external override view returns ( uint256 ) {
-        uint256 recipientIndex = _getRecipientIndex(donor_, recipient_);
-        if (recipientIndex == MAX_UINT256) {
+    function depositsTo(address donor_, address recipient_) external view returns ( uint256 ) {
+        uint256[] storage depositIds = depositorIds[donor_];
+        if (depositIds.length == 0) {
             return 0;
         }
 
-        return _toAgnostic(donationInfo[donor_][recipientIndex].sohmDeposit);
+        for (uint256 index = 0; index < depositIds.length; index++) {
+            DepositInfo storage currDeposit = depositInfo[depositIds[index]];
+            if (currDeposit.recipient == recipient_) {
+                return IgOHM(gOHM).balanceTo(currDeposit.principalAmount);
+            }
+        }
+
+        return 0;
     }
 
     /**
         @notice Return total amount of donor's gOHM deposited (updated to current index based on sOHM equivalent amount deposits)
+        @param donor_ Address of user donating yield
      */
-    function totalDeposits(address donor_) external override view returns ( uint256 ) {
-        DonationInfo[] storage donations = donationInfo[donor_];
-        if (donations.length == 0) {
-            return 0;
+    function totalDeposits(address donor_) external view returns ( uint256 ) {
+        uint256[] storage depositIds = depositorIds[donor_];
+        uint256 agnosticTotal = 0;
+
+        for (uint256 index = 0; index < depositIds.length; index++) {
+            DepositInfo storage currDeposit = depositInfo[depositIds[index]];
+            agnosticTotal += IgOHM(gOHM).balanceTo(currDeposit.principalAmount);
         }
 
-        uint256 gohmTotal = 0;
-        for (uint256 index = 0; index < donations.length; index++) {
-            gohmTotal += _toAgnostic(donations[index].sohmDeposit);
-        }
-
-        return gohmTotal;
+        return agnosticTotal;
     }
     
     /**
         @notice Return arrays of donor's recipients and deposit amounts (gOHM value based on sOHM equivalent deposit), matched by index
+        @param donor_ Address of user donating yield
      */
-    function getAllDeposits(address donor_) external override view returns ( address[] memory, uint256[] memory ) {
-        DonationInfo[] storage donations = donationInfo[donor_];
+    function getAllDeposits(address donor_) external view returns ( address[] memory, uint256[] memory ) {
+        uint256[] storage depositIds = depositorIds[donor_];
 
-        uint256 len = donations.length == 0 ? 1 : donations.length;
+        uint256 len = depositIds.length == 0 ? 1 : depositIds.length;
 
         address[] memory addresses = new address[](len);
-        uint256[] memory gohmDeposits = new uint256[](len);
+        uint256[] memory agnosticDeposits = new uint256[](len);
 
-        if (donations.length == 0) {
+        if (depositIds.length == 0) {
         	addresses[0] = address(0);
-        	gohmDeposits[0] = 0;
+        	agnosticDeposits[0] = 0;
         } else {
 	        for (uint256 index = 0; index < len; index++) {
-	            addresses[index] = donations[index].recipient;
-	            gohmDeposits[index] = _toAgnostic(donations[index].sohmDeposit);
+                DepositInfo storage currDeposit = depositInfo[depositIds[index]];
+	            addresses[index] = currDeposit.recipient;
+	            agnosticDeposits[index] = IgOHM(gOHM).balanceTo(currDeposit.principalAmount);
 	        }
         }
 
-        return (addresses, gohmDeposits);
+        return (addresses, agnosticDeposits);
     }
 
     /**
-        @notice Return total amount of gOHM donated to recipient since last full withdrawal
+        @notice Return total amount of gOHM donated to recipient since last full withdrawal or redemption
+        @param donor_ Address of user donating yield
+        @param recipient_ Address of user recieiving donated yield
      */
-    function donatedTo(address donor_, address recipient_) external override view returns (uint256) {
-        uint256 recipientIndex = _getRecipientIndex(donor_, recipient_);
-        if (recipientIndex == MAX_UINT256) {
-            return 0;
+    function donatedTo(address donor_, address recipient_) external view returns (uint256) {
+        uint256[] storage depositIds = depositorIds[donor_];
+
+        for (uint256 index = 0; index < depositIds.length; index++) {
+            DepositInfo storage currDeposit = depositInfo[depositIds[index]];
+            if (currDeposit.recipient == recipient_) {
+                return _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);
+            }
         }
 
-        DonationInfo storage donation = donationInfo[donor_][recipientIndex];
-        uint256 gohmDonation = _toAgnostic(
-            donation.carry
-            + _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange));
-        return gohmDonation;
+        return 0;
     }
 
     /**
-        @notice Return total amount of gOHM donated from donor since last full withdrawal
+        @notice Return total amount of gOHM donated from donor since last full withdrawal or redemption
+        @param donor_ Address of user donating yield
      */
-    function totalDonated(address donor_) external override view returns (uint256) {
-        DonationInfo[] storage donations = donationInfo[donor_];
-        uint256 totalGohm = 0;
+    function totalDonated(address donor_) external view returns (uint256) {
+        uint256[] storage depositIds = depositorIds[donor_];
+        uint256 agnosticTotal = 0;
 
-        for (uint256 index = 0; index < donations.length; index++) {
-            DonationInfo memory donation = donations[index];
+        for (uint256 index = 0; index < depositIds.length; index++) {
+            DepositInfo storage currDeposit = depositInfo[depositIds[index]];
 
-            totalGohm += _toAgnostic(
-                donation.carry
-                + _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange));
+            agnosticTotal += _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);
         }
 
-        return totalGohm;
+        return agnosticTotal;
     }
 
     /************************
     * Recipient Functions
     ************************/
 
+    function redeemableBalance(uint256 id_) public view returns (uint256) {
+        DepositInfo storage currDeposit = depositInfo[id_];
+        return _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);     
+    }
+
     /**
         @notice Get redeemable sOHM balance of a recipient address
+        @param recipient_ Address of user receiving donated yield
      */
-    function redeemableBalance(address recipient_) public override view returns ( uint256 ) {
-        RecipientInfo storage recipient = recipientInfo[recipient_];
-        uint gohmRedeemable = _toAgnostic(recipient.totalCarry
-                + _getAccumulatedValue(recipient.gohmDebt, recipient.indexAtLastChange));
+    function totalRedeemableBalance(address recipient_) public view returns ( uint256 ) {
+        uint256[] storage receiptIds = recipientIds[recipient_];
+        uint agnosticRedeemable = 0;
 
-        return gohmRedeemable;
+        for (uint256 index = 0; index < receiptIds.length; index++) {
+            DepositInfo storage currDeposit = depositInfo[receiptIds[index]];
+            agnosticRedeemable += _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);
+        }
+
+        return agnosticRedeemable;
+    }
+
+    /**
+        @notice Redeem recipient's donated amount of sOHM at current index from one donor
+        @param id_ Deposit id for this donation
+     */
+    function redeemYield(uint256 id_) external returns (uint256) {
+        // Since recipient and donor now share a data object, need to figure out best way
+        // to report this as Donated event as well
+        require(!redeemDisabled, "Redeems currently disabled");
+
+        uint256 amountRedeemed = _redeemYield(id_);
+        require(amountRedeemed > 0, "No redeemable balance");
+
+        IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
+
+        emit Redeemed(msg.sender, amountRedeemed);
+
     }
 
     /**
         @notice Redeem recipient's full donated amount of sOHM at current index
-        @dev Note that a recipient redeeming their vault shares effectively pays back all
-             sOHM debt to donors at the time of redeem. Any future incurred debt will
-             be accounted for with a subsequent redeem or a withdrawal by the specific donor.
      */
-    function redeem() external override {
+    function redeemAllYield() external returns (uint256) {
+        // Since recipient and donor now share a data object, need to figure out best way
+        // to report this as Donated for each user as well
         require(!redeemDisabled, "Redeems currently disabled");
 
-        uint256 redeemable = redeemableBalance(msg.sender);
-        require(redeemable > 0, "No redeemable balance");
+        uint256 amountRedeemed = _redeemAllYield(msg.sender);
+        require(amountRedeemed > 0, "No redeemable balance");
 
-        RecipientInfo storage recipient = recipientInfo[msg.sender];
-        recipient.gohmDebt = _toAgnostic(recipient.sohmDebt);
-        recipient.totalCarry = 0;
-        recipient.indexAtLastChange = IsOHM(sOHM).index();
+        IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
 
-        IERC20(gOHM).safeTransfer(msg.sender, redeemable);
-
-        emit Redeemed(msg.sender, redeemable);
+        emit Redeemed(msg.sender, amountRedeemed);
     }
 
-    /************************
-    * Utility Functions
-    ************************/
-
-    function _deposit(address depositer_, uint256 amount_, address recipient_) internal {
-        uint256 index = IsOHM(sOHM).index(); // need to find chainlink oracle
-
-        // Record donors's issued debt to recipient address
-        DonationInfo[] storage donations = donationInfo[depositer_];
-        uint256 recipientIndex = _getRecipientIndex(depositer_, recipient_);
-
-        if(recipientIndex == MAX_UINT256) {
-            donations.push(
-                DonationInfo({
-                    recipient: recipient_,
-                    sohmDeposit: _fromAgnostic(amount_),
-                    gohmDeposit: amount_,
-                    carry: 0,
-                    indexAtLastChange: index
-                })
-            );
-        } else {
-            DonationInfo storage donation = donations[recipientIndex];
-
-            donation.carry += _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange);
-            donation.gohmDeposit = _toAgnostic(donation.sohmDeposit) + amount_;
-            donation.sohmDeposit += _fromAgnostic(amount_);
-            donation.indexAtLastChange = index;
-        }
-
-        RecipientInfo storage recipient = recipientInfo[recipient_];
-
-        // Calculate value carried over since last change
-        recipient.totalCarry += _getAccumulatedValue(recipient.gohmDebt, recipient.indexAtLastChange);
-        recipient.sohmDebt += _fromAgnostic(amount_);
-        recipient.gohmDebt = _toAgnostic(recipient.sohmDebt + recipient.totalCarry);
-        recipient.indexAtLastChange = index;
-
-        emit Deposited(depositer_, recipient_, amount_);
-    }
-
-    function _withdraw(address depositer_, uint256 amount_, address recipient_) internal {
-        uint256 index = IsOHM(sOHM).index();
-
-        // Donor accounting
-        uint256 recipientIndex = _getRecipientIndex(depositer_, recipient_);
-        require(recipientIndex != MAX_UINT256, "No donations to recipient");
-
-        // Check withdrawal size
-        DonationInfo storage donation = donationInfo[depositer_][recipientIndex];
-
-        if(amount_ > _toAgnostic(donation.sohmDeposit)) {
-            // Report how much was donated then clear donation information
-            uint256 accumulated = _toAgnostic(
-                    donation.carry
-                    + _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange));
-            emit Donated(depositer_, recipient_, accumulated);
-
-            delete donationInfo[depositer_][recipientIndex];
-
-            // If element was in middle of array, bring last element to deleted index
-            uint256 lastIndex = donationInfo[depositer_].length - 1;
-            if(recipientIndex != lastIndex) {
-                donationInfo[depositer_][recipientIndex] = donationInfo[depositer_][lastIndex];
-                donationInfo[depositer_].pop();
-            }
-        } else {
-            donation.carry += _getAccumulatedValue(donation.gohmDeposit, donation.indexAtLastChange);
-            donation.gohmDeposit = _toAgnostic(donation.sohmDeposit) - amount_;
-            donation.sohmDeposit -= _fromAgnostic(amount_);
-            donation.indexAtLastChange = index;
-        }
-
-        // Recipient accounting
-        RecipientInfo storage recipient = recipientInfo[recipient_];
-        recipient.totalCarry += _getAccumulatedValue(recipient.gohmDebt, recipient.indexAtLastChange);
-        recipient.sohmDebt -= _fromAgnostic(amount_);
-        recipient.gohmDebt = _toAgnostic(recipient.sohmDebt + recipient.totalCarry);
-        recipient.indexAtLastChange = index;
-    }
-
-    /**
-        @notice Get accumulated sOHM since last time agnostic value changed.
-     */
-    function _getAccumulatedValue(uint256 gAmount_, uint256 indexAtLastChange_) internal view returns (uint256) {
-        return _fromAgnostic(gAmount_) - _fromAgnosticAtIndex(gAmount_, indexAtLastChange_);
-    }
-
-    /**
-        @notice Get array index of a particular recipient in a donor's donationInfo array.
-        @return Array index of recipient address. If recipient not present, returns max uint256 value.
-     */
-    function _getRecipientIndex(address donor_, address recipient_) internal view returns (uint256) {
-        DonationInfo[] storage info = donationInfo[donor_];
-
-        uint256 existingIndex = MAX_UINT256;
-        for (uint256 i = 0; i < info.length; i++) {
-            if(info[i].recipient == recipient_) {
-                existingIndex = i;
-                break;
-            }
-        }
-        return existingIndex;
-    }
-
-    /**
-        @notice Convert flat sOHM value to agnostic value at current index
-        @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
-             1e9 is because sOHM index has 9 decimals and this will preserve the
-             right number of decimals.
-     */
-    function _toAgnostic(uint256 amount_) internal view returns ( uint256 ) {
-        return amount_
-            * INDEX_DECIMALS
-            / (IsOHM(sOHM).index());
-    }
-
-    /**
-        @notice Convert agnostic value at current index to flat sOHM value
-        @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
-             1e18 is because gOHM has 18 decimals.
-     */
-    function _fromAgnostic(uint256 amount_) internal view returns ( uint256 ) {
-        return amount_
-            * (IsOHM(sOHM).index())
-            / INDEX_DECIMALS;
-    }
-
-    /**
-        @notice Convert flat sOHM value to agnostic value at a given index value
-        @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
-             1e18 is because gOHM has 18 decimals.
-     */
-    function _fromAgnosticAtIndex(uint256 amount_, uint256 index_) internal pure returns ( uint256 ) {
-        return amount_
-            * index_
-            / INDEX_DECIMALS;
-    }
 
     /************************
     * Emergency Functions

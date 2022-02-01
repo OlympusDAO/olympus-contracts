@@ -15,12 +15,14 @@ describe.only('YieldDirector', async () => {
     // Reward rate of .1%
     const initialRewardRate = "1000";
 
-    const mineBlock = async () => {
-        await network.provider.request({
-          method: "evm_mine",
-          params: [],
-        });
-    }
+    const advanceEpoch = async () => {
+        await advanceTime(8 * 60 * 60);
+    };
+
+    const advanceTime = async (seconds) => {
+        await ethers.provider.send("evm_increaseTime", [seconds]);
+        await ethers.provider.send("evm_mine", []);
+    };
 
     // Calculate index after some number of epochs. Takes principal and rebase rate.
     // TODO verify this works
@@ -29,11 +31,10 @@ describe.only('YieldDirector', async () => {
     // TODO needs cleanup. use Bignumber.
     // Mine block and rebase. Returns the new index.
     const triggerRebase = async () => {
-        mineBlock();
+        advanceEpoch(); // 8 hours per rebase
         await staking.rebase();
-
         return await sOhm.index();
-    }
+    };
 
     let deployer, alice, bob, carol;
     let erc20Factory;
@@ -79,28 +80,44 @@ describe.only('YieldDirector', async () => {
     })
 
     beforeEach(async () => {
-        //dai = await smock.fake(erc20Factory);
-        //lpToken = await smock.fake(erc20Factory);
         dai = await erc20Factory.deploy(0);
-        lpToken = await erc20Factory.deploy(0);
-
-        // TODO use promise.all
-        auth = await authFactory.deploy(deployer.address, deployer.address, deployer.address, deployer.address); // TODO
+        auth = await authFactory.deploy(
+            deployer.address,
+            deployer.address,
+            deployer.address,
+            deployer.address
+        );
         ohm = await ohmFactory.deploy(auth.address);
         sOhm = await sOhmFactory.deploy();
-        gOhm = await gOhmFactory.deploy(deployer.address, sOhm.address); // Call migrate immediately
-        staking = await stakingFactory.deploy(ohm.address, sOhm.address, gOhm.address, "10", "1", "9", auth.address);
-        treasury = await treasuryFactory.deploy(ohm.address, "0", auth.address);
-        distributor = await distributorFactory.deploy(treasury.address, ohm.address, staking.address, auth.address);
+        gOhm = await gOhmFactory.deploy(deployer.address, sOhm.address);
+        const blockNumBefore = await ethers.provider.getBlockNumber();
+        const blockBefore = await ethers.provider.getBlock(blockNumBefore);
+        staking = await stakingFactory.deploy(
+            ohm.address,
+            sOhm.address,
+            gOhm.address,
+            "28800", // 1 epoch = 8 hours
+            "1",
+            blockBefore.timestamp + 28800, // First epoch in 8 hours. Avoids first deposit to set epoch.distribute wrong
+            auth.address
+        );
+        await gOhm.migrate(staking.address, sOhm.address);
+        treasury = await treasuryFactory.deploy(
+            ohm.address,
+            "0",
+            auth.address
+        );
+        distributor = await distributorFactory.deploy(
+            treasury.address,
+            ohm.address,
+            staking.address,
+            auth.address
+        );
         tyche = await tycheFactory.deploy(sOhm.address, gOhm.address, staking.address, auth.address);
-
-        // Call migrate
-        gOhm.migrate(staking.address, sOhm.address);
 
         // Setup for each component
 
         // Needed for treasury deposit
-        //await gOhm.migrate(staking.address, sOhm.address);
         await dai.mint(deployer.address, initialMint);
         await dai.approve(treasury.address, LARGE_APPROVAL);
 
@@ -108,7 +125,7 @@ describe.only('YieldDirector', async () => {
         await ohm.approve(staking.address, LARGE_APPROVAL);
 
         // To get past OHM contract guards
-        await auth.pushVault(treasury.address, true)
+        await auth.pushVault(treasury.address, true);
 
         // Initialization for sOHM contract.
         // Set index to 10
@@ -120,47 +137,36 @@ describe.only('YieldDirector', async () => {
         await staking.setDistributor(distributor.address);
 
         // queue and toggle reward manager
-        await treasury.initialize();
-        await treasury.queueTimelock('8', distributor.address, ZERO_ADDRESS);
-        await treasury.execute('0');
+        await treasury.enable("8", distributor.address, ZERO_ADDRESS);
         // queue and toggle deployer reserve depositor
-        await treasury.queueTimelock('0', deployer.address, ZERO_ADDRESS);
-        await treasury.execute('1');
+        await treasury.enable("0", deployer.address, ZERO_ADDRESS);
         // queue and toggle liquidity depositor
-        await treasury.queueTimelock('4', deployer.address, ZERO_ADDRESS);
-        await treasury.execute('2');
+        await treasury.enable("4", deployer.address, ZERO_ADDRESS);
         // queue and toggle DAI as reserve token
-        await treasury.queueTimelock('2', dai.address, ZERO_ADDRESS);
-        await treasury.execute('3');
+        await treasury.enable("2", dai.address, ZERO_ADDRESS);
 
         // Deposit 10,000 DAI to treasury, 1,000 OHM gets minted to deployer with 9000 as excess reserves (ready to be minted)
-        await treasury.connect(deployer).deposit('10000000000000000000000', dai.address, '9000000000000');
+        await treasury.connect(deployer).deposit("10000000000000000000000", dai.address, "9000000000000");
 
         // Add staking as recipient of distributor with a test reward rate
         await distributor.addRecipient(staking.address, initialRewardRate);
 
         // Get sOHM in deployer wallet
-        const sohmAmount = "1000000000000"
+        const sohmAmount = "1000000000000";
         await ohm.approve(staking.address, sohmAmount);
         await staking.stake(deployer.address, sohmAmount, true, true);
+        await triggerRebase(); // Trigger first rebase to set initial distribute amount. This rebase shouldn't update index.
 
-        // Transfer 110 sOHM to alice for testing
-        await sOhm.transfer(alice.address, "110000000000");
+        // Transfer 100 sOHM to alice for testing
+        await sOhm.transfer(alice.address, "100000000000");
 
-        // Approve sOHM to be deposited to Tyche
-        await sOhm.connect(alice).approve(staking.address, "110000000000");
-        await staking.connect(alice).wrap(alice.address, "110000000000");
+        // Alice should wrap ohm to gOhm. Should have 10gOhm
+        await sOhm.approve(staking.address, LARGE_APPROVAL);
+        await staking.wrap(deployer.address, "500000000000");
+        await sOhm.connect(alice).approve(staking.address, LARGE_APPROVAL);
+        await staking.connect(alice).wrap(alice.address, "100000000000");
 
-        // Get gOHM in deployer wallet
-        const sohmToGohmAmount = "200000000000"
-        await sOhm.approve(staking.address, sohmToGohmAmount);
-        const gohmAmount = await staking.wrap(deployer.address, sohmToGohmAmount);
-
-        // Approve gOHM to be deposited to Tyche
-        await gOhm.approve(tyche.address, LARGE_APPROVAL);
         await gOhm.connect(alice).approve(tyche.address, LARGE_APPROVAL);
-
-        // TODO Transfer gOHM to alice for testing
     });
 
     it.only('should rebase properly', async () => {
