@@ -341,7 +341,6 @@ contract YieldDirector is YieldSplitter, OlympusAccessControlled {
         emit Redeemed(msg.sender, amountRedeemed);
     }
 
-
     /************************
     * Emergency Functions
     ************************/
