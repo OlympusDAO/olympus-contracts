@@ -9,9 +9,11 @@ import "../interfaces/IOHM.sol";
 import "../interfaces/IsOHM.sol";
 import "../types/OlympusAccessControlled.sol";
 import "../libraries/SafeERC20.sol";
+import "../libraries/SafeMath.sol";
 
 contract LiquidityMigrator is OlympusAccessControlled {
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     ITreasury internal immutable oldTreasury = ITreasury(0x31F8Cc382c9898b273eff4e0b7626a6987C846E8);
     ITreasury internal immutable newTreasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
@@ -91,8 +93,8 @@ contract LiquidityMigrator is OlympusAccessControlled {
         oldOHM.burn(amountOld);
 
         // mint new OHM after converting to new supply
-        uint256 amountNew = amountOld * newsohm.index() / oldsohm.index();
-        treasury.mint(address(this), amountNew);
+        uint256 amountNew = amountOld.mul(newsohm.index()).div(oldsohm.index());
+        newTreasury.mint(address(this), amountNew);
 
         newOHM.approve(address(router), amountNew);
         token.approve(address(router), amountToken);
