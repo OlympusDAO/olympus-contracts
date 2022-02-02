@@ -131,7 +131,7 @@ describe("BaseAllocator", async () => {
         expect(await allocator.amountAllocated(0)).to.equal(0);
     });
 
-    describe("registerAllocator + setId", () => {
+    describe("registerDeposit + setId", () => {
         it("revert: should revert if sender not expected", async () => {
             await expect(allocator.addId(2)).to.be.revertedWith(
                 `BaseAllocator_OnlyExtender(\"${guardian.address}\")`
@@ -140,7 +140,7 @@ describe("BaseAllocator", async () => {
 
         it("passing: should register allocator", async () => {
             const snapId = await snapshot();
-            await extender.registerAllocator(allocator.address);
+            await extender.registerDeposit(allocator.address);
             expect((await allocator.ids())[0]).to.equal(1);
             await revert(snapId);
         });
@@ -161,7 +161,7 @@ describe("BaseAllocator", async () => {
         before(async () => {
             localSnapId = await snapshot();
 
-            await extender.registerAllocator(allocator.address);
+            await extender.registerDeposit(allocator.address);
             await extender.setAllocatorLimits(1, {
                 allocated: bne(10, 35),
                 loss: bne(10, 35),
@@ -252,7 +252,7 @@ describe("BaseAllocator", async () => {
     describe("prepareMigration + migrate", async () => {
         before(async () => {
             localSnapId = await snapshot();
-            await extender.registerAllocator(allocator.address);
+            await extender.registerDeposit(allocator.address);
             await extender.setAllocatorLimits(1, {
                 allocated: bne(10, 35),
                 loss: bne(10, 35),
@@ -288,7 +288,7 @@ describe("BaseAllocator", async () => {
             fakeAllocator.tokenIds.returns(0);
             fakeAllocator.tokens.returns([coins.frax]);
 
-            await extender.registerAllocator(fakeAllocator.address);
+            await extender.registerDeposit(fakeAllocator.address);
 
             fakeAllocator.ids.returns([2]);
             fakeAllocator.status.returns(1);

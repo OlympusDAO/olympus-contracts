@@ -29,7 +29,8 @@ error TreasuryExtender_MaxAllocation(uint256 allocated, uint256 limit);
  *  `totalValueAllocated` is incremented, which can be done because it is
  *  always denominated in the same unit.
  *
- *  For each Allocator we record 5 distinct values grouped into 3 fields,
+ *  For each Allocator there are multiple deposit IDs referring to individual tokens,
+ *  for each deposit ID we record 5 distinct values grouped into 3 fields,
  *  together grouped as AllocatorData:
  *
  *  AllocatorLimits { allocated, loss } - This is the maximum amount
@@ -42,10 +43,9 @@ error TreasuryExtender_MaxAllocation(uint256 allocated, uint256 limit);
  *  AllocatorHoldings { allocated } - This is the amount of tokens an Allocator
  *  has currently been allocated by the Extender.
  *
- *  Important: The above is only tracked in the 1 underlying token,
- *  (see BaseAllocator.sol) while rewards are retrievable by the standard
- *  ERC20 functions. The point is that we only exactly track that which
- *  exits the Treasury.
+ *  Important: The above is only tracked in the underlying token specified by the ID,
+ *  (see BaseAllocator.sol) while rewards are retrievable by the standard ERC20 functions.
+ *  The point is that we only exactly track that which exits the Treasury.
  */
 contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     using SafeERC20 for IERC20;
@@ -53,10 +53,10 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     // The Olympus Treasury.
     ITreasury immutable treasury;
 
-    // Enumerable Allocators according to their Id.
+    // Enumerable Allocators according to deposit IDs.
     IAllocator[] public allocators;
 
-    // Get an AllocatorData for an Allocator
+    // Get an an Allocator's Data for for an Allocator and deposit ID
     mapping(IAllocator => mapping(uint256 => AllocatorData)) public allocatorData;
 
     // The total value allocated according to `treasury.tokenValue`
@@ -88,13 +88,13 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
 
     /**
      * @notice
-     *  Registers an Allocator. Sets the Allocators id and prepares storage slots for writing.
+     *  Registers an Allocator. Adds a deposit id and prepares storage slots for writing.
      *  Does not activate the Allocator.
      * @dev
-     *  Calls `setId` from `IAllocator` with the index of the Allocator in `allocators`
+     *  Calls `addId` from `IAllocator` with the index of the deposit in `allocators`
      * @param newAllocator the Allocator to be registered
      */
-    function registerAllocator(address newAllocator) external override {
+    function registerDeposit(address newAllocator) external override {
         // reads
         IAllocator allocator = IAllocator(newAllocator);
 
@@ -110,7 +110,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         allocator.addId(id);
 
         // events
-        emit NewAllocatorRegistered(newAllocator, address(allocator.tokens()[allocator.tokenIds(id)]), id);
+        emit NewDepositRegistered(newAllocator, address(allocator.tokens()[allocator.tokenIds(id)]), id);
     }
 
     /**
@@ -121,7 +121,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  loss - The maximum loss amount this Allocator can take.
      * @dev
      *  Can only be called while the Allocator is offline.
-     * @param id the id to set AllocatorLimits for
+     * @param id the deposit id to set AllocatorLimits for
      * @param limits the AllocatorLimits to set
      */
     function setAllocatorLimits(uint256 id, AllocatorLimits memory limits) external override {
@@ -151,12 +151,12 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *
      *  (gain + loss) == 0, the Allocator will NEVER report this state
      *  gain > loss, gain is reported and gain + totalValueAllocated is incremented but allocated not.
-     *  loss > gain, loss is reported, allocated, totalValueAllocated is decremented and loss incremented
+     *  loss > gain, loss is reported, allocated, totalValueAllocated is decremented and loss incremented.
      *  loss == gain, (loss + gain) > 0, migration case, zero out gain, loss, allocated
      *
      *  note when migrating the next Allocator should report his state to the Extender, in say an `_activate` call.
      *
-     * @param id the id of the Allocator reporting its state
+     * @param id the deposit id of the token to report state for
      * @param gain the gain the Allocator has made in allocated token
      * @param loss the loss the Allocator has sustained in allocated token
      */
@@ -222,14 +222,14 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  Can only be called while the Allocator is activated.
      *  Can only be called by the Guardian.
      *
-     *  This function is going to allocate an `amount` of tokens to the Allocator and
+     *  This function is going to allocate an `amount` of deposit id tokens to the Allocator and
      *  properly record this in storage. This done so that at any point, we know exactly
      *  how much was initially allocated and also how much value is allocated in total.
      *
      *  The related functions are `getAllocatorAllocated` and `getTotalValueAllocated`.
      *
      *  To note is also the `_allocatorBelowLimit` check.
-     * @param id the id of the allocator to fund
+     * @param id the deposit id of the token to fund allocator with
      * @param amount the amount of token to withdraw, the token is known in the Allocator
      */
     function requestFundsFromTreasury(uint256 id, uint256 amount) external override {
@@ -272,7 +272,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  The maximum amount which can be withdrawn is `gain` + `allocated`.
      *  `allocated` is decremented first after which `gain` is decremented in the case
      *  that `allocated` is not sufficient. The `totalValueAllocated` is also decremented.
-     * @param id the id of the allocator to return funds from
+     * @param id the deposit id of the token to fund allocator with
      * @param amount the amount of token to withdraw, the token is known in the Allocator
      */
     function returnFundsToTreasury(uint256 id, uint256 amount) external override {
@@ -325,7 +325,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @dev
      *  External hook: Logic is handled in the internal function.
      *  Can only be called by the Guardian.
-     * @param id the id of the Allocator to returns rewards from
+     * @param id the deposit id of the token to fund allocator with
      * @param token the address of the reward token to withdraw
      * @param amount the amount of the reward token to withdraw
      */
@@ -374,7 +374,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  Get an Allocators address by it's ID.
      * @dev
      *  Our first Allocator is at index 1, 0 is a placeholder.
-     * @param id the id of the allocator's address to find
+     * @param id the deposit id of the allocator's address to find
      * @return allocatorAddress the allocator's address
      */
     function getAllocatorByID(uint256 id) external view override returns (address allocatorAddress) {
@@ -436,7 +436,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  loss - The maximum loss amount this Allocator can take.
      * @dev
      *  Can only be called while the Allocator is offline.
-     * @param id the id to set AllocatorLimits for
+     * @param id the deposit id of the token to set limits for
      * @param limits the AllocatorLimits to set
      */
     function _setAllocatorLimits(uint256 id, AllocatorLimits memory limits) internal {
