@@ -9,9 +9,6 @@ import {SafeERC20} from "../libraries/SafeERC20.sol";
 import {YieldSplitter} from "../types/YieldSplitter.sol";
 import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 
-
-// Because of truncation in the ones place for both gohmDeposit and gohmDebt we lose
-// 1e-18 units of precision. Potential solution is to round up redeemable amount by 1e-18
 /**
     @title YieldDirector (codename Tyche) 
     @notice This contract allows donors to deposit their sOHM and donate their rebases
@@ -134,11 +131,8 @@ contract YieldDirector is YieldSplitter, OlympusAccessControlled {
      */
     function withdrawPrincipal(uint256 id_, uint256 amount_) external isValidWithdrawal(amount_) {
         DepositInfo storage currDeposit = depositInfo[id_];
+        // Need to figure out best way to report Donated event
         _withdrawPrincipal(id_, amount_);
-        if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
-            (uint256 principal, uint256 agnosticAmount) = _closeDeposit(id_);
-            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(principal, agnosticAmount));   
-        }
         IERC20(gOHM).safeTransfer(msg.sender, amount_);
         emit Withdrawn(msg.sender, currDeposit.recipient, amount_);
     }
@@ -150,11 +144,8 @@ contract YieldDirector is YieldSplitter, OlympusAccessControlled {
      */
     function withdrawPrincipalAsSohm(uint256 id_, uint256 amount_) external isValidWithdrawal(amount_) {
         DepositInfo storage currDeposit = depositInfo[id_];
-        _withdrawPrincipal(id_, amount_); // need to add _closeDeposit if amount_ > principal
-        if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
-            (uint256 principal, uint256 agnosticAmount) = _closeDeposit(id_);
-            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(principal, agnosticAmount));
-        }
+        // Need to figure out best way to report Donated event
+        _withdrawPrincipal(id_, amount_);
         staking.unwrap(msg.sender, amount_);
         emit Withdrawn(msg.sender, currDeposit.recipient, amount_);
     }
