@@ -29,8 +29,9 @@ error BaseAllocator_OnlyExtender(address sender);
  *  we expect an Allocator to behave in general, mentioning the most important points.
  *
  *  Activation:
- *   - An Allocator is first deployed with all necessary arguments. Thereafter,
- *     the allocator is registered with the `TreasuryExtender`.
+ *   - An Allocator is first deployed with all necessary arguments.
+ *     Thereafter, each deposit is registered with the `TreasuryExtender`.
+ *     This assigns a unique id for each deposit (set of allocations) in an Allocator.
  *   - Next, the Allocators allocation and loss limits are set via the extender function.
  *   - Finally, the Allocator is activated by calling `activate`.
  *
@@ -39,10 +40,10 @@ error BaseAllocator_OnlyExtender(address sender);
  *   what the status of the tokens is which were allocated. We only care about noting down
  *   their status in the Extender. A quick summary of the important functions on this topic:
  *
- *   - `update()` is the main function that deals with state reporting, where
- *     `_update()` is the internal function to implement, which should update Allocator
- *     internal state. update() then continues to report the Allocators state via `report`
- *     to the extender. `_update()` should handle _investment_ of funds present in Contract.
+ *   - `update(uint256 id)` is the main function that deals with state reporting, where
+ *     `_update(uint256 id)` is the internal function to implement, which should update Allocator
+ *     internal state. `update(uint256 id)` then continues to report the Allocators state via `report`
+ *     to the extender. `_update(uint256 id)` should handle _investment_ of funds present in Contract.
  *
  *   - `deallocate` should handle allocated token withdrawal, preparing the tokens to be withdrawn
  *     by the Extender. It is not necessary to handle approvals for this token, because it is automatically
@@ -71,13 +72,13 @@ error BaseAllocator_OnlyExtender(address sender);
 abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     using SafeERC20 for IERC20;
 
-    // The id of the Allocator as present in `TreasuryExtender`, `allocators`.
+    // Indices which represent the ids of the deposits in the `TreasuryExtender`
     uint256[] internal _ids;
 
-    // The allocated (underlying) token of the Allocator
+    // The allocated (underlying) tokens of the Allocator
     IERC20[] internal _tokens;
 
-    // From id to the token's id
+    // From deposit id to the token's id
     mapping(uint256 => uint256) public tokenIds;
 
     // Allocator status: OFFLINE, ACTIVATED, MIGRATING
@@ -128,13 +129,14 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      * @dev
      *  This function should be implemented by the developer of the Allocator.
      *  This function should fulfill the following purposes:
-     *   - invest all tokens deposited in the contract
-     *   - handle rebalancing / harvesting as needed
-     *   - calculate gain / loss and return those values
+     *   - invest token specified by deposit id
+     *   - handle rebalancing / harvesting for token as needed
+     *   - calculate gain / loss for token and return those values
      *   - handle any other necessary runtime calculations, such as fees etc.
      *
      *  In essence, this function should update the main runtime state of the Allocator
      *  so that everything is properly invested, harvested, accounted for.
+     * @param id the id of the deposit in the `TreasuryExtender`
      */
     function _update(uint256 id) internal virtual returns (uint128 gain, uint128 loss);
 
@@ -143,12 +145,8 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  Deallocates tokens, prepares tokens for return to the Treasury.
      * @dev
      *  This function should deallocate (withdraw) `amounts` of each token so that they may be withdrawn
-     *  by the TreasuryExtender. Otherwise, this function may also prepare the withdrawl if it is time-bound.
-     *
-     *  NOTE (IMPORTANT): amounts[0] is to be considered the amount of `token` to withdraw,
-     *                    the rest should be utility tokens. This serves as a reminder that
-     *  we consider reward tokens to either be harvested into allocated or simply contained
-     *  in the contract.
+     *  by the TreasuryExtender. Otherwise, this function may also prepare the withdraw if it is time-bound.
+     * @param amounts is the amount of each of token from `_tokens` to withdraw
      */
     function deallocate(uint256[] memory amounts) public virtual;
 
@@ -175,6 +173,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  The difference between this and `treasury.getAllocatorAllocated`, is that the latter is a static
      *  value recorded during reporting, but no data is available on _new_ amounts after reporting.
      *  Thus, this should take into consideration the new amounts. This can be used for say aTokens.
+     * @param id the id of the deposit in `TreasuryExtender`
      */
     function amountAllocated(uint256 id) public view virtual returns (uint256);
 
@@ -226,7 +225,8 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  Can only be called while the Allocator is activated.
      *
      *  This function should update the Allocators internal state via `_update`, which should in turn
-     *  return the `gain` and `loss` the Allocator has sustained in underlying allocated `token`.
+     *  return the `gain` and `loss` the Allocator has sustained in underlying allocated `token` from `_tokens`
+     *  decided by the `id`.
      *  Please check the docs on `_update` to see what its function should be.
      *
      *  `_lossLimitViolated` checks if the Allocators is above its loss limit and deactivates it in case
@@ -235,6 +235,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *
      *  Lastly, the Allocator reports its state to the Extender, which handles gain, loss, allocated logic.
      *  The documentation on this can be found in `TreasuryExtender.sol`.
+     * @param id the id of the deposit in `TreasuryExtender`
      */
     function update(uint256 id) external override {
         // checks
@@ -362,10 +363,20 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
         tokenIds[id] = _ids.length - 1;
     }
 
+    /**
+     * @notice
+     *  Returns all deposit IDs registered with the Allocator.
+     * @return the deposit IDs registered
+     */
     function ids() external view override returns (uint256[] memory) {
         return _ids;
     }
 
+    /**
+     * @notice
+     *  Returns all tokens registered with the Allocator.
+     * @return the tokens
+     */
     function tokens() external view override returns (IERC20[] memory) {
         return _tokens;
     }
@@ -407,6 +418,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      * @dev
      *  Called as part of `update`. The rule is that the already sustained loss + newly sustained
      *  has to be larger or equal to the limit to break the contract.
+     * @param id deposit id as in `TreasuryExtender`
      * @param loss the amount of newly sustained loss
      * @return true if the the loss limit has been broken
      */

@@ -26,9 +26,9 @@ struct AllocatorData {
 interface ITreasuryExtender {
     /**
      * @notice
-     *  Emitted when a new Allocator is registered.
+     *  Emitted when a new Deposit is registered.
      */
-    event NewAllocatorRegistered(address allocatorAddress, address allocatorToken, uint256 id);
+    event NewDepositRegistered(address allocator, address token, uint256 id);
 
     /**
      * @notice
@@ -72,7 +72,7 @@ interface ITreasuryExtender {
      */
     event AllocatorLimitsChanged(uint256 id, uint128 allocationLimit, uint128 lossLimit);
 
-    function registerAllocator(address newAllocator) external;
+    function registerDeposit(address newAllocator) external;
 
     function setAllocatorLimits(uint256 id, AllocatorLimits memory limits) external;
 

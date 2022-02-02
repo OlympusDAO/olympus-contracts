@@ -110,7 +110,7 @@ describe("TreasuryExtender", () => {
         treasury.enable(0, extender.address, addressZero);
     });
 
-    describe("registerAllocator", () => {
+    describe("registerDeposit", () => {
         before(async () => {
             start = await snapshot();
         });
@@ -125,14 +125,14 @@ describe("TreasuryExtender", () => {
 
         it("revert: should revert if sender is not guardian", async () => {
             extender = extender.connect(owner);
-            await expect(extender.registerAllocator(fakeAllocator.address)).to.be.revertedWith(
+            await expect(extender.registerDeposit(fakeAllocator.address)).to.be.revertedWith(
                 "UNAUTHORIZED"
             );
             extender = extender.connect(guardian);
         });
 
         it("passing: should be able to register the allocator", async () => {
-            await extender.registerAllocator(fakeAllocator.address);
+            await extender.registerDeposit(fakeAllocator.address);
 
             expect(fakeAllocator.addId).to.have.been.calledOnce;
             expect(fakeAllocator.addId).to.have.been.calledWith(1);
@@ -150,7 +150,7 @@ describe("TreasuryExtender", () => {
             fakeAllocatorTwo.tokenIds.returns(0);
             fakeAllocatorTwo.tokens.returns([coins.frax]);
 
-            await extender.registerAllocator(fakeAllocatorTwo.address);
+            await extender.registerDeposit(fakeAllocatorTwo.address);
 
             expect(fakeAllocatorTwo.addId).to.have.been.calledOnce;
             expect(fakeAllocatorTwo.addId).to.have.been.calledWith(2);
@@ -166,7 +166,7 @@ describe("TreasuryExtender", () => {
     describe("setAllocatorLimits", () => {
         before(async () => {
             start = await snapshot();
-            await extender.registerAllocator(fakeAllocator.address);
+            await extender.registerDeposit(fakeAllocator.address);
             fakeAllocator.ids.returns([1]);
         });
 
@@ -241,7 +241,7 @@ describe("TreasuryExtender", () => {
             rewardAllocator.rewardTokens.returns(coins.dai);
             rewardAllocator.amountAllocated.returns(0);
 
-            await extender.registerAllocator(rewardAllocator.address);
+            await extender.registerDeposit(rewardAllocator.address);
 
             rewardAllocator.ids.returns([1]);
 
@@ -323,7 +323,7 @@ describe("TreasuryExtender", () => {
         before(async () => {
             start = await snapshot();
 
-            await extender.registerAllocator(fakeAllocator.address);
+            await extender.registerDeposit(fakeAllocator.address);
 
             fakeAllocator.ids.returns([1]);
 
@@ -344,7 +344,7 @@ describe("TreasuryExtender", () => {
             veryfakeAllocator.rewardTokens.returns(coins.weth);
             veryfakeAllocator.amountAllocated.returns(0);
 
-            await extender.registerAllocator(veryfakeAllocator.address);
+            await extender.registerDeposit(veryfakeAllocator.address);
 
             veryfakeAllocator.ids.returns([2]);
 
