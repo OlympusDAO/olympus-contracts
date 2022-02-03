@@ -10,7 +10,7 @@ import {
     Distributor__factory,
     Distributor,
     OlympusStaking,
-    OlympusStaking__factory, 
+    OlympusStaking__factory,
     OlympusAuthority,
     OlympusAuthority__factory,
 } from "../../types";
@@ -20,7 +20,7 @@ chai.use(smock.matchers);
 const ZERO_ADDRESS = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
 
 describe("Distributor", () => {
-    let owner: SignerWithAddress;    
+    let owner: SignerWithAddress;
     let governor: SignerWithAddress;
     let guardian: SignerWithAddress;
     let other: SignerWithAddress;
@@ -60,7 +60,6 @@ describe("Distributor", () => {
             FUTURE_END_TIME,
             authority.address
         );
-
     });
 
     describe("constructor", () => {
@@ -142,7 +141,7 @@ describe("Distributor", () => {
             it("mint from treasury and distribute to recipients", async () => {
                 await distributor.connect(governor).addRecipient(staking.address, 2975);
                 await distributor.connect(governor).addRecipient(other.address, 1521);
-                
+
                 treasuryFake.baseSupply.returns(10000000);
                 await distributor.connect(other).triggerRebase();
 
