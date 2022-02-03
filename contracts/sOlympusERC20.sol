@@ -9,7 +9,7 @@ import "./types/ERC20Permit.sol";
 import "./interfaces/IgOHM.sol";
 import "./interfaces/IsOHM.sol";
 import "./interfaces/IStaking.sol";
-
+import "hardhat/console.sol";
 contract sOlympus is IsOHM, ERC20Permit {
     /* ========== DEPENDENCIES ========== */
 
@@ -274,6 +274,11 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     // Staking contract holds excess sOHM
     function circulatingSupply() public view override returns (uint256) {
+        console.log("in circulatingSupply!");
+        console.log("_totalSupply", _totalSupply);
+        console.log("balanceOf(stakingContract)", balanceOf(stakingContract));
+        console.log("(gOHM.balanceFrom(IERC20(address(gOHM)).totalSupply())", (gOHM.balanceFrom(IERC20(address(gOHM)).totalSupply())));
+        console.log("IStaking(stakingContract).supplyInWarmup()", IStaking(stakingContract).supplyInWarmup());
         return
             _totalSupply.sub(balanceOf(stakingContract)).add(gOHM.balanceFrom(IERC20(address(gOHM)).totalSupply())).add(
                 IStaking(stakingContract).supplyInWarmup()

@@ -157,8 +157,9 @@ describe("Treasury", async () => {
 
         // Get sOHM in deployer wallet
         const sohmAmount = "1000000000000";
-        await ohm.approve(staking.address, sohmAmount);
-        await staking.stake(deployer.address, sohmAmount, true, true);
+        await ohm.approve(staking.address, sohmAmount);        
+        await distributor.triggerRebase();    
+        await staking.stake(deployer.address, sohmAmount, true, true);        
 
         // Transfer 10 sOHM to alice for testing
         await sOhm.transfer(alice.address, debtLimit);
