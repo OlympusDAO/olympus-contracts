@@ -26,13 +26,9 @@ interface IStaking {
 
     function unwrap(address _to, uint256 _amount) external returns (uint256 sBalance_);
 
-    function rebase() external;
+    function rebase() external returns (uint256);
 
-    function index() external view returns (uint256);
-
-    function contractBalance() external view returns (uint256);
-
-    function totalStaked() external view returns (uint256);
+    function index() external view returns (uint256);    
 
     function supplyInWarmup() external view returns (uint256);
 }

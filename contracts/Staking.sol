@@ -8,10 +8,11 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/IsOHM.sol";
 import "./interfaces/IgOHM.sol";
 import "./interfaces/IDistributor.sol";
+import "./interfaces/IStaking.sol";
 
 import "./types/OlympusAccessControlled.sol";
 
-contract OlympusStaking is OlympusAccessControlled {
+contract OlympusStaking is OlympusAccessControlled, IStaking {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -90,7 +91,7 @@ contract OlympusStaking is OlympusAccessControlled {
         uint256 _amount,
         bool _rebasing,
         bool _claim
-    ) external returns (uint256) {
+    ) external override returns (uint256) {
         OHM.safeTransferFrom(msg.sender, address(this), _amount);
         _amount = _amount.add(rebase()); // add bounty if rebase occurred
         if (_claim && warmupPeriod == 0) {
@@ -120,7 +121,7 @@ contract OlympusStaking is OlympusAccessControlled {
      * @param _rebasing bool
      * @return uint
      */
-    function claim(address _to, bool _rebasing) public returns (uint256) {
+    function claim(address _to, bool _rebasing) public override returns (uint256) {
         Claim memory info = warmupInfo[_to];
 
         if (!info.lock) {
@@ -141,7 +142,7 @@ contract OlympusStaking is OlympusAccessControlled {
      * @notice forfeit stake and retrieve OHM
      * @return uint
      */
-    function forfeit() external returns (uint256) {
+    function forfeit() external override returns (uint256) {
         Claim memory info = warmupInfo[msg.sender];
         delete warmupInfo[msg.sender];
 
@@ -155,7 +156,7 @@ contract OlympusStaking is OlympusAccessControlled {
     /**
      * @notice prevent new deposits or claims from ext. address (protection from malicious activity)
      */
-    function toggleLock() external {
+    function toggleLock() external override {
         warmupInfo[msg.sender].lock = !warmupInfo[msg.sender].lock;
     }
 
@@ -172,7 +173,7 @@ contract OlympusStaking is OlympusAccessControlled {
         uint256 _amount,
         bool _trigger,
         bool _rebasing
-    ) external returns (uint256 amount_) {
+    ) external override returns (uint256 amount_) {
         amount_ = _amount;
         uint256 bounty;
         if (_trigger) {
@@ -196,7 +197,7 @@ contract OlympusStaking is OlympusAccessControlled {
      * @param _amount uint
      * @return gBalance_ uint
      */
-    function wrap(address _to, uint256 _amount) external returns (uint256 gBalance_) {
+    function wrap(address _to, uint256 _amount) external override returns (uint256 gBalance_) {
         sOHM.safeTransferFrom(msg.sender, address(this), _amount);
         gBalance_ = gOHM.balanceTo(_amount);
         gOHM.mint(_to, gBalance_);
@@ -208,7 +209,7 @@ contract OlympusStaking is OlympusAccessControlled {
      * @param _amount uint
      * @return sBalance_ uint
      */
-    function unwrap(address _to, uint256 _amount) external returns (uint256 sBalance_) {
+    function unwrap(address _to, uint256 _amount) external override returns (uint256 sBalance_) {
         gOHM.burn(msg.sender, _amount);
         sBalance_ = gOHM.balanceFrom(_amount);
         sOHM.safeTransfer(_to, sBalance_);
@@ -218,7 +219,7 @@ contract OlympusStaking is OlympusAccessControlled {
      * @notice trigger rebase if epoch over
      * @return uint256
      */
-    function rebase() public returns (uint256) {
+    function rebase() public override returns (uint256) {
         uint256 bounty;
         if (epoch.end <= block.timestamp) {
             sOHM.rebase(epoch.distribute, epoch.number);
@@ -269,14 +270,14 @@ contract OlympusStaking is OlympusAccessControlled {
      * @notice returns the sOHM index, which tracks rebase growth
      * @return uint
      */
-    function index() public view returns (uint256) {
+    function index() public override view returns (uint256) {
         return sOHM.index();
     }
 
     /**
      * @notice total supply in warmup
      */
-    function supplyInWarmup() public view returns (uint256) {
+    function supplyInWarmup() public override view returns (uint256) {
         return sOHM.balanceForGons(gonsInWarmup);
     }
 

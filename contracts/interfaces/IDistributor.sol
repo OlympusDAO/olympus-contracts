@@ -24,4 +24,6 @@ interface IDistributor {
         uint256 _rate,
         uint256 _target
     ) external;
+
+    function setUnlockRebase(bool _unlockRebase) external;
 }

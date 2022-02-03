@@ -119,6 +119,10 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         return bounty;
     }
 
+    function setUnlockRebase(bool _unlockRebase) external override {        
+        unlockRebase = _unlockRebase;
+    }
+
     /* ====== INTERNAL FUNCTIONS ====== */
 
     /**

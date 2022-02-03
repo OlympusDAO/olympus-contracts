@@ -93,8 +93,8 @@ describe("Distributor", () => {
         });
 
         describe("distribute", () => {
-            it("will do nothing if there are no recipients", async () => {
-                await distributor.connect(staking).distribute();
+            it.only("will do nothing if there are no recipients", async () => {
+                await distributor.connect(staking).triggerRebase();
 
                 expect(treasuryFake.mint).to.have.callCount(0);
             });
