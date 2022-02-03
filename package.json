@@ -6,7 +6,6 @@
     "test": "test"
   },
   "dependencies": {
-    "@uniswap/v3-periphery": "^1.2.0"
   },
   "devDependencies": {
     "@defi-wonderland/smock": "^2.0.7",
