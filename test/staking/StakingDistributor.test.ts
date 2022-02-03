@@ -288,7 +288,7 @@ describe("Distributor", () => {
         });
 
         describe("nextRewardAt", () => {
-            it("returns the number of OHM to be distributed in the next epoch", async () => {                
+            it("returns the number of OHM to be distributed in the next epoch", async () => {
                 treasuryFake.baseSupply.returns(3899568500546135);
 
                 const rate = 2975;
