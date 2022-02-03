@@ -131,7 +131,6 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
      */
     function withdrawPrincipal(uint256 id_, uint256 amount_) external isValidWithdrawal(amount_) {
         DepositInfo storage currDeposit = depositInfo[id_];
-        // Need to figure out best way to report Donated event
         _withdrawPrincipal(id_, amount_);
         if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
             currDeposit.principalAmount = 0;
