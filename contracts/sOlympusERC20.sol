@@ -119,11 +119,15 @@ contract sOlympus is IsOHM, ERC20Permit {
     function rebase(uint256 profit_, uint256 epoch_) public override onlyStakingContract returns (uint256) {
         uint256 rebaseAmount;
         uint256 circulatingSupply_ = circulatingSupply();
+        console.log("in rebase circulatingSupply_", circulatingSupply_);
+        console.log("profit_", profit_);
+        console.log("_totalSupply", _totalSupply);
         if (profit_ == 0) {
             emit LogSupply(epoch_, _totalSupply);
             emit LogRebase(epoch_, 0, index());
             return _totalSupply;
         } else if (circulatingSupply_ > 0) {
+            console.log("1111111");
             rebaseAmount = profit_.mul(_totalSupply).div(circulatingSupply_);
         } else {
             rebaseAmount = profit_;
@@ -274,11 +278,6 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     // Staking contract holds excess sOHM
     function circulatingSupply() public view override returns (uint256) {
-        console.log("in circulatingSupply!");
-        console.log("_totalSupply", _totalSupply);
-        console.log("balanceOf(stakingContract)", balanceOf(stakingContract));
-        console.log("(gOHM.balanceFrom(IERC20(address(gOHM)).totalSupply())", (gOHM.balanceFrom(IERC20(address(gOHM)).totalSupply())));
-        console.log("IStaking(stakingContract).supplyInWarmup()", IStaking(stakingContract).supplyInWarmup());
         return
             _totalSupply.sub(balanceOf(stakingContract)).add(gOHM.balanceFrom(IERC20(address(gOHM)).totalSupply())).add(
                 IStaking(stakingContract).supplyInWarmup()
