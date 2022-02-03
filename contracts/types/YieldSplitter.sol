@@ -98,6 +98,9 @@ abstract contract YieldSplitter {
 
         amountRedeemed = _getOutstandingYield(userDeposit.principalAmount, userDeposit.agnosticAmount);
         userDeposit.agnosticAmount = IgOHM(gOHM).balanceTo(userDeposit.principalAmount);
+        if (userDeposit.principalAmount == 0) {
+            _closeDeposit(id_);
+        }
     }
 
     /**
@@ -112,6 +115,9 @@ abstract contract YieldSplitter {
             DepositInfo storage currentDeposit = depositInfo[recipientIdsArray[i]];
             amountRedeemed += _getOutstandingYield(currentDeposit.principalAmount, currentDeposit.agnosticAmount);
             currentDeposit.agnosticAmount = IgOHM(gOHM).balanceTo(currentDeposit.principalAmount);
+            if (currentDeposit.principalAmount == 0) {
+                _closeDeposit(recipientIdsArray[i]);
+            }
         }
     }
 

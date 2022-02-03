@@ -9,16 +9,13 @@ import {SafeERC20} from "../libraries/SafeERC20.sol";
 import {YieldSplitter} from "../types/YieldSplitter.sol";
 import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 
-
-// Because of truncation in the ones place for both gohmDeposit and gohmDebt we lose
-// 1e-18 units of precision. Potential solution is to round up redeemable amount by 1e-18
 /**
     @title YieldDirector (codename Tyche) 
     @notice This contract allows donors to deposit their sOHM and donate their rebases
             to any address. Donors will be able to withdraw their principal
             sOHM at any time. Donation recipients can also redeem accrued rebases at any time.
  */
-contract YieldDirector is YieldSplitter, OlympusAccessControlled {
+contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
     using SafeERC20 for IERC20;
 
     // drop sOHM for mainnet launch
@@ -136,8 +133,8 @@ contract YieldDirector is YieldSplitter, OlympusAccessControlled {
         DepositInfo storage currDeposit = depositInfo[id_];
         _withdrawPrincipal(id_, amount_);
         if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
-            (uint256 principal, uint256 agnosticAmount) = _closeDeposit(id_);
-            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(principal, agnosticAmount));   
+            currDeposit.principalAmount = 0;
+            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount));
         }
         IERC20(gOHM).safeTransfer(msg.sender, amount_);
         emit Withdrawn(msg.sender, currDeposit.recipient, amount_);
@@ -150,10 +147,10 @@ contract YieldDirector is YieldSplitter, OlympusAccessControlled {
      */
     function withdrawPrincipalAsSohm(uint256 id_, uint256 amount_) external isValidWithdrawal(amount_) {
         DepositInfo storage currDeposit = depositInfo[id_];
-        _withdrawPrincipal(id_, amount_); // need to add _closeDeposit if amount_ > principal
+        _withdrawPrincipal(id_, amount_);
         if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
-            (uint256 principal, uint256 agnosticAmount) = _closeDeposit(id_);
-            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(principal, agnosticAmount));
+            currDeposit.principalAmount = 0;
+            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount));
         }
         staking.unwrap(msg.sender, amount_);
         emit Withdrawn(msg.sender, currDeposit.recipient, amount_);
@@ -174,14 +171,14 @@ contract YieldDirector is YieldSplitter, OlympusAccessControlled {
 
         for (uint256 index = 0; index < depositsLength; index++) {
             DepositInfo storage currDeposit = depositInfo[depositIds[index]];
-            (uint256 principal, uint256 agnosticAmount) = _closeDeposit(index);
-            principalTotal += principal;
-            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(principal, agnosticAmount));
+            principalTotal += currDeposit.principalAmount;
+            currDeposit.principalAmount = 0;
+            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount));
         }
 
-        IERC20(gOHM).safeTransfer(msg.sender, principalTotal);
+        IERC20(gOHM).safeTransfer(msg.sender, IgOHM(gOHM).balanceTo(principalTotal));
 
-        emit AllWithdrawn(msg.sender, principalTotal);
+        emit AllWithdrawn(msg.sender, IgOHM(gOHM).balanceTo(principalTotal));
     }
 
     /**
@@ -211,14 +208,14 @@ contract YieldDirector is YieldSplitter, OlympusAccessControlled {
      */
     function totalDeposits(address donor_) external view returns ( uint256 ) {
         uint256[] storage depositIds = depositorIds[donor_];
-        uint256 agnosticTotal = 0;
+        uint256 principalTotal = 0;
 
         for (uint256 index = 0; index < depositIds.length; index++) {
             DepositInfo storage currDeposit = depositInfo[depositIds[index]];
-            agnosticTotal += IgOHM(gOHM).balanceTo(currDeposit.principalAmount);
+            principalTotal += currDeposit.principalAmount;
         }
 
-        return agnosticTotal;
+        return IgOHM(gOHM).balanceTo(principalTotal);
     }
     
     /**
@@ -271,15 +268,17 @@ contract YieldDirector is YieldSplitter, OlympusAccessControlled {
      */
     function totalDonated(address donor_) external view returns (uint256) {
         uint256[] storage depositIds = depositorIds[donor_];
+        uint256 principalTotal = 0;
         uint256 agnosticTotal = 0;
 
         for (uint256 index = 0; index < depositIds.length; index++) {
             DepositInfo storage currDeposit = depositInfo[depositIds[index]];
 
-            agnosticTotal += _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);
+            principalTotal += currDeposit.principalAmount;
+            agnosticTotal += currDeposit.agnosticAmount;
         }
 
-        return agnosticTotal;
+        return _getOutstandingYield(principalTotal, agnosticTotal);
     }
 
     /************************
@@ -312,10 +311,7 @@ contract YieldDirector is YieldSplitter, OlympusAccessControlled {
         @param id_ Deposit id for this donation
      */
     function redeemYield(uint256 id_) external returns (uint256) {
-        // Since recipient and donor now share a data object, need to figure out best way
-        // to report this as Donated event as well
         require(!redeemDisabled, "Redeems currently disabled");
-
         uint256 amountRedeemed = _redeemYield(id_);
         require(amountRedeemed > 0, "No redeemable balance");
 
@@ -329,8 +325,6 @@ contract YieldDirector is YieldSplitter, OlympusAccessControlled {
         @notice Redeem recipient's full donated amount of sOHM at current index
      */
     function redeemAllYield() external returns (uint256) {
-        // Since recipient and donor now share a data object, need to figure out best way
-        // to report this as Donated for each user as well
         require(!redeemDisabled, "Redeems currently disabled");
 
         uint256 amountRedeemed = _redeemAllYield(msg.sender);
