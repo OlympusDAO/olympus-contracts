@@ -9,7 +9,7 @@ import "./types/ERC20Permit.sol";
 import "./interfaces/IgOHM.sol";
 import "./interfaces/IsOHM.sol";
 import "./interfaces/IStaking.sol";
-import "hardhat/console.sol";
+
 contract sOlympus is IsOHM, ERC20Permit {
     /* ========== DEPENDENCIES ========== */
 
@@ -119,15 +119,11 @@ contract sOlympus is IsOHM, ERC20Permit {
     function rebase(uint256 profit_, uint256 epoch_) public override onlyStakingContract returns (uint256) {
         uint256 rebaseAmount;
         uint256 circulatingSupply_ = circulatingSupply();
-        console.log("in rebase circulatingSupply_", circulatingSupply_);
-        console.log("profit_", profit_);
-        console.log("_totalSupply", _totalSupply);
         if (profit_ == 0) {
             emit LogSupply(epoch_, _totalSupply);
             emit LogRebase(epoch_, 0, index());
             return _totalSupply;
         } else if (circulatingSupply_ > 0) {
-            console.log("1111111");
             rebaseAmount = profit_.mul(_totalSupply).div(circulatingSupply_);
         } else {
             rebaseAmount = profit_;
