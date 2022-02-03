@@ -4,9 +4,13 @@ import { ethers } from "hardhat";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import {
     ITreasury,
+    IgOHM,
+    IsOHM,
     IOHM,
     Distributor__factory,
     Distributor,
+    OlympusStaking,
+    OlympusStaking__factory, 
     OlympusAuthority,
     OlympusAuthority__factory,
 } from "../../types";
@@ -16,26 +20,47 @@ chai.use(smock.matchers);
 const ZERO_ADDRESS = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
 
 describe("Distributor", () => {
-    let owner: SignerWithAddress;
-    let staking: SignerWithAddress;
+    let owner: SignerWithAddress;    
     let governor: SignerWithAddress;
     let guardian: SignerWithAddress;
     let other: SignerWithAddress;
     let ohmFake: FakeContract<IOHM>;
+    let sOHMFake: FakeContract<IsOHM>;
+    let gOHMFake: FakeContract<IgOHM>;
     let treasuryFake: FakeContract<ITreasury>;
+    let staking: OlympusStaking;
     let distributor: Distributor;
     let authority: OlympusAuthority;
 
+    const EPOCH_LENGTH = 2200;
+    const EPOCH_NUMBER = 1;
+    const FUTURE_END_TIME = 1022010000; // an arbitrary future block timestamp
+
     beforeEach(async () => {
-        [owner, staking, governor, guardian, other] = await ethers.getSigners();
+        [owner, governor, guardian, other] = await ethers.getSigners();
         treasuryFake = await smock.fake<ITreasury>("ITreasury");
         ohmFake = await smock.fake<IOHM>("IOHM");
+        gOHMFake = await smock.fake<IgOHM>("IgOHM");
+        // need to be specific because IsOHM is also defined in OLD
+        sOHMFake = await smock.fake<IsOHM>("contracts/interfaces/IsOHM.sol:IsOHM");
+
         authority = await new OlympusAuthority__factory(owner).deploy(
             governor.address,
             guardian.address,
             owner.address,
             owner.address
         );
+
+        staking = await new OlympusStaking__factory(owner).deploy(
+            ohmFake.address,
+            sOHMFake.address,
+            gOHMFake.address,
+            EPOCH_LENGTH,
+            EPOCH_NUMBER,
+            FUTURE_END_TIME,
+            authority.address
+        );
+
     });
 
     describe("constructor", () => {
@@ -90,11 +115,12 @@ describe("Distributor", () => {
                 staking.address,
                 authority.address
             );
+            staking.connect(governor).setDistributor(distributor.address);
         });
 
         describe("distribute", () => {
             it("will do nothing if there are no recipients", async () => {
-                await distributor.connect(staking).distribute();
+                await distributor.connect(other).triggerRebase();
 
                 expect(treasuryFake.mint).to.have.callCount(0);
             });
@@ -116,9 +142,9 @@ describe("Distributor", () => {
             it("mint from treasury and distribute to recipients", async () => {
                 await distributor.connect(governor).addRecipient(staking.address, 2975);
                 await distributor.connect(governor).addRecipient(other.address, 1521);
-
-                ohmFake.totalSupply.returns(10000000);
-                await distributor.connect(staking).distribute();
+                
+                treasuryFake.baseSupply.returns(10000000);
+                await distributor.connect(other).triggerRebase();
 
                 expect(treasuryFake.mint).to.have.been.calledWith(staking.address, 29750);
                 expect(treasuryFake.mint).to.have.been.calledWith(other.address, 15210);
@@ -133,7 +159,7 @@ describe("Distributor", () => {
                     const target = 2000;
                     await distributor.connect(governor).setAdjustment(index, add, rate, target);
 
-                    await distributor.connect(staking).distribute();
+                    await distributor.connect(other).triggerRebase();
 
                     const info = await distributor.info(0);
                     expect(info.rate).to.equal(2970);
@@ -147,7 +173,7 @@ describe("Distributor", () => {
                     const target = 3000;
                     await distributor.connect(governor).setAdjustment(index, add, rate, target);
 
-                    await distributor.connect(staking).distribute();
+                    await distributor.connect(other).triggerRebase();
 
                     const info = await distributor.info(0);
                     expect(info.rate).to.equal(2980);
@@ -161,7 +187,7 @@ describe("Distributor", () => {
                     const target = 3000;
                     await distributor.connect(governor).setAdjustment(index, add, rate, target);
 
-                    await distributor.connect(staking).distribute();
+                    await distributor.connect(other).triggerRebase();
 
                     const info = await distributor.info(0);
                     expect(info.rate).to.equal(2975);
@@ -175,7 +201,7 @@ describe("Distributor", () => {
                     const target = 2970;
                     await distributor.connect(governor).setAdjustment(index, add, rate, target);
 
-                    await distributor.connect(staking).distribute();
+                    await distributor.connect(other).triggerRebase();
 
                     const adjustment = await distributor.adjustments(0);
                     expect(adjustment.rate).to.equal(0);
@@ -189,7 +215,7 @@ describe("Distributor", () => {
                     const target = 2980;
                     await distributor.connect(governor).setAdjustment(index, add, rate, target);
 
-                    await distributor.connect(staking).distribute();
+                    await distributor.connect(other).triggerRebase();
 
                     const adjustment = await distributor.adjustments(0);
                     expect(adjustment.rate).to.equal(0);
@@ -262,8 +288,8 @@ describe("Distributor", () => {
         });
 
         describe("nextRewardAt", () => {
-            it("returns the number of OHM to be distributed in the next epoch", async () => {
-                ohmFake.totalSupply.returns(3899568500546135);
+            it("returns the number of OHM to be distributed in the next epoch", async () => {                
+                treasuryFake.baseSupply.returns(3899568500546135);
 
                 const rate = 2975;
                 const reward = await distributor.nextRewardAt(rate);
@@ -271,7 +297,7 @@ describe("Distributor", () => {
             });
 
             it("returns zero when rate is zero", async () => {
-                ohmFake.totalSupply.returns(3899568500546135);
+                treasuryFake.baseSupply.returns(3899568500546135);
 
                 const rate = 0;
                 const reward = await distributor.nextRewardAt(rate);
@@ -283,14 +309,14 @@ describe("Distributor", () => {
             it("returns the number of OHM to be distributed to the given address in the next epoch", async () => {
                 const rate = 2975;
                 await distributor.connect(governor).addRecipient(staking.address, rate);
-                ohmFake.totalSupply.returns(3899568500546135);
+                treasuryFake.baseSupply.returns(3899568500546135);
 
                 const reward = await distributor.nextRewardFor(staking.address);
                 expect(reward).to.equal(11601216289124);
             });
 
             it("returns the 0 if the address is not a recipient", async () => {
-                ohmFake.totalSupply.returns(3899568500546135);
+                treasuryFake.baseSupply.returns(3899568500546135);
 
                 const reward = await distributor.nextRewardFor(other.address);
                 expect(reward).to.equal(0);

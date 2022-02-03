@@ -178,6 +178,9 @@ contract OlympusStaking is OlympusAccessControlled {
         if (_trigger) {
             bounty = rebase();
         }
+        if (_amount == 0) {
+            return amount_;
+        }
         if (_rebasing) {
             sOHM.safeTransferFrom(msg.sender, address(this), _amount);
             amount_ = amount_.add(bounty);
@@ -225,7 +228,6 @@ contract OlympusStaking is OlympusAccessControlled {
 
             epoch.end = epoch.end.add(epoch.length);
             epoch.number++;
-
             if (address(distributor) != address(0)) {
                 distributor.distribute();
                 bounty = distributor.retrieveBounty(); // Will mint ohm for this contract if there exists a bounty
