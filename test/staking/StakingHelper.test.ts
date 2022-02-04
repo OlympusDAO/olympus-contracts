@@ -7,8 +7,8 @@ import {
     IgOHM,
     IsOHM,
     IOHM,
-    // StakingHelper,
-    // StakingHelper__factory,
+    StakingHelper,
+    StakingHelper__factory,
     OlympusStaking,
     OlympusStaking__factory,    
     Distributor__factory,
@@ -33,7 +33,7 @@ describe("StakingHelper", () => {
     let distributor: Distributor;
     let authority: OlympusAuthority;
     let staking: OlympusStaking;
-    // let stakingHelper: StakingHelper;
+    let stakingHelper: StakingHelper;
 
     const EPOCH_LENGTH = 2200;
     const EPOCH_NUMBER = 1;
@@ -72,7 +72,7 @@ describe("StakingHelper", () => {
         );
         staking.connect(governor).setDistributor(distributor.address);
 
-        // stakingHelper = await new StakingHelper__factory(owner).deploy();
+        stakingHelper = await new StakingHelper__factory(owner).deploy();
     });
 
    
@@ -94,8 +94,8 @@ describe("StakingHelper", () => {
                     .returns(true);
                 gOHMFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
 
-                await staking.connect(other).stake(other.address, amount, rebasing, claim);
-                // await stakingHelper.stake(staking.address, distributor.address, other.address, amount, rebasing, claim);
+                // await staking.connect(other).stake(other.address, amount, rebasing, claim);
+                await stakingHelper.stake(staking.address, distributor.address, other.address, amount, rebasing, claim);
 
                 expect(gOHMFake.mint).to.be.calledWith(other.address, indexedAmount);
             });
