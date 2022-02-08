@@ -1,0 +1,651 @@
+{
+  "address": "0x525C7063E7C20997BaaE9bDa922159152D0e8417",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_authority",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "Approval",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "contract IOlympusAuthority",
+          "name": "authority",
+          "type": "address"
+        }
+      ],
+      "name": "AuthorityUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "Transfer",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "DOMAIN_SEPARATOR",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        }
+      ],
+      "name": "allowance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "approve",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "authority",
+      "outputs": [
+        {
+          "internalType": "contract IOlympusAuthority",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "balanceOf",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "burn",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account_",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "name": "burnFrom",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "decimals",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "subtractedValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "decreaseAllowance",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "addedValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "increaseAllowance",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account_",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "name": "mint",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "name",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "nonces",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "spender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "value",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "deadline",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint8",
+          "name": "v",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "r",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "s",
+          "type": "bytes32"
+        }
+      ],
+      "name": "permit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IOlympusAuthority",
+          "name": "_newAuthority",
+          "type": "address"
+        }
+      ],
+      "name": "setAuthority",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "symbol",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "totalSupply",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "transfer",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "transferFrom",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xd700f486502e14ce98f3c270d8ecd52cd418b60116f76715887c97198e5dbccb",
+  "receipt": {
+    "to": null,
+    "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "contractAddress": "0x525C7063E7C20997BaaE9bDa922159152D0e8417",
+    "transactionIndex": 0,
+    "gasUsed": "1428935",
+    "logsBloom": "0x00000000000000000000000000000000000000000001000000000200000000000040000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000",
+    "blockHash": "0xf2998cc487b5e0db5ccb4bd2c4a9045cf1543b759ccdc74dbfd3a334fe1f2980",
+    "transactionHash": "0xd700f486502e14ce98f3c270d8ecd52cd418b60116f76715887c97198e5dbccb",
+    "logs": [
+      {
+        "transactionIndex": 0,
+        "blockNumber": 14028127,
+        "transactionHash": "0xd700f486502e14ce98f3c270d8ecd52cd418b60116f76715887c97198e5dbccb",
+        "address": "0x525C7063E7C20997BaaE9bDa922159152D0e8417",
+        "topics": [
+          "0x2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad",
+          "0x000000000000000000000000ab16a69a5a8c12c732e0deff4be56a70bb64c926"
+        ],
+        "data": "0x",
+        "logIndex": 0,
+        "blockHash": "0xf2998cc487b5e0db5ccb4bd2c4a9045cf1543b759ccdc74dbfd3a334fe1f2980"
+      }
+    ],
+    "blockNumber": 14028127,
+    "cumulativeGasUsed": "1428935",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0xab16A69A5a8c12C732e0DEFF4BE56A70bb64c926"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "902de087b8e2f430cce0936c30130584",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.5+commit.eb77ed08\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_authority\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"contract IOlympusAuthority\",\"name\":\"authority\",\"type\":\"address\"}],\"name\":\"AuthorityUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DOMAIN_SEPARATOR\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"authority\",\"outputs\":[{\"internalType\":\"contract IOlympusAuthority\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account_\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"name\":\"burnFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"decimals\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"subtractedValue\",\"type\":\"uint256\"}],\"name\":\"decreaseAllowance\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"addedValue\",\"type\":\"uint256\"}],\"name\":\"increaseAllowance\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account_\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"name\":\"mint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"nonces\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"spender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"name\":\"permit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contract IOlympusAuthority\",\"name\":\"_newAuthority\",\"type\":\"address\"}],\"name\":\"setAuthority\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"DOMAIN_SEPARATOR()\":{\"details\":\"See {IERC20Permit-DOMAIN_SEPARATOR}.\"},\"allowance(address,address)\":{\"details\":\"Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called.\"},\"approve(address,uint256)\":{\"details\":\"Sets `amount` as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded. IMPORTANT: Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729 Emits an {Approval} event.\"},\"balanceOf(address)\":{\"details\":\"Returns the amount of tokens owned by `account`.\"},\"nonces(address)\":{\"details\":\"See {IERC20Permit-nonces}.\"},\"permit(address,address,uint256,uint256,uint8,bytes32,bytes32)\":{\"details\":\"See {IERC20Permit-permit}.\"},\"totalSupply()\":{\"details\":\"Returns the amount of tokens in existence.\"},\"transfer(address,uint256)\":{\"details\":\"Moves `amount` tokens from the caller's account to `recipient`. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"},\"transferFrom(address,address,uint256)\":{\"details\":\"Moves `amount` tokens from `sender` to `recipient` using the allowance mechanism. `amount` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/OlympusERC20.sol\":\"OlympusERC20Token\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":800},\"remappings\":[]},\"sources\":{\"contracts/OlympusERC20.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity ^0.7.5;\\n\\nimport \\\"./libraries/SafeMath.sol\\\";\\n\\nimport \\\"./interfaces/IERC20.sol\\\";\\nimport \\\"./interfaces/IOHM.sol\\\";\\nimport \\\"./interfaces/IERC20Permit.sol\\\";\\n\\nimport \\\"./types/ERC20Permit.sol\\\";\\nimport \\\"./types/OlympusAccessControlled.sol\\\";\\n\\ncontract OlympusERC20Token is ERC20Permit, IOHM, OlympusAccessControlled {\\n    using SafeMath for uint256;\\n\\n    constructor(address _authority) \\n    ERC20(\\\"Olympus\\\", \\\"OHM\\\", 9) \\n    ERC20Permit(\\\"Olympus\\\") \\n    OlympusAccessControlled(IOlympusAuthority(_authority)) {}\\n\\n    function mint(address account_, uint256 amount_) external override onlyVault {\\n        _mint(account_, amount_);\\n    }\\n\\n    function burn(uint256 amount) external override {\\n        _burn(msg.sender, amount);\\n    }\\n\\n    function burnFrom(address account_, uint256 amount_) external override {\\n        _burnFrom(account_, amount_);\\n    }\\n\\n    function _burnFrom(address account_, uint256 amount_) internal {\\n        uint256 decreasedAllowance_ = allowance(account_, msg.sender).sub(amount_, \\\"ERC20: burn amount exceeds allowance\\\");\\n\\n        _approve(account_, msg.sender, decreasedAllowance_);\\n        _burn(account_, amount_);\\n    }\\n}\\n\",\"keccak256\":\"0x90212122f1b34557024d85a6f3814e55f52e81e30c97fc5578a45c06b93b0498\",\"license\":\"AGPL-3.0\"},\"contracts/cryptography/ECDSA.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.7.5;\\n\\n/**\\n * @dev Elliptic Curve Digital Signature Algorithm (ECDSA) operations.\\n *\\n * These functions can be used to verify that a message was signed by the holder\\n * of the private keys of a given address.\\n */\\nlibrary ECDSA {\\n    enum RecoverError {\\n        NoError,\\n        InvalidSignature,\\n        InvalidSignatureLength,\\n        InvalidSignatureS,\\n        InvalidSignatureV\\n    }\\n\\n    function _throwError(RecoverError error) private pure {\\n        if (error == RecoverError.NoError) {\\n            return; // no error: do nothing\\n        } else if (error == RecoverError.InvalidSignature) {\\n            revert(\\\"ECDSA: invalid signature\\\");\\n        } else if (error == RecoverError.InvalidSignatureLength) {\\n            revert(\\\"ECDSA: invalid signature length\\\");\\n        } else if (error == RecoverError.InvalidSignatureS) {\\n            revert(\\\"ECDSA: invalid signature 's' value\\\");\\n        } else if (error == RecoverError.InvalidSignatureV) {\\n            revert(\\\"ECDSA: invalid signature 'v' value\\\");\\n        }\\n    }\\n\\n    /**\\n     * @dev Returns the address that signed a hashed message (`hash`) with\\n     * `signature` or error string. This address can then be used for verification purposes.\\n     *\\n     * The `ecrecover` EVM opcode allows for malleable (non-unique) signatures:\\n     * this function rejects them by requiring the `s` value to be in the lower\\n     * half order, and the `v` value to be either 27 or 28.\\n     *\\n     * IMPORTANT: `hash` _must_ be the result of a hash operation for the\\n     * verification to be secure: it is possible to craft signatures that\\n     * recover to arbitrary addresses for non-hashed data. A safe way to ensure\\n     * this is by receiving a hash of the original message (which may otherwise\\n     * be too long), and then calling {toEthSignedMessageHash} on it.\\n     *\\n     * Documentation for signature generation:\\n     * - with https://web3js.readthedocs.io/en/v1.3.4/web3-eth-accounts.html#sign[Web3.js]\\n     * - with https://docs.ethers.io/v5/api/signer/#Signer-signMessage[ethers]\\n     *\\n     * _Available since v4.3._\\n     */\\n    function tryRecover(bytes32 hash, bytes memory signature) internal pure returns (address, RecoverError) {\\n        // Check the signature length\\n        // - case 65: r,s,v signature (standard)\\n        // - case 64: r,vs signature (cf https://eips.ethereum.org/EIPS/eip-2098) _Available since v4.1._\\n        if (signature.length == 65) {\\n            bytes32 r;\\n            bytes32 s;\\n            uint8 v;\\n            // ecrecover takes the signature parameters, and the only way to get them\\n            // currently is to use assembly.\\n            assembly {\\n                r := mload(add(signature, 0x20))\\n                s := mload(add(signature, 0x40))\\n                v := byte(0, mload(add(signature, 0x60)))\\n            }\\n            return tryRecover(hash, v, r, s);\\n        } else if (signature.length == 64) {\\n            bytes32 r;\\n            bytes32 vs;\\n            // ecrecover takes the signature parameters, and the only way to get them\\n            // currently is to use assembly.\\n            assembly {\\n                r := mload(add(signature, 0x20))\\n                vs := mload(add(signature, 0x40))\\n            }\\n            return tryRecover(hash, r, vs);\\n        } else {\\n            return (address(0), RecoverError.InvalidSignatureLength);\\n        }\\n    }\\n\\n    /**\\n     * @dev Returns the address that signed a hashed message (`hash`) with\\n     * `signature`. This address can then be used for verification purposes.\\n     *\\n     * The `ecrecover` EVM opcode allows for malleable (non-unique) signatures:\\n     * this function rejects them by requiring the `s` value to be in the lower\\n     * half order, and the `v` value to be either 27 or 28.\\n     *\\n     * IMPORTANT: `hash` _must_ be the result of a hash operation for the\\n     * verification to be secure: it is possible to craft signatures that\\n     * recover to arbitrary addresses for non-hashed data. A safe way to ensure\\n     * this is by receiving a hash of the original message (which may otherwise\\n     * be too long), and then calling {toEthSignedMessageHash} on it.\\n     */\\n    function recover(bytes32 hash, bytes memory signature) internal pure returns (address) {\\n        (address recovered, RecoverError error) = tryRecover(hash, signature);\\n        _throwError(error);\\n        return recovered;\\n    }\\n\\n    /**\\n     * @dev Overload of {ECDSA-tryRecover} that receives the `r` and `vs` short-signature fields separately.\\n     *\\n     * See https://eips.ethereum.org/EIPS/eip-2098[EIP-2098 short signatures]\\n     *\\n     * _Available since v4.3._\\n     */\\n    function tryRecover(\\n        bytes32 hash,\\n        bytes32 r,\\n        bytes32 vs\\n    ) internal pure returns (address, RecoverError) {\\n        bytes32 s;\\n        uint8 v;\\n        assembly {\\n            s := and(vs, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)\\n            v := add(shr(255, vs), 27)\\n        }\\n        return tryRecover(hash, v, r, s);\\n    }\\n\\n    /**\\n     * @dev Overload of {ECDSA-recover} that receives the `r and `vs` short-signature fields separately.\\n     *\\n     * _Available since v4.2._\\n     */\\n    function recover(\\n        bytes32 hash,\\n        bytes32 r,\\n        bytes32 vs\\n    ) internal pure returns (address) {\\n        (address recovered, RecoverError error) = tryRecover(hash, r, vs);\\n        _throwError(error);\\n        return recovered;\\n    }\\n\\n    /**\\n     * @dev Overload of {ECDSA-tryRecover} that receives the `v`,\\n     * `r` and `s` signature fields separately.\\n     *\\n     * _Available since v4.3._\\n     */\\n    function tryRecover(\\n        bytes32 hash,\\n        uint8 v,\\n        bytes32 r,\\n        bytes32 s\\n    ) internal pure returns (address, RecoverError) {\\n        // EIP-2 still allows signature malleability for ecrecover(). Remove this possibility and make the signature\\n        // unique. Appendix F in the Ethereum Yellow paper (https://ethereum.github.io/yellowpaper/paper.pdf), defines\\n        // the valid range for s in (301): 0 < s < secp256k1n \\u00f7 2 + 1, and for v in (302): v \\u2208 {27, 28}. Most\\n        // signatures from current libraries generate a unique signature with an s-value in the lower half order.\\n        //\\n        // If your library generates malleable signatures, such as s-values in the upper range, calculate a new s-value\\n        // with 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141 - s1 and flip v from 27 to 28 or\\n        // vice versa. If your library also generates signatures with 0/1 for v instead 27/28, add 27 to v to accept\\n        // these malleable signatures as well.\\n        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {\\n            return (address(0), RecoverError.InvalidSignatureS);\\n        }\\n        if (v != 27 && v != 28) {\\n            return (address(0), RecoverError.InvalidSignatureV);\\n        }\\n\\n        // If the signature is valid (and not malleable), return the signer address\\n        address signer = ecrecover(hash, v, r, s);\\n        if (signer == address(0)) {\\n            return (address(0), RecoverError.InvalidSignature);\\n        }\\n\\n        return (signer, RecoverError.NoError);\\n    }\\n\\n    /**\\n     * @dev Overload of {ECDSA-recover} that receives the `v`,\\n     * `r` and `s` signature fields separately.\\n     */\\n    function recover(\\n        bytes32 hash,\\n        uint8 v,\\n        bytes32 r,\\n        bytes32 s\\n    ) internal pure returns (address) {\\n        (address recovered, RecoverError error) = tryRecover(hash, v, r, s);\\n        _throwError(error);\\n        return recovered;\\n    }\\n\\n    /**\\n     * @dev Returns an Ethereum Signed Message, created from a `hash`. This\\n     * produces hash corresponding to the one signed with the\\n     * https://eth.wiki/json-rpc/API#eth_sign[`eth_sign`]\\n     * JSON-RPC method as part of EIP-191.\\n     *\\n     * See {recover}.\\n     */\\n    function toEthSignedMessageHash(bytes32 hash) internal pure returns (bytes32) {\\n        // 32 is the length in bytes of hash,\\n        // enforced by the type signature above\\n        return keccak256(abi.encodePacked(\\\"\\\\x19Ethereum Signed Message:\\\\n32\\\", hash));\\n    }\\n\\n    /**\\n     * @dev Returns an Ethereum Signed Typed Data, created from a\\n     * `domainSeparator` and a `structHash`. This produces hash corresponding\\n     * to the one signed with the\\n     * https://eips.ethereum.org/EIPS/eip-712[`eth_signTypedData`]\\n     * JSON-RPC method as part of EIP-712.\\n     *\\n     * See {recover}.\\n     */\\n    function toTypedDataHash(bytes32 domainSeparator, bytes32 structHash) internal pure returns (bytes32) {\\n        return keccak256(abi.encodePacked(\\\"\\\\x19\\\\x01\\\", domainSeparator, structHash));\\n    }\\n}\",\"keccak256\":\"0x10a8f5729ac6eb0986647052e72e06dabb8933a42c9841e3b29535d16a47344a\",\"license\":\"MIT\"},\"contracts/cryptography/EIP712.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.7.5;\\n\\nimport \\\"./ECDSA.sol\\\";\\n\\n/**\\n * @dev https://eips.ethereum.org/EIPS/eip-712[EIP 712] is a standard for hashing and signing of typed structured data.\\n *\\n * The encoding specified in the EIP is very generic, and such a generic implementation in Solidity is not feasible,\\n * thus this contract does not implement the encoding itself. Protocols need to implement the type-specific encoding\\n * they need in their contracts using a combination of `abi.encode` and `keccak256`.\\n *\\n * This contract implements the EIP 712 domain separator ({_domainSeparatorV4}) that is used as part of the encoding\\n * scheme, and the final step of the encoding to obtain the message digest that is then signed via ECDSA\\n * ({_hashTypedDataV4}).\\n *\\n * The implementation of the domain separator was designed to be as efficient as possible while still properly updating\\n * the chain id to protect against replay attacks on an eventual fork of the chain.\\n *\\n * NOTE: This contract implements the version of the encoding known as \\\"v4\\\", as implemented by the JSON RPC method\\n * https://docs.metamask.io/guide/signing-data.html[`eth_signTypedDataV4` in MetaMask].\\n *\\n * _Available since v3.4._\\n */\\nabstract contract EIP712 {\\n    /* solhint-disable var-name-mixedcase */\\n    // Cache the domain separator as an immutable value, but also store the chain id that it corresponds to, in order to\\n    // invalidate the cached domain separator if the chain id changes.\\n    bytes32 private immutable _CACHED_DOMAIN_SEPARATOR;\\n    uint256 private immutable _CACHED_CHAIN_ID;\\n\\n    bytes32 private immutable _HASHED_NAME;\\n    bytes32 private immutable _HASHED_VERSION;\\n    bytes32 private immutable _TYPE_HASH;\\n\\n    /* solhint-enable var-name-mixedcase */\\n\\n    /**\\n     * @dev Initializes the domain separator and parameter caches.\\n     *\\n     * The meaning of `name` and `version` is specified in\\n     * https://eips.ethereum.org/EIPS/eip-712#definition-of-domainseparator[EIP 712]:\\n     *\\n     * - `name`: the user readable name of the signing domain, i.e. the name of the DApp or the protocol.\\n     * - `version`: the current major version of the signing domain.\\n     *\\n     * NOTE: These parameters cannot be changed except through a xref:learn::upgrading-smart-contracts.adoc[smart\\n     * contract upgrade].\\n     */\\n    constructor(string memory name, string memory version) {\\n\\n        uint256 chainID;\\n        assembly {\\n            chainID := chainid()\\n        }\\n\\n        bytes32 hashedName = keccak256(bytes(name));\\n        bytes32 hashedVersion = keccak256(bytes(version));\\n        bytes32 typeHash = keccak256(\\n            \\\"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)\\\"\\n        );\\n        _HASHED_NAME = hashedName;\\n        _HASHED_VERSION = hashedVersion;\\n        _CACHED_CHAIN_ID = chainID;\\n        _CACHED_DOMAIN_SEPARATOR = _buildDomainSeparator(typeHash, hashedName, hashedVersion);\\n        _TYPE_HASH = typeHash;\\n    }\\n\\n    /**\\n     * @dev Returns the domain separator for the current chain.\\n     */\\n    function _domainSeparatorV4() internal view returns (bytes32) {\\n\\n        uint256 chainID;\\n        assembly {\\n            chainID := chainid()\\n        }\\n\\n        if (chainID == _CACHED_CHAIN_ID) {\\n            return _CACHED_DOMAIN_SEPARATOR;\\n        } else {\\n            return _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME, _HASHED_VERSION);\\n        }\\n    }\\n\\n    function _buildDomainSeparator(\\n        bytes32 typeHash,\\n        bytes32 nameHash,\\n        bytes32 versionHash\\n    ) private view returns (bytes32) {\\n        uint256 chainID;\\n        assembly {\\n            chainID := chainid()\\n        }\\n\\n        return keccak256(abi.encode(typeHash, nameHash, versionHash, chainID, address(this)));\\n    }\\n\\n    /**\\n     * @dev Given an already https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct[hashed struct], this\\n     * function returns the hash of the fully encoded EIP712 message for this domain.\\n     *\\n     * This hash can be used together with {ECDSA-recover} to obtain the signer of a message. For example:\\n     *\\n     * ```solidity\\n     * bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(\\n     *     keccak256(\\\"Mail(address to,string contents)\\\"),\\n     *     mailTo,\\n     *     keccak256(bytes(mailContents))\\n     * )));\\n     * address signer = ECDSA.recover(digest, signature);\\n     * ```\\n     */\\n    function _hashTypedDataV4(bytes32 structHash) internal view virtual returns (bytes32) {\\n        return ECDSA.toTypedDataHash(_domainSeparatorV4(), structHash);\\n    }\\n}\",\"keccak256\":\"0x0fccde89421da2f357c7dd30fcf545af1a0e771bff8769f516ed4168e9739ae1\",\"license\":\"MIT\"},\"contracts/interfaces/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IERC20 {\\n  /**\\n   * @dev Returns the amount of tokens in existence.\\n   */\\n  function totalSupply() external view returns (uint256);\\n\\n  /**\\n   * @dev Returns the amount of tokens owned by `account`.\\n   */\\n  function balanceOf(address account) external view returns (uint256);\\n\\n  /**\\n   * @dev Moves `amount` tokens from the caller's account to `recipient`.\\n   *\\n   * Returns a boolean value indicating whether the operation succeeded.\\n   *\\n   * Emits a {Transfer} event.\\n   */\\n  function transfer(address recipient, uint256 amount) external returns (bool);\\n\\n  /**\\n   * @dev Returns the remaining number of tokens that `spender` will be\\n   * allowed to spend on behalf of `owner` through {transferFrom}. This is\\n   * zero by default.\\n   *\\n   * This value changes when {approve} or {transferFrom} are called.\\n   */\\n  function allowance(address owner, address spender) external view returns (uint256);\\n\\n  /**\\n   * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.\\n   *\\n   * Returns a boolean value indicating whether the operation succeeded.\\n   *\\n   * IMPORTANT: Beware that changing an allowance with this method brings the risk\\n   * that someone may use both the old and the new allowance by unfortunate\\n   * transaction ordering. One possible solution to mitigate this race\\n   * condition is to first reduce the spender's allowance to 0 and set the\\n   * desired value afterwards:\\n   * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729\\n   *\\n   * Emits an {Approval} event.\\n   */\\n  function approve(address spender, uint256 amount) external returns (bool);\\n\\n  /**\\n   * @dev Moves `amount` tokens from `sender` to `recipient` using the\\n   * allowance mechanism. `amount` is then deducted from the caller's\\n   * allowance.\\n   *\\n   * Returns a boolean value indicating whether the operation succeeded.\\n   *\\n   * Emits a {Transfer} event.\\n   */\\n  function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);\\n\\n  /**\\n   * @dev Emitted when `value` tokens are moved from one account (`from`) to\\n   * another (`to`).\\n   *\\n   * Note that `value` may be zero.\\n   */\\n  event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n  /**\\n   * @dev Emitted when the allowance of a `spender` for an `owner` is set by\\n   * a call to {approve}. `value` is the new allowance.\\n   */\\n  event Approval(address indexed owner, address indexed spender, uint256 value);\\n}\\n\",\"keccak256\":\"0xa142440b0e1c51ece24b6d074ac883b34e1f33a2472773eeaaf4871875904d09\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IERC20Permit.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity >=0.7.5;\\n\\n/**\\n * @dev Interface of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in\\n * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].\\n *\\n * Adds the {permit} method, which can be used to change an account's ERC20 allowance (see {IERC20-allowance}) by\\n * presenting a message signed by the account. By not relying on {IERC20-approve}, the token holder account doesn't\\n * need to send a transaction, and thus is not required to hold Ether at all.\\n */\\ninterface IERC20Permit {\\n    /**\\n     * @dev Sets `value` as th xe allowance of `spender` over ``owner``'s tokens,\\n     * given ``owner``'s signed approval.\\n     *\\n     * IMPORTANT: The same issues {IERC20-approve} has related to transaction\\n     * ordering also apply here.\\n     *\\n     * Emits an {Approval} event.\\n     *\\n     * Requirements:\\n     *\\n     * - `spender` cannot be the zero address.\\n     * - `deadline` must be a timestamp in the future.\\n     * - `v`, `r` and `s` must be a valid `secp256k1` signature from `owner`\\n     * over the EIP712-formatted function arguments.\\n     * - the signature must use ``owner``'s current nonce (see {nonces}).\\n     *\\n     * For more information on the signature format, see the\\n     * https://eips.ethereum.org/EIPS/eip-2612#specification[relevant EIP\\n     * section].\\n     */\\n    function permit(\\n        address owner,\\n        address spender,\\n        uint256 value,\\n        uint256 deadline,\\n        uint8 v,\\n        bytes32 r,\\n        bytes32 s\\n    ) external;\\n\\n    /**\\n     * @dev Returns the current nonce for `owner`. This value must be\\n     * included whenever a signature is generated for {permit}.\\n     *\\n     * Every successful call to {permit} increases ``owner``'s nonce by one. This\\n     * prevents a signature from being used multiple times.\\n     */\\n    function nonces(address owner) external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the domain separator used in the encoding of the signature for {permit}, as defined by {EIP712}.\\n     */\\n    // solhint-disable-next-line func-name-mixedcase\\n    function DOMAIN_SEPARATOR() external view returns (bytes32);\\n}\\n\",\"keccak256\":\"0x681e969fed243296a88805a5c99bc934b6149f0310ce7761a9cbd988f2cc139a\",\"license\":\"MIT\"},\"contracts/interfaces/IOHM.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\nimport \\\"./IERC20.sol\\\";\\n\\ninterface IOHM is IERC20 {\\n  function mint(address account_, uint256 amount_) external;\\n\\n  function burn(uint256 amount) external;\\n\\n  function burnFrom(address account_, uint256 amount_) external;\\n}\\n\",\"keccak256\":\"0x55568e9a514830a80fa2939fef82b0649ee24e19af2d8ffa561b584ae4622521\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IOlympusAuthority.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity =0.7.5;\\n\\ninterface IOlympusAuthority {\\n    /* ========== EVENTS ========== */\\n    \\n    event GovernorPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n    event GuardianPushed(address indexed from, address indexed to, bool _effectiveImmediately);    \\n    event PolicyPushed(address indexed from, address indexed to, bool _effectiveImmediately);    \\n    event VaultPushed(address indexed from, address indexed to, bool _effectiveImmediately);    \\n\\n    event GovernorPulled(address indexed from, address indexed to);\\n    event GuardianPulled(address indexed from, address indexed to);\\n    event PolicyPulled(address indexed from, address indexed to);\\n    event VaultPulled(address indexed from, address indexed to);\\n\\n    /* ========== VIEW ========== */\\n    \\n    function governor() external view returns (address);\\n    function guardian() external view returns (address);\\n    function policy() external view returns (address);\\n    function vault() external view returns (address);\\n}\",\"keccak256\":\"0xfa39300288697fadbeade51ca71b1ca7306136182238dd7f2d36149659084b53\",\"license\":\"AGPL-3.0\"},\"contracts/libraries/Counters.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity ^0.7.5;\\n\\nimport \\\"./SafeMath.sol\\\";\\n\\nlibrary Counters {\\n    using SafeMath for uint256;\\n\\n    struct Counter {\\n        // This variable should never be directly accessed by users of the library: interactions must be restricted to\\n        // the library's function. As of Solidity v0.5.2, this cannot be enforced, though there is a proposal to add\\n        // this feature: see https://github.com/ethereum/solidity/issues/4637\\n        uint256 _value; // default: 0\\n    }\\n\\n    function current(Counter storage counter) internal view returns (uint256) {\\n        return counter._value;\\n    }\\n\\n    function increment(Counter storage counter) internal {\\n        // The {SafeMath} overflow check can be skipped here, see the comment at the top\\n        counter._value += 1;\\n    }\\n\\n    function decrement(Counter storage counter) internal {\\n        counter._value = counter._value.sub(1);\\n    }\\n}\",\"keccak256\":\"0xbee1dc23d642ca6eb772a0380b15213fbdf1208399357d6dd8f66ae0f1dc78a2\",\"license\":\"AGPL-3.0\"},\"contracts/libraries/SafeMath.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity ^0.7.5;\\n\\n\\n// TODO(zx): Replace all instances of SafeMath with OZ implementation\\nlibrary SafeMath {\\n\\n    function add(uint256 a, uint256 b) internal pure returns (uint256) {\\n        uint256 c = a + b;\\n        require(c >= a, \\\"SafeMath: addition overflow\\\");\\n\\n        return c;\\n    }\\n\\n    function sub(uint256 a, uint256 b) internal pure returns (uint256) {\\n        return sub(a, b, \\\"SafeMath: subtraction overflow\\\");\\n    }\\n\\n    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {\\n        require(b <= a, errorMessage);\\n        uint256 c = a - b;\\n\\n        return c;\\n    }\\n\\n    function mul(uint256 a, uint256 b) internal pure returns (uint256) {\\n        if (a == 0) {\\n            return 0;\\n        }\\n\\n        uint256 c = a * b;\\n        require(c / a == b, \\\"SafeMath: multiplication overflow\\\");\\n\\n        return c;\\n    }\\n\\n    function div(uint256 a, uint256 b) internal pure returns (uint256) {\\n        return div(a, b, \\\"SafeMath: division by zero\\\");\\n    }\\n\\n    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {\\n        require(b > 0, errorMessage);\\n        uint256 c = a / b;\\n        assert(a == b * c + a % b); // There is no case in which this doesn't hold\\n\\n        return c;\\n    }\\n\\n    // Only used in the  BondingCalculator.sol\\n    function sqrrt(uint256 a) internal pure returns (uint c) {\\n        if (a > 3) {\\n            c = a;\\n            uint b = add( div( a, 2), 1 );\\n            while (b < c) {\\n                c = b;\\n                b = div( add( div( a, b ), b), 2 );\\n            }\\n        } else if (a != 0) {\\n            c = 1;\\n        }\\n    }\\n\\n}\",\"keccak256\":\"0x45cfc2aa9d85df2add98d4e899d834c646e8ce7001b00ead65f07dbefbcebeef\",\"license\":\"AGPL-3.0\"},\"contracts/types/ERC20.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0-or-later\\npragma solidity >=0.7.5;\\n\\nimport \\\"../libraries/SafeMath.sol\\\";\\n\\nimport \\\"../interfaces/IERC20.sol\\\";\\n\\n\\nabstract contract ERC20 is IERC20 {\\n\\n    using SafeMath for uint256;\\n\\n    // TODO comment actual hash value.\\n    bytes32 constant private ERC20TOKEN_ERC1820_INTERFACE_ID = keccak256( \\\"ERC20Token\\\" );\\n    \\n    mapping (address => uint256) internal _balances;\\n\\n    mapping (address => mapping (address => uint256)) internal _allowances;\\n\\n    uint256 internal _totalSupply;\\n\\n    string internal _name;\\n    \\n    string internal _symbol;\\n    \\n    uint8 internal immutable _decimals;\\n\\n    constructor (string memory name_, string memory symbol_, uint8 decimals_) {\\n        _name = name_;\\n        _symbol = symbol_;\\n        _decimals = decimals_;\\n    }\\n\\n    function name() public view returns (string memory) {\\n        return _name;\\n    }\\n\\n    function symbol() public view returns (string memory) {\\n        return _symbol;\\n    }\\n\\n    function decimals() public view virtual returns (uint8) {\\n        return _decimals;\\n    }\\n\\n    function totalSupply() public view override returns (uint256) {\\n        return _totalSupply;\\n    }\\n\\n    function balanceOf(address account) public view virtual override returns (uint256) {\\n        return _balances[account];\\n    }\\n\\n    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {\\n        _transfer(msg.sender, recipient, amount);\\n        return true;\\n    }\\n\\n    function allowance(address owner, address spender) public view virtual override returns (uint256) {\\n        return _allowances[owner][spender];\\n    }\\n\\n    function approve(address spender, uint256 amount) public virtual override returns (bool) {\\n        _approve(msg.sender, spender, amount);\\n        return true;\\n    }\\n\\n    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {\\n        _transfer(sender, recipient, amount);\\n        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, \\\"ERC20: transfer amount exceeds allowance\\\"));\\n        return true;\\n    }\\n\\n    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {\\n        _approve(msg.sender, spender, _allowances[msg.sender][spender].add(addedValue));\\n        return true;\\n    }\\n\\n    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {\\n        _approve(msg.sender, spender, _allowances[msg.sender][spender].sub(subtractedValue, \\\"ERC20: decreased allowance below zero\\\"));\\n        return true;\\n    }\\n\\n    function _transfer(address sender, address recipient, uint256 amount) internal virtual {\\n        require(sender != address(0), \\\"ERC20: transfer from the zero address\\\");\\n        require(recipient != address(0), \\\"ERC20: transfer to the zero address\\\");\\n\\n        _beforeTokenTransfer(sender, recipient, amount);\\n\\n        _balances[sender] = _balances[sender].sub(amount, \\\"ERC20: transfer amount exceeds balance\\\");\\n        _balances[recipient] = _balances[recipient].add(amount);\\n        emit Transfer(sender, recipient, amount);\\n    }\\n\\n    function _mint(address account, uint256 amount) internal virtual {\\n        require(account != address(0), \\\"ERC20: mint to the zero address\\\");\\n        _beforeTokenTransfer(address(0), account, amount);\\n        _totalSupply = _totalSupply.add(amount);\\n        _balances[account] = _balances[account].add(amount);\\n        emit Transfer(address(0), account, amount);\\n    }\\n\\n    function _burn(address account, uint256 amount) internal virtual {\\n        require(account != address(0), \\\"ERC20: burn from the zero address\\\");\\n\\n        _beforeTokenTransfer(account, address(0), amount);\\n\\n        _balances[account] = _balances[account].sub(amount, \\\"ERC20: burn amount exceeds balance\\\");\\n        _totalSupply = _totalSupply.sub(amount);\\n        emit Transfer(account, address(0), amount);\\n    }\\n\\n    function _approve(address owner, address spender, uint256 amount) internal virtual {\\n        require(owner != address(0), \\\"ERC20: approve from the zero address\\\");\\n        require(spender != address(0), \\\"ERC20: approve to the zero address\\\");\\n\\n        _allowances[owner][spender] = amount;\\n        emit Approval(owner, spender, amount);\\n    }\\n\\n  function _beforeTokenTransfer( address from_, address to_, uint256 amount_ ) internal virtual { }\\n}\\n\",\"keccak256\":\"0x4c4ae7b078471e2be0637dda816fb22b4ff5793f54d75132d83191557af420e7\",\"license\":\"AGPL-3.0-or-later\"},\"contracts/types/ERC20Permit.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity >=0.7.5;\\n\\nimport \\\"../interfaces/IERC20Permit.sol\\\";\\nimport \\\"./ERC20.sol\\\";\\nimport \\\"../cryptography/EIP712.sol\\\";\\nimport \\\"../cryptography/ECDSA.sol\\\";\\nimport \\\"../libraries/Counters.sol\\\";\\n\\n/**\\n * @dev Implementation of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in\\n * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].\\n *\\n * Adds the {permit} method, which can be used to change an account's ERC20 allowance (see {IERC20-allowance}) by\\n * presenting a message signed by the account. By not relying on `{IERC20-approve}`, the token holder account doesn't\\n * need to send a transaction, and thus is not required to hold Ether at all.\\n *\\n * _Available since v3.4._\\n */\\nabstract contract ERC20Permit is ERC20, IERC20Permit, EIP712 {\\n    using Counters for Counters.Counter;\\n\\n    mapping(address => Counters.Counter) private _nonces;\\n\\n    // solhint-disable-next-line var-name-mixedcase\\n    bytes32 private immutable _PERMIT_TYPEHASH = keccak256(\\\"Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)\\\");\\n\\n    /**\\n     * @dev Initializes the {EIP712} domain separator using the `name` parameter, and setting `version` to `\\\"1\\\"`.\\n     *\\n     * It's a good idea to use the same `name` that is defined as the ERC20 token name.\\n     */\\n    constructor(string memory name) EIP712(name, \\\"1\\\") {}\\n\\n    /**\\n     * @dev See {IERC20Permit-permit}.\\n     */\\n    function permit(\\n        address owner,\\n        address spender,\\n        uint256 value,\\n        uint256 deadline,\\n        uint8 v,\\n        bytes32 r,\\n        bytes32 s\\n    ) public virtual override {\\n        require(block.timestamp <= deadline, \\\"ERC20Permit: expired deadline\\\");\\n\\n        bytes32 structHash = keccak256(abi.encode(_PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline));\\n\\n        bytes32 hash = _hashTypedDataV4(structHash);\\n\\n        address signer = ECDSA.recover(hash, v, r, s);\\n        require(signer == owner, \\\"ERC20Permit: invalid signature\\\");\\n\\n        _approve(owner, spender, value);\\n    }\\n\\n    /**\\n     * @dev See {IERC20Permit-nonces}.\\n     */\\n    function nonces(address owner) public view virtual override returns (uint256) {\\n        return _nonces[owner].current();\\n    }\\n\\n    /**\\n     * @dev See {IERC20Permit-DOMAIN_SEPARATOR}.\\n     */\\n    // solhint-disable-next-line func-name-mixedcase\\n    function DOMAIN_SEPARATOR() external view override returns (bytes32) {\\n        return _domainSeparatorV4();\\n    }\\n\\n    /**\\n     * @dev \\\"Consume a nonce\\\": return the current value and increment.\\n     *\\n     * _Available since v4.1._\\n     */\\n    function _useNonce(address owner) internal virtual returns (uint256 current) {\\n        Counters.Counter storage nonce = _nonces[owner];\\n        current = nonce.current();\\n        nonce.increment();\\n    }\\n}\\n\",\"keccak256\":\"0x40ec8f537d138839902f90cf1512694aeb0a3bcd4d02780ccd9936f25d9c8ace\",\"license\":\"MIT\"},\"contracts/types/OlympusAccessControlled.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0-only\\npragma solidity >=0.7.5;\\n\\nimport \\\"../interfaces/IOlympusAuthority.sol\\\";\\n\\nabstract contract OlympusAccessControlled {\\n\\n    /* ========== EVENTS ========== */\\n\\n    event AuthorityUpdated(IOlympusAuthority indexed authority);\\n\\n    string UNAUTHORIZED = \\\"UNAUTHORIZED\\\"; // save gas\\n\\n    /* ========== STATE VARIABLES ========== */\\n\\n    IOlympusAuthority public authority;\\n\\n\\n    /* ========== Constructor ========== */\\n\\n    constructor(IOlympusAuthority _authority) {\\n        authority = _authority;\\n        emit AuthorityUpdated(_authority);\\n    }\\n    \\n\\n    /* ========== MODIFIERS ========== */\\n    \\n    modifier onlyGovernor() {\\n        require(msg.sender == authority.governor(), UNAUTHORIZED);\\n        _;\\n    }\\n    \\n    modifier onlyGuardian() {\\n        require(msg.sender == authority.guardian(), UNAUTHORIZED);\\n        _;\\n    }\\n    \\n    modifier onlyPolicy() {\\n        require(msg.sender == authority.policy(), UNAUTHORIZED);\\n        _;\\n    }\\n\\n    modifier onlyVault() {\\n        require(msg.sender == authority.vault(), UNAUTHORIZED);\\n        _;\\n    }\\n    \\n    /* ========== GOV ONLY ========== */\\n    \\n    function setAuthority(IOlympusAuthority _newAuthority) external onlyGovernor {\\n        authority = _newAuthority;\\n        emit AuthorityUpdated(_newAuthority);\\n    }\\n}\\n\",\"keccak256\":\"0x7e7c74bd79093c0ee40af7bc07622b29930bb60424afbd5689e78cd4e02d3122\",\"license\":\"AGPL-3.0-only\"}},\"version\":1}",
+  "bytecode": "0x7f6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9610140526101a0604052600c6101608190526b15539055551213d49256915160a21b61018090815262000057916006919062000243565b503480156200006557600080fd5b5060405162001a5338038062001a53833981810160405260208110156200008b57600080fd5b50516040805180820182526007808252664f6c796d70757360c81b60208381018290528451808601865260018152603160f81b818301528551808701875293845283820192835285518087019096526003808752624f484d60e81b928701929092528351879686959294929390926009926200010992919062000243565b5081516200011f90600490602085019062000243565b5060f81b7fff00000000000000000000000000000000000000000000000000000000000000166080525050815160208084019190912082519183019190912060e08290526101008190524660c081905291907f8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f6200019f818484620001fe565b60a052610120525050600780546001600160a01b0319166001600160a01b0387169081179091556040519094507f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad9350600092509050a25050620002ef565b604080516020808201959095528082019390935260608301919091524660808301523060a0808401919091528151808403909101815260c09092019052805191012090565b828054600181600116156101000203166002900490600052602060002090601f0160209004810192826200027b5760008555620002c6565b82601f106200029657805160ff1916838001178555620002c6565b82800160010185558215620002c6579182015b82811115620002c6578251825591602001919060010190620002a9565b50620002d4929150620002d8565b5090565b5b80821115620002d45760008155600101620002d9565b60805160f81c60a05160c05160e05161010051610120516101405161170d6200034660003980610a26525080610eab525080610eed525080610ecc525080610e57525080610e7f5250806105bf525061170d6000f3fe608060405234801561001057600080fd5b50600436106101515760003560e01c806370a08231116100cd578063a457c2d711610081578063bf7e214f11610066578063bf7e214f146103fe578063d505accf14610422578063dd62ed3e1461047357610151565b8063a457c2d7146103a6578063a9059cbb146103d257610151565b80637a9e5e4b116100b25780637a9e5e4b146103525780637ecebe001461037857806395d89b411461039e57610151565b806370a082311461030057806379cc67901461032657610151565b8063313ce567116101245780633950935111610109578063395093511461028957806340c10f19146102b557806342966c68146102e357610151565b8063313ce567146102635780633644e5151461028157610151565b806306fdde0314610156578063095ea7b3146101d357806318160ddd1461021357806323b872dd1461022d575b600080fd5b61015e6104a1565b6040805160208082528351818301528351919283929083019185019080838360005b83811015610198578181015183820152602001610180565b50505050905090810190601f1680156101c55780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6101ff600480360360408110156101e957600080fd5b506001600160a01b038135169060200135610538565b604080519115158252519081900360200190f35b61021b61054e565b60408051918252519081900360200190f35b6101ff6004803603606081101561024357600080fd5b506001600160a01b03813581169160208101359091169060400135610554565b61026b6105bd565b6040805160ff9092168252519081900360200190f35b61021b6105e1565b6101ff6004803603604081101561029f57600080fd5b506001600160a01b0381351690602001356105f0565b6102e1600480360360408110156102cb57600080fd5b506001600160a01b038135169060200135610626565b005b6102e1600480360360208110156102f957600080fd5b503561075a565b61021b6004803603602081101561031657600080fd5b50356001600160a01b0316610767565b6102e16004803603604081101561033c57600080fd5b506001600160a01b038135169060200135610782565b6102e16004803603602081101561036857600080fd5b50356001600160a01b031661078c565b61021b6004803603602081101561038e57600080fd5b50356001600160a01b03166108da565b61015e610901565b6101ff600480360360408110156103bc57600080fd5b506001600160a01b038135169060200135610962565b6101ff600480360360408110156103e857600080fd5b506001600160a01b0381351690602001356109b1565b6104066109be565b604080516001600160a01b039092168252519081900360200190f35b6102e1600480360360e081101561043857600080fd5b506001600160a01b03813581169160208101359091169060408101359060608101359060ff6080820135169060a08101359060c001356109cd565b61021b6004803603604081101561048957600080fd5b506001600160a01b0381358116916020013516610b49565b60038054604080516020601f600260001961010060018816150201909516949094049384018190048102820181019092528281526060939092909183018282801561052d5780601f106105025761010080835404028352916020019161052d565b820191906000526020600020905b81548152906001019060200180831161051057829003601f168201915b505050505090505b90565b6000610545338484610b74565b50600192915050565b60025490565b6000610561848484610c60565b6105b384336105ae85604051806060016040528060288152602001611626602891396001600160a01b038a1660009081526001602090815260408083203384529091529020549190610dbb565b610b74565b5060019392505050565b7f000000000000000000000000000000000000000000000000000000000000000090565b60006105eb610e52565b905090565b3360008181526001602090815260408083206001600160a01b038716845290915281205490916105459185906105ae9086610f19565b600760009054906101000a90046001600160a01b03166001600160a01b031663fbfa77cf6040518163ffffffff1660e01b815260040160206040518083038186803b15801561067457600080fd5b505afa158015610688573d6000803e3d6000fd5b505050506040513d602081101561069e57600080fd5b50516006906001600160a01b0316331461074b5760405162461bcd60e51b815260206004820190815282546002600019610100600184161502019091160460248301819052909182916044909101908490801561073c5780601f106107115761010080835404028352916020019161073c565b820191906000526020600020905b81548152906001019060200180831161071f57829003601f168201915b50509250505060405180910390fd5b506107568282610f7a565b5050565b610764338261106a565b50565b6001600160a01b031660009081526020819052604090205490565b6107568282611166565b600760009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b815260040160206040518083038186803b1580156107da57600080fd5b505afa1580156107ee573d6000803e3d6000fd5b505050506040513d602081101561080457600080fd5b50516006906001600160a01b031633146108775760405162461bcd60e51b815260206004820190815282546002600019610100600184161502019091160460248301819052909182916044909101908490801561073c5780601f106107115761010080835404028352916020019161073c565b50600780547fffffffffffffffffffffffff0000000000000000000000000000000000000000166001600160a01b0383169081179091556040517f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad90600090a250565b6001600160a01b03811660009081526005602052604081206108fb906111b2565b92915050565b60048054604080516020601f600260001961010060018816150201909516949094049384018190048102820181019092528281526060939092909183018282801561052d5780601f106105025761010080835404028352916020019161052d565b600061054533846105ae856040518060600160405280602581526020016116dc602591393360009081526001602090815260408083206001600160a01b038d1684529091529020549190610dbb565b6000610545338484610c60565b6007546001600160a01b031681565b83421115610a22576040805162461bcd60e51b815260206004820152601d60248201527f45524332305065726d69743a206578706972656420646561646c696e65000000604482015290519081900360640190fd5b60007f0000000000000000000000000000000000000000000000000000000000000000888888610a518c6111b6565b8960405160200180878152602001866001600160a01b03168152602001856001600160a01b0316815260200184815260200183815260200182815260200196505050505050506040516020818303038152906040528051906020012090506000610aba826111e8565b90506000610aca828787876111fb565b9050896001600160a01b0316816001600160a01b031614610b32576040805162461bcd60e51b815260206004820152601e60248201527f45524332305065726d69743a20696e76616c6964207369676e61747572650000604482015290519081900360640190fd5b610b3d8a8a8a610b74565b50505050505050505050565b6001600160a01b03918216600090815260016020908152604080832093909416825291909152205490565b6001600160a01b038316610bb95760405162461bcd60e51b81526004018080602001828103825260248152602001806116b86024913960400191505060405180910390fd5b6001600160a01b038216610bfe5760405162461bcd60e51b815260040180806020018281038252602281526020018061159a6022913960400191505060405180910390fd5b6001600160a01b03808416600081815260016020908152604080832094871680845294825291829020859055815185815291517f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b9259281900390910190a3505050565b6001600160a01b038316610ca55760405162461bcd60e51b81526004018080602001828103825260258152602001806116936025913960400191505060405180910390fd5b6001600160a01b038216610cea5760405162461bcd60e51b81526004018080602001828103825260238152602001806115556023913960400191505060405180910390fd5b610cf58383836111ad565b610d32816040518060600160405280602681526020016115bc602691396001600160a01b0386166000908152602081905260409020549190610dbb565b6001600160a01b038085166000908152602081905260408082209390935590841681522054610d619082610f19565b6001600160a01b038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b60008184841115610e4a5760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b83811015610e0f578181015183820152602001610df7565b50505050905090810190601f168015610e3c5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b505050900390565b6000467f0000000000000000000000000000000000000000000000000000000000000000811415610ea6577f0000000000000000000000000000000000000000000000000000000000000000915050610535565b610f117f00000000000000000000000000000000000000000000000000000000000000007f00000000000000000000000000000000000000000000000000000000000000007f0000000000000000000000000000000000000000000000000000000000000000611223565b915050610535565b600082820183811015610f73576040805162461bcd60e51b815260206004820152601b60248201527f536166654d6174683a206164646974696f6e206f766572666c6f770000000000604482015290519081900360640190fd5b9392505050565b6001600160a01b038216610fd5576040805162461bcd60e51b815260206004820152601f60248201527f45524332303a206d696e7420746f20746865207a65726f206164647265737300604482015290519081900360640190fd5b610fe1600083836111ad565b600254610fee9082610f19565b6002556001600160a01b0382166000908152602081905260409020546110149082610f19565b6001600160a01b0383166000818152602081815260408083209490945583518581529351929391927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9281900390910190a35050565b6001600160a01b0382166110af5760405162461bcd60e51b81526004018080602001828103825260218152602001806116726021913960400191505060405180910390fd5b6110bb826000836111ad565b6110f881604051806060016040528060228152602001611578602291396001600160a01b0385166000908152602081905260409020549190610dbb565b6001600160a01b03831660009081526020819052604090205560025461111e9082611268565b6002556040805182815290516000916001600160a01b038516917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9181900360200190a35050565b60006111968260405180606001604052806024815260200161164e6024913961118f8633610b49565b9190610dbb565b90506111a3833383610b74565b6111ad838361106a565b505050565b5490565b6001600160a01b03811660009081526005602052604081206111d7816111b2565b91506111e2816112aa565b50919050565b60006108fb6111f5610e52565b836112b3565b600080600061120c878787876112ee565b91509150611219816113e3565b5095945050505050565b604080516020808201959095528082019390935260608301919091524660808301523060a0808401919091528151808403909101815260c09092019052805191012090565b6000610f7383836040518060400160405280601e81526020017f536166654d6174683a207375627472616374696f6e206f766572666c6f770000815250610dbb565b80546001019055565b6040805161190160f01b6020808301919091526022820194909452604280820193909352815180820390930183526062019052805191012090565b6000807f7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a083111561132557506000905060036113da565b8460ff16601b1415801561133d57508460ff16601c14155b1561134e57506000905060046113da565b600060018787878760405160008152602001604052604051808581526020018460ff1681526020018381526020018281526020019450505050506020604051602081039080840390855afa1580156113aa573d6000803e3d6000fd5b5050604051601f1901519150506001600160a01b0381166113d3576000600192509250506113da565b9150600090505b94509492505050565b60008160048111156113f157fe5b14156113fc57610764565b600181600481111561140a57fe5b141561145d576040805162461bcd60e51b815260206004820152601860248201527f45434453413a20696e76616c6964207369676e61747572650000000000000000604482015290519081900360640190fd5b600281600481111561146b57fe5b14156114be576040805162461bcd60e51b815260206004820152601f60248201527f45434453413a20696e76616c6964207369676e6174757265206c656e67746800604482015290519081900360640190fd5b60038160048111156114cc57fe5b14156115095760405162461bcd60e51b81526004018080602001828103825260228152602001806115e26022913960400191505060405180910390fd5b600481600481111561151757fe5b14156107645760405162461bcd60e51b81526004018080602001828103825260228152602001806116046022913960400191505060405180910390fdfe45524332303a207472616e7366657220746f20746865207a65726f206164647265737345524332303a206275726e20616d6f756e7420657863656564732062616c616e636545524332303a20617070726f766520746f20746865207a65726f206164647265737345524332303a207472616e7366657220616d6f756e7420657863656564732062616c616e636545434453413a20696e76616c6964207369676e6174757265202773272076616c756545434453413a20696e76616c6964207369676e6174757265202776272076616c756545524332303a207472616e7366657220616d6f756e74206578636565647320616c6c6f77616e636545524332303a206275726e20616d6f756e74206578636565647320616c6c6f77616e636545524332303a206275726e2066726f6d20746865207a65726f206164647265737345524332303a207472616e736665722066726f6d20746865207a65726f206164647265737345524332303a20617070726f76652066726f6d20746865207a65726f206164647265737345524332303a2064656372656173656420616c6c6f77616e63652062656c6f77207a65726fa164736f6c6343000705000a",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106101515760003560e01c806370a08231116100cd578063a457c2d711610081578063bf7e214f11610066578063bf7e214f146103fe578063d505accf14610422578063dd62ed3e1461047357610151565b8063a457c2d7146103a6578063a9059cbb146103d257610151565b80637a9e5e4b116100b25780637a9e5e4b146103525780637ecebe001461037857806395d89b411461039e57610151565b806370a082311461030057806379cc67901461032657610151565b8063313ce567116101245780633950935111610109578063395093511461028957806340c10f19146102b557806342966c68146102e357610151565b8063313ce567146102635780633644e5151461028157610151565b806306fdde0314610156578063095ea7b3146101d357806318160ddd1461021357806323b872dd1461022d575b600080fd5b61015e6104a1565b6040805160208082528351818301528351919283929083019185019080838360005b83811015610198578181015183820152602001610180565b50505050905090810190601f1680156101c55780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6101ff600480360360408110156101e957600080fd5b506001600160a01b038135169060200135610538565b604080519115158252519081900360200190f35b61021b61054e565b60408051918252519081900360200190f35b6101ff6004803603606081101561024357600080fd5b506001600160a01b03813581169160208101359091169060400135610554565b61026b6105bd565b6040805160ff9092168252519081900360200190f35b61021b6105e1565b6101ff6004803603604081101561029f57600080fd5b506001600160a01b0381351690602001356105f0565b6102e1600480360360408110156102cb57600080fd5b506001600160a01b038135169060200135610626565b005b6102e1600480360360208110156102f957600080fd5b503561075a565b61021b6004803603602081101561031657600080fd5b50356001600160a01b0316610767565b6102e16004803603604081101561033c57600080fd5b506001600160a01b038135169060200135610782565b6102e16004803603602081101561036857600080fd5b50356001600160a01b031661078c565b61021b6004803603602081101561038e57600080fd5b50356001600160a01b03166108da565b61015e610901565b6101ff600480360360408110156103bc57600080fd5b506001600160a01b038135169060200135610962565b6101ff600480360360408110156103e857600080fd5b506001600160a01b0381351690602001356109b1565b6104066109be565b604080516001600160a01b039092168252519081900360200190f35b6102e1600480360360e081101561043857600080fd5b506001600160a01b03813581169160208101359091169060408101359060608101359060ff6080820135169060a08101359060c001356109cd565b61021b6004803603604081101561048957600080fd5b506001600160a01b0381358116916020013516610b49565b60038054604080516020601f600260001961010060018816150201909516949094049384018190048102820181019092528281526060939092909183018282801561052d5780601f106105025761010080835404028352916020019161052d565b820191906000526020600020905b81548152906001019060200180831161051057829003601f168201915b505050505090505b90565b6000610545338484610b74565b50600192915050565b60025490565b6000610561848484610c60565b6105b384336105ae85604051806060016040528060288152602001611626602891396001600160a01b038a1660009081526001602090815260408083203384529091529020549190610dbb565b610b74565b5060019392505050565b7f000000000000000000000000000000000000000000000000000000000000000090565b60006105eb610e52565b905090565b3360008181526001602090815260408083206001600160a01b038716845290915281205490916105459185906105ae9086610f19565b600760009054906101000a90046001600160a01b03166001600160a01b031663fbfa77cf6040518163ffffffff1660e01b815260040160206040518083038186803b15801561067457600080fd5b505afa158015610688573d6000803e3d6000fd5b505050506040513d602081101561069e57600080fd5b50516006906001600160a01b0316331461074b5760405162461bcd60e51b815260206004820190815282546002600019610100600184161502019091160460248301819052909182916044909101908490801561073c5780601f106107115761010080835404028352916020019161073c565b820191906000526020600020905b81548152906001019060200180831161071f57829003601f168201915b50509250505060405180910390fd5b506107568282610f7a565b5050565b610764338261106a565b50565b6001600160a01b031660009081526020819052604090205490565b6107568282611166565b600760009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b815260040160206040518083038186803b1580156107da57600080fd5b505afa1580156107ee573d6000803e3d6000fd5b505050506040513d602081101561080457600080fd5b50516006906001600160a01b031633146108775760405162461bcd60e51b815260206004820190815282546002600019610100600184161502019091160460248301819052909182916044909101908490801561073c5780601f106107115761010080835404028352916020019161073c565b50600780547fffffffffffffffffffffffff0000000000000000000000000000000000000000166001600160a01b0383169081179091556040517f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad90600090a250565b6001600160a01b03811660009081526005602052604081206108fb906111b2565b92915050565b60048054604080516020601f600260001961010060018816150201909516949094049384018190048102820181019092528281526060939092909183018282801561052d5780601f106105025761010080835404028352916020019161052d565b600061054533846105ae856040518060600160405280602581526020016116dc602591393360009081526001602090815260408083206001600160a01b038d1684529091529020549190610dbb565b6000610545338484610c60565b6007546001600160a01b031681565b83421115610a22576040805162461bcd60e51b815260206004820152601d60248201527f45524332305065726d69743a206578706972656420646561646c696e65000000604482015290519081900360640190fd5b60007f0000000000000000000000000000000000000000000000000000000000000000888888610a518c6111b6565b8960405160200180878152602001866001600160a01b03168152602001856001600160a01b0316815260200184815260200183815260200182815260200196505050505050506040516020818303038152906040528051906020012090506000610aba826111e8565b90506000610aca828787876111fb565b9050896001600160a01b0316816001600160a01b031614610b32576040805162461bcd60e51b815260206004820152601e60248201527f45524332305065726d69743a20696e76616c6964207369676e61747572650000604482015290519081900360640190fd5b610b3d8a8a8a610b74565b50505050505050505050565b6001600160a01b03918216600090815260016020908152604080832093909416825291909152205490565b6001600160a01b038316610bb95760405162461bcd60e51b81526004018080602001828103825260248152602001806116b86024913960400191505060405180910390fd5b6001600160a01b038216610bfe5760405162461bcd60e51b815260040180806020018281038252602281526020018061159a6022913960400191505060405180910390fd5b6001600160a01b03808416600081815260016020908152604080832094871680845294825291829020859055815185815291517f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b9259281900390910190a3505050565b6001600160a01b038316610ca55760405162461bcd60e51b81526004018080602001828103825260258152602001806116936025913960400191505060405180910390fd5b6001600160a01b038216610cea5760405162461bcd60e51b81526004018080602001828103825260238152602001806115556023913960400191505060405180910390fd5b610cf58383836111ad565b610d32816040518060600160405280602681526020016115bc602691396001600160a01b0386166000908152602081905260409020549190610dbb565b6001600160a01b038085166000908152602081905260408082209390935590841681522054610d619082610f19565b6001600160a01b038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b60008184841115610e4a5760405162461bcd60e51b81526004018080602001828103825283818151815260200191508051906020019080838360005b83811015610e0f578181015183820152602001610df7565b50505050905090810190601f168015610e3c5780820380516001836020036101000a031916815260200191505b509250505060405180910390fd5b505050900390565b6000467f0000000000000000000000000000000000000000000000000000000000000000811415610ea6577f0000000000000000000000000000000000000000000000000000000000000000915050610535565b610f117f00000000000000000000000000000000000000000000000000000000000000007f00000000000000000000000000000000000000000000000000000000000000007f0000000000000000000000000000000000000000000000000000000000000000611223565b915050610535565b600082820183811015610f73576040805162461bcd60e51b815260206004820152601b60248201527f536166654d6174683a206164646974696f6e206f766572666c6f770000000000604482015290519081900360640190fd5b9392505050565b6001600160a01b038216610fd5576040805162461bcd60e51b815260206004820152601f60248201527f45524332303a206d696e7420746f20746865207a65726f206164647265737300604482015290519081900360640190fd5b610fe1600083836111ad565b600254610fee9082610f19565b6002556001600160a01b0382166000908152602081905260409020546110149082610f19565b6001600160a01b0383166000818152602081815260408083209490945583518581529351929391927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9281900390910190a35050565b6001600160a01b0382166110af5760405162461bcd60e51b81526004018080602001828103825260218152602001806116726021913960400191505060405180910390fd5b6110bb826000836111ad565b6110f881604051806060016040528060228152602001611578602291396001600160a01b0385166000908152602081905260409020549190610dbb565b6001600160a01b03831660009081526020819052604090205560025461111e9082611268565b6002556040805182815290516000916001600160a01b038516917fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9181900360200190a35050565b60006111968260405180606001604052806024815260200161164e6024913961118f8633610b49565b9190610dbb565b90506111a3833383610b74565b6111ad838361106a565b505050565b5490565b6001600160a01b03811660009081526005602052604081206111d7816111b2565b91506111e2816112aa565b50919050565b60006108fb6111f5610e52565b836112b3565b600080600061120c878787876112ee565b91509150611219816113e3565b5095945050505050565b604080516020808201959095528082019390935260608301919091524660808301523060a0808401919091528151808403909101815260c09092019052805191012090565b6000610f7383836040518060400160405280601e81526020017f536166654d6174683a207375627472616374696f6e206f766572666c6f770000815250610dbb565b80546001019055565b6040805161190160f01b6020808301919091526022820194909452604280820193909352815180820390930183526062019052805191012090565b6000807f7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a083111561132557506000905060036113da565b8460ff16601b1415801561133d57508460ff16601c14155b1561134e57506000905060046113da565b600060018787878760405160008152602001604052604051808581526020018460ff1681526020018381526020018281526020019450505050506020604051602081039080840390855afa1580156113aa573d6000803e3d6000fd5b5050604051601f1901519150506001600160a01b0381166113d3576000600192509250506113da565b9150600090505b94509492505050565b60008160048111156113f157fe5b14156113fc57610764565b600181600481111561140a57fe5b141561145d576040805162461bcd60e51b815260206004820152601860248201527f45434453413a20696e76616c6964207369676e61747572650000000000000000604482015290519081900360640190fd5b600281600481111561146b57fe5b14156114be576040805162461bcd60e51b815260206004820152601f60248201527f45434453413a20696e76616c6964207369676e6174757265206c656e67746800604482015290519081900360640190fd5b60038160048111156114cc57fe5b14156115095760405162461bcd60e51b81526004018080602001828103825260228152602001806115e26022913960400191505060405180910390fd5b600481600481111561151757fe5b14156107645760405162461bcd60e51b81526004018080602001828103825260228152602001806116046022913960400191505060405180910390fdfe45524332303a207472616e7366657220746f20746865207a65726f206164647265737345524332303a206275726e20616d6f756e7420657863656564732062616c616e636545524332303a20617070726f766520746f20746865207a65726f206164647265737345524332303a207472616e7366657220616d6f756e7420657863656564732062616c616e636545434453413a20696e76616c6964207369676e6174757265202773272076616c756545434453413a20696e76616c6964207369676e6174757265202776272076616c756545524332303a207472616e7366657220616d6f756e74206578636565647320616c6c6f77616e636545524332303a206275726e20616d6f756e74206578636565647320616c6c6f77616e636545524332303a206275726e2066726f6d20746865207a65726f206164647265737345524332303a207472616e736665722066726f6d20746865207a65726f206164647265737345524332303a20617070726f76652066726f6d20746865207a65726f206164647265737345524332303a2064656372656173656420616c6c6f77616e63652062656c6f77207a65726fa164736f6c6343000705000a",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "DOMAIN_SEPARATOR()": {
+        "details": "See {IERC20Permit-DOMAIN_SEPARATOR}."
+      },
+      "allowance(address,address)": {
+        "details": "Returns the remaining number of tokens that `spender` will be allowed to spend on behalf of `owner` through {transferFrom}. This is zero by default. This value changes when {approve} or {transferFrom} are called."
+      },
+      "approve(address,uint256)": {
+        "details": "Sets `amount` as the allowance of `spender` over the caller's tokens. Returns a boolean value indicating whether the operation succeeded. IMPORTANT: Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729 Emits an {Approval} event."
+      },
+      "balanceOf(address)": {
+        "details": "Returns the amount of tokens owned by `account`."
+      },
+      "nonces(address)": {
+        "details": "See {IERC20Permit-nonces}."
+      },
+      "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)": {
+        "details": "See {IERC20Permit-permit}."
+      },
+      "totalSupply()": {
+        "details": "Returns the amount of tokens in existence."
+      },
+      "transfer(address,uint256)": {
+        "details": "Moves `amount` tokens from the caller's account to `recipient`. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event."
+      },
+      "transferFrom(address,address,uint256)": {
+        "details": "Moves `amount` tokens from `sender` to `recipient` using the allowance mechanism. `amount` is then deducted from the caller's allowance. Returns a boolean value indicating whether the operation succeeded. Emits a {Transfer} event."
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 11965,
+        "contract": "contracts/OlympusERC20.sol:OlympusERC20Token",
+        "label": "_balances",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_mapping(t_address,t_uint256)"
+      },
+      {
+        "astId": 11971,
+        "contract": "contracts/OlympusERC20.sol:OlympusERC20Token",
+        "label": "_allowances",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))"
+      },
+      {
+        "astId": 11973,
+        "contract": "contracts/OlympusERC20.sol:OlympusERC20Token",
+        "label": "_totalSupply",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 11975,
+        "contract": "contracts/OlympusERC20.sol:OlympusERC20Token",
+        "label": "_name",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_string_storage"
+      },
+      {
+        "astId": 11977,
+        "contract": "contracts/OlympusERC20.sol:OlympusERC20Token",
+        "label": "_symbol",
+        "offset": 0,
+        "slot": "4",
+        "type": "t_string_storage"
+      },
+      {
+        "astId": 12446,
+        "contract": "contracts/OlympusERC20.sol:OlympusERC20Token",
+        "label": "_nonces",
+        "offset": 0,
+        "slot": "5",
+        "type": "t_mapping(t_address,t_struct(Counter)7994_storage)"
+      },
+      {
+        "astId": 12601,
+        "contract": "contracts/OlympusERC20.sol:OlympusERC20Token",
+        "label": "UNAUTHORIZED",
+        "offset": 0,
+        "slot": "6",
+        "type": "t_string_storage"
+      },
+      {
+        "astId": 12603,
+        "contract": "contracts/OlympusERC20.sol:OlympusERC20Token",
+        "label": "authority",
+        "offset": 0,
+        "slot": "7",
+        "type": "t_contract(IOlympusAuthority)6856"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_contract(IOlympusAuthority)6856": {
+        "encoding": "inplace",
+        "label": "contract IOlympusAuthority",
+        "numberOfBytes": "20"
+      },
+      "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => mapping(address => uint256))",
+        "numberOfBytes": "32",
+        "value": "t_mapping(t_address,t_uint256)"
+      },
+      "t_mapping(t_address,t_struct(Counter)7994_storage)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => struct Counters.Counter)",
+        "numberOfBytes": "32",
+        "value": "t_struct(Counter)7994_storage"
+      },
+      "t_mapping(t_address,t_uint256)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => uint256)",
+        "numberOfBytes": "32",
+        "value": "t_uint256"
+      },
+      "t_string_storage": {
+        "encoding": "bytes",
+        "label": "string",
+        "numberOfBytes": "32"
+      },
+      "t_struct(Counter)7994_storage": {
+        "encoding": "inplace",
+        "label": "struct Counters.Counter",
+        "members": [
+          {
+            "astId": 7993,
+            "contract": "contracts/OlympusERC20.sol:OlympusERC20Token",
+            "label": "_value",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "32"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

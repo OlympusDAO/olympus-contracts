@@ -49,7 +49,6 @@ abstract contract EIP712 {
      * contract upgrade].
      */
     constructor(string memory name, string memory version) {
-
         uint256 chainID;
         assembly {
             chainID := chainid()
@@ -71,7 +70,6 @@ abstract contract EIP712 {
      * @dev Returns the domain separator for the current chain.
      */
     function _domainSeparatorV4() internal view returns (bytes32) {
-
         uint256 chainID;
         assembly {
             chainID := chainid()

@@ -1,0 +1,3 @@
+tasks:
+  - init: nvm install 14 && yarn && yarn run compile
+    # command: npm run start

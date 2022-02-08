@@ -2,5 +2,5 @@
 pragma solidity >=0.7.5;
 
 interface IWarmup {
-    function retrieve( address staker_, uint amount_ ) external;
+    function retrieve(address staker_, uint256 amount_) external;
 }
