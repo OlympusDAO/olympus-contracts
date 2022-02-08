@@ -105,7 +105,7 @@ describe("Bond Depository", async () => {
         await depository.create(
             dai.address,
             [capacity, initialPrice, buffer],
-            [false, true],
+            [false, true, true],
             [vesting, conclusion],
             [depositInterval, tuneInterval]
         );
@@ -127,7 +127,7 @@ describe("Bond Depository", async () => {
     });
 
     it("should set max payout to correct % of capacity", async () => {
-        let [, , , , maxPayout, ,] = await depository.markets(bid);
+        let [, , , , , maxPayout, ,] = await depository.markets(bid);
         var upperBound = (capacity * 1.0033) / 6;
         var lowerBound = (capacity * 0.9967) / 6;
         expect(Number(maxPayout)).to.be.greaterThan(lowerBound);
@@ -139,7 +139,7 @@ describe("Bond Depository", async () => {
         await depository.create(
             dai.address,
             [capacity, initialPrice, buffer],
-            [false, true],
+            [false, true, true],
             [vesting, conclusion],
             [depositInterval, tuneInterval]
         );
@@ -153,7 +153,7 @@ describe("Bond Depository", async () => {
         await depository.create(
             dai.address,
             [capacity, initialPrice, buffer],
-            [false, true],
+            [false, true, true],
             [vesting, conclusion],
             [depositInterval, tuneInterval]
         );
@@ -182,7 +182,7 @@ describe("Bond Depository", async () => {
     });
 
     it("should decay debt", async () => {
-        let [, , , totalDebt, , ,] = await depository.markets(0);
+        let [, , , , totalDebt, , ,] = await depository.markets(0);
 
         await network.provider.send("evm_increaseTime", [100]);
         await depository.connect(bob).deposit(bid, "0", initialPrice, bob.address, carol.address);
@@ -350,7 +350,7 @@ describe("Bond Depository", async () => {
     });
 
     it("should decay a max payout in target deposit interval", async () => {
-        let [, , , , , maxPayout, ,] = await depository.markets(bid);
+        let [, , , , , , maxPayout, ,] = await depository.markets(bid);
         let price = await depository.marketPrice(bid);
         let amount = maxPayout * price;
         await depository.connect(bob).deposit(

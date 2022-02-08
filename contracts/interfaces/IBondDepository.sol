@@ -9,6 +9,7 @@ interface IBondDepository {
         uint256 capacity; // capacity remaining
         IERC20 quoteToken; // token to accept as payment
         bool capacityInQuote; // capacity limit is in payment token (true) or in OHM (false, default)
+        bool quoteTokenIsReserve; // quoteToken is a reserve asset/OHM LP pair (true) or not a reserve asset (false)
         uint64 totalDebt; // total debt from market
         uint64 maxPayout; // max tokens in/out (determined by capacityInQuote false/true, respectively)
         uint64 sold; // base tokens out
@@ -70,7 +71,7 @@ interface IBondDepository {
     function create(
         IERC20 _quoteToken, // token used to deposit
         uint256[3] memory _market, // [capacity, initial price]
-        bool[2] memory _booleans, // [capacity in quote, fixed term]
+        bool[3] memory _booleans, // [capacity in quote, quote is reserve, fixed term]
         uint256[2] memory _terms, // [vesting, conclusion]
         uint32[2] memory _intervals // [deposit interval, tune interval]
     ) external returns (uint256 id_);

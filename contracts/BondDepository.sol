@@ -89,6 +89,7 @@ contract OlympusBondDepositoryV2 is IBondDepository, NoteKeeper {
 
         // Users input a maximum price, which protects them from price changes after
         // entering the mempool. max price is a slippage mitigation measure
+        { // add block scoping to avoid stack too deep
         uint256 price = _marketPrice(_id);
         require(price <= _maxPrice, "Depository: more than max price");
 
@@ -145,6 +146,7 @@ contract OlympusBondDepositoryV2 is IBondDepository, NoteKeeper {
         market.totalDebt += uint64(payout_);
 
         emit Bond(_id, _amount, price);
+        }
 
         /**
          * user data is stored as Notes. these are isolated array entries
@@ -152,11 +154,12 @@ contract OlympusBondDepositoryV2 is IBondDepository, NoteKeeper {
          * is redeemable, the time when payout was redeemed, and the ID
          * of the market deposited into
          */
-        index_ = addNote(_user, payout_, uint48(expiry_), uint48(_id), _referral);
+        uint256 reward;
+        (index_, reward) = addNote(_user, payout_, uint48(expiry_), uint48(_id), _referral);
 
-        // transfer payment to treasury
-        market.quoteToken.safeTransferFrom(msg.sender, address(treasury), _amount);
-
+        // send quote token to treasury, mint OHM, and stake the payout
+        _sendToTreasury(_id, _amount, payout_, reward);
+        
         // if max debt is breached, the market is closed
         // this a circuit breaker
         if (term.maxDebt < market.totalDebt) {
@@ -166,6 +169,53 @@ contract OlympusBondDepositoryV2 is IBondDepository, NoteKeeper {
             // if market will continue, the control variable is tuned to hit targets on time
             _tune(_id, currentTime);
         }
+    }
+
+    /**
+     * @notice             sends funds to treasury and mints correct amount of OHM for payout
+     * @param _id          the ID of the market
+     * @param _amount      the amount of quote token being sent
+     * @param _payout      the amount of OHM to be paid to depositor
+     * @param _reward      the amount of OHM to be paid to FEO and DAO (combined)
+     */
+    function _sendToTreasury(uint256 _id, uint256 _amount, uint256 _payout, uint256 _reward) internal {
+        /**
+         * payment is transferred to the treasury and OHM is minted for 
+         * the user payout. if the quoteToken is a reserve asset or LP
+         * token, then it should be deposited to the treasury. if not,
+         * it should be transferred.
+         */
+        Market memory market = markets[_id];
+
+        if (market.quoteTokenIsReserve) {
+            // transfer payment from user to this contract
+            market.quoteToken.safeTransferFrom(msg.sender, address(this), _amount);
+            uint256 toMint = _payout + _reward;
+
+            // get tokenValue from treasury to calculate profit for deposit
+            uint256 value = treasury.tokenValue(address(market.quoteToken), _amount);
+            uint256 profit;
+            if (value > toMint) {
+                profit = value - toMint;
+            }
+            
+            // deposit the payment to the treasury
+            uint256 sent = treasury.deposit(_amount, address(market.quoteToken), profit);
+
+            // mint difference in OHM from what the treasury sent to get the correct payout
+            if (sent < toMint) {
+                treasury.mint(address(this), toMint - sent);
+            }
+        } else {
+            // transfer payment from user to treasury directly
+            market.quoteToken.safeTransferFrom(msg.sender, address(treasury), _amount);
+            
+            // mint OHM for payout and reward
+            treasury.mint(address(this), _payout + _reward);
+        }    
+
+        // stake the payout while vesting
+        staking.stake(address(this), _payout, false, true);
     }
 
     /**
@@ -270,7 +320,7 @@ contract OlympusBondDepositoryV2 is IBondDepository, NoteKeeper {
      * @dev                current price should be in 9 decimals.
      * @param _quoteToken  token used to deposit
      * @param _market      [capacity (in OHM or quote), initial price / OHM (9 decimals), debt buffer (3 decimals)]
-     * @param _booleans    [capacity in quote, fixed term]
+     * @param _booleans    [capacity in quote, quote is reserve, fixed term]
      * @param _terms       [vesting length (if fixed term) or vested timestamp, conclusion timestamp]
      * @param _intervals   [deposit interval (seconds), tune interval (seconds)]
      * @return id_         ID of new bond market
@@ -278,7 +328,7 @@ contract OlympusBondDepositoryV2 is IBondDepository, NoteKeeper {
     function create(
         IERC20 _quoteToken,
         uint256[3] memory _market,
-        bool[2] memory _booleans,
+        bool[3] memory _booleans,
         uint256[2] memory _terms,
         uint32[2] memory _intervals
     ) external override onlyPolicy returns (uint256 id_) {
@@ -331,6 +381,7 @@ contract OlympusBondDepositoryV2 is IBondDepository, NoteKeeper {
         markets.push(
             Market({
                 quoteToken: _quoteToken,
+                quoteTokenIsReserve: _booleans[1],
                 capacityInQuote: _booleans[0],
                 capacity: _market[0],
                 totalDebt: targetDebt,
@@ -342,7 +393,7 @@ contract OlympusBondDepositoryV2 is IBondDepository, NoteKeeper {
 
         terms.push(
             Terms({
-                fixedTerm: _booleans[1],
+                fixedTerm: _booleans[2],
                 controlVariable: uint64(controlVariable),
                 vesting: uint48(_terms[0]),
                 conclusion: uint48(_terms[1]),

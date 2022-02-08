@@ -48,6 +48,7 @@ abstract contract NoteKeeper is INoteKeeper, FrontEndRewarder {
      * @param _expiry      the timestamp when the Note is redeemable
      * @param _marketID    the ID of the market deposited into
      * @return index_      the index of the Note in the user's array
+     * @return reward_     the amount of OHM to be paid to FEO and DAO (combined)
      */
     function addNote(
         address _user,
@@ -55,7 +56,7 @@ abstract contract NoteKeeper is INoteKeeper, FrontEndRewarder {
         uint48 _expiry,
         uint48 _marketID,
         address _referral
-    ) internal returns (uint256 index_) {
+    ) internal returns (uint256 index_, uint256 reward_) {
         // the index of the note is the next in the user's array
         index_ = notes[_user].length;
 
@@ -71,13 +72,7 @@ abstract contract NoteKeeper is INoteKeeper, FrontEndRewarder {
         );
 
         // front end operators can earn rewards by referring users
-        uint256 rewards = _giveRewards(_payout, _referral);
-
-        // mint and stake payout
-        treasury.mint(address(this), _payout + rewards);
-
-        // note that only the payout gets staked (front end rewards are in OHM)
-        staking.stake(address(this), _payout, false, true);
+        reward_ = _giveRewards(_payout, _referral);
     }
 
     /* ========== REDEEM ========== */
