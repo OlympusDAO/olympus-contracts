@@ -34,15 +34,12 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     event Redeemed(address indexed recipient_, uint256 amount_);
     event EmergencyShutdown(bool active_);
 
-    constructor (
-    	address sOhm_,
-    	address gOhm_,
-    	address staking_,
-    	address authority_
-    )
-        OlympusAccessControlled(IOlympusAuthority(authority_))
-        YieldSplitter(gOhm_)
-    {
+    constructor(
+        address sOhm_,
+        address gOhm_,
+        address staking_,
+        address authority_
+    ) OlympusAccessControlled(IOlympusAuthority(authority_)) YieldSplitter(gOhm_) {
         require(sOhm_ != address(0), "Invalid address for sOHM");
         require(gOhm_ != address(0), "Invalid address for gOHM");
         require(staking_ != address(0), "Invalid address for staking");
@@ -52,38 +49,38 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     }
 
     /************************
-    * Modifiers
-    ************************/
-    function isValidDeposit(uint256 amount_, address recipient_) internal returns(bool) {
+     * Modifiers
+     ************************/
+    function isValidDeposit(uint256 amount_, address recipient_) internal returns (bool) {
         if (depositDisabled) return false;
         if (amount_ <= 0) return false;
         if (recipient_ == address(0)) return false;
         return true;
     }
 
-    function isValidUpdate(uint256 id_, uint256 amount_) internal returns(bool) {
+    function isValidUpdate(uint256 id_, uint256 amount_) internal returns (bool) {
         if (depositDisabled) return false;
         if (amount_ <= 0) return false;
         if (depositInfo[id_].depositor == address(0)) return false;
         return true;
     }
 
-    function isValidWithdrawal(uint256 amount_) internal returns(bool) {
+    function isValidWithdrawal(uint256 amount_) internal returns (bool) {
         if (withdrawDisabled) return false;
         if (amount_ <= 0) return false;
         return true;
     }
 
     /************************
-    * Donor Functions
-    ************************/
+     * Donor Functions
+     ************************/
 
     /**
         @notice Deposit gOHM, records sender address and assign rebases to recipient
         @param amount_ Amount of gOHM debt issued from donor to recipient
         @param recipient_ Address to direct staking yield and vault shares to
     */
-    function deposit(uint256 amount_, address recipient_) external returns(uint256 depositId) {
+    function deposit(uint256 amount_, address recipient_) external returns (uint256 depositId) {
         require(isValidDeposit(amount_, recipient_), "Not a valid deposit.");
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
         depositId = _deposit(msg.sender, recipient_, amount_);
@@ -95,7 +92,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param amount_ Amount of sOHM debt issued from donor to recipient
         @param recipient_ Address to direct staking yield and vault shares to
      */
-    function depositSohm(uint256 amount_, address recipient_) external returns(uint256 depositId) {
+    function depositSohm(uint256 amount_, address recipient_) external returns (uint256 depositId) {
         require(isValidDeposit(amount_, recipient_), "Not a valid deposit.");
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
         IERC20(sOHM).approve(address(staking), amount_);
@@ -141,7 +138,11 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         _withdrawPrincipal(id_, amount_);
         if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
             currDeposit.principalAmount = 0;
-            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount));
+            emit Donated(
+                msg.sender,
+                currDeposit.recipient,
+                _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount)
+            );
         }
         IERC20(gOHM).safeTransfer(msg.sender, amount_);
         emit Withdrawn(msg.sender, currDeposit.recipient, amount_);
@@ -158,7 +159,11 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         _withdrawPrincipal(id_, amount_);
         if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
             currDeposit.principalAmount = 0;
-            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount));
+            emit Donated(
+                msg.sender,
+                currDeposit.recipient,
+                _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount)
+            );
         }
         IERC20(sOHM).approve(address(staking), amount_);
         staking.unwrap(msg.sender, amount_);
@@ -182,7 +187,11 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
             DepositInfo storage currDeposit = depositInfo[depositIds[index]];
             principalTotal += currDeposit.principalAmount;
             currDeposit.principalAmount = 0;
-            emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount));
+            emit Donated(
+                msg.sender,
+                currDeposit.recipient,
+                _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount)
+            );
         }
 
         IERC20(gOHM).safeTransfer(msg.sender, IgOHM(gOHM).balanceTo(principalTotal));
@@ -195,7 +204,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param donor_ Address of user donating yield
         @param recipient_ Address of user receiving donated yield
      */
-    function depositsTo(address donor_, address recipient_) external view returns ( uint256 ) {
+    function depositsTo(address donor_, address recipient_) external view returns (uint256) {
         uint256[] storage depositIds = depositorIds[donor_];
         if (depositIds.length == 0) {
             return 0;
@@ -215,7 +224,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @notice Return total amount of donor's gOHM deposited (updated to current index based on sOHM equivalent amount deposits)
         @param donor_ Address of user donating yield
      */
-    function totalDeposits(address donor_) external view returns ( uint256 ) {
+    function totalDeposits(address donor_) external view returns (uint256) {
         uint256[] storage depositIds = depositorIds[donor_];
         uint256 principalTotal = 0;
 
@@ -226,12 +235,12 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
 
         return IgOHM(gOHM).balanceTo(principalTotal);
     }
-    
+
     /**
         @notice Return arrays of donor's recipients and deposit amounts (gOHM value based on sOHM equivalent deposit), matched by index
         @param donor_ Address of user donating yield
      */
-    function getAllDeposits(address donor_) external view returns ( address[] memory, uint256[] memory ) {
+    function getAllDeposits(address donor_) external view returns (address[] memory, uint256[] memory) {
         uint256[] storage depositIds = depositorIds[donor_];
 
         uint256 len = depositIds.length == 0 ? 1 : depositIds.length;
@@ -240,14 +249,14 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         uint256[] memory agnosticDeposits = new uint256[](len);
 
         if (depositIds.length == 0) {
-        	addresses[0] = address(0);
-        	agnosticDeposits[0] = 0;
+            addresses[0] = address(0);
+            agnosticDeposits[0] = 0;
         } else {
-	        for (uint256 index = 0; index < len; index++) {
+            for (uint256 index = 0; index < len; index++) {
                 DepositInfo storage currDeposit = depositInfo[depositIds[index]];
-	            addresses[index] = currDeposit.recipient;
-	            agnosticDeposits[index] = IgOHM(gOHM).balanceTo(currDeposit.principalAmount);
-	        }
+                addresses[index] = currDeposit.recipient;
+                agnosticDeposits[index] = IgOHM(gOHM).balanceTo(currDeposit.principalAmount);
+            }
         }
 
         return (addresses, agnosticDeposits);
@@ -291,21 +300,21 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     }
 
     /************************
-    * Recipient Functions
-    ************************/
+     * Recipient Functions
+     ************************/
 
     function redeemableBalance(uint256 id_) public view returns (uint256) {
         DepositInfo storage currDeposit = depositInfo[id_];
-        return _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);     
+        return _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);
     }
 
     /**
         @notice Get redeemable sOHM balance of a recipient address
         @param recipient_ Address of user receiving donated yield
      */
-    function totalRedeemableBalance(address recipient_) public view returns ( uint256 ) {
+    function totalRedeemableBalance(address recipient_) public view returns (uint256) {
         uint256[] storage receiptIds = recipientIds[recipient_];
-        uint agnosticRedeemable = 0;
+        uint256 agnosticRedeemable = 0;
 
         for (uint256 index = 0; index < receiptIds.length; index++) {
             DepositInfo storage currDeposit = depositInfo[receiptIds[index]];
@@ -327,7 +336,6 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
 
         emit Redeemed(msg.sender, amountRedeemed);
-
     }
 
     /**
@@ -345,8 +353,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     }
 
     /************************
-    * Emergency Functions
-    ************************/
+     * Emergency Functions
+     ************************/
 
     function emergencyShutdown(bool active_) external onlyGovernor {
         depositDisabled = active_;
