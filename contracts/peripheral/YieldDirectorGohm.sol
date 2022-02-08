@@ -54,24 +54,24 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
     /************************
     * Modifiers
     ************************/
-    modifier isValidDeposit(uint256 amount_, address recipient_) {
-        require(!depositDisabled, "Deposits currently disabled");
-        require(amount_ > 0, "Invalid deposit amount");
-        require(recipient_ != address(0), "Invalid recipient address");
-        _;
+    function isValidDeposit(uint256 amount_, address recipient_) internal returns(bool) {
+        if (depositDisabled) return false;
+        if (amount_ <= 0) return false;
+        if (recipient_ == address(0)) return false;
+        return true;
     }
 
-    modifier isValidUpdate(uint256 id_, uint256 amount_) {
-        require(!depositDisabled, "Deposits currently disabled");
-        require(amount_ > 0, "Invalid deposit amount");
-        require(depositInfo[id_].depositor != address(0), "Invalid deposit ID");
-        _;
+    function isValidUpdate(uint256 id_, uint256 amount_) internal returns(bool) {
+        if (depositDisabled) return false;
+        if (amount_ <= 0) return false;
+        if (depositInfo[id_].depositor == address(0)) return false;
+        return true;
     }
 
-    modifier isValidWithdrawal(uint256 amount_) {
-        require(!withdrawDisabled, "Withdraws currently disabled");
-        require(amount_ > 0, "Invalid withdraw amount");
-        _;
+    function isValidWithdrawal(uint256 amount_) internal returns(bool) {
+        if (withdrawDisabled) return false;
+        if (amount_ <= 0) return false;
+        return true;
     }
 
     /************************
@@ -83,7 +83,8 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
         @param amount_ Amount of gOHM debt issued from donor to recipient
         @param recipient_ Address to direct staking yield and vault shares to
     */
-    function deposit(uint256 amount_, address recipient_) external isValidDeposit(amount_, recipient_) returns(uint256 depositId) {
+    function deposit(uint256 amount_, address recipient_) external returns(uint256 depositId) {
+        require(isValidDeposit(amount_, recipient_), "Not a valid deposit.");
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
         depositId = _deposit(msg.sender, recipient_, amount_);
         emit Deposited(msg.sender, recipient_, amount_);
@@ -94,7 +95,8 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
         @param amount_ Amount of sOHM debt issued from donor to recipient
         @param recipient_ Address to direct staking yield and vault shares to
      */
-    function depositSohm(uint256 amount_, address recipient_) external isValidDeposit(amount_, recipient_) returns(uint256 depositId) {
+    function depositSohm(uint256 amount_, address recipient_) external returns(uint256 depositId) {
+        require(isValidDeposit(amount_, recipient_), "Not a valid deposit.");
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
         IERC20(sOHM).approve(address(staking), amount_);
         uint256 gohmAmount = staking.wrap(address(this), amount_);
@@ -107,7 +109,8 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
         @param id_ Deposit ID to direct additional gOHM to
         @param amount_ Amount of new gOHM debt issued from donor to recipient
      */
-    function addToDeposit(uint256 id_, uint256 amount_) external isValidUpdate(id_, amount_) {
+    function addToDeposit(uint256 id_, uint256 amount_) external {
+        require(isValidUpdate(id_, amount_), "Not a valid deposit update.");
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
         _addToDeposit(id_, amount_);
         emit DepositUpdated(msg.sender, depositInfo[id_].recipient, amount_);
@@ -118,7 +121,8 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
         @param id_ Deposit ID to direct additional gOHM to
         @param amount_ Amount of new sOHM debt issued from donor to recipient
      */
-    function addToSohmDeposit(uint256 id_, uint256 amount_) external isValidUpdate(id_, amount_) {
+    function addToSohmDeposit(uint256 id_, uint256 amount_) external {
+        require(isValidUpdate(id_, amount_), "Not a valid deposit update.");
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
         IERC20(sOHM).approve(address(staking), amount_);
         uint256 gohmAmount = staking.wrap(address(this), amount_);
@@ -131,7 +135,8 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
         @param id_ Deposit ID to remove gOHM debt from
         @param amount_ Amount of gOHM debt to remove and return to donor
      */
-    function withdrawPrincipal(uint256 id_, uint256 amount_) external isValidWithdrawal(amount_) {
+    function withdrawPrincipal(uint256 id_, uint256 amount_) external {
+        require(isValidWithdrawal(amount_), "Not a valid withdrawal.");
         DepositInfo storage currDeposit = depositInfo[id_];
         _withdrawPrincipal(id_, amount_);
         if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
@@ -147,7 +152,8 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
         @param id_ Deposit ID to remove gOHM debt from
         @param amount_ Amount of gOHM debt to remove and return to donor as sOHM
      */
-    function withdrawPrincipalAsSohm(uint256 id_, uint256 amount_) external isValidWithdrawal(amount_) {
+    function withdrawPrincipalAsSohm(uint256 id_, uint256 amount_) external {
+        require(isValidWithdrawal(amount_), "Not a valid withdrawal.");
         DepositInfo storage currDeposit = depositInfo[id_];
         _withdrawPrincipal(id_, amount_);
         if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
