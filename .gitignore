@@ -19,7 +19,7 @@ yarn-error.log
 yalc.lock
 
 contractsInfo.json
-deployments/**/solcinputs
+deployments/*
 
 /.dapp
 
@@ -27,3 +27,5 @@ deployments/**/solcinputs
 # OpenZeppelin upgradeable files
 .openzeppelin/unknown-*.json
 /flatten
+
+addresses/*
