@@ -1,9 +1,8 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-
     const [deployer] = await ethers.getSigners();
-    console.log('Deploying contracts with the account: ' + deployer.address);
+    console.log("Deploying contracts with the account: " + deployer.address);
 
     const oldOHM = "0x383518188c0c6d7730d91b2c03a03c837814a899";
     const oldsOHM = "0x04f2694c8fcee23e8fd0dfea1d4f5bb8c352111f";
@@ -15,15 +14,29 @@ async function main() {
 
     const authorityAddress = "";
 
-    const Authority = await ethers.getContractFactory('OlympusAuthority');
-    const authority = await Authority.deploy(authorityAddress, authorityAddress, authorityAddress, authorityAddress);
+    const Authority = await ethers.getContractFactory("OlympusAuthority");
+    const authority = await Authority.deploy(
+        authorityAddress,
+        authorityAddress,
+        authorityAddress,
+        authorityAddress
+    );
 
-    const Migrator = await ethers.getContractFactory('OlympusTokenMigrator');
-    const migrator = await Migrator.deploy(oldOHM, oldsOHM, oldTreasury, oldStaking, oldwsOHM, sushiRouter, uniRouter, '0', authority.address);
+    const Migrator = await ethers.getContractFactory("OlympusTokenMigrator");
+    const migrator = await Migrator.deploy(
+        oldOHM,
+        oldsOHM,
+        oldTreasury,
+        oldStaking,
+        oldwsOHM,
+        sushiRouter,
+        uniRouter,
+        "0",
+        authority.address
+    );
 
-    const GOHM = await ethers.getContractFactory('gOHM');
+    const GOHM = await ethers.getContractFactory("gOHM");
     const gOHM = await GOHM.deploy(migrator.address, oldsOHM);
-
 
     console.log("Migrator: " + migrator.address);
     console.log("gOHM: " + gOHM.address);
@@ -31,7 +44,7 @@ async function main() {
 
 main()
     .then(() => process.exit())
-    .catch(error => {
+    .catch((error) => {
         console.error(error);
         process.exit(1);
-})
+    });

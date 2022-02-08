@@ -1,0 +1,216 @@
+{
+  "address": "0x976fcd02f7C4773dd89C309fBF55D5923B4c98a1",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_ohm",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipPulled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipPushed",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "dispense",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ohm",
+      "outputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pullManagement",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner_",
+          "type": "address"
+        }
+      ],
+      "name": "pushManagement",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceManagement",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_ohm",
+          "type": "address"
+        }
+      ],
+      "name": "setOhm",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x7ddd4f210af5c9451d79a991449c8e18ee011ce237a1cea93aa6507ea9a03338",
+  "receipt": {
+    "to": null,
+    "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "contractAddress": "0x5FeaeBfB4439F3516c74939A9D04e95AFE82C4ae",
+    "transactionIndex": 0,
+    "gasUsed": "351224",
+    "logsBloom": "0x00080000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000020000000000000100000800000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000200000000000000000000000002000000020000000000020000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0xe6d5c927bc88e844394a13569820cf67ccc49a74db703c879a2eb307d3e9e77e",
+    "transactionHash": "0x7ddd4f210af5c9451d79a991449c8e18ee011ce237a1cea93aa6507ea9a03338",
+    "logs": [
+      {
+        "transactionIndex": 0,
+        "blockNumber": 14028141,
+        "transactionHash": "0x7ddd4f210af5c9451d79a991449c8e18ee011ce237a1cea93aa6507ea9a03338",
+        "address": "0x5FeaeBfB4439F3516c74939A9D04e95AFE82C4ae",
+        "topics": [
+          "0xea8258f2d9ddb679928cf34b78cf645b7feda9acc828e4dd82d014eaae270eba",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+        ],
+        "data": "0x",
+        "logIndex": 0,
+        "blockHash": "0xe6d5c927bc88e844394a13569820cf67ccc49a74db703c879a2eb307d3e9e77e"
+      }
+    ],
+    "blockNumber": 14028141,
+    "cumulativeGasUsed": "351224",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0x525C7063E7C20997BaaE9bDa922159152D0e8417"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "902de087b8e2f430cce0936c30130584",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.5+commit.eb77ed08\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_ohm\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipPulled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipPushed\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"dispense\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ohm\",\"outputs\":[{\"internalType\":\"contract IERC20\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pullManagement\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner_\",\"type\":\"address\"}],\"name\":\"pushManagement\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceManagement\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_ohm\",\"type\":\"address\"}],\"name\":\"setOhm\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/testnet/OhmFaucet.sol\":\"OhmFaucet\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":800},\"remappings\":[]},\"sources\":{\"contracts/interfaces/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IERC20 {\\n  /**\\n   * @dev Returns the amount of tokens in existence.\\n   */\\n  function totalSupply() external view returns (uint256);\\n\\n  /**\\n   * @dev Returns the amount of tokens owned by `account`.\\n   */\\n  function balanceOf(address account) external view returns (uint256);\\n\\n  /**\\n   * @dev Moves `amount` tokens from the caller's account to `recipient`.\\n   *\\n   * Returns a boolean value indicating whether the operation succeeded.\\n   *\\n   * Emits a {Transfer} event.\\n   */\\n  function transfer(address recipient, uint256 amount) external returns (bool);\\n\\n  /**\\n   * @dev Returns the remaining number of tokens that `spender` will be\\n   * allowed to spend on behalf of `owner` through {transferFrom}. This is\\n   * zero by default.\\n   *\\n   * This value changes when {approve} or {transferFrom} are called.\\n   */\\n  function allowance(address owner, address spender) external view returns (uint256);\\n\\n  /**\\n   * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.\\n   *\\n   * Returns a boolean value indicating whether the operation succeeded.\\n   *\\n   * IMPORTANT: Beware that changing an allowance with this method brings the risk\\n   * that someone may use both the old and the new allowance by unfortunate\\n   * transaction ordering. One possible solution to mitigate this race\\n   * condition is to first reduce the spender's allowance to 0 and set the\\n   * desired value afterwards:\\n   * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729\\n   *\\n   * Emits an {Approval} event.\\n   */\\n  function approve(address spender, uint256 amount) external returns (bool);\\n\\n  /**\\n   * @dev Moves `amount` tokens from `sender` to `recipient` using the\\n   * allowance mechanism. `amount` is then deducted from the caller's\\n   * allowance.\\n   *\\n   * Returns a boolean value indicating whether the operation succeeded.\\n   *\\n   * Emits a {Transfer} event.\\n   */\\n  function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);\\n\\n  /**\\n   * @dev Emitted when `value` tokens are moved from one account (`from`) to\\n   * another (`to`).\\n   *\\n   * Note that `value` may be zero.\\n   */\\n  event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n  /**\\n   * @dev Emitted when the allowance of a `spender` for an `owner` is set by\\n   * a call to {approve}. `value` is the new allowance.\\n   */\\n  event Approval(address indexed owner, address indexed spender, uint256 value);\\n}\\n\",\"keccak256\":\"0xa142440b0e1c51ece24b6d074ac883b34e1f33a2472773eeaaf4871875904d09\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IOwnable.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\n\\ninterface IOwnable {\\n  function owner() external view returns (address);\\n\\n  function renounceManagement() external;\\n  \\n  function pushManagement( address newOwner_ ) external;\\n  \\n  function pullManagement() external;\\n}\",\"keccak256\":\"0x67b482434e366a3ff98d5ea407a569399f331df2de8ea7e2a7f38af675057771\",\"license\":\"AGPL-3.0\"},\"contracts/testnet/OhmFaucet.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity 0.7.5;\\n\\nimport \\\"../interfaces/IERC20.sol\\\";\\nimport \\\"../types/Ownable.sol\\\";\\n\\ncontract OhmFaucet is Ownable {\\n    IERC20 public ohm;\\n\\n    constructor(address _ohm) {\\n        ohm = IERC20(_ohm);\\n    }\\n\\n    function setOhm(address _ohm) external onlyOwner {\\n        ohm = IERC20(_ohm);\\n    }\\n\\n    function dispense() external {\\n        ohm.transfer(msg.sender, 1e9);\\n    }\\n}\\n\",\"keccak256\":\"0x2fc2a0dc684d12dd5d7c900088776d0ff7aec7fc3747e15d318baba291b9cb52\",\"license\":\"AGPL-3.0\"},\"contracts/types/Ownable.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0-or-later\\npragma solidity >=0.7.5;\\n\\nimport \\\"../interfaces/IOwnable.sol\\\";\\n\\nabstract contract Ownable is IOwnable {\\n\\n    address internal _owner;\\n    address internal _newOwner;\\n\\n    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);\\n    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);\\n\\n    constructor () {\\n        _owner = msg.sender;\\n        emit OwnershipPushed( address(0), _owner );\\n    }\\n\\n    function owner() public view override returns (address) {\\n        return _owner;\\n    }\\n\\n    modifier onlyOwner() {\\n        require( _owner == msg.sender, \\\"Ownable: caller is not the owner\\\" );\\n        _;\\n    }\\n\\n    function renounceManagement() public virtual override onlyOwner() {\\n        emit OwnershipPulled( _owner, address(0) );\\n        _owner = address(0);\\n        _newOwner = address(0);\\n    }\\n\\n    function pushManagement( address newOwner_ ) public virtual override onlyOwner() {\\n        emit OwnershipPushed( _owner, newOwner_ );\\n        _newOwner = newOwner_;\\n    }\\n    \\n    function pullManagement() public virtual override {\\n        require( msg.sender == _newOwner, \\\"Ownable: must be new owner to pull\\\");\\n        emit OwnershipPulled( _owner, _newOwner );\\n        _owner = _newOwner;\\n        _newOwner = address(0);\\n    }\\n}\\n\",\"keccak256\":\"0xfe6b742e3ef90f8c50b41d307e0b8928db8eda36bf5dfa9c12e493f17db19f43\",\"license\":\"AGPL-3.0-or-later\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b506040516105303803806105308339818101604052602081101561003357600080fd5b5051600080546001600160a01b03191633178082556040516001600160a01b039190911691907fea8258f2d9ddb679928cf34b78cf645b7feda9acc828e4dd82d014eaae270eba908290a3600280546001600160a01b0319166001600160a01b0392909216919091179055610483806100ad6000396000f3fe608060405234801561001057600080fd5b506004361061007d5760003560e01c806346f68ee91161005b57806346f68ee9146100b85780635a96ac0a146100de5780638da5cb5b146100e6578063f9224d3c146100ee5761007d565b806302b1d23914610082578063089208d8146100a65780630adb1a9a146100b0575b600080fd5b61008a610114565b604080516001600160a01b039092168252519081900360200190f35b6100ae610123565b005b6100ae6101d8565b6100ae600480360360208110156100ce57600080fd5b50356001600160a01b031661025d565b6100ae610317565b61008a6103c4565b6100ae6004803603602081101561010457600080fd5b50356001600160a01b03166103d3565b6002546001600160a01b031681565b6000546001600160a01b03163314610182576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600080546040516001600160a01b03909116907faa151555690c956fc3ea32f106bb9f119b5237a061eaa8557cff3e51e3792c8d908390a3600080546001600160a01b0319908116909155600180549091169055565b6002546040805163a9059cbb60e01b8152336004820152633b9aca00602482015290516001600160a01b039092169163a9059cbb916044808201926020929091908290030181600087803b15801561022f57600080fd5b505af1158015610243573d6000803e3d6000fd5b505050506040513d602081101561025957600080fd5b5050565b6000546001600160a01b031633146102bc576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600080546040516001600160a01b03808516939216917fea8258f2d9ddb679928cf34b78cf645b7feda9acc828e4dd82d014eaae270eba91a3600180546001600160a01b0319166001600160a01b0392909216919091179055565b6001546001600160a01b031633146103605760405162461bcd60e51b81526004018080602001828103825260228152602001806104556022913960400191505060405180910390fd5b600154600080546040516001600160a01b0393841693909116917faa151555690c956fc3ea32f106bb9f119b5237a061eaa8557cff3e51e3792c8d91a360018054600080546001600160a01b03199081166001600160a01b03841617909155169055565b6000546001600160a01b031690565b6000546001600160a01b03163314610432576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600280546001600160a01b0319166001600160a01b039290921691909117905556fe4f776e61626c653a206d757374206265206e6577206f776e657220746f2070756c6ca164736f6c6343000705000a",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b506004361061007d5760003560e01c806346f68ee91161005b57806346f68ee9146100b85780635a96ac0a146100de5780638da5cb5b146100e6578063f9224d3c146100ee5761007d565b806302b1d23914610082578063089208d8146100a65780630adb1a9a146100b0575b600080fd5b61008a610114565b604080516001600160a01b039092168252519081900360200190f35b6100ae610123565b005b6100ae6101d8565b6100ae600480360360208110156100ce57600080fd5b50356001600160a01b031661025d565b6100ae610317565b61008a6103c4565b6100ae6004803603602081101561010457600080fd5b50356001600160a01b03166103d3565b6002546001600160a01b031681565b6000546001600160a01b03163314610182576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600080546040516001600160a01b03909116907faa151555690c956fc3ea32f106bb9f119b5237a061eaa8557cff3e51e3792c8d908390a3600080546001600160a01b0319908116909155600180549091169055565b6002546040805163a9059cbb60e01b8152336004820152633b9aca00602482015290516001600160a01b039092169163a9059cbb916044808201926020929091908290030181600087803b15801561022f57600080fd5b505af1158015610243573d6000803e3d6000fd5b505050506040513d602081101561025957600080fd5b5050565b6000546001600160a01b031633146102bc576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600080546040516001600160a01b03808516939216917fea8258f2d9ddb679928cf34b78cf645b7feda9acc828e4dd82d014eaae270eba91a3600180546001600160a01b0319166001600160a01b0392909216919091179055565b6001546001600160a01b031633146103605760405162461bcd60e51b81526004018080602001828103825260228152602001806104556022913960400191505060405180910390fd5b600154600080546040516001600160a01b0393841693909116917faa151555690c956fc3ea32f106bb9f119b5237a061eaa8557cff3e51e3792c8d91a360018054600080546001600160a01b03199081166001600160a01b03841617909155169055565b6000546001600160a01b031690565b6000546001600160a01b03163314610432576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600280546001600160a01b0319166001600160a01b039290921691909117905556fe4f776e61626c653a206d757374206265206e6577206f776e657220746f2070756c6ca164736f6c6343000705000a",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 12697,
+        "contract": "contracts/testnet/OhmFaucet.sol:OhmFaucet",
+        "label": "_owner",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_address"
+      },
+      {
+        "astId": 12699,
+        "contract": "contracts/testnet/OhmFaucet.sol:OhmFaucet",
+        "label": "_newOwner",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_address"
+      },
+      {
+        "astId": 11908,
+        "contract": "contracts/testnet/OhmFaucet.sol:OhmFaucet",
+        "label": "ohm",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_contract(IERC20)6695"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_contract(IERC20)6695": {
+        "encoding": "inplace",
+        "label": "contract IERC20",
+        "numberOfBytes": "20"
+      }
+    }
+  }
+}
