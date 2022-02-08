@@ -10,12 +10,12 @@ import {YieldSplitter} from "../types/YieldSplitter.sol";
 import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 
 /**
-    @title YieldDirector (codename Tyche) 
-    @notice This contract allows donors to deposit their sOHM and donate their rebases
-            to any address. Donors will be able to withdraw their principal
-            sOHM at any time. Donation recipients can also redeem accrued rebases at any time.
+    @title YieldDirectorV2 (codename Tyche) 
+    @notice This contract allows donors to deposit their gOHM and donate their rebases
+            to any address. Donors will be able to withdraw the sOHM equivalent of their principal
+            gOHM at any time. Donation recipients can also redeem accrued rebases at any time.
  */
-contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
+contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     using SafeERC20 for IERC20;
 
     // drop sOHM for mainnet launch
