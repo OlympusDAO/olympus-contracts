@@ -58,12 +58,8 @@ make run
  - For [Rinkeby Testnet](./docs/deployments/rinkeby.md).
 
 ### Notes for `localhost`
--   The `deployments/localhost` directory is included in the git repository,
-    so that the contract addresses remain constant. Otherwise, the frontend's
-    `constants.ts` file would need to be updated.
--   Avoid committing changes to the `deployments/localhost` files (unless you
-    are sure), as this will alter the state of the hardhat node when deployed
-    in tests.
+- The contract addresses are output into the `addresses/addresses.json` file. 
+  This is done so that the file can be passed onto the frontend (particularly when running in Docker).
 
 ## 📖 Guides
 
