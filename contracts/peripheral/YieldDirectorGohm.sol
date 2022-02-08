@@ -27,7 +27,7 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
     bool public redeemDisabled;
 
     event Deposited(address indexed donor_, address indexed recipient_, uint256 amount_);
-    event DepositUpdated(address indexed donor_, uint256 indexed id_, uint256 amount_);
+    event DepositUpdated(address indexed donor_, address indexed recipient_, uint256 amount_);
     event Withdrawn(address indexed donor_, address indexed recipient_, uint256 amount_);
     event AllWithdrawn(address indexed donor_, uint256 indexed amount_);
     event Donated(address indexed donor_, address indexed recipient_, uint256 amount_);
@@ -90,6 +90,19 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
     }
 
     /**
+        @notice Deposit sOHM, wrap to gOHM, and records sender address and assign rebases to recipeint
+        @param amount_ Amount of sOHM debt issued from donor to recipient
+        @param recipient_ Address to direct staking yield and vault shares to
+     */
+    function depositSohm(uint256 amount_, address recipient_) external isValidDeposit(amount_, recipient_) returns(uint256 depositId) {
+        IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
+        IERC20(sOHM).approve(address(staking), amount_);
+        uint256 gohmAmount = staking.wrap(address(this), amount_);
+        depositId = _deposit(msg.sender, recipient_, gohmAmount);
+        emit Deposited(msg.sender, recipient_, gohmAmount);
+    }
+
+    /**
         @notice Deposit additional gOHM, and update deposit record
         @param id_ Deposit ID to direct additional gOHM to
         @param amount_ Amount of new gOHM debt issued from donor to recipient
@@ -97,19 +110,7 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
     function addToDeposit(uint256 id_, uint256 amount_) external isValidUpdate(id_, amount_) {
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
         _addToDeposit(id_, amount_);
-        emit DepositUpdated(msg.sender, id_, amount_);
-    }
-
-    /**
-        @notice Deposit sOHM, wrap to gOHM, and records sender address and assign rebases to recipeint
-        @param amount_ Amount of sOHM debt issued from donor to recipient
-        @param recipient_ Address to direct staking yield and vault shares to
-     */
-    function depositSohm(uint256 amount_, address recipient_) external isValidDeposit(amount_, recipient_) returns(uint256 depositId) {
-        IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
-    	uint256 gohmAmount = staking.wrap(address(this), amount_);
-    	depositId = _deposit(msg.sender, recipient_, gohmAmount);
-        emit Deposited(msg.sender, recipient_, amount_);
+        emit DepositUpdated(msg.sender, depositInfo[id_].recipient, amount_);
     }
 
     /**
@@ -119,9 +120,10 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
      */
     function addToSohmDeposit(uint256 id_, uint256 amount_) external isValidUpdate(id_, amount_) {
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
+        IERC20(sOHM).approve(address(staking), amount_);
         uint256 gohmAmount = staking.wrap(address(this), amount_);
         _addToDeposit(id_, gohmAmount);
-        emit DepositUpdated(msg.sender, id_, amount_);
+        emit DepositUpdated(msg.sender, depositInfo[id_].recipient, gohmAmount);
     }
 
     /**
@@ -152,6 +154,7 @@ contract YieldDirectorGohm is YieldSplitter, OlympusAccessControlled {
             currDeposit.principalAmount = 0;
             emit Donated(msg.sender, currDeposit.recipient, _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount));
         }
+        IERC20(sOHM).approve(address(staking), amount_);
         staking.unwrap(msg.sender, amount_);
         emit Withdrawn(msg.sender, currDeposit.recipient, amount_);
     }
