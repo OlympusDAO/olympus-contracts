@@ -9,7 +9,7 @@
     "outDir": "dist"
   },
   "include": [
-    "hardhat.config.ts",
+    "hardhat.config.js",
     "./scripts",
     "./deploy",
     "./test",

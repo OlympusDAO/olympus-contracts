@@ -1,19 +1,20 @@
 {
-  "name": "olympus-contracts",
+  "name": "floor-contracts",
   "version": "1.0.0",
-  "description": "Smart Contracts for Olympus",
+  "description": "Smart Contracts for FloorDAO",
   "directories": {
     "test": "test"
   },
+  "dependencies": {
+    "@uniswap/v3-periphery": "^1.2.0"
+  },
   "devDependencies": {
     "@defi-wonderland/smock": "^2.0.7",
-    "@nomiclabs/hardhat-ethers": "2.0.4",
+    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@0.3.0-beta.11",
     "@nomiclabs/hardhat-etherscan": "^2.1.7",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/contracts": "^4.4.2",
-    "@openzeppelin/contracts-upgradeable": "^3.4.2",
-    "@openzeppelin/hardhat-upgrades": "^1.12.0",
     "@rari-capital/solmate": "^6.2.0",
+    "@openzeppelin/contracts": "^4.3.2",
     "@typechain/ethers-v5": "^7.1.2",
     "@typechain/hardhat": "^2.3.0",
     "@types/chai": "^4.2.22",
@@ -49,31 +50,20 @@
     "format": "prettier --check \"**/*.{ts,js,sol}\"",
     "format:fix": "prettier --write \"**/*.{ts,js,sol}\"",
     "compile": "hardhat compile",
-    "clean": "hardhat clean",
     "void:deploy": "hardhat deploy",
     "test": "hardhat test",
     "gas": "REPORT_GAS=true hardhat test",
     "coverage": "HARDHAT_DEPLOY_FIXTURE=true hardhat coverage",
     "typechain": "TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
-    "fork": "hardhat node",
-    "deploy:mainnet": "hardhat --network mainnet deploy",
-    "deploy:rinkeby": "hardhat --network rinkeby deploy",
-    "deploy:ropsten": "hardhat --network ropsten deploy",
-    "deploy:hardhat": "hardhat --network hardhat deploy",
-    "sourcify:mainnet": "hardhat --network mainnet sourcify",
-    "sourcify:rinkeby": "hardhat --network rinkeby sourcify",
-    "etherscan:mainnet": "hardhat --network mainnet etherscan-verify",
-    "etherscan:rinkeby": "hardhat --network rinkeby etherscan-verify",
-    "prestart": "yarn run typechain",
-    "start": "hardhat node --network hardhat"
+    "fork": "hardhat node"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OlympusDAO/olympus-contracts.git"
+    "url": "git+https://github.com/NFTX-project/floor-contracts.git"
   },
   "author": "",
   "bugs": {
-    "url": "https://github.com/OlympusDAO/olympus-contracts/issues"
+    "url": "https://github.com/NFTX-project/floor-contracts/issues"
   },
-  "homepage": "https://github.com/OlympusDAO/olympus-contracts#readme"
+  "homepage": "https://github.com/NFTX-project/floor-contracts#readme"
 }

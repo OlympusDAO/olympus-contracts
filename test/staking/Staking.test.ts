@@ -1,36 +1,36 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import chai, { expect } from "chai";
 import { ethers } from "hardhat";
 const { BigNumber } = ethers;
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import {
     IDistributor,
-    IgOHM,
-    IsOHM,
-    IOHM,
-    OlympusStaking,
-    OlympusStaking__factory,
-    OlympusAuthority,
-    OlympusAuthority__factory,
+    IgFLOOR,
+    IsFLOOR,
+    IFLOOR,
+    FloorStaking,
+    FloorStaking__factory,
+    FloorAuthority,
+    FloorAuthority__factory,
 } from "../../types";
 
 chai.use(smock.matchers);
 
 const ZERO_ADDRESS = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
 
-describe("OlympusStaking", () => {
+describe("FloorStaking", () => {
     let owner: SignerWithAddress;
     let governor: SignerWithAddress;
     let guardian: SignerWithAddress;
     let alice: SignerWithAddress;
     let bob: SignerWithAddress;
     let other: SignerWithAddress;
-    let ohmFake: FakeContract<IOHM>;
-    let sOHMFake: FakeContract<IsOHM>;
-    let gOHMFake: FakeContract<IgOHM>;
+    let floorFake: FakeContract<IFLOOR>;
+    let sFLOORFake: FakeContract<IsFLOOR>;
+    let gFLOORFake: FakeContract<IgFLOOR>;
     let distributorFake: FakeContract<IDistributor>;
-    let staking: OlympusStaking;
-    let authority: OlympusAuthority;
+    let staking: FloorStaking;
+    let authority: FloorAuthority;
 
     const EPOCH_LENGTH = 2200;
     const EPOCH_NUMBER = 1;
@@ -38,12 +38,12 @@ describe("OlympusStaking", () => {
 
     beforeEach(async () => {
         [owner, governor, guardian, alice, bob, other] = await ethers.getSigners();
-        ohmFake = await smock.fake<IOHM>("IOHM");
-        gOHMFake = await smock.fake<IgOHM>("IgOHM");
-        // need to be specific because IsOHM is also defined in OLD
-        sOHMFake = await smock.fake<IsOHM>("contracts/interfaces/IsOHM.sol:IsOHM");
+        floorFake = await smock.fake<IFLOOR>("IFLOOR");
+        gFLOORFake = await smock.fake<IgFLOOR>("IgFLOOR");
+        // need to be specific because IsFLOOR is also defined in OLD
+        sFLOORFake = await smock.fake<IsFLOOR>("contracts/interfaces/IsFLOOR.sol:IsFLOOR");
         distributorFake = await smock.fake<IDistributor>("IDistributor");
-        authority = await new OlympusAuthority__factory(owner).deploy(
+        authority = await new FloorAuthority__factory(owner).deploy(
             governor.address,
             guardian.address,
             owner.address,
@@ -53,18 +53,18 @@ describe("OlympusStaking", () => {
 
     describe("constructor", () => {
         it("can be constructed", async () => {
-            staking = await new OlympusStaking__factory(owner).deploy(
-                ohmFake.address,
-                sOHMFake.address,
-                gOHMFake.address,
+            staking = await new FloorStaking__factory(owner).deploy(
+                floorFake.address,
+                sFLOORFake.address,
+                gFLOORFake.address,
                 EPOCH_LENGTH,
                 EPOCH_NUMBER,
                 FUTURE_END_TIME,
                 authority.address
             );
 
-            expect(await staking.OHM()).to.equal(ohmFake.address);
-            expect(await staking.sOHM()).to.equal(sOHMFake.address);
+            expect(await staking.FLOOR()).to.equal(floorFake.address);
+            expect(await staking.sFLOOR()).to.equal(sFLOORFake.address);
             const epoch = await staking.epoch();
             expect((epoch as any)._length).to.equal(BigNumber.from(EPOCH_LENGTH));
             expect(epoch.number).to.equal(BigNumber.from(EPOCH_NUMBER));
@@ -73,12 +73,12 @@ describe("OlympusStaking", () => {
             expect(await authority.governor()).to.equal(governor.address);
         });
 
-        it("will not allow a 0x0 OHM address", async () => {
+        it("will not allow a 0x0 FLOOR address", async () => {
             await expect(
-                new OlympusStaking__factory(owner).deploy(
+                new FloorStaking__factory(owner).deploy(
                     ZERO_ADDRESS,
-                    sOHMFake.address,
-                    gOHMFake.address,
+                    sFLOORFake.address,
+                    gFLOORFake.address,
                     EPOCH_LENGTH,
                     EPOCH_NUMBER,
                     FUTURE_END_TIME,
@@ -87,12 +87,12 @@ describe("OlympusStaking", () => {
             ).to.be.reverted;
         });
 
-        it("will not allow a 0x0 sOHM address", async () => {
+        it("will not allow a 0x0 sFLOOR address", async () => {
             await expect(
-                new OlympusStaking__factory(owner).deploy(
-                    ohmFake.address,
+                new FloorStaking__factory(owner).deploy(
+                    floorFake.address,
                     ZERO_ADDRESS,
-                    gOHMFake.address,
+                    gFLOORFake.address,
                     EPOCH_LENGTH,
                     EPOCH_NUMBER,
                     FUTURE_END_TIME,
@@ -101,11 +101,11 @@ describe("OlympusStaking", () => {
             ).to.be.reverted;
         });
 
-        it("will not allow a 0x0 gOHM address", async () => {
+        it("will not allow a 0x0 gFLOOR address", async () => {
             await expect(
-                new OlympusStaking__factory(owner).deploy(
-                    ohmFake.address,
-                    sOHMFake.address,
+                new FloorStaking__factory(owner).deploy(
+                    floorFake.address,
+                    sFLOORFake.address,
                     ZERO_ADDRESS,
                     EPOCH_LENGTH,
                     EPOCH_NUMBER,
@@ -118,10 +118,10 @@ describe("OlympusStaking", () => {
 
     describe("initialization", () => {
         beforeEach(async () => {
-            staking = await new OlympusStaking__factory(owner).deploy(
-                ohmFake.address,
-                sOHMFake.address,
-                gOHMFake.address,
+            staking = await new FloorStaking__factory(owner).deploy(
+                floorFake.address,
+                sFLOORFake.address,
+                gFLOORFake.address,
                 EPOCH_LENGTH,
                 EPOCH_NUMBER,
                 FUTURE_END_TIME,
@@ -168,10 +168,10 @@ describe("OlympusStaking", () => {
 
     describe("post-initialization", () => {
         async function deployStaking(nextRebaseBlock: any) {
-            staking = await new OlympusStaking__factory(owner).deploy(
-                ohmFake.address,
-                sOHMFake.address,
-                gOHMFake.address,
+            staking = await new FloorStaking__factory(owner).deploy(
+                floorFake.address,
+                sFLOORFake.address,
+                gFLOORFake.address,
                 EPOCH_LENGTH,
                 EPOCH_NUMBER,
                 nextRebaseBlock,
@@ -194,11 +194,11 @@ describe("OlympusStaking", () => {
                 const rebasing = true;
                 const claim = false;
 
-                ohmFake.transferFrom
+                floorFake.transferFrom
                     .whenCalledWith(alice.address, staking.address, amount)
                     .returns(true);
-                sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
-                sOHMFake.balanceForGons.whenCalledWith(gons).returns(amount);
+                sFLOORFake.gonsForBalance.whenCalledWith(amount).returns(gons);
+                sFLOORFake.balanceForGons.whenCalledWith(gons).returns(amount);
 
                 await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
@@ -212,37 +212,37 @@ describe("OlympusStaking", () => {
                 expect(warmupInfo.lock).to.equal(false);
             });
 
-            it("exchanges OHM for sOHM when claim is true and rebasing is true", async () => {
+            it("exchanges FLOOR for sFLOOR when claim is true and rebasing is true", async () => {
                 const amount = 1000;
                 const rebasing = true;
                 const claim = true;
 
-                ohmFake.transferFrom
+                floorFake.transferFrom
                     .whenCalledWith(alice.address, staking.address, amount)
                     .returns(true);
-                sOHMFake.transfer.whenCalledWith(alice.address, amount).returns(true);
+                sFLOORFake.transfer.whenCalledWith(alice.address, amount).returns(true);
 
                 await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
                 // nothing is in warmup
-                sOHMFake.balanceForGons.whenCalledWith(0).returns(0);
+                sFLOORFake.balanceForGons.whenCalledWith(0).returns(0);
                 expect(await staking.supplyInWarmup()).to.equal(0);
             });
 
-            it("exchanges OHM for newly minted gOHM when claim is true and rebasing is true", async () => {
+            it("exchanges FLOOR for newly minted gFLOOR when claim is true and rebasing is true", async () => {
                 const amount = 1000;
                 const indexedAmount = 10000;
                 const rebasing = false;
                 const claim = true;
 
-                ohmFake.transferFrom
+                floorFake.transferFrom
                     .whenCalledWith(alice.address, staking.address, amount)
                     .returns(true);
-                gOHMFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
+                gFLOORFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
 
                 await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
-                expect(gOHMFake.mint).to.be.calledWith(alice.address, indexedAmount);
+                expect(gFLOORFake.mint).to.be.calledWith(alice.address, indexedAmount);
             });
 
             it("adds amount to warmup when claim is true and warmup period > 0, regardless of rebasing", async () => {
@@ -252,11 +252,11 @@ describe("OlympusStaking", () => {
                 const rebasing = true;
                 const claim = true;
 
-                ohmFake.transferFrom
+                floorFake.transferFrom
                     .whenCalledWith(alice.address, staking.address, amount)
                     .returns(true);
-                sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
-                sOHMFake.balanceForGons.whenCalledWith(gons).returns(amount);
+                sFLOORFake.gonsForBalance.whenCalledWith(amount).returns(gons);
+                sFLOORFake.balanceForGons.whenCalledWith(gons).returns(amount);
 
                 await staking.connect(governor).setWarmupLength(1);
                 await staking.connect(alice).stake(alice.address, amount, true, true);
@@ -276,10 +276,10 @@ describe("OlympusStaking", () => {
                 const rebasing = false;
                 const claim = false;
 
-                ohmFake.transferFrom
+                floorFake.transferFrom
                     .whenCalledWith(alice.address, staking.address, amount)
                     .returns(true);
-                sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
+                sFLOORFake.gonsForBalance.whenCalledWith(amount).returns(gons);
 
                 await staking.connect(alice).toggleLock();
 
@@ -294,11 +294,11 @@ describe("OlympusStaking", () => {
                 const rebasing = false;
                 const claim = false;
 
-                ohmFake.transferFrom
+                floorFake.transferFrom
                     .whenCalledWith(alice.address, staking.address, amount)
                     .returns(true);
-                sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
-                sOHMFake.balanceForGons.whenCalledWith(gons).returns(amount);
+                sFLOORFake.gonsForBalance.whenCalledWith(amount).returns(gons);
+                sFLOORFake.balanceForGons.whenCalledWith(gons).returns(amount);
 
                 await staking.connect(alice).toggleLock();
 
@@ -312,41 +312,41 @@ describe("OlympusStaking", () => {
             async function createClaim(wallet: SignerWithAddress, amount: number, gons: number) {
                 const rebasing = true;
                 const claim = false;
-                ohmFake.transferFrom
+                floorFake.transferFrom
                     .whenCalledWith(alice.address, staking.address, amount)
                     .returns(true);
-                sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
+                sFLOORFake.gonsForBalance.whenCalledWith(amount).returns(gons);
                 await staking.connect(wallet).stake(wallet.address, amount, rebasing, claim);
             }
 
-            it("transfers sOHM when rebasing is true", async () => {
+            it("transfers sFLOOR when rebasing is true", async () => {
                 const amount = 1000;
                 const gons = 10;
                 await createClaim(alice, amount, gons);
 
-                sOHMFake.transfer.whenCalledWith(alice.address, amount).returns(true);
-                sOHMFake.balanceForGons.whenCalledWith(gons).returns(amount);
+                sFLOORFake.transfer.whenCalledWith(alice.address, amount).returns(true);
+                sFLOORFake.balanceForGons.whenCalledWith(gons).returns(amount);
 
                 await staking.connect(alice).claim(alice.address, true);
 
-                sOHMFake.balanceForGons.whenCalledWith(0).returns(0);
+                sFLOORFake.balanceForGons.whenCalledWith(0).returns(0);
                 expect(await staking.supplyInWarmup()).to.equal(0);
             });
 
-            it("mints gOHM when rebasing is false", async () => {
+            it("mints gFLOOR when rebasing is false", async () => {
                 const indexedAmount = 10000;
                 const amount = 1000;
                 const gons = 10;
                 await createClaim(alice, amount, gons);
 
-                gOHMFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
-                sOHMFake.balanceForGons.whenCalledWith(gons).returns(amount);
+                gFLOORFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
+                sFLOORFake.balanceForGons.whenCalledWith(gons).returns(amount);
 
                 await staking.connect(alice).claim(alice.address, false);
 
-                expect(gOHMFake.mint).to.be.calledWith(alice.address, indexedAmount);
+                expect(gFLOORFake.mint).to.be.calledWith(alice.address, indexedAmount);
 
-                sOHMFake.balanceForGons.whenCalledWith(0).returns(0);
+                sFLOORFake.balanceForGons.whenCalledWith(0).returns(0);
                 expect(await staking.supplyInWarmup()).to.equal(0);
             });
 
@@ -367,20 +367,20 @@ describe("OlympusStaking", () => {
                 await createClaim(alice, amount, gons);
                 await staking.connect(alice).toggleLock();
 
-                sOHMFake.transfer.whenCalledWith(alice.address, amount).returns(true);
-                sOHMFake.balanceForGons.whenCalledWith(gons).returns(amount);
+                sFLOORFake.transfer.whenCalledWith(alice.address, amount).returns(true);
+                sFLOORFake.balanceForGons.whenCalledWith(gons).returns(amount);
 
                 await staking.connect(alice).claim(alice.address, true);
 
-                sOHMFake.balanceForGons.whenCalledWith(0).returns(0);
+                sFLOORFake.balanceForGons.whenCalledWith(0).returns(0);
                 expect(await staking.supplyInWarmup()).to.equal(0);
             });
 
             it("does nothing when there is nothing to claim", async () => {
                 await staking.connect(bob).claim(bob.address, true);
 
-                expect(sOHMFake.transfer).to.not.have.been.called;
-                expect(gOHMFake.mint).to.not.have.been.called;
+                expect(sFLOORFake.transfer).to.not.have.been.called;
+                expect(gFLOORFake.mint).to.not.have.been.called;
             });
 
             it("does nothing when the warmup isn't over", async () => {
@@ -389,8 +389,8 @@ describe("OlympusStaking", () => {
 
                 await staking.connect(alice).claim(alice.address, true);
 
-                expect(sOHMFake.transfer).to.not.have.been.called;
-                expect(gOHMFake.mint).to.not.have.been.called;
+                expect(sFLOORFake.transfer).to.not.have.been.called;
+                expect(gFLOORFake.mint).to.not.have.been.called;
             });
         });
 
@@ -404,88 +404,88 @@ describe("OlympusStaking", () => {
                 gons = 10;
                 const rebasing = true;
                 const claim = false;
-                ohmFake.transferFrom
+                floorFake.transferFrom
                     .whenCalledWith(alice.address, staking.address, amount)
                     .returns(true);
-                sOHMFake.gonsForBalance.whenCalledWith(amount).returns(gons);
+                sFLOORFake.gonsForBalance.whenCalledWith(amount).returns(gons);
 
                 await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
             });
 
-            it("removes stake from warmup and returns OHM", async () => {
-                ohmFake.transfer.returns(true);
+            it("removes stake from warmup and returns FLOOR", async () => {
+                floorFake.transfer.returns(true);
 
                 await staking.connect(alice).forfeit();
 
-                expect(ohmFake.transfer).to.be.calledWith(alice.address, amount);
+                expect(floorFake.transfer).to.be.calledWith(alice.address, amount);
 
-                sOHMFake.balanceForGons.whenCalledWith(0).returns(0);
+                sFLOORFake.balanceForGons.whenCalledWith(0).returns(0);
                 expect(await staking.supplyInWarmup()).to.equal(0);
             });
 
             it("transfers zero if there is no balance in warmup", async () => {
-                ohmFake.transfer.returns(true);
+                floorFake.transfer.returns(true);
 
                 await staking.connect(bob).forfeit();
 
-                expect(ohmFake.transfer).to.be.calledWith(bob.address, 0);
+                expect(floorFake.transfer).to.be.calledWith(bob.address, 0);
             });
         });
 
         describe("unstake", () => {
-            it("can redeem sOHM for OHM", async () => {
+            it("can redeem sFLOOR for FLOOR", async () => {
                 const amount = 1000;
                 const rebasing = true;
                 const claim = true;
 
-                ohmFake.transferFrom.returns(true);
-                ohmFake.balanceOf.returns(amount);
-                sOHMFake.transfer.returns(true);
+                floorFake.transferFrom.returns(true);
+                floorFake.balanceOf.returns(amount);
+                sFLOORFake.transfer.returns(true);
                 await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
-                sOHMFake.transferFrom.returns(true);
-                ohmFake.transfer.returns(true);
+                sFLOORFake.transferFrom.returns(true);
+                floorFake.transfer.returns(true);
                 await staking.connect(alice).unstake(alice.address, amount, false, rebasing);
 
-                expect(sOHMFake.transferFrom).to.be.calledWith(
+                expect(sFLOORFake.transferFrom).to.be.calledWith(
                     alice.address,
                     staking.address,
                     amount
                 );
-                expect(ohmFake.transfer).to.be.calledWith(alice.address, amount);
+                expect(floorFake.transfer).to.be.calledWith(alice.address, amount);
             });
 
-            it("can redeem gOHM for OHM", async () => {
+            it("can redeem gFLOOR for FLOOR", async () => {
                 const amount = 1000;
                 const indexedAmount = 10000;
                 const rebasing = false;
                 const claim = true;
 
-                ohmFake.transferFrom.returns(true);
+                floorFake.transferFrom.returns(true);
                 await staking.connect(alice).stake(alice.address, amount, rebasing, claim);
 
-                gOHMFake.balanceFrom.whenCalledWith(indexedAmount).returns(amount);
-                ohmFake.transfer.returns(true);
-                ohmFake.balanceOf.returns(amount);
+                gFLOORFake.balanceFrom.whenCalledWith(indexedAmount).returns(amount);
+                floorFake.transfer.returns(true);
+                floorFake.balanceOf.returns(amount);
                 await staking.connect(alice).unstake(alice.address, indexedAmount, false, rebasing);
 
-                expect(ohmFake.transfer).to.be.calledWith(alice.address, amount);
-                expect(gOHMFake.burn).to.be.calledWith(alice.address, indexedAmount);
+                expect(floorFake.transfer).to.be.calledWith(alice.address, amount);
+                expect(gFLOORFake.burn).to.be.calledWith(alice.address, indexedAmount);
             });
         });
 
         describe("wrap", () => {
-            it("converts sOHM into gOHM", async () => {
+            it("converts sFLOOR into gFLOOR", async () => {
                 const amount = 1000;
                 const indexedAmount = 10000;
 
-                gOHMFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
-                sOHMFake.transferFrom.returns(true);
+                gFLOORFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
+                sFLOORFake.transferFrom.returns(true);
 
                 await staking.connect(alice).wrap(alice.address, amount);
 
-                expect(gOHMFake.mint).to.be.calledWith(alice.address, indexedAmount);
-                expect(sOHMFake.transferFrom).to.be.calledWith(
+                expect(gFLOORFake.mint).to.be.calledWith(alice.address, indexedAmount);
+                expect(sFLOORFake.transferFrom).to.be.calledWith(
                     alice.address,
                     staking.address,
                     amount
@@ -494,17 +494,17 @@ describe("OlympusStaking", () => {
         });
 
         describe("unwrap", () => {
-            it("converts gOHM into sOHM", async () => {
+            it("converts gFLOOR into sFLOOR", async () => {
                 const amount = 1000;
                 const indexedAmount = 10000;
 
-                gOHMFake.balanceFrom.whenCalledWith(indexedAmount).returns(amount);
-                sOHMFake.transfer.returns(true);
+                gFLOORFake.balanceFrom.whenCalledWith(indexedAmount).returns(amount);
+                sFLOORFake.transfer.returns(true);
 
                 await staking.connect(alice).unwrap(alice.address, indexedAmount);
 
-                expect(gOHMFake.burn).to.be.calledWith(alice.address, indexedAmount);
-                expect(sOHMFake.transfer).to.be.calledWith(alice.address, amount);
+                expect(gFLOORFake.burn).to.be.calledWith(alice.address, indexedAmount);
+                expect(sFLOORFake.transfer).to.be.calledWith(alice.address, amount);
             });
         });
 
@@ -536,14 +536,14 @@ describe("OlympusStaking", () => {
                 );
             });
 
-            it("when the OHM balance of the staking contract equals sOHM supply, distribute zero", async () => {
+            it("when the FLOOR balance of the staking contract equals sFLOOR supply, distribute zero", async () => {
                 const currentBlock = await ethers.provider.send("eth_blockNumber", []);
                 await deployStaking(currentBlock);
                 const epoch = await staking.epoch();
                 expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.end));
 
-                ohmFake.balanceOf.whenCalledWith(staking.address).returns(10);
-                sOHMFake.circulatingSupply.returns(10);
+                floorFake.balanceOf.whenCalledWith(staking.address).returns(10);
+                sFLOORFake.circulatingSupply.returns(10);
                 await staking.connect(alice).rebase();
 
                 const nextEpoch = await staking.epoch();
@@ -556,8 +556,8 @@ describe("OlympusStaking", () => {
                 const epoch = await staking.epoch();
                 expect(BigNumber.from(currentBlock)).to.equal(BigNumber.from(epoch.end));
 
-                ohmFake.balanceOf.whenCalledWith(staking.address).returns(10);
-                sOHMFake.circulatingSupply.returns(5);
+                floorFake.balanceOf.whenCalledWith(staking.address).returns(10);
+                sFLOORFake.circulatingSupply.returns(5);
                 await staking.connect(alice).rebase();
 
                 const nextEpoch = await staking.epoch();

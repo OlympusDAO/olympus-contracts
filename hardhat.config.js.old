@@ -1,50 +1,14 @@
-import "@nomiclabs/hardhat-waffle";
-import "@typechain/hardhat";
-import "hardhat-gas-reporter";
-import "solidity-coverage";
-import "@nomiclabs/hardhat-etherscan";
-import "@nomiclabs/hardhat-ethers";
-import "hardhat-deploy";
+require("dotenv").config();
+require("@nomiclabs/hardhat-waffle");
+// require("@openzeppelin/hardhat-upgrades");
+require("hardhat-gas-reporter");
 
-import { resolve } from "path";
+/**
+ * @type import('hardhat/config').HardhatUserConfig
+ */
 
-import { config as dotenvConfig } from "dotenv";
-import { HardhatUserConfig } from "hardhat/config";
-import { NetworkUserConfig } from "hardhat/types";
-
-dotenvConfig({ path: resolve(__dirname, "./.env") });
-
-const chainIds = {
-    goerli: 5,
-    hardhat: 31337,
-    kovan: 42,
-    mainnet: 1,
-    rinkeby: 4,
-    ropsten: 3,
-};
-
-// Ensure that we have all the environment variables we need.
-const privateKey = process.env.PRIVATE_KEY ?? "NO_PRIVATE_KEY";
-// Make sure node is setup on Alchemy website
-const alchemyApiKey = process.env.ALCHEMY_MAINNET_API_KEY ?? "NO_ALCHEMY_API_KEY";
-
-function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
-    const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
-    return {
-        accounts: [`${privateKey}`],
-        chainId: chainIds[network],
-        url,
-    };
-}
-
-const config: HardhatUserConfig = {
+module.exports = {
     defaultNetwork: "hardhat",
-    gasReporter: {
-        currency: "USD",
-        enabled: process.env.REPORT_GAS ? true : false,
-        excludeContracts: [],
-        src: "./contracts",
-    },
     networks: {
         rinkeby: {
             url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_RINKEBY_API_KEY}`,
@@ -65,8 +29,9 @@ const config: HardhatUserConfig = {
             },
             forking: {
                 url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_MAINNET_API_KEY}`,
+                blockNumber: 12772572,
+                hardhat: 31337,
             },
-            chainId: chainIds.hardhat,
         },
     },
     paths: {
@@ -115,22 +80,9 @@ const config: HardhatUserConfig = {
             },
         },
     },
-    namedAccounts: {
-        deployer: {
-            default: 0,
-        },
-        daoMultisig: {
-            // mainnet
-            1: "0x245cc372C84B3645Bf0Ffe6538620B04a217988B",
-        },
-    },
-    typechain: {
-        outDir: "types",
-        target: "ethers-v5",
-    },
-    etherscan: {
-        apiKey: process.env.ETHERSCAN_API_KEY,
+    gasReporter: {
+        coinmarketcap: '75865531-6a43-42a4-884e-9f9d628125b6',
+        currency: 'USD',
+        enabled: true,
     },
 };
-
-export default config;

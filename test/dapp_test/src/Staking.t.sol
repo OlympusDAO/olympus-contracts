@@ -8,12 +8,12 @@ import "../../../contracts/libraries/SafeMath.sol";
 import "../../../contracts/libraries/FixedPoint.sol";
 import "../../../contracts/libraries/FullMath.sol";
 import "../../../contracts/Staking.sol";
-import "../../../contracts/OlympusERC20.sol";
-import "../../../contracts/sOlympusERC20.sol";
-import "../../../contracts/governance/gOHM.sol";
+import "../../../contracts/FloorERC20.sol";
+import "../../../contracts/sFloorERC20.sol";
+import "../../../contracts/governance/gFLOOR.sol";
 import "../../../contracts/Treasury.sol";
 import "../../../contracts/StakingDistributor.sol";
-import "../../../contracts/OlympusAuthority.sol";
+import "../../../contracts/FloorAuthority.sol";
 
 import "./util/Hevm.sol";
 import "./util/MockContract.sol";
@@ -23,14 +23,14 @@ contract StakingTest is DSTest {
     using SafeMath for uint256;
     using SafeMath for uint112;
 
-    OlympusStaking internal staking;
-    OlympusTreasury internal treasury;
-    OlympusAuthority internal authority;
+    FloorStaking internal staking;
+    FloorTreasury internal treasury;
+    FloorAuthority internal authority;
     Distributor internal distributor;
 
-    OlympusERC20Token internal ohm;
-    sOlympus internal sohm;
-    gOHM internal gohm;
+    FloorERC20Token internal floor;
+    sFloor internal sfloor;
+    gFLOOR internal gfloor;
 
     MockContract internal mockToken;
 
@@ -53,40 +53,40 @@ contract StakingTest is DSTest {
         mockToken.givenMethodReturnUint(abi.encodeWithSelector(ERC20.decimals.selector), 18);
         mockToken.givenMethodReturnBool(abi.encodeWithSelector(IERC20.transferFrom.selector), true);
 
-        authority = new OlympusAuthority(address(this), address(this), address(this), address(this));
+        authority = new FloorAuthority(address(this), address(this), address(this), address(this));
 
-        ohm = new OlympusERC20Token(address(authority));
-        gohm = new gOHM(address(this), address(this));
-        sohm = new sOlympus();
-        sohm.setIndex(10);
-        sohm.setgOHM(address(gohm));
+        floor = new FloorERC20Token(address(authority));
+        gfloor = new gFLOOR(address(this), address(this));
+        sfloor = new sFloor();
+        sfloor.setIndex(10);
+        sfloor.setgFLOOR(address(gfloor));
 
-        treasury = new OlympusTreasury(address(ohm), 1, address(authority));
+        treasury = new FloorTreasury(address(floor), 1, address(authority));
 
-        staking = new OlympusStaking(
-            address(ohm),
-            address(sohm),
-            address(gohm),
+        staking = new FloorStaking(
+            address(floor),
+            address(sfloor),
+            address(gfloor),
             EPOCH_LENGTH,
             START_TIME,
             NEXT_REBASE_TIME,
             address(authority)
         );
 
-        distributor = new Distributor(address(treasury), address(ohm), address(staking), address(authority));
+        distributor = new Distributor(address(treasury), address(floor), address(staking), address(authority));
         distributor.setBounty(BOUNTY);
         staking.setDistributor(address(distributor));
-        treasury.enable(OlympusTreasury.STATUS.REWARDMANAGER, address(distributor), address(0)); // Allows distributor to mint ohm.
-        treasury.enable(OlympusTreasury.STATUS.RESERVETOKEN, address(mockToken), address(0)); // Allow mock token to be deposited into treasury
-        treasury.enable(OlympusTreasury.STATUS.RESERVEDEPOSITOR, address(this), address(0)); // Allow this contract to deposit token into treeasury
+        treasury.enable(FloorTreasury.STATUS.REWARDMANAGER, address(distributor), address(0)); // Allows distributor to mint floor.
+        treasury.enable(FloorTreasury.STATUS.RESERVETOKEN, address(mockToken), address(0)); // Allow mock token to be deposited into treasury
+        treasury.enable(FloorTreasury.STATUS.RESERVEDEPOSITOR, address(this), address(0)); // Allow this contract to deposit token into treeasury
 
-        sohm.initialize(address(staking), address(treasury));
-        gohm.migrate(address(staking), address(sohm));
+        sfloor.initialize(address(staking), address(treasury));
+        // gfloor.migrate(address(staking), address(sfloor));
 
         // Give the treasury permissions to mint
         authority.pushVault(address(treasury), true);
 
-        // Deposit a token who's profit (3rd param) determines how much ohm the treasury can mint
+        // Deposit a token who's profit (3rd param) determines how much floor the treasury can mint
         uint256 depositAmount = 20e18;
         treasury.deposit(depositAmount, address(mockToken), BOUNTY.mul(2)); // Mints (depositAmount- 2xBounty) for this contract
     }
@@ -109,32 +109,32 @@ contract StakingTest is DSTest {
     }
 
     function testStake() public {
-        ohm.approve(address(staking), AMOUNT);
+        floor.approve(address(staking), AMOUNT);
         uint256 amountStaked = staking.stake(address(this), AMOUNT, true, true);
         assertEq(amountStaked, AMOUNT);
     }
 
-    function testStakeAtRebaseToGohm() public {
+    function testStakeAtRebaseToGfloor() public {
         // Move into next rebase window
         hevm.warp(EPOCH_LENGTH);
 
-        ohm.approve(address(staking), AMOUNT);
-        bool isSohm = false;
+        floor.approve(address(staking), AMOUNT);
+        bool isSfloor = false;
         bool claim = true;
-        uint256 gOHMRecieved = staking.stake(address(this), AMOUNT, isSohm, claim);
+        uint256 gFLOORRecieved = staking.stake(address(this), AMOUNT, isSfloor, claim);
 
-        uint256 expectedAmount = gohm.balanceTo(AMOUNT.add(BOUNTY));
-        assertEq(gOHMRecieved, expectedAmount);
+        uint256 expectedAmount = gfloor.balanceTo(AMOUNT.add(BOUNTY));
+        assertEq(gFLOORRecieved, expectedAmount);
     }
 
     function testStakeAtRebase() public {
         // Move into next rebase window
         hevm.warp(EPOCH_LENGTH);
 
-        ohm.approve(address(staking), AMOUNT);
-        bool isSohm = true;
+        floor.approve(address(staking), AMOUNT);
+        bool isSfloor = true;
         bool claim = true;
-        uint256 amountStaked = staking.stake(address(this), AMOUNT, isSohm, claim);
+        uint256 amountStaked = staking.stake(address(this), AMOUNT, isSfloor, claim);
 
         uint256 expectedAmount = AMOUNT.add(BOUNTY);
         assertEq(amountStaked, expectedAmount);
@@ -142,96 +142,96 @@ contract StakingTest is DSTest {
 
     function testUnstake() public {
         bool triggerRebase = true;
-        bool isSohm = true;
+        bool isSfloor = true;
         bool claim = true;
 
-        // Stake the ohm
-        uint256 initialOhmBalance = ohm.balanceOf(address(this));
-        ohm.approve(address(staking), initialOhmBalance);
-        uint256 amountStaked = staking.stake(address(this), initialOhmBalance, isSohm, claim);
-        assertEq(amountStaked, initialOhmBalance);
+        // Stake the floor
+        uint256 initialFloorBalance = floor.balanceOf(address(this));
+        floor.approve(address(staking), initialFloorBalance);
+        uint256 amountStaked = staking.stake(address(this), initialFloorBalance, isSfloor, claim);
+        assertEq(amountStaked, initialFloorBalance);
 
         // Validate balances post stake
-        uint256 ohmBalance = ohm.balanceOf(address(this));
-        uint256 sOhmBalance = sohm.balanceOf(address(this));
-        assertEq(ohmBalance, 0);
-        assertEq(sOhmBalance, initialOhmBalance);
+        uint256 floorBalance = floor.balanceOf(address(this));
+        uint256 sFloorBalance = sfloor.balanceOf(address(this));
+        assertEq(floorBalance, 0);
+        assertEq(sFloorBalance, initialFloorBalance);
 
-        // Unstake sOHM
-        sohm.approve(address(staking), sOhmBalance);
-        staking.unstake(address(this), sOhmBalance, triggerRebase, isSohm);
+        // Unstake sFLOOR
+        sfloor.approve(address(staking), sFloorBalance);
+        staking.unstake(address(this), sFloorBalance, triggerRebase, isSfloor);
 
         // Validate Balances post unstake
-        ohmBalance = ohm.balanceOf(address(this));
-        sOhmBalance = sohm.balanceOf(address(this));
-        assertEq(ohmBalance, initialOhmBalance);
-        assertEq(sOhmBalance, 0);
+        floorBalance = floor.balanceOf(address(this));
+        sFloorBalance = sfloor.balanceOf(address(this));
+        assertEq(floorBalance, initialFloorBalance);
+        assertEq(sFloorBalance, 0);
     }
 
     function testUnstakeAtRebase() public {
         bool triggerRebase = true;
-        bool isSohm = true;
+        bool isSfloor = true;
         bool claim = true;
 
-        // Stake the ohm
-        uint256 initialOhmBalance = ohm.balanceOf(address(this));
-        ohm.approve(address(staking), initialOhmBalance);
-        uint256 amountStaked = staking.stake(address(this), initialOhmBalance, isSohm, claim);
-        assertEq(amountStaked, initialOhmBalance);
+        // Stake the floor
+        uint256 initialFloorBalance = floor.balanceOf(address(this));
+        floor.approve(address(staking), initialFloorBalance);
+        uint256 amountStaked = staking.stake(address(this), initialFloorBalance, isSfloor, claim);
+        assertEq(amountStaked, initialFloorBalance);
 
         // Move into next rebase window
         hevm.warp(EPOCH_LENGTH);
 
         // Validate balances post stake
-        // Post initial rebase, distribution amount is 0, so sOHM balance doens't change.
-        uint256 ohmBalance = ohm.balanceOf(address(this));
-        uint256 sOhmBalance = sohm.balanceOf(address(this));
-        assertEq(ohmBalance, 0);
-        assertEq(sOhmBalance, initialOhmBalance);
+        // Post initial rebase, distribution amount is 0, so sFLOOR balance doens't change.
+        uint256 floorBalance = floor.balanceOf(address(this));
+        uint256 sFloorBalance = sfloor.balanceOf(address(this));
+        assertEq(floorBalance, 0);
+        assertEq(sFloorBalance, initialFloorBalance);
 
-        // Unstake sOHM
-        sohm.approve(address(staking), sOhmBalance);
-        staking.unstake(address(this), sOhmBalance, triggerRebase, isSohm);
+        // Unstake sFLOOR
+        sfloor.approve(address(staking), sFloorBalance);
+        staking.unstake(address(this), sFloorBalance, triggerRebase, isSfloor);
 
         // Validate balances post unstake
-        ohmBalance = ohm.balanceOf(address(this));
-        sOhmBalance = sohm.balanceOf(address(this));
-        uint256 expectedAmount = initialOhmBalance.add(BOUNTY); // Rebase earns a bounty
-        assertEq(ohmBalance, expectedAmount);
-        assertEq(sOhmBalance, 0);
+        floorBalance = floor.balanceOf(address(this));
+        sFloorBalance = sfloor.balanceOf(address(this));
+        uint256 expectedAmount = initialFloorBalance.add(BOUNTY); // Rebase earns a bounty
+        assertEq(floorBalance, expectedAmount);
+        assertEq(sFloorBalance, 0);
     }
 
-    function testUnstakeAtRebaseFromGohm() public {
+    function testUnstakeAtRebaseFromGfloor() public {
         bool triggerRebase = true;
-        bool isSohm = false;
+        bool isSfloor = false;
         bool claim = true;
 
-        // Stake the ohm
-        uint256 initialOhmBalance = ohm.balanceOf(address(this));
-        ohm.approve(address(staking), initialOhmBalance);
-        uint256 amountStaked = staking.stake(address(this), initialOhmBalance, isSohm, claim);
-        uint256 gohmAmount = gohm.balanceTo(initialOhmBalance);
-        assertEq(amountStaked, gohmAmount);
+        // Stake the floor
+        uint256 initialFloorBalance = floor.balanceOf(address(this));
+        floor.approve(address(staking), initialFloorBalance);
+        uint256 amountStaked = staking.stake(address(this), initialFloorBalance, isSfloor, claim);
+        uint256 gfloorAmount = gfloor.balanceTo(initialFloorBalance);
+        assertEq(amountStaked, gfloorAmount);
 
         // test the unstake
         // Move into next rebase window
         hevm.warp(EPOCH_LENGTH);
 
         // Validate balances post-stake
-        uint256 ohmBalance = ohm.balanceOf(address(this));
-        uint256 gohmBalance = gohm.balanceOf(address(this));
-        assertEq(ohmBalance, 0);
-        assertEq(gohmBalance, gohmAmount);
+        uint256 floorBalance = floor.balanceOf(address(this));
+        uint256 gfloorBalance = gfloor.balanceOf(address(this));
+        assertEq(floorBalance, 0);
+        assertEq(gfloorBalance, gfloorAmount);
 
-        // Unstake gOHM
-        gohm.approve(address(staking), gohmBalance);
-        staking.unstake(address(this), gohmBalance, triggerRebase, isSohm);
+        // Unstake gFLOOR
+        gfloor.approve(address(staking), gfloorBalance);
+        staking.unstake(address(this), gfloorBalance, triggerRebase, isSfloor);
 
         // Validate balances post unstake
-        ohmBalance = ohm.balanceOf(address(this));
-        gohmBalance = gohm.balanceOf(address(this));
-        uint256 expectedOhm = initialOhmBalance.add(BOUNTY); // Rebase earns a bounty
-        assertEq(ohmBalance, expectedOhm);
-        assertEq(gohmBalance, 0);
+        floorBalance = floor.balanceOf(address(this));
+        gfloorBalance = gfloor.balanceOf(address(this));
+        uint256 expectedFloor = initialFloorBalance.add(BOUNTY); // Rebase earns a bounty
+        assertEq(floorBalance, expectedFloor);
+        assertEq(gfloorBalance, 0);
     }
 }
