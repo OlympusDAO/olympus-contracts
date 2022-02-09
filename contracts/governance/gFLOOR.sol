@@ -4,11 +4,12 @@ pragma solidity ^0.7.5;
 import "../libraries/SafeMath.sol";
 import "../libraries/Address.sol";
 
-import "../interfaces/IsOHM.sol";
-import "../interfaces/IgOHM.sol";
+import "../interfaces/IsFLOOR.sol";
+import "../interfaces/IgFLOOR.sol";
 import "../types/ERC20.sol";
 
-contract gOHM is IgOHM, ERC20 {
+contract gFLOOR is IgFLOOR, ERC20 {
+
     /* ========== DEPENDENCIES ========== */
 
     using Address for address;
@@ -36,9 +37,9 @@ contract gOHM is IgOHM, ERC20 {
 
     /* ========== STATE VARIABLES ========== */
 
-    IsOHM public sOHM;
+    IsFLOOR public sFLOOR;
     address public approved; // minter
-    bool public migrated;
+    bool public initialized;
 
     mapping(address => mapping(uint256 => Checkpoint)) public checkpoints;
     mapping(address => uint256) public numCheckpoints;
@@ -46,31 +47,28 @@ contract gOHM is IgOHM, ERC20 {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor(address _migrator, address _sOHM) ERC20("Governance OHM", "gOHM", 18) {
-        require(_migrator != address(0), "Zero address: Migrator");
-        approved = _migrator;
-        require(_sOHM != address(0), "Zero address: sOHM");
-        sOHM = IsOHM(_sOHM);
+    constructor(address _sFLOOR)
+        ERC20("Governance FLOOR", "gFLOOR", 18)
+    {
+        approved = msg.sender;
+        require(_sFLOOR != address(0), "Zero address: sFLOOR");
+        sFLOOR = IsFLOOR(_sFLOOR);
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     /**
-     * @notice transfer mint rights from migrator to staking
-     * @notice can only be done once, at the time of contract migration
+     * @notice transfer mint rights from deployer to staking
+     * @notice can only be done once, at the time of contract deployment
      * @param _staking address
-     * @param _sOHM address
      */
-    function migrate(address _staking, address _sOHM) external override onlyApproved {
-        require(!migrated, "Migrated");
-        migrated = true;
+    function initialize(address _staking) external onlyApproved {
+        require(!initialized, "already initialized");
+        initialized = true;
 
         require(_staking != approved, "Invalid argument");
         require(_staking != address(0), "Zero address found");
         approved = _staking;
-
-        require(_sOHM != address(0), "Zero address found");
-        sOHM = IsOHM(_sOHM);
     }
 
     /**
@@ -82,7 +80,7 @@ contract gOHM is IgOHM, ERC20 {
     }
 
     /**
-        @notice mint gOHM
+        @notice mint gFLOOR
         @param _to address
         @param _amount uint
      */
@@ -91,7 +89,7 @@ contract gOHM is IgOHM, ERC20 {
     }
 
     /**
-        @notice burn gOHM
+        @notice burn gFLOOR
         @param _from address
         @param _amount uint
      */
@@ -102,14 +100,14 @@ contract gOHM is IgOHM, ERC20 {
     /* ========== VIEW FUNCTIONS ========== */
 
     /**
-     * @notice pull index from sOHM token
+     * @notice pull index from sFLOOR token
      */
     function index() public view override returns (uint256) {
-        return sOHM.index();
+        return sFLOOR.index();
     }
 
     /**
-        @notice converts gOHM amount to OHM
+        @notice converts gFLOOR amount to FLOOR
         @param _amount uint
         @return uint
      */
@@ -118,7 +116,7 @@ contract gOHM is IgOHM, ERC20 {
     }
 
     /**
-        @notice converts OHM amount to gOHM
+        @notice converts FLOOR amount to gFLOOR
         @param _amount uint
         @return uint
      */
@@ -144,7 +142,7 @@ contract gOHM is IgOHM, ERC20 {
      * @return The number of votes the account had as of the given block
      */
     function getPriorVotes(address account, uint256 blockNumber) external view returns (uint256) {
-        require(blockNumber < block.number, "gOHM::getPriorVotes: not yet determined");
+        require(blockNumber < block.number, "gFLOOR::getPriorVotes: not yet determined");
 
         uint256 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
