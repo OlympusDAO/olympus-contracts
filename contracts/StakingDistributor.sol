@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.7.5;
 
 import "./libraries/SafeERC20.sol";
@@ -8,9 +8,10 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IDistributor.sol";
 
-import "./types/OlympusAccessControlled.sol";
+import "./types/FloorAccessControlled.sol";
 
-contract Distributor is IDistributor, OlympusAccessControlled {
+
+contract Distributor is IDistributor, FloorAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -18,7 +19,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
 
     /* ====== VARIABLES ====== */
 
-    IERC20 private immutable ohm;
+    IERC20 private immutable floor;
     ITreasury private immutable treasury;
     address private immutable staking;
 
@@ -45,14 +46,14 @@ contract Distributor is IDistributor, OlympusAccessControlled {
 
     constructor(
         address _treasury,
-        address _ohm,
-        address _staking,
+        address _floor,
+        address _staking, 
         address _authority
-    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
+    ) FloorAccessControlled(IFloorAuthority(_authority)) {
         require(_treasury != address(0), "Zero address: Treasury");
         treasury = ITreasury(_treasury);
-        require(_ohm != address(0), "Zero address: OHM");
-        ohm = IERC20(_ohm);
+        require(_floor != address(0), "Zero address: FLOOR");
+        floor = IERC20(_floor);
         require(_staking != address(0), "Zero address: Staking");
         staking = _staking;
     }
@@ -67,20 +68,14 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         // distribute rewards to each recipient
         for (uint256 i = 0; i < info.length; i++) {
             if (info[i].rate > 0) {
-                treasury.mint(info[i].recipient, nextRewardAt(info[i].rate)); // mint and send tokens
+                if (info[i].recipient == staking) {
+                    treasury.mint(info[i].recipient, nextRewardAt(info[i].rate).add(bounty)); // mint and send with bounty
+                } else {
+                    treasury.mint(info[i].recipient, nextRewardAt(info[i].rate)); // mint and send tokens
+                }
                 adjust(i); // check for adjustment
             }
         }
-    }
-
-    function retrieveBounty() external override returns (uint256) {
-        require(msg.sender == staking, "Only staking");
-        // If the distributor bounty is > 0, mint it for the staking contract.
-        if (bounty > 0) {
-            treasury.mint(address(staking), bounty);
-        }
-
-        return bounty;
     }
 
     /* ====== INTERNAL FUNCTIONS ====== */
@@ -101,13 +96,12 @@ contract Distributor is IDistributor, OlympusAccessControlled {
                 }
             } else {
                 // if rate should decrease
-                if (info[_index].rate > adjustment.rate) {
-                    // protect from underflow
+                if (info[_index].rate > adjustment.rate) { // protect from underflow
                     info[_index].rate = info[_index].rate.sub(adjustment.rate); // lower rate
                 } else {
                     info[_index].rate = 0;
                 }
-
+                
                 if (info[_index].rate <= adjustment.target) {
                     // if target met
                     adjustments[_index].rate = 0; // turn off adjustment
@@ -125,7 +119,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         @return uint
      */
     function nextRewardAt(uint256 _rate) public view override returns (uint256) {
-        return ohm.totalSupply().mul(_rate).div(rateDenominator);
+        return floor.totalSupply().mul(_rate).div(rateDenominator);
     }
 
     /**
@@ -170,10 +164,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         @param _index uint
      */
     function removeRecipient(uint256 _index) external override {
-        require(
-            msg.sender == authority.governor() || msg.sender == authority.guardian(),
-            "Caller is not governor or guardian"
-        );
+        require(msg.sender == authority.governor() || msg.sender == authority.guardian(), "Caller is not governor or guardian");
         require(info[_index].recipient != address(0), "Recipient does not exist");
         info[_index].recipient = address(0);
         info[_index].rate = 0;
@@ -192,10 +183,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         uint256 _rate,
         uint256 _target
     ) external override {
-        require(
-            msg.sender == authority.governor() || msg.sender == authority.guardian(),
-            "Caller is not governor or guardian"
-        );
+        require(msg.sender == authority.governor() || msg.sender == authority.guardian(), "Caller is not governor or guardian");
         require(info[_index].recipient != address(0), "Recipient does not exist");
 
         if (msg.sender == authority.guardian()) {
