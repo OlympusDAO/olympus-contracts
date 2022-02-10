@@ -18,9 +18,10 @@ import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccess
 contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     using SafeERC20 for IERC20;
 
-    // drop sOHM for mainnet launch
     address public immutable sOHM;
     IStaking public immutable staking;
+    mapping(address => uint256[]) public recipientIds;
+    mapping(uint256 => address) internal recipientLookup;
 
     bool public depositDisabled;
     bool public withdrawDisabled;
@@ -52,23 +53,15 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
      * Modifiers
      ************************/
     function isValidDeposit(uint256 amount_, address recipient_) internal returns (bool) {
-        if (depositDisabled) return false;
-        if (amount_ <= 0) return false;
-        if (recipient_ == address(0)) return false;
-        return true;
+        return !(depositDisabled || amount_ <= 0 || recipient_ == address(0));
     }
 
     function isValidUpdate(uint256 id_, uint256 amount_) internal returns (bool) {
-        if (depositDisabled) return false;
-        if (amount_ <= 0) return false;
-        if (depositInfo[id_].depositor == address(0)) return false;
-        return true;
+        return !(depositDisabled || amount_ <= 0 || depositInfo[id_].depositor == address(0));
     }
 
     function isValidWithdrawal(uint256 amount_) internal returns (bool) {
-        if (withdrawDisabled) return false;
-        if (amount_ <= 0) return false;
-        return true;
+        return !(withdrawDisabled || amount_ <= 0);
     }
 
     /************************
@@ -84,7 +77,11 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         require(isValidDeposit(amount_, recipient_), "Not a valid deposit.");
 
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
-        depositId = _deposit(msg.sender, recipient_, amount_);
+
+        depositId = _deposit(msg.sender, amount_);
+        recipientIds[recipient_].push(depositId);
+        recipientLookup[depositId] = recipient_;
+
         emit Deposited(msg.sender, recipient_, amount_);
     }
 
@@ -99,7 +96,11 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
         IERC20(sOHM).approve(address(staking), amount_);
         uint256 gohmAmount = staking.wrap(address(this), amount_);
-        depositId = _deposit(msg.sender, recipient_, gohmAmount);
+
+        depositId = _deposit(msg.sender, gohmAmount);
+        recipientIds[recipient_].push(depositId);
+        recipientLookup[depositId] = recipient_;
+
         emit Deposited(msg.sender, recipient_, gohmAmount);
     }
 
@@ -114,7 +115,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
 
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
         _addToDeposit(id_, amount_);
-        emit DepositUpdated(msg.sender, depositInfo[id_].recipient, amount_);
+
+        emit DepositUpdated(msg.sender, recipientLookup[id_], amount_);
     }
 
     /**
@@ -130,7 +132,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         IERC20(sOHM).approve(address(staking), amount_);
         uint256 gohmAmount = staking.wrap(address(this), amount_);
         _addToDeposit(id_, gohmAmount);
-        emit DepositUpdated(msg.sender, depositInfo[id_].recipient, gohmAmount);
+
+        emit DepositUpdated(msg.sender, recipientLookup[id_], gohmAmount);
     }
 
     /**
@@ -143,17 +146,20 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         DepositInfo storage currDeposit = depositInfo[id_];
         require(currDeposit.depositor == msg.sender, "Can't withdraw principal that's not yours");
 
-        _withdrawPrincipal(id_, amount_);
         if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
+            _withdrawPrincipal(id_, amount_);
             currDeposit.principalAmount = 0;
             emit Donated(
                 msg.sender,
-                currDeposit.recipient,
+                recipientLookup[id_],
                 _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount)
             );
+        } else {
+            _withdrawPrincipal(id_, amount_);
         }
+
         IERC20(gOHM).safeTransfer(msg.sender, amount_);
-        emit Withdrawn(msg.sender, currDeposit.recipient, amount_);
+        emit Withdrawn(msg.sender, recipientLookup[id_], amount_);
     }
 
     /**
@@ -166,18 +172,22 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         DepositInfo storage currDeposit = depositInfo[id_];
         require(currDeposit.depositor == msg.sender, "Can't withdraw principal that's not yours");
 
-        _withdrawPrincipal(id_, amount_);
         if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
+            _withdrawPrincipal(id_, amount_);
             currDeposit.principalAmount = 0;
             emit Donated(
                 msg.sender,
-                currDeposit.recipient,
+                recipientLookup[id_],
                 _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount)
             );
+        } else {
+            _withdrawPrincipal(id_, amount_);
         }
+
         IERC20(sOHM).approve(address(staking), amount_);
         staking.unwrap(msg.sender, amount_);
-        emit Withdrawn(msg.sender, currDeposit.recipient, amount_);
+
+        emit Withdrawn(msg.sender, recipientLookup[id_], amount_);
     }
 
     /**
@@ -196,10 +206,11 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         for (uint256 index = 0; index < depositsLength; index++) {
             DepositInfo storage currDeposit = depositInfo[depositIds[index]];
             principalTotal += currDeposit.principalAmount;
+            _withdrawPrincipal(currDeposit.id, IgOHM(gOHM).balanceTo(currDeposit.principalAmount));
             currDeposit.principalAmount = 0;
             emit Donated(
                 msg.sender,
-                currDeposit.recipient,
+                recipientLookup[currDeposit.id],
                 _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount)
             );
         }
@@ -221,9 +232,10 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         }
 
         for (uint256 index = 0; index < depositIds.length; index++) {
-            DepositInfo storage currDeposit = depositInfo[depositIds[index]];
-            if (currDeposit.recipient == recipient_) {
-                return IgOHM(gOHM).balanceTo(currDeposit.principalAmount);
+            uint256 id = depositIds[index];
+
+            if (recipientLookup[id] == recipient_) {
+                return IgOHM(gOHM).balanceTo(depositInfo[id].principalAmount);
             }
         }
 
@@ -264,7 +276,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         } else {
             for (uint256 index = 0; index < len; index++) {
                 DepositInfo storage currDeposit = depositInfo[depositIds[index]];
-                addresses[index] = currDeposit.recipient;
+                addresses[index] = recipientLookup[depositIds[index]];
                 agnosticDeposits[index] = IgOHM(gOHM).balanceTo(currDeposit.principalAmount);
             }
         }
@@ -281,9 +293,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         uint256[] storage depositIds = depositorIds[donor_];
 
         for (uint256 index = 0; index < depositIds.length; index++) {
-            DepositInfo storage currDeposit = depositInfo[depositIds[index]];
-            if (currDeposit.recipient == recipient_) {
-                return _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);
+            if (recipientLookup[depositIds[index]] == recipient_) {
+                return _getOutstandingYield(depositInfo[depositIds[index]].principalAmount, depositInfo[depositIds[index]].agnosticAmount);
             }
         }
 
@@ -337,10 +348,10 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     /**
         @notice Redeem recipient's donated amount of sOHM at current index from one donor as gOHM
         @param id_ Deposit id for this donation
-     */
+    */
     function redeemYield(uint256 id_) external returns (uint256) {
         require(!redeemDisabled, "Redeems currently disabled");
-        require(depositInfo[id_].recipient == msg.sender);
+        require(recipientLookup[id_] == msg.sender);
 
         uint256 amountRedeemed = _redeemYield(id_);
         require(amountRedeemed > 0, "No redeemable balance");
@@ -353,10 +364,10 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     /**
         @notice Redeem recipient's donated amount of sOHM at current index
         @param id_ Deposit id for this donation
-     */
+    */
     function redeemYieldAsSohm(uint256 id_) external returns (uint256) {
         require(!redeemDisabled, "Redeems currently disabled");
-        require(depositInfo[id_].recipient == msg.sender);
+        require(recipientLookup[id_] == msg.sender);
 
         uint256 amountRedeemed = _redeemYield(id_);
         require(amountRedeemed > 0, "No redeemable balance");
@@ -369,28 +380,40 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
 
     /**
         @notice Redeem recipient's full donated amount of sOHM at current index as gOHM
-     */
+    */
     function redeemAllYield() external returns (uint256) {
         require(!redeemDisabled, "Redeems currently disabled");
 
-        uint256 amountRedeemed = _redeemAllYield(msg.sender);
-        require(amountRedeemed > 0, "No redeemable balance");
+        uint256 totalRedeemable = totalRedeemableBalance(msg.sender);
+        require(totalRedeemable > 0, "No redeemable balance");
 
-        IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
+        uint256[] storage receiptIds = recipientIds[msg.sender];
+        
+        for (uint256 index = 0; index < receiptIds.length; index++) {
+            _redeemYield(receiptIds[index]);
+        }
 
-        emit Redeemed(msg.sender, amountRedeemed);
+        IERC20(gOHM).safeTransfer(msg.sender, totalRedeemable);
+
+        emit Redeemed(msg.sender, totalRedeemable);
     }
 
     function redeemAllYieldAsSohm() external returns (uint256) {
         require(!redeemDisabled, "Redeems currently disabled");
 
-        uint256 amountRedeemed = _redeemAllYield(msg.sender);
-        require(amountRedeemed > 0, "No redeemable balance");
+        uint256 totalRedeemable = totalRedeemableBalance(msg.sender);
+        require(totalRedeemable > 0, "No redeemable balance");
 
-        IERC20(sOHM).approve(address(staking), amountRedeemed);
-        staking.unwrap(msg.sender, amountRedeemed);
+        uint256[] storage receiptIds = recipientIds[msg.sender];
 
-        emit Redeemed(msg.sender, amountRedeemed);
+        for (uint256 index = 0; index < receiptIds.length; index++) {
+            _redeemYield(receiptIds[index]);
+        }
+
+        IERC20(sOHM).approve(address(staking), totalRedeemable);
+        staking.unwrap(msg.sender, totalRedeemable);
+
+        emit Redeemed(msg.sender, totalRedeemable);
     }
 
     /************************

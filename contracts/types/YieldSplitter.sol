@@ -22,7 +22,6 @@ abstract contract YieldSplitter {
     struct DepositInfo {
         uint256 id;
         address depositor;
-        address recipient;
         uint256 principalAmount; // Total amount of sOhm deposited as principal, 9 decimals.
         uint256 agnosticAmount; // Total amount deposited priced in gOhm. 18 decimals.
     }
@@ -30,7 +29,6 @@ abstract contract YieldSplitter {
     uint256 public idCount;
     mapping(uint256 => DepositInfo) public depositInfo; // depositId -> DepositInfo
     mapping(address => uint256[]) public depositorIds; // address -> Array of the deposit id's deposited by user
-    mapping(address => uint256[]) public recipientIds; // address -> Array of the deposit id's user is recipient of
 
     /**
         @notice Constructor
@@ -44,20 +42,16 @@ abstract contract YieldSplitter {
         @notice Create a deposit.
         @param depositor_ Address of depositor
         @param amount_ Amount in gOhm. 18 decimals.
-        @param recipient_ Address to direct staking yield to.
     */
     function _deposit(
         address depositor_,
-        address recipient_,
         uint256 amount_
     ) internal returns (uint256 depositId) {
         depositorIds[depositor_].push(idCount);
-        recipientIds[recipient_].push(idCount);
 
         depositInfo[idCount] = DepositInfo({
             id: idCount,
             depositor: depositor_,
-            recipient: recipient_,
             principalAmount: IgOHM(gOHM).balanceFrom(amount_),
             agnosticAmount: amount_
         });
@@ -104,24 +98,6 @@ abstract contract YieldSplitter {
     }
 
     /**
-        @notice Redeem all excess yield from your all deposits recipient can redeem from.
-        @param recipient_ Recipient that wants to redeem their yield.
-        @return amountRedeemed : amount of yield redeemed in gOHM. 18 decimals.
-    */
-    function _redeemAllYield(address recipient_) internal returns (uint256 amountRedeemed) {
-        uint256[] storage recipientIdsArray = recipientIds[recipient_]; // Could probably optimise for gas. TODO later.
-
-        for (uint256 i = 0; i < recipientIdsArray.length; i++) {
-            DepositInfo storage currentDeposit = depositInfo[recipientIdsArray[i]];
-            amountRedeemed += _getOutstandingYield(currentDeposit.principalAmount, currentDeposit.agnosticAmount);
-            currentDeposit.agnosticAmount = IgOHM(gOHM).balanceTo(currentDeposit.principalAmount);
-            if (currentDeposit.principalAmount == 0) {
-                _closeDeposit(recipientIdsArray[i]);
-            }
-        }
-    }
-
-    /**
         @notice Close a deposit. Remove all information in both the deposit info, depositorIds and recipientIds.
         @param id_ Id of the deposit.
         @dev Internally for accounting reasons principal amount is stored in 9 decimal OHM terms. 
@@ -143,6 +119,8 @@ abstract contract YieldSplitter {
             }
         }
 
+        // Still need to recreate this in YieldDirector V2
+        /*
         uint256[] storage recipientIdsArray = depositorIds[depositInfo[id_].recipient];
         for (uint256 i = 0; i < recipientIdsArray.length; i++) {
             if (recipientIdsArray[i] == id_) {
@@ -152,6 +130,7 @@ abstract contract YieldSplitter {
                 break;
             }
         }
+        */
 
         delete depositInfo[id_];
     }

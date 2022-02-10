@@ -202,7 +202,7 @@ describe("YieldDirectorV2", async () => {
         // Verify donor info
         const donationInfo = await tyche.depositInfo("0");
         await expect(donationInfo.depositor).is.equal(deployer.address);
-        await expect(donationInfo.recipient).is.equal(bob.address);
+        // await expect(donationInfo.recipient).is.equal(bob.address);
         await expect(donationInfo.principalAmount).is.equal(`10${e9}`);
         await expect(donationInfo.agnosticAmount).is.equal(principal);
     });
@@ -215,7 +215,7 @@ describe("YieldDirectorV2", async () => {
         // Verify donor info
         const donationInfo = await tyche.depositInfo("0");
         await expect(donationInfo.depositor).is.equal(deployer.address);
-        await expect(donationInfo.recipient).is.equal(bob.address);
+        // await expect(donationInfo.recipient).is.equal(bob.address);
         await expect(donationInfo.principalAmount).is.equal(principal);
         await expect(donationInfo.agnosticAmount).is.equal(`1${e18}`);
     });
@@ -244,7 +244,7 @@ describe("YieldDirectorV2", async () => {
 
         const donationInfo = await tyche.depositInfo("0");
         await expect(donationInfo.depositor).is.equal(deployer.address);
-        await expect(donationInfo.recipient).is.equal(bob.address);
+        // await expect(donationInfo.recipient).is.equal(bob.address);
         await expect(donationInfo.principalAmount).is.equal(`10${e9}`);
         await expect(donationInfo.agnosticAmount).is.equal(principal);
         await expect(await tyche.redeemableBalance("0")).is.equal("0");
@@ -457,8 +457,8 @@ describe("YieldDirectorV2", async () => {
         // Verify donor info
         const donationInfo = await tyche.depositInfo("0");
         const aliceDonationInfo = await tyche.depositInfo("1");
-        await expect(donationInfo.recipient).is.equal(bob.address);
-        await expect(aliceDonationInfo.recipient).is.equal(bob.address);
+        //await expect(donationInfo.recipient).is.equal(bob.address);
+        //await expect(aliceDonationInfo.recipient).is.equal(bob.address);
         await expect(donationInfo.principalAmount).is.equal(`10${e9}`);
         await expect(aliceDonationInfo.principalAmount).is.equal(await gOhm.balanceFrom(principal));
         await expect(donationInfo.agnosticAmount).is.equal(principal);
