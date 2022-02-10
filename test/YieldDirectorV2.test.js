@@ -1,4 +1,5 @@
 const { ethers, waffle, network } = require("hardhat");
+const { BigNumber } = require("ethers");
 const { expect } = require("chai");
 //const { FakeContract, smock } = require("@defi-wonderland/smock");
 
@@ -219,6 +220,23 @@ describe("YieldDirectorV2", async () => {
         await expect(donationInfo.agnosticAmount).is.equal(`1${e18}`);
     });
 
+    it("can't access all deposits per recipient", async () => {
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+
+        // Since entries in depositInfo are siloed by depositor, funds can't be exploited like this
+        await tyche.connect(alice).deposit(BigNumber.from("1"), bob.address);
+        await expect(tyche.connect(alice).withdrawPrincipal("1", principal)).to.be.reverted;
+    });
+
+    it("can't steal another deposit", async () => {
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+
+        await expect(tyche.connect(alice).withdrawPrincipal("0", principal)).to.be.reverted;
+        await expect(tyche.connect(alice).withdrawPrincipalAsSohm("0", principal)).to.be.reverted;
+    });
+
     it("should withdraw tokens", async () => {
         // Deposit 1 gOHM into Tyche and donate to Bob
         const principal = `1${e18}`;
@@ -301,6 +319,13 @@ describe("YieldDirectorV2", async () => {
         const donatedAmount = await gOhm.balanceTo("10000000");
         const bobBalance = await gOhm.balanceOf(bob.address);
         await expect(bobBalance).is.equal(donatedAmount.add("1"));
+    });
+
+    it("can't redeem another user's tokens", async () => {
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+        await triggerRebase();
+        await expect(tyche.connect(alice).redeemYield("0")).to.be.reverted;
     });
 
     it("should withdraw tokens before recipient redeems", async () => {

@@ -82,6 +82,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     */
     function deposit(uint256 amount_, address recipient_) external returns (uint256 depositId) {
         require(isValidDeposit(amount_, recipient_), "Not a valid deposit.");
+
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
         depositId = _deposit(msg.sender, recipient_, amount_);
         emit Deposited(msg.sender, recipient_, amount_);
@@ -94,6 +95,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
      */
     function depositSohm(uint256 amount_, address recipient_) external returns (uint256 depositId) {
         require(isValidDeposit(amount_, recipient_), "Not a valid deposit.");
+        
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
         IERC20(sOHM).approve(address(staking), amount_);
         uint256 gohmAmount = staking.wrap(address(this), amount_);
@@ -108,6 +110,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
      */
     function addToDeposit(uint256 id_, uint256 amount_) external {
         require(isValidUpdate(id_, amount_), "Not a valid deposit update.");
+        require(depositInfo[id_].depositor == msg.sender, "Can't adjust deposits that aren't yours");
+
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
         _addToDeposit(id_, amount_);
         emit DepositUpdated(msg.sender, depositInfo[id_].recipient, amount_);
@@ -120,6 +124,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
      */
     function addToSohmDeposit(uint256 id_, uint256 amount_) external {
         require(isValidUpdate(id_, amount_), "Not a valid deposit update.");
+        require(depositInfo[id_].depositor == msg.sender, "Can't adjust deposits that aren't yours");
+
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
         IERC20(sOHM).approve(address(staking), amount_);
         uint256 gohmAmount = staking.wrap(address(this), amount_);
@@ -135,6 +141,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     function withdrawPrincipal(uint256 id_, uint256 amount_) external {
         require(isValidWithdrawal(amount_), "Not a valid withdrawal.");
         DepositInfo storage currDeposit = depositInfo[id_];
+        require(currDeposit.depositor == msg.sender, "Can't withdraw principal that's not yours");
+
         _withdrawPrincipal(id_, amount_);
         if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
             currDeposit.principalAmount = 0;
@@ -156,6 +164,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     function withdrawPrincipalAsSohm(uint256 id_, uint256 amount_) external {
         require(isValidWithdrawal(amount_), "Not a valid withdrawal.");
         DepositInfo storage currDeposit = depositInfo[id_];
+        require(currDeposit.depositor == msg.sender, "Can't withdraw principal that's not yours");
+
         _withdrawPrincipal(id_, amount_);
         if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
             currDeposit.principalAmount = 0;
@@ -330,6 +340,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
      */
     function redeemYield(uint256 id_) external returns (uint256) {
         require(!redeemDisabled, "Redeems currently disabled");
+        require(depositInfo[id_].recipient == msg.sender);
         uint256 amountRedeemed = _redeemYield(id_);
         require(amountRedeemed > 0, "No redeemable balance");
 
