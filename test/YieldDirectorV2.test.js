@@ -315,10 +315,42 @@ describe("YieldDirectorV2", async () => {
         const principal = `1${e18}`;
         await tyche.deposit(principal, bob.address);
         await triggerRebase();
-        await tyche.connect(bob).redeemAllYield();
+        await tyche.connect(bob).redeemYield("0");
         const donatedAmount = await gOhm.balanceTo("10000000");
         const bobBalance = await gOhm.balanceOf(bob.address);
         await expect(bobBalance).is.equal(donatedAmount.add("1"));
+    });
+
+    it("should redeem tokens as sOHM", async () => {
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+        await triggerRebase();
+        const balanceBefore = await sOhm.balanceOf(bob.address);
+        await tyche.connect(bob).redeemYieldAsSohm("0");
+        const balanceAfter = await sOhm.balanceOf(bob.address);
+        await expect(balanceAfter.sub(balanceBefore)).is.equal("10000000");
+    });
+
+    it("should redeem all tokens", async () => {
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+        await tyche.connect(alice).deposit(principal, bob.address);
+        await triggerRebase();
+        await tyche.connect(bob).redeemAllYield();
+        const donatedAmount = await gOhm.balanceTo("20000000");
+        const bobBalance = await gOhm.balanceOf(bob.address);
+        await expect(bobBalance).is.equal(donatedAmount.add("2"));
+    });
+
+    it("should redeem all tokens as sOHM", async () => {
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+        await tyche.connect(alice).deposit(principal, bob.address);
+        await triggerRebase();
+        const balanceBefore = await sOhm.balanceOf(bob.address);
+        await tyche.connect(bob).redeemAllYieldAsSohm();
+        const balanceAfter = await sOhm.balanceOf(bob.address);
+        await expect(balanceAfter.sub(balanceBefore)).is.equal("20000000");
     });
 
     it("can't redeem another user's tokens", async () => {

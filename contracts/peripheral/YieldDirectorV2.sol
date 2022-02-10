@@ -95,7 +95,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
      */
     function depositSohm(uint256 amount_, address recipient_) external returns (uint256 depositId) {
         require(isValidDeposit(amount_, recipient_), "Not a valid deposit.");
-        
+
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
         IERC20(sOHM).approve(address(staking), amount_);
         uint256 gohmAmount = staking.wrap(address(this), amount_);
@@ -335,12 +335,13 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     }
 
     /**
-        @notice Redeem recipient's donated amount of sOHM at current index from one donor
+        @notice Redeem recipient's donated amount of sOHM at current index from one donor as gOHM
         @param id_ Deposit id for this donation
      */
     function redeemYield(uint256 id_) external returns (uint256) {
         require(!redeemDisabled, "Redeems currently disabled");
         require(depositInfo[id_].recipient == msg.sender);
+
         uint256 amountRedeemed = _redeemYield(id_);
         require(amountRedeemed > 0, "No redeemable balance");
 
@@ -350,7 +351,24 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     }
 
     /**
-        @notice Redeem recipient's full donated amount of sOHM at current index
+        @notice Redeem recipient's donated amount of sOHM at current index
+        @param id_ Deposit id for this donation
+     */
+    function redeemYieldAsSohm(uint256 id_) external returns (uint256) {
+        require(!redeemDisabled, "Redeems currently disabled");
+        require(depositInfo[id_].recipient == msg.sender);
+
+        uint256 amountRedeemed = _redeemYield(id_);
+        require(amountRedeemed > 0, "No redeemable balance");
+
+        IERC20(sOHM).approve(address(staking), amountRedeemed);
+        staking.unwrap(msg.sender, amountRedeemed);
+
+        emit Redeemed(msg.sender, amountRedeemed);
+    }
+
+    /**
+        @notice Redeem recipient's full donated amount of sOHM at current index as gOHM
      */
     function redeemAllYield() external returns (uint256) {
         require(!redeemDisabled, "Redeems currently disabled");
@@ -359,6 +377,18 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         require(amountRedeemed > 0, "No redeemable balance");
 
         IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
+
+        emit Redeemed(msg.sender, amountRedeemed);
+    }
+
+    function redeemAllYieldAsSohm() external returns (uint256) {
+        require(!redeemDisabled, "Redeems currently disabled");
+
+        uint256 amountRedeemed = _redeemAllYield(msg.sender);
+        require(amountRedeemed > 0, "No redeemable balance");
+
+        IERC20(sOHM).approve(address(staking), amountRedeemed);
+        staking.unwrap(msg.sender, amountRedeemed);
 
         emit Redeemed(msg.sender, amountRedeemed);
     }
