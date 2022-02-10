@@ -30,7 +30,8 @@ describe("Treasury", async () => {
     // Mine block and rebase. Returns the new index.
     const triggerRebase = async () => {
         mineBlock();
-        await staking.rebase();
+        await distributor.triggerRebase();
+        // await staking.rebase();
 
         return await sOhm.index();
     };
