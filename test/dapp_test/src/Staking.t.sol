@@ -14,6 +14,7 @@ import "../../../contracts/governance/gOHM.sol";
 import "../../../contracts/Treasury.sol";
 import "../../../contracts/StakingDistributor.sol";
 import "../../../contracts/OlympusAuthority.sol";
+import "../../../contracts/StakingHelper.sol";
 
 import "./util/Hevm.sol";
 import "./util/MockContract.sol";
@@ -30,6 +31,7 @@ contract StakingTest is DSTest {
     OlympusTreasury internal treasury;
     OlympusAuthority internal authority;
     Distributor internal distributor;
+    StakingHelper internal stakingHelper;
 
     OlympusERC20Token internal ohm;
     sOlympus internal sohm;
@@ -92,6 +94,9 @@ contract StakingTest is DSTest {
         // Deposit a token who's profit (3rd param) determines how much ohm the treasury can mint
         uint256 depositAmount = 20e18;
         treasury.deposit(depositAmount, address(mockToken), BOUNTY.mul(2)); // Mints (depositAmount- 2xBounty) for this contract
+
+        // [patch] Rebase-fix
+        stakingHelper = new StakingHelper(address(staking), address(distributor), address(ohm));
     }
 
     function testStakeNoBalance() public {
@@ -264,5 +269,36 @@ contract StakingTest is DSTest {
         distributor.triggerRebase();
         uint256 newBalance = ohm.balanceOf(address(this));
         assertEq(newBalance.sub(currentBalance), BOUNTY);
+    }
+
+    /**
+        StakingHelper patch Test
+     */
+    function testStakeNoBalance_helper() public {
+        uint256 newAmount = AMOUNT.mul(2);
+        try stakingHelper.stake(address(this), newAmount, true, true) {
+            fail();
+        } catch Error(string memory error) {
+            assertEq(error, "TRANSFER_FROM_FAILED"); // Should be 'Transfer exceeds balance'
+        }
+    }
+
+    function testStake_helper() public {
+        ohm.approve(address(stakingHelper), AMOUNT);
+        uint256 amountStaked = stakingHelper.stake(address(this), AMOUNT, true, true);
+        assertEq(amountStaked, AMOUNT);
+    }
+
+    function testStakeAtRebase_helper() public {
+        // Move into next rebase window
+        hevm.warp(EPOCH_LENGTH);
+
+        ohm.approve(address(stakingHelper), AMOUNT);
+        bool isSohm = true;
+        bool claim = true;
+        uint256 amountStaked = stakingHelper.stake(address(this), AMOUNT, isSohm, claim);
+
+        uint256 expectedAmount = AMOUNT.add(BOUNTY);
+        assertEq(amountStaked, expectedAmount);
     }
 }

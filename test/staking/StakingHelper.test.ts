@@ -10,7 +10,7 @@ import {
     StakingHelper,
     StakingHelper__factory,
     OlympusStaking,
-    OlympusStaking__factory,    
+    OlympusStaking__factory,
     Distributor__factory,
     Distributor,
     OlympusAuthority,
@@ -22,13 +22,13 @@ chai.use(smock.matchers);
 const ZERO_ADDRESS = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
 
 describe("StakingHelper", () => {
-    let owner: SignerWithAddress;    
+    let owner: SignerWithAddress;
     let governor: SignerWithAddress;
     let guardian: SignerWithAddress;
     let other: SignerWithAddress;
     let ohmFake: FakeContract<IOHM>;
     let sOHMFake: FakeContract<IsOHM>;
-    let gOHMFake: FakeContract<IgOHM>;    
+    let gOHMFake: FakeContract<IgOHM>;
     let treasuryFake: FakeContract<ITreasury>;
     let distributor: Distributor;
     let authority: OlympusAuthority;
@@ -38,7 +38,6 @@ describe("StakingHelper", () => {
     const EPOCH_LENGTH = 2200;
     const EPOCH_NUMBER = 1;
     const FUTURE_END_TIME = 1022010000; // an arbitrary future block timestamp
-
 
     beforeEach(async () => {
         [owner, governor, guardian, other] = await ethers.getSigners();
@@ -62,8 +61,8 @@ describe("StakingHelper", () => {
             EPOCH_NUMBER,
             FUTURE_END_TIME,
             authority.address
-        );        
-        
+        );
+
         distributor = await new Distributor__factory(owner).deploy(
             treasuryFake.address,
             ohmFake.address,
@@ -72,48 +71,46 @@ describe("StakingHelper", () => {
         );
         staking.connect(governor).setDistributor(distributor.address);
 
-        stakingHelper = await new StakingHelper__factory(owner).deploy();
+        stakingHelper = await new StakingHelper__factory(owner).deploy(
+            staking.address,
+            distributor.address,
+            ohmFake.address
+        );
     });
 
-   
-
     describe("post-construction", () => {
-        beforeEach(async () => {
-            
-        });
+        beforeEach(async () => {});
 
-        describe("stake", () => {      
+        describe("stake", () => {
             it("exchanges OHM for newly minted gOHM when claim is true and rebasing is true", async () => {
                 const amount = 1000;
                 const indexedAmount = 10000;
                 const rebasing = false;
                 const claim = true;
 
-                ohmFake.transferFrom
-                    // .whenCalledWith(other.address, staking.address, amount) //TODO this is significant b/c Staking::stake() uses msg.sender!!
-                    .returns(true);
+                // Mocked endpoints
+                ohmFake.transfer.returns(true);
+                ohmFake.transferFrom.returns(true);
+                sOHMFake.transferFrom.returns(true);
                 gOHMFake.balanceTo.whenCalledWith(amount).returns(indexedAmount);
 
                 // await staking.connect(other).stake(other.address, amount, rebasing, claim);
-                await stakingHelper.stake(staking.address, distributor.address, other.address, amount, rebasing, claim);
+                await stakingHelper.stake(other.address, amount, rebasing, claim);
 
                 expect(gOHMFake.mint).to.be.calledWith(other.address, indexedAmount);
             });
-            // it.only("mint from treasury and distribute to recipients", async () => {
-            //     await distributor.connect(governor).addRecipient(staking.address, 2975);
-            //     await distributor.connect(governor).addRecipient(other.address, 1521);
+            it.only("mint from treasury and distribute to recipients", async () => {
+                await distributor.connect(governor).addRecipient(staking.address, 2975);
+                await distributor.connect(governor).addRecipient(other.address, 1521);
 
-            //     ohmFake.totalSupply.returns(10000000);
-            //     // await stakingHelper.stake(staking.address, distributor.address,
-            //     // )
-            //     await distributor.connect(other).distribute();
+                ohmFake.totalSupply.returns(10000000);
+                // await stakingHelper.stake(staking.address, distributor.address,
+                // )
+                await distributor.connect(other).distribute();
 
-            //     expect(treasuryFake.mint).to.have.been.calledWith(staking.address, 29750);
-            //     expect(treasuryFake.mint).to.have.been.calledWith(other.address, 15210);
-            // });
-
-           
+                expect(treasuryFake.mint).to.have.been.calledWith(staking.address, 29750);
+                expect(treasuryFake.mint).to.have.been.calledWith(other.address, 15210);
+            });
         });
-
     });
 });
