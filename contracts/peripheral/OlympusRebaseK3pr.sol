@@ -17,7 +17,7 @@ contract Keep3rJob {
     IDistributorRebase public constant stakingDistributor =
         IDistributorRebase(0x623164A9Ee2556D524b08f34F1d2389d7B4e1A1C);
     Keep3r public constant KPR = Keep3r(0x1cEB5cB57C4D4E2b2433641b95Dd330A33185A44);
-    address public constant DAO = "0x245cc372C84B3645Bf0Ffe6538620B04a217988B";
+    address public constant DAO = 0x245cc372C84B3645Bf0Ffe6538620B04a217988B;
 
     /// @notice Provides an interface for keepers to execute rebases
     /// @dev requires that the caller is a valid keeper. Automatically extracts payment at the end
