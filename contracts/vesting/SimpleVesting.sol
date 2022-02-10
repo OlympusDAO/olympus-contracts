@@ -31,16 +31,15 @@ contract SimpleVesting is Ownable {
         gOHM.transfer(msg.sender, distributePerPeriod);
     }
 
-    /// @notice                     sets the vesting terms and transfers ownership
+    /// @notice                     sets the vesting terms
+    /// @dev                        push ownership after locking
     /// @param firstDistribution    the timestamp of the first distribution
-    /// @param newOwner             the address to receive tokens
-    function lock(uint256 firstDistribution, address newOwner) external onlyOwner notSet {
+    function lock(uint256 firstDistribution) external onlyOwner notSet {
         distributePerPeriod = gOHM.balanceOf(address(this)) / 4;
         nextDistribution = firstDistribution;
-        _owner = newOwner;
     }
 
-    /// @notice rescind tokens before initialization
+    /// @notice rescind tokens if needed before locking
     function unwind() external onlyOwner notSet {
         gOHM.transfer(msg.sender, gOHM.balanceOf(address(this)));
     }
