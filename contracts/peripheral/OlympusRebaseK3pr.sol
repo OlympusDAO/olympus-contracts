@@ -28,6 +28,8 @@ contract Keep3rJob {
         KPR.worked(msg.sender);
     }
 
+    /// @notice Used to withdraw any tokens that are in the contract.
+    /// @param token the address of the token.
     function withdrawFunds(address token) external {
         require(msg.sender == DAO, "Not DAO MS");
         uint256 tokenBalance = IERC20(token).balanceOf(address(this));
