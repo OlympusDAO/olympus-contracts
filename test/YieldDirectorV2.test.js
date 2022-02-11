@@ -202,7 +202,6 @@ describe("YieldDirectorV2", async () => {
         // Verify donor info
         const donationInfo = await tyche.depositInfo("0");
         await expect(donationInfo.depositor).is.equal(deployer.address);
-        // await expect(donationInfo.recipient).is.equal(bob.address);
         await expect(donationInfo.principalAmount).is.equal(`10${e9}`);
         await expect(donationInfo.agnosticAmount).is.equal(principal);
     });
@@ -218,6 +217,37 @@ describe("YieldDirectorV2", async () => {
         // await expect(donationInfo.recipient).is.equal(bob.address);
         await expect(donationInfo.principalAmount).is.equal(principal);
         await expect(donationInfo.agnosticAmount).is.equal(`1${e18}`);
+    });
+
+    it("should add deposits", async () => {
+        const principal = `1${e18}`;
+        const sohmPrincipal = `1${e9}`;
+
+        await tyche.deposit(principal, bob.address);
+        const donationInfo = await tyche.depositInfo("0");
+        await expect(donationInfo.depositor).is.equal(deployer.address);
+        await expect(donationInfo.principalAmount).is.equal(`10${e9}`);
+        await expect(donationInfo.agnosticAmount).is.equal(principal);
+
+        await tyche.addToDeposit("0", principal);
+        const donationInfo1 = await tyche.depositInfo("0");
+        await expect(donationInfo1.depositor).is.equal(deployer.address);
+        await expect(donationInfo1.principalAmount).is.equal(`20${e9}`);
+        await expect(donationInfo1.agnosticAmount).is.equal(`2${e18}`);
+
+        await tyche.addToSohmDeposit("0", sohmPrincipal);
+        const donationInfo2 = await tyche.depositInfo("0");
+        await expect(donationInfo2.depositor).is.equal(deployer.address);
+        await expect(donationInfo2.principalAmount).is.equal(`21${e9}`);
+        await expect(donationInfo2.agnosticAmount).is.equal("2100000000000000000");
+
+        await triggerRebase();
+
+        await tyche.connect(bob).redeemAllYield();
+
+        const donationInfo3 = await tyche.depositInfo("0");
+        const withdrawableBalance = await gOhm.balanceTo(donationInfo3.principalAmount);
+        await tyche.withdrawPrincipal("0", withdrawableBalance);
     });
 
     it("can't access all deposits per recipient", async () => {
@@ -332,6 +362,26 @@ describe("YieldDirectorV2", async () => {
         await tyche.withdrawPrincipalAsSohm("0", withdrawableBalance);
         const balanceAfter1 = await sOhm.balanceOf(deployer.address);
         await expect(balanceAfter1.sub(balanceBefore)).is.equal("9999999999");
+    });
+
+    it("should mix withdrawal types without breaking", async () => {
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+
+        await triggerRebase();
+        const sohmBalanceBefore = await sOhm.balanceOf(deployer.address);
+        const gohmBalanceBefore = await gOhm.balanceOf(deployer.address);
+        const withdrawalAmount = await gOhm.balanceTo("1000000000");
+        await tyche.withdrawPrincipalAsSohm("0", withdrawalAmount);
+        await tyche.withdrawPrincipal("0", withdrawalAmount);
+        const sohmBalanceAfter = await sOhm.balanceOf(deployer.address);
+        const gohmBalanceAfter = await gOhm.balanceOf(deployer.address);
+        await expect(sohmBalanceAfter.sub(sohmBalanceBefore)).is.equal("999999999");
+        await expect(gohmBalanceAfter.sub(gohmBalanceBefore)).is.equal(withdrawalAmount);
+
+        const donationInfo = await tyche.depositInfo("0");
+        const withdrawableBalance = await gOhm.balanceTo(donationInfo.principalAmount);
+        await tyche.withdrawPrincipal("0", withdrawableBalance);
     });
 
     it("should not revert on second withdraw", async () => {
