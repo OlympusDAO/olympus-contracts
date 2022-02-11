@@ -40,16 +40,8 @@ contract LiquidityMigrator is OlympusAccessControlled {
 
         // Remove the liquidity
         pair.approve(address(router), lpAmount);
-        router.removeLiquidity(
-            address(token),
-            address(oldOHM),
-            lpAmount,
-            minToken,
-            minOhm,
-            address(this),
-            deadline
-        );
-        
+        router.removeLiquidity(address(token), address(oldOHM), lpAmount, minToken, minOhm, address(this), deadline);
+
         // deposit the paired token into the new treasury
         uint256 amountToken = token.balanceOf(address(this));
         token.approve(address(newTreasury), amountToken);
@@ -75,16 +67,8 @@ contract LiquidityMigrator is OlympusAccessControlled {
 
         // Remove the liquidity
         pair.approve(address(router), lpAmount);
-        router.removeLiquidity(
-            address(token),
-            address(oldOHM),
-            lpAmount,
-            minToken,
-            minOhm,
-            address(this),
-            deadline
-        );
-        
+        router.removeLiquidity(address(token), address(oldOHM), lpAmount, minToken, minOhm, address(this), deadline);
+
         // deposit the paired token into the new treasury
         uint256 amountToken = token.balanceOf(address(this));
 
@@ -100,13 +84,13 @@ contract LiquidityMigrator is OlympusAccessControlled {
         token.approve(address(router), amountToken);
 
         router.addLiquidity(
-            address(token), 
-            address(newOHM), 
-            amountToken, 
-            amountNew, 
-            amountToken * 99 / 100, 
-            amountNew * 99 / 100, 
-            address(newTreasury), 
+            address(token),
+            address(newOHM),
+            amountToken,
+            amountNew,
+            (amountToken * 99) / 100,
+            (amountNew * 99) / 100,
+            address(newTreasury),
             deadline
         );
     }
