@@ -290,6 +290,48 @@ describe("YieldDirectorV2", async () => {
         await expect(donationInfo1.principalAmount).is.equal("0");
     });
 
+    it("should partial withdraw and full withdraw", async () => {
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+
+        await triggerRebase();
+        const balanceBefore = await gOhm.balanceOf(deployer.address);
+        const withdrawalAmount = await gOhm.balanceTo("1000000000");
+        await tyche.withdrawPrincipal("0", withdrawalAmount);
+        await tyche.withdrawPrincipal("0", withdrawalAmount);
+        const balanceAfter = await gOhm.balanceOf(deployer.address);
+        await expect(balanceAfter.sub(balanceBefore)).is.equal(BigNumber.from("2").mul(withdrawalAmount));
+
+        const donationInfo = await tyche.depositInfo("0");
+        const withdrawableBalance = await gOhm.balanceTo(donationInfo.principalAmount);
+        await tyche.withdrawPrincipal("0", withdrawableBalance);
+        const balanceAfter1 = await gOhm.balanceOf(deployer.address);
+        await expect(balanceAfter1.sub(balanceBefore)).is.equal(await gOhm.balanceTo("10000000000"));
+
+        const redeemable = await tyche.redeemableBalance("0");
+        console.log(balanceAfter1.sub(balanceBefore).add(redeemable));
+        await tyche.connect(bob).redeemYield("0");
+    });
+
+    it("should partial withdraw and full withdraw to sOHM", async () => {
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+
+        await triggerRebase();
+        const balanceBefore = await sOhm.balanceOf(deployer.address);
+        const withdrawalAmount = await gOhm.balanceTo("1000000000");
+        await tyche.withdrawPrincipalAsSohm("0", withdrawalAmount);
+        await tyche.withdrawPrincipalAsSohm("0", withdrawalAmount);
+        const balanceAfter = await sOhm.balanceOf(deployer.address);
+        await expect(balanceAfter.sub(balanceBefore)).is.equal("1999999998");
+
+        const donationInfo = await tyche.depositInfo("0");
+        const withdrawableBalance = await gOhm.balanceTo(donationInfo.principalAmount);
+        await tyche.withdrawPrincipalAsSohm("0", withdrawableBalance);
+        const balanceAfter1 = await sOhm.balanceOf(deployer.address);
+        await expect(balanceAfter1.sub(balanceBefore)).is.equal("9999999999");
+    });
+
     it("should not revert on second withdraw", async () => {
         // Deposit 1 gOHM into Tyche and donate to Bob
         const principal = `1${e18}`;
