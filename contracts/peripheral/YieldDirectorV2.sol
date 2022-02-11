@@ -154,7 +154,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         DepositInfo storage currDeposit = depositInfo[id_];
         if (depositInfo[id_].depositor != msg.sender) revert YieldDirector_NotYourDeposit();
 
-        if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
+        uint256 withdrawableBalance = IgOHM(gOHM).balanceTo(currDeposit.principalAmount);
+        if (amount_ >= withdrawableBalance) {
             _withdrawPrincipal(id_, amount_);
             currDeposit.principalAmount = 0;
             emit Donated(
@@ -180,7 +181,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         DepositInfo storage currDeposit = depositInfo[id_];
         if (depositInfo[id_].depositor != msg.sender) revert YieldDirector_NotYourDeposit();
 
-        if (amount_ >= IgOHM(gOHM).balanceTo(currDeposit.principalAmount)) {
+        uint256 withdrawableBalance = IgOHM(gOHM).balanceTo(currDeposit.principalAmount);
+        if (amount_ >= withdrawableBalance) {
             _withdrawPrincipal(id_, amount_);
             currDeposit.principalAmount = 0;
             emit Donated(
