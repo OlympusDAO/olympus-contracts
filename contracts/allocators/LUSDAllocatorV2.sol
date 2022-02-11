@@ -177,7 +177,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
                 }
             }
         }
-        
+
         // If swap was successful (or if percent to swap is 0), send the remaining WETH to the treasury.  Crucial check otherwise we'd send all our WETH to the treasury and not respect our desired percentage
         if (ethToLUSDRatio == 0 || swappedLUSDSuccessfully) {
             uint256 wethBalance = IWETH(wethAddress).balanceOf(address(this));
@@ -185,7 +185,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
                 IERC20(wethAddress).safeTransfer(address(treasury), wethBalance);
             }
         }
-        
+
         // 4.  Deposit all LUSD in balance to into StabilityPool.
         uint256 lusdBalance = _tokens[0].balanceOf(address(this));
         if (lusdBalance > 0) {
@@ -196,17 +196,18 @@ contract LUSDAllocatorV2 is BaseAllocator {
     function deallocate(uint256[] memory amounts) public override {
         require(amounts.length == _tokens.length, "input array invalid length");
 
-        if(amounts[0] > 0) {
+        if (amounts[0] > 0) {
             lusdStabilityPool.withdrawFromSP(amounts[0]);
         }
     }
 
     function _deactivate(bool panic) internal override {
-        if(panic) { // If panic unstake everything
+        if (panic) {
+            // If panic unstake everything
             _withdrawEverything();
         }
     }
- 
+
     function _prepareMigration() internal override {
         _withdrawEverything();
 
@@ -227,7 +228,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
     function _withdrawEverything() internal {
         // If unstake amount > amount available to unstake will unstake everything. So max int ensures unstake max amount.
         lqtyStaking.unstake(type(uint256).max);
-        lusdStabilityPool.withdrawFromSP(type(uint256).max); 
+        lusdStabilityPool.withdrawFromSP(type(uint256).max);
     }
 
     /* ======== VIEW FUNCTIONS ======== */
@@ -236,7 +237,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
      * @notice This returns the amount of LUSD allocated to the pool. Does not return how much LUSD deposited since that number is increasing and compounding.
      */
     function amountAllocated(uint256 id) public view override returns (uint256) {
-        if(tokenIds[id] == 0) {
+        if (tokenIds[id] == 0) {
             return lusdStabilityPool.getTotalLUSDDeposits();
         }
         return 0;
