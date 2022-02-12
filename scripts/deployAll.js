@@ -150,7 +150,7 @@ async function main() {
     await treasury.toggle('0', deployer.address, zeroAddress);
 
     // queue and toggle liquidity depositor
-    await treasury.queue('4', deployer.address, );
+    await treasury.queue('4', deployer.address );
     await treasury.toggle('4', deployer.address, zeroAddress);
 
     // Approve the treasury to spend DAI and Frax
