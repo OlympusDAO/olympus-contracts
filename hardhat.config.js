@@ -6,7 +6,7 @@ module.exports = {
   networks: {
     fantom: {
       url: secret.url,
-      accounts: [secret.key]
+      accounts: [secret.key1, secret.key2]
     }
   }
 };
