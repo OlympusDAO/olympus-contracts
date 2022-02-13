@@ -43,10 +43,7 @@ abstract contract YieldSplitter {
         @param depositor_ Address of depositor
         @param amount_ Amount in gOhm. 18 decimals.
     */
-    function _deposit(
-        address depositor_,
-        uint256 amount_
-    ) internal returns (uint256 depositId) {
+    function _deposit(address depositor_, uint256 amount_) internal returns (uint256 depositId) {
         depositorIds[depositor_].push(idCount);
 
         depositInfo[idCount] = DepositInfo({
