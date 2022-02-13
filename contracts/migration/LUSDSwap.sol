@@ -5,6 +5,7 @@ pragma abicoder v2;
 import "../libraries/SafeERC20.sol";
 
 import "../interfaces/ITreasury.sol";
+import "../interfaces/ITreasuryV1.sol";
 import "../interfaces/IERC20.sol";
 import "../interfaces/IUniswapV2Router.sol";
 import "../interfaces/IOlympusAuthority.sol";
@@ -21,9 +22,9 @@ contract LUSDSwapContract is OlympusAccessControlled {
     ICurveFactory internal immutable curveFactory = ICurveFactory(0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA);
 
     // Olympus Treasury V1
-    ITreasury internal immutable treasuryV1 = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
+    ITreasuryV1 internal immutable treasuryV1 = ITreasuryV1(0x31F8Cc382c9898b273eff4e0b7626a6987C846E8);
 
-    // Olympus Treasury V1
+    // Olympus Treasury V2
     ITreasury internal immutable treasuryV2 = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
 
     address internal immutable LUSD = 0x69b81152c5A8d35A67B32A4D3772795d96CaE4da;
@@ -32,8 +33,7 @@ contract LUSDSwapContract is OlympusAccessControlled {
     constructor(IOlympusAuthority _authority) OlympusAccessControlled(_authority) {}
 
     /**
-     * @notice Removes liquidity from OHM/ETH SLP and OHM/DAI SLP, then adds liquidty to
-     * 50OHM-25DAI-25WETH Balancer pool.
+     * @notice Swaps LUSD to DAI
      */
     function swapLUSDForDAI(
         uint256 _amountLUSD,
