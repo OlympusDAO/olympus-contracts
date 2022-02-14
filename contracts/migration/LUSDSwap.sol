@@ -42,7 +42,7 @@ contract LUSDSwapContract is OlympusAccessControlled {
     /// @notice Olympus Token V1
     IERC20 internal immutable OHMV1 = IERC20(0x383518188C0C6d7730D91b2c03a03C837814a899);
     /// @notice LUSD
-    address internal immutable LUSD = 0x69b81152c5A8d35A67B32A4D3772795d96CaE4da;
+    address internal immutable LUSD = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     /// @notice DAI
     address internal immutable DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     /// @notice Remaining amount of DAI to have each OHM V1 backed by 1 DAI;
