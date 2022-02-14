@@ -274,7 +274,6 @@ describe("YieldDirectorV2", async () => {
 
         const donationInfo = await tyche.depositInfo("0");
         await expect(donationInfo.depositor).is.equal(deployer.address);
-        // await expect(donationInfo.recipient).is.equal(bob.address);
         await expect(donationInfo.principalAmount).is.equal(`10${e9}`);
         await expect(donationInfo.agnosticAmount).is.equal(principal);
         await expect(await tyche.redeemableBalance("0")).is.equal("0");
@@ -289,6 +288,37 @@ describe("YieldDirectorV2", async () => {
 
         const withdrawableBalance = await gOhm.balanceTo(donationInfo.principalAmount);
         await tyche.withdrawPrincipal("0", withdrawableBalance);
+
+        // Verify donor and recipient data is properly updated
+        const donationInfo1 = await tyche.depositInfo("0");
+        // Precision errors leading to losing 1e-18
+        await expect(donationInfo1.principalAmount).is.equal("0");
+
+        await expect(await tyche.redeemableBalance("0")).is.equal(
+            (await gOhm.balanceTo(donatedAmount)).add(1)
+        );
+    });
+
+    it("should max withdraw", async () => {
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+
+        const donationInfo = await tyche.depositInfo("0");
+        await expect(donationInfo.depositor).is.equal(deployer.address);
+        await expect(donationInfo.principalAmount).is.equal(`10${e9}`);
+        await expect(donationInfo.agnosticAmount).is.equal(principal);
+        await expect(await tyche.redeemableBalance("0")).is.equal("0");
+
+        // First rebase
+        await triggerRebase();
+
+        const donatedAmount = "10000000";
+        await expect(await tyche.redeemableBalance("0")).is.equal(
+            (await gOhm.balanceTo(donatedAmount)).add("1")
+        );
+
+        // should revert until I update from new YieldSplitter
+        await tyche.withdrawPrincipal("0", principal);
 
         // Verify donor and recipient data is properly updated
         const donationInfo1 = await tyche.depositInfo("0");

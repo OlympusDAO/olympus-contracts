@@ -334,13 +334,17 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
      * Recipient Functions
      ************************/
 
+     /**
+        @notice Get redeemable gOHM balance of a specific deposit
+        @param id_ Deposit id for this donation
+    */
     function redeemableBalance(uint256 id_) public view returns (uint256) {
         DepositInfo storage currDeposit = depositInfo[id_];
         return _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);
     }
 
     /**
-        @notice Get redeemable sOHM balance of a recipient address
+        @notice Get redeemable gOHM balance of a recipient address
         @param recipient_ Address of user receiving donated yield
      */
     function totalRedeemableBalance(address recipient_) public view returns (uint256) {
@@ -365,6 +369,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
 
         uint256 amountRedeemed = _redeemYield(id_);
         if (amountRedeemed == 0) revert YieldDirector_NoRedeemableBalance();
+        if (depositInfo[id_].principalAmount == 0) _closeDeposit(id_);
 
         IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
 
@@ -381,6 +386,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
 
         uint256 amountRedeemed = _redeemYield(id_);
         if (amountRedeemed == 0) revert YieldDirector_NoRedeemableBalance();
+        if (depositInfo[id_].principalAmount == 0) _closeDeposit(id_);
 
         IERC20(sOHM).approve(address(staking), amountRedeemed);
         staking.unwrap(msg.sender, amountRedeemed);
@@ -394,15 +400,16 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     function redeemAllYield() external returns (uint256) {
         if (redeemDisabled) revert YieldDirector_RedeemsDisabled();
 
-        uint256 totalRedeemable = totalRedeemableBalance(msg.sender);
-        if (totalRedeemable == 0) revert YieldDirector_NoRedeemableBalance();
+        uint256 totalRedeemable = 0;
 
         uint256[] storage receiptIds = recipientIds[msg.sender];
         
         for (uint256 index = 0; index < receiptIds.length; index++) {
-            _redeemYield(receiptIds[index]);
+            totalRedeemable += _redeemYield(receiptIds[index]);
+            if (depositInfo[receiptIds[index]].principalAmount == 0) _closeDeposit(receiptIds[index]);
         }
 
+        if (totalRedeemable == 0) revert YieldDirector_NoRedeemableBalance();
         IERC20(gOHM).safeTransfer(msg.sender, totalRedeemable);
 
         emit Redeemed(msg.sender, totalRedeemable);
@@ -411,15 +418,16 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     function redeemAllYieldAsSohm() external returns (uint256) {
         if (redeemDisabled) revert YieldDirector_RedeemsDisabled();
 
-        uint256 totalRedeemable = totalRedeemableBalance(msg.sender);
-        if (totalRedeemable == 0) revert YieldDirector_NoRedeemableBalance();
+        uint256 totalRedeemable = 0;
 
         uint256[] storage receiptIds = recipientIds[msg.sender];
 
         for (uint256 index = 0; index < receiptIds.length; index++) {
-            _redeemYield(receiptIds[index]);
+            totalRedeemable += _redeemYield(receiptIds[index]);
+            if (depositInfo[receiptIds[index]].principalAmount == 0) _closeDeposit(receiptIds[index]);
         }
 
+        if (totalRedeemable == 0) revert YieldDirector_NoRedeemableBalance();
         IERC20(sOHM).approve(address(staking), totalRedeemable);
         staking.unwrap(msg.sender, totalRedeemable);
 
