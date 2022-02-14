@@ -2,8 +2,6 @@
 pragma solidity ^0.8.10;
 pragma abicoder v2;
 
-import "../libraries/SafeERC20.sol";
-
 import "../interfaces/ITreasury.sol";
 import "../interfaces/ITreasuryV1.sol";
 import "../interfaces/IERC20.sol";
@@ -25,8 +23,6 @@ interface ICurveFactory {
 /// @notice  Swaps LUSD from treasury v1 to DAI then sends to treasury v2
 /// @author  JeffX
 contract LUSDSwapContract is OlympusAccessControlled {
-    using SafeERC20 for IERC20;
-
     /// STATE VARIABLES ///
 
     /// @notice Curve Factory
@@ -58,9 +54,11 @@ contract LUSDSwapContract is OlympusAccessControlled {
         IERC20(LUSD).approve(address(curveFactory), _amountLUSD);
 
         // Swap specified LUSD for DAI
-        curveFactory.exchange_underlying(0, 1, _amountLUSD, _minAmountDAI);
+        uint256 daiReceived = curveFactory.exchange_underlying(0, 1, _amountLUSD, _minAmountDAI);
 
-        // Send DAI to v2 treasury
-        IERC20(DAI).safeTransfer(address(treasuryV2), IERC20(DAI).balanceOf(address(this)));
+        IERC20(DAI).approve(address(treasuryV2), daiReceived);
+
+        // Deposit DAI into v2 treasury, all as profit
+        treasuryV2.deposit(daiReceived, DAI, treasuryV2.tokenValue(DAI, daiReceived));
     }
 }
