@@ -13,7 +13,12 @@ import "../interfaces/IOlympusAuthority.sol";
 import "../types/OlympusAccessControlled.sol";
 
 interface ICurveFactory {
-    function exchange_underlying(uint i, uint j, uint dx, uint min_dy) external returns(uint);
+    function exchange_underlying(
+        uint256 i,
+        uint256 j,
+        uint256 dx,
+        uint256 min_dy
+    ) external returns (uint256);
 }
 
 /// @title   LUSD Swap Contract
@@ -35,22 +40,17 @@ contract LUSDSwapContract is OlympusAccessControlled {
     /// @notice DAI
     address internal immutable DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
-
     /// CONSTRUCTOR ///
 
     /// @param _authority  Address of the Olympus Authority contract
     constructor(IOlympusAuthority _authority) OlympusAccessControlled(_authority) {}
-
 
     /// POLICY FUNCTIONS ///
 
     /// @notice               Manages LUSD from treasury V1 and swaps for LUSD
     /// @param _amountLUSD    Amount of LUSD that will be managed from treasury V1 and swaped
     /// @param _minAmountDAI  Minimum amount of DAI to receive
-    function swapLUSDForDAI(
-        uint256 _amountLUSD,
-        uint256 _minAmountDAI
-    ) external onlyGuardian {
+    function swapLUSDForDAI(uint256 _amountLUSD, uint256 _minAmountDAI) external onlyGuardian {
         // Manage LUSD from v1 treasury
         treasuryV1.manage(LUSD, _amountLUSD);
 
@@ -58,12 +58,7 @@ contract LUSDSwapContract is OlympusAccessControlled {
         IERC20(LUSD).approve(address(curveFactory), _amountLUSD);
 
         // Swap specified LUSD for DAI
-       curveFactory.exchange_underlying(
-            0,
-            1,
-            _amountLUSD,
-            _minAmountDAI
-        );
+        curveFactory.exchange_underlying(0, 1, _amountLUSD, _minAmountDAI);
 
         // Send DAI to v2 treasury
         IERC20(DAI).safeTransfer(address(treasuryV2), IERC20(DAI).balanceOf(address(this)));
