@@ -717,4 +717,8 @@ describe("YieldDirectorV2", async () => {
         await expect(allDeposits[0][0]).is.equal(bob.address);
         await expect(allDeposits[1][0]).is.equal(await gOhm.balanceTo(`10${e9}`));
     });
+
+    it("test deposit gas", async () => {
+        await tyche.deposit(`1${e18}`, bob.address);
+    });
 });
