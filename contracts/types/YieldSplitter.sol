@@ -82,6 +82,13 @@ abstract contract YieldSplitter {
         userDeposit.agnosticAmount -= amount_;
     }
 
+    function _withdrawAllPrincipal(uint256 id_) internal returns (uint256 amountWithdrawn) {
+        DepositInfo storage userDeposit = depositInfo[id_];
+        amountWithdrawn = IgOHM(gOHM).balanceTo(userDeposit.principalAmount);
+        userDeposit.principalAmount = 0;
+        userDeposit.agnosticAmount -= amountWithdrawn;
+    }
+
     /**
         @notice Redeem excess yield from your deposit in sOHM.
         @param id_ Id of the deposit.
