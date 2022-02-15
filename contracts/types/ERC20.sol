@@ -5,29 +5,27 @@ import "../libraries/SafeMath.sol";
 
 import "../interfaces/IERC20.sol";
 
+
 abstract contract ERC20 is IERC20 {
+
     using SafeMath for uint256;
 
     // TODO comment actual hash value.
-    bytes32 private constant ERC20TOKEN_ERC1820_INTERFACE_ID = keccak256("ERC20Token");
+    bytes32 constant private ERC20TOKEN_ERC1820_INTERFACE_ID = keccak256( "ERC20Token" );
+    
+    mapping (address => uint256) internal _balances;
 
-    mapping(address => uint256) internal _balances;
-
-    mapping(address => mapping(address => uint256)) internal _allowances;
+    mapping (address => mapping (address => uint256)) internal _allowances;
 
     uint256 internal _totalSupply;
 
     string internal _name;
-
+    
     string internal _symbol;
-
+    
     uint8 internal immutable _decimals;
 
-    constructor(
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_
-    ) {
+    constructor (string memory name_, string memory symbol_, uint8 decimals_) {
         _name = name_;
         _symbol = symbol_;
         _decimals = decimals_;
@@ -67,17 +65,9 @@ abstract contract ERC20 is IERC20 {
         return true;
     }
 
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(
-            sender,
-            msg.sender,
-            _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance")
-        );
+        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
     }
 
@@ -87,19 +77,11 @@ abstract contract ERC20 is IERC20 {
     }
 
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
-        _approve(
-            msg.sender,
-            spender,
-            _allowances[msg.sender][spender].sub(subtractedValue, "ERC20: decreased allowance below zero")
-        );
+        _approve(msg.sender, spender, _allowances[msg.sender][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
         return true;
     }
 
-    function _transfer(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) internal virtual {
+    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
 
@@ -128,11 +110,7 @@ abstract contract ERC20 is IERC20 {
         emit Transfer(account, address(0), amount);
     }
 
-    function _approve(
-        address owner,
-        address spender,
-        uint256 amount
-    ) internal virtual {
+    function _approve(address owner, address spender, uint256 amount) internal virtual {
         require(owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
 
@@ -140,9 +118,5 @@ abstract contract ERC20 is IERC20 {
         emit Approval(owner, spender, amount);
     }
 
-    function _beforeTokenTransfer(
-        address from_,
-        address to_,
-        uint256 amount_
-    ) internal virtual {}
+  function _beforeTokenTransfer( address from_, address to_, uint256 amount_ ) internal virtual { }
 }

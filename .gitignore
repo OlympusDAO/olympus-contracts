@@ -1,6 +1,7 @@
 .DS_Store
 cache/
 artifacts/
+types/
 
 coverage*
 /types/
@@ -19,6 +20,8 @@ yarn-error.log
 yalc.lock
 
 contractsInfo.json
+deployments/hardhat
+deployments/localhost
 deployments/**/solcinputs
 
 /.dapp

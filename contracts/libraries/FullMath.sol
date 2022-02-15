@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.7.5;
 
 library FullMath {
@@ -43,7 +43,7 @@ library FullMath {
 
         if (h == 0) return l / d;
 
-        require(h < d, "FullMath: FULLDIV_OVERFLOW");
+        require(h < d, 'FullMath: FULLDIV_OVERFLOW');
         return fullDiv(l, h, d);
     }
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.7.5;
 
 import "./libraries/SafeMath.sol";
@@ -7,14 +7,14 @@ import "./libraries/SafeERC20.sol";
 import "./interfaces/IOwnable.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IERC20Metadata.sol";
-import "./interfaces/IOHM.sol";
-import "./interfaces/IsOHM.sol";
+import "./interfaces/IFLOOR.sol";
+import "./interfaces/IsFLOOR.sol";
 import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITreasury.sol";
 
-import "./types/OlympusAccessControlled.sol";
+import "./types/FloorAccessControlled.sol";
 
-contract OlympusTreasury is OlympusAccessControlled, ITreasury {
+contract FloorTreasury is FloorAccessControlled, ITreasury {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -24,6 +24,8 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
     event Deposit(address indexed token, uint256 amount, uint256 value);
     event Withdrawal(address indexed token, uint256 amount, uint256 value);
+    event AllocatorDeposit(address indexed token, uint256 amount, uint256 value);
+    event AllocatorWithdrawal(address indexed token, uint256 amount, uint256 value);
     event CreateDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
     event RepayDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
     event Managed(address indexed token, uint256 amount);
@@ -31,6 +33,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     event Minted(address indexed caller, address indexed recipient, uint256 amount);
     event PermissionQueued(STATUS indexed status, address queued);
     event Permissioned(address addr, STATUS indexed status, bool result);
+    event RiskOffValueSet(address indexed token, uint256 valuation);
 
     /* ========== DATA STRUCTURES ========== */
 
@@ -43,9 +46,11 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         LIQUIDITYTOKEN,
         LIQUIDITYMANAGER,
         RESERVEDEBTOR,
+        RISKRESERVETOKEN,
         REWARDMANAGER,
-        SOHM,
-        OHMDEBTOR
+        SFLOOR,
+        FLOORDEBTOR,
+        ALLOCATOR
     }
 
     struct Queue {
@@ -59,18 +64,21 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
 
     /* ========== STATE VARIABLES ========== */
 
-    IOHM public immutable OHM;
-    IsOHM public sOHM;
+    IFLOOR public immutable FLOOR;
+    IsFLOOR public sFLOOR;
 
     mapping(STATUS => address[]) public registry;
     mapping(STATUS => mapping(address => bool)) public permissions;
     mapping(address => address) public bondCalculator;
+    mapping(address => uint256) public _riskOffValuation; // 18 decimal in ETH terms 
 
     mapping(address => uint256) public debtLimit;
 
+    mapping(address => mapping(address => uint256)) allocatorReserves;
+
     uint256 public totalReserves;
     uint256 public totalDebt;
-    uint256 public ohmDebt;
+    uint256 public floorDebt;
 
     Queue[] public permissionQueue;
     uint256 public immutable blocksNeededForQueue;
@@ -88,12 +96,12 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
-        address _ohm,
+        address _floor,
         uint256 _timelock,
         address _authority
-    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
-        require(_ohm != address(0), "Zero address: OHM");
-        OHM = IOHM(_ohm);
+    ) FloorAccessControlled(IFloorAuthority(_authority)) {
+        require(_floor != address(0), "Zero address: FLOOR");
+        FLOOR = IFLOOR(_floor);
 
         timelockEnabled = false;
         initialized = false;
@@ -103,7 +111,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     /**
-     * @notice allow approved address to deposit an asset for OHM
+     * @notice allow approved address to deposit an asset for FLOOR
      * @param _amount uint256
      * @param _token address
      * @param _profit uint256
@@ -125,9 +133,9 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 value = tokenValue(_token, _amount);
-        // mint OHM needed and store amount of rewards for distribution
+        // mint FLOOR needed and store amount of rewards for distribution
         send_ = value.sub(_profit);
-        OHM.mint(msg.sender, send_);
+        FLOOR.mint(msg.sender, send_);
 
         totalReserves = totalReserves.add(value);
 
@@ -135,7 +143,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     }
 
     /**
-     * @notice allow approved address to burn OHM for reserves
+     * @notice allow approved address to burn FLOOR for reserves
      * @param _amount uint256
      * @param _token address
      */
@@ -144,13 +152,45 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         require(permissions[STATUS.RESERVESPENDER][msg.sender], notApproved);
 
         uint256 value = tokenValue(_token, _amount);
-        OHM.burnFrom(msg.sender, value);
+        FLOOR.burnFrom(msg.sender, value);
 
         totalReserves = totalReserves.sub(value);
 
         IERC20(_token).safeTransfer(msg.sender, _amount);
 
         emit Withdrawal(_token, _amount, value);
+    }
+
+    /**
+     * @notice allow our allocator to withdraw without affecting our reserves or FLOOR
+     * @param _amount uint256
+     * @param _token address
+     */
+    function allocatorDeposit(uint256 _amount, address _token) external override {
+        require(permissions[STATUS.ALLOCATOR][msg.sender], notApproved);
+
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+
+        allocatorReserves[msg.sender][_token] = (_amount < allocatorReserves[msg.sender][_token]) ? allocatorReserves[msg.sender][_token].sub(_amount) : 0;
+
+        uint256 value = tokenValue(_token, _amount);
+        emit AllocatorDeposit(_token, _amount, value);
+    }
+
+    /**
+     * @notice allow our allocator to withdraw without affecting our reserves
+     * @param _amount uint256
+     * @param _token address
+     */
+    function allocatorWithdraw(uint256 _amount, address _token) external override {
+        require(permissions[STATUS.ALLOCATOR][msg.sender], notApproved);
+
+        IERC20(_token).safeTransfer(msg.sender, _amount);
+
+        allocatorReserves[msg.sender][_token].add(_amount);
+
+        uint256 value = tokenValue(_token, _amount);
+        emit AllocatorWithdrawal(_token, _amount, value);
     }
 
     /**
@@ -174,21 +214,21 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
     }
 
     /**
-     * @notice mint new OHM using excess reserves
+     * @notice mint new FLOOR using excess reserves
      * @param _recipient address
      * @param _amount uint256
      */
     function mint(address _recipient, uint256 _amount) external override {
         require(permissions[STATUS.REWARDMANAGER][msg.sender], notApproved);
         require(_amount <= excessReserves(), insufficientReserves);
-        OHM.mint(_recipient, _amount);
+        FLOOR.mint(_recipient, _amount);
         emit Minted(msg.sender, _recipient, _amount);
     }
 
     /**
      * DEBT: The debt functions allow approved addresses to borrow treasury assets
-     * or OHM from the treasury, using sOHM as collateral. This might allow an
-     * sOHM holder to provide OHM liquidity without taking on the opportunity cost
+     * or FLOOR from the treasury, using sFLOOR as collateral. This might allow an
+     * sFLOOR holder to provide FLOOR liquidity without taking on the opportunity cost
      * of unstaking, or alter their backing without imposing risk onto the treasury.
      * Many of these use cases are yet to be defined, but they appear promising.
      * However, we urge the community to think critically and move slowly upon
@@ -202,8 +242,8 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      */
     function incurDebt(uint256 _amount, address _token) external override {
         uint256 value;
-        if (_token == address(OHM)) {
-            require(permissions[STATUS.OHMDEBTOR][msg.sender], notApproved);
+        if (_token == address(FLOOR)) {
+            require(permissions[STATUS.FLOORDEBTOR][msg.sender], notApproved);
             value = _amount;
         } else {
             require(permissions[STATUS.RESERVEDEBTOR][msg.sender], notApproved);
@@ -212,13 +252,13 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         }
         require(value != 0, invalidToken);
 
-        sOHM.changeDebt(value, msg.sender, true);
-        require(sOHM.debtBalances(msg.sender) <= debtLimit[msg.sender], "Treasury: exceeds limit");
+        sFLOOR.changeDebt(value, msg.sender, true);
+        require(sFLOOR.debtBalances(msg.sender) <= debtLimit[msg.sender], "Treasury: exceeds limit");
         totalDebt = totalDebt.add(value);
 
-        if (_token == address(OHM)) {
-            OHM.mint(msg.sender, value);
-            ohmDebt = ohmDebt.add(value);
+        if (_token == address(FLOOR)) {
+            FLOOR.mint(msg.sender, value);
+            floorDebt = floorDebt.add(value);
         } else {
             totalReserves = totalReserves.sub(value);
             IERC20(_token).safeTransfer(msg.sender, _amount);
@@ -236,30 +276,30 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         require(permissions[STATUS.RESERVETOKEN][_token], notAccepted);
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
         uint256 value = tokenValue(_token, _amount);
-        sOHM.changeDebt(value, msg.sender, false);
+        sFLOOR.changeDebt(value, msg.sender, false);
         totalDebt = totalDebt.sub(value);
         totalReserves = totalReserves.add(value);
         emit RepayDebt(msg.sender, _token, _amount, value);
     }
 
     /**
-     * @notice allow approved address to repay borrowed reserves with OHM
+     * @notice allow approved address to repay borrowed reserves with FLOOR
      * @param _amount uint256
      */
-    function repayDebtWithOHM(uint256 _amount) external {
-        require(permissions[STATUS.RESERVEDEBTOR][msg.sender] || permissions[STATUS.OHMDEBTOR][msg.sender], notApproved);
-        OHM.burnFrom(msg.sender, _amount);
-        sOHM.changeDebt(_amount, msg.sender, false);
+    function repayDebtWithFLOOR(uint256 _amount) external {
+        require(permissions[STATUS.RESERVEDEBTOR][msg.sender] || permissions[STATUS.FLOORDEBTOR][msg.sender], notApproved);
+        FLOOR.burnFrom(msg.sender, _amount);
+        sFLOOR.changeDebt(_amount, msg.sender, false);
         totalDebt = totalDebt.sub(_amount);
-        ohmDebt = ohmDebt.sub(_amount);
-        emit RepayDebt(msg.sender, address(OHM), _amount, _amount);
+        floorDebt = floorDebt.sub(_amount);
+        emit RepayDebt(msg.sender, address(FLOOR), _amount, _amount);
     }
 
     /* ========== MANAGERIAL FUNCTIONS ========== */
 
     /**
      * @notice takes inventory of all tracked assets
-     * @notice always consolidate to recognized reserves before audit
+     * @notice always withdraw from allocators and consolidate to recognized reserves before audit
      */
     function auditReserves() external onlyGovernor {
         uint256 reserves;
@@ -300,8 +340,8 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         address _calculator
     ) external onlyGovernor {
         require(timelockEnabled == false, "Use queueTimelock");
-        if (_status == STATUS.SOHM) {
-            sOHM = IsOHM(_address);
+        if (_status == STATUS.SFLOOR) {
+            sFLOOR = IsFLOOR(_address);
         } else {
             permissions[_status][_address] = true;
 
@@ -313,10 +353,15 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
             if (!registered) {
                 registry[_status].push(_address);
 
-                if (_status == STATUS.LIQUIDITYTOKEN || _status == STATUS.RESERVETOKEN) {
-                    (bool reg, uint256 index) = indexInRegistry(_address, _status);
+                if (_status == STATUS.LIQUIDITYTOKEN) {
+                    (bool reg, uint256 index) = indexInRegistry(_address, STATUS.RESERVETOKEN);
                     if (reg) {
-                        delete registry[_status][index];
+                        delete registry[STATUS.RESERVETOKEN][index];
+                    }
+                } else if (_status == STATUS.RESERVETOKEN) {
+                    (bool reg, uint256 index) = indexInRegistry(_address, STATUS.LIQUIDITYTOKEN);
+                    if (reg) {
+                        delete registry[STATUS.LIQUIDITYTOKEN][index];
                     }
                 }
             }
@@ -349,6 +394,17 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         return (false, 0);
     }
 
+    /**
+     * @notice sets the valuation of a risk on asset
+     * @param _token address
+     * @param _valuation uint256
+     */
+    function setRiskOffValuation(address _token, uint256 _valuation) external onlyPolicy {
+        require(permissions[STATUS.RISKRESERVETOKEN][_token], "Risk on permission not given");
+        _riskOffValuation[_token] = _valuation;
+        emit RiskOffValueSet(_token, _valuation);
+    }
+
     /* ========== TIMELOCKED FUNCTIONS ========== */
 
     // functions are used prior to enabling on-chain governance
@@ -372,7 +428,14 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
             timelock = block.number.add(blocksNeededForQueue.mul(2));
         }
         permissionQueue.push(
-            Queue({managing: _status, toPermit: _address, calculator: _calculator, timelockEnd: timelock, nullify: false, executed: false})
+            Queue({
+              managing: _status,
+              toPermit: _address,
+              calculator: _calculator,
+              timelockEnd: timelock,
+              nullify: false,
+              executed: false
+            })
         );
         emit PermissionQueued(_status, _address);
     }
@@ -390,9 +453,9 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         require(!info.executed, "Action has already been executed");
         require(block.number >= info.timelockEnd, "Timelock not complete");
 
-        if (info.managing == STATUS.SOHM) {
+        if (info.managing == STATUS.SFLOOR) {
             // 9
-            sOHM = IsOHM(info.toPermit);
+            sFLOOR = IsFLOOR(info.toPermit);
         } else {
             permissions[info.managing][info.toPermit] = true;
 
@@ -456,21 +519,51 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      * @return uint
      */
     function excessReserves() public view override returns (uint256) {
-        return totalReserves.sub(OHM.totalSupply().sub(totalDebt));
+        return totalReserves.sub(FLOOR.totalSupply().sub(totalDebt));
     }
 
     /**
-     * @notice returns OHM valuation of asset
+     * @notice returns FLOOR valuation of asset where 1 FLOOR = 1 finney (10^3)
      * @param _token address
      * @param _amount uint256
      * @return value_ uint256
      */
     function tokenValue(address _token, uint256 _amount) public view override returns (uint256 value_) {
-        value_ = _amount.mul(10**IERC20Metadata(address(OHM)).decimals()).div(10**IERC20Metadata(_token).decimals());
+        // If token is not ETH or ETH-pegged, and the permission is identified as a RISKRESERVETOKEN,
+        // then we need to query a manual conversion table that will provide a comparitive valuation.
+        if (permissions[STATUS.RISKRESERVETOKEN][_token]) {
+            // Calculate value of risk on token as determined by policy. If we have encountered an
+            // unsupported token we will revert.
+
+            return _amount.mul(riskOffValuation(_token)).div(10**IERC20Metadata(address(_token)).decimals());
+        }
+
+        // The following calculation gets the equivalent FLOOR value by taking the decimal accuracy
+        // of our FLOOR address, normalising it against the token being passed and then converting
+        // the value to finney. The amount passed by default is expected to be WETH.
+
+        value_ = _amount
+            .mul(10**IERC20Metadata(address(FLOOR)).decimals())
+            .div(10**IERC20Metadata(_token).decimals())
+            .mul(10**3);
+
+        // If our token is present in our LIQUIDITYTOKEN array then we will utilise our bonding
+        // calculator to generate a valuation based on the liquidity pool balance. Again, this is
+        // converted to finney in the closing `mul`.
 
         if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
-            value_ = IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);
+            value_ = IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount).mul(10**3);
         }
+    }
+
+    /**
+     * @notice valuation for risk on assets
+     * @param _token address
+     * @return uint256
+     */
+    function riskOffValuation(address _token) public view override returns (uint256) {
+        require(_riskOffValuation[_token] > 0, "Token has no valuation");
+        return _riskOffValuation[_token];
     }
 
     /**
@@ -479,6 +572,6 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      * @return uint256
      */
     function baseSupply() external view override returns (uint256) {
-        return OHM.totalSupply() - ohmDebt;
+        return FLOOR.totalSupply() - floorDebt;
     }
 }

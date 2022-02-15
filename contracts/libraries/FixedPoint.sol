@@ -1,9 +1,11 @@
-// SPDX-License-Identifier: AGPL-3.0
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.7.5;
 
 import "./FullMath.sol";
 
+
 library Babylonian {
+
     function sqrt(uint256 x) internal pure returns (uint256) {
         if (x == 0) return 0;
 
@@ -49,8 +51,9 @@ library Babylonian {
 }
 
 library BitMath {
+
     function mostSignificantBit(uint256 x) internal pure returns (uint8 r) {
-        require(x > 0, "BitMath::mostSignificantBit: zero");
+        require(x > 0, 'BitMath::mostSignificantBit: zero');
 
         if (x >= 0x100000000000000000000000000000000) {
             x >>= 128;
@@ -84,7 +87,9 @@ library BitMath {
     }
 }
 
+
 library FixedPoint {
+
     struct uq112x112 {
         uint224 _x;
     }
@@ -102,25 +107,26 @@ library FixedPoint {
         return uint112(self._x >> RESOLUTION);
     }
 
-    function decode112with18(uq112x112 memory self) internal pure returns (uint256) {
-        return uint256(self._x) / 5192296858534827;
+    function decode112with18(uq112x112 memory self) internal pure returns (uint) {
+
+        return uint(self._x) / 5192296858534827;
     }
 
     function fraction(uint256 numerator, uint256 denominator) internal pure returns (uq112x112 memory) {
-        require(denominator > 0, "FixedPoint::fraction: division by zero");
+        require(denominator > 0, 'FixedPoint::fraction: division by zero');
         if (numerator == 0) return FixedPoint.uq112x112(0);
 
         if (numerator <= uint144(-1)) {
             uint256 result = (numerator << RESOLUTION) / denominator;
-            require(result <= uint224(-1), "FixedPoint::fraction: overflow");
+            require(result <= uint224(-1), 'FixedPoint::fraction: overflow');
             return uq112x112(uint224(result));
         } else {
             uint256 result = FullMath.mulDiv(numerator, Q112, denominator);
-            require(result <= uint224(-1), "FixedPoint::fraction: overflow");
+            require(result <= uint224(-1), 'FixedPoint::fraction: overflow');
             return uq112x112(uint224(result));
         }
     }
-
+    
     // square root of a UQ112x112
     // lossy between 0/1 and 40 bits
     function sqrt(uq112x112 memory self) internal pure returns (uq112x112 memory) {

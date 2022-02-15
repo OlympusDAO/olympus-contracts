@@ -1,8 +1,10 @@
-// SPDX-License-Identifier: AGPL-3.0
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.7.5;
+
 
 // TODO(zx): Replace all instances of SafeMath with OZ implementation
 library SafeMath {
+
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
         require(c >= a, "SafeMath: addition overflow");
@@ -14,11 +16,7 @@ library SafeMath {
         return sub(a, b, "SafeMath: subtraction overflow");
     }
 
-    function sub(
-        uint256 a,
-        uint256 b,
-        string memory errorMessage
-    ) internal pure returns (uint256) {
+    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
         require(b <= a, errorMessage);
         uint256 c = a - b;
 
@@ -40,29 +38,26 @@ library SafeMath {
         return div(a, b, "SafeMath: division by zero");
     }
 
-    function div(
-        uint256 a,
-        uint256 b,
-        string memory errorMessage
-    ) internal pure returns (uint256) {
+    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
         require(b > 0, errorMessage);
         uint256 c = a / b;
-        assert(a == b * c + (a % b)); // There is no case in which this doesn't hold
+        assert(a == b * c + a % b); // There is no case in which this doesn't hold
 
         return c;
     }
 
     // Only used in the  BondingCalculator.sol
-    function sqrrt(uint256 a) internal pure returns (uint256 c) {
+    function sqrrt(uint256 a) internal pure returns (uint c) {
         if (a > 3) {
             c = a;
-            uint256 b = add(div(a, 2), 1);
+            uint b = add( div( a, 2), 1 );
             while (b < c) {
                 c = b;
-                b = div(add(div(a, b), b), 2);
+                b = div( add( div( a, b ), b), 2 );
             }
         } else if (a != 0) {
             c = 1;
         }
     }
+
 }

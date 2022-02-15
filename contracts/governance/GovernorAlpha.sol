@@ -3,15 +3,15 @@ pragma experimental ABIEncoderV2;
 
 contract GovernorAlpha {
     /// @notice The name of this contract
-    string public constant name = "Olympus Governor OHMega";
+    string public constant name = "Floor Governoor";
 
-    /// @notice The percent of sOHM in support of a proposal required in order for a quorum to be reached and for a vote to succeed
+    /// @notice The percent of sFLOOR in support of a proposal required in order for a quorum to be reached and for a vote to succeed
     /// @notice change from original contract
     function quorumPercent() public pure returns (uint) { return 40000; } // In ten-thosandaths 40000 = 4.00%
 
     /// @notice The maximum setable proposal threshold percent
     /// @notice change from original contract
-    function proposalThresholdPercent() public pure returns (uint) { return 10000; } // 1.00% of sOHM circulating supply : In ten-thosandaths 10000 = 1.00%
+    function proposalThresholdPercent() public pure returns (uint) { return 10000; } // 1.00% of sFLOOR circulating supply : In ten-thosandaths 10000 = 1.00%
 
     /// @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
@@ -22,16 +22,16 @@ contract GovernorAlpha {
     /// @notice The duration of voting on a proposal, in blocks
     function votingPeriod() public pure returns (uint) { return 17280; } // ~3 days in blocks (assuming 15s blocks)
 
-    /// @notice The address of the Olympus Protocol Timelock
+    /// @notice The address of the Floor Protocol Timelock
     TimelockInterface public timelock;
 
-    /// @notice The address of the gOHM token
+    /// @notice The address of the gFLOOR token
     /// @notice change from original contract
-    gOHMInterface public gOHM;
+    gFLOORInterface public gFLOOR;
 
-    /// @notice The address of the sOHM token
+    /// @notice The address of the sFLOOR token
     /// @notice change from original contract
-    sOHMInterface public sOHM;
+    sFLOORInterface public sFLOOR;
 
     /// @notice The address of the Governor Guardian
     address public guardian;
@@ -73,11 +73,11 @@ contract GovernorAlpha {
         /// @notice Current number of votes in opposition to this proposal
         uint againstVotes;
 
-        /// @notice Threshold of gOHM at start of proposal
+        /// @notice Threshold of gFLOOR at start of proposal
         /// @notice change from original contract
         uint thresholdAtStart;
 
-        /// @notice Number of gOHM needed to pass vote
+        /// @notice Number of gFLOOR needed to pass vote
         /// @notice change from original contract
         uint votesNeeded;
 
@@ -142,18 +142,18 @@ contract GovernorAlpha {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint id);
 
-    constructor(address timelock_, address sOHM_, address gOHM_, address guardian_ ) public {
+    constructor(address timelock_, address sFLOOR_, address gFLOOR_, address guardian_ ) public {
         timelock = TimelockInterface(timelock_);
         /// @notice change from original contract
-        sOHM = sOHMInterface(sOHM_);
+        sFLOOR = sFLOORInterface(sFLOOR_);
         /// @notice change from original contract
-        gOHM = gOHMInterface(gOHM_);
+        gFLOOR = gFLOORInterface(gFLOOR_);
         guardian = guardian_;
     }
 
     function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
         /// @notice change from original contract
-        require(gOHM.getPriorVotes(msg.sender, sub256(block.number, 1)) > getVotesFromPercentOfsOHMSupply(proposalThresholdPercent()), "GovernorAlpha::propose: proposer votes below proposal threshold");
+        require(gFLOOR.getPriorVotes(msg.sender, sub256(block.number, 1)) > getVotesFromPercentOfsFLOORSupply(proposalThresholdPercent()), "GovernorAlpha::propose: proposer votes below proposal threshold");
         require(targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length, "GovernorAlpha::propose: proposal function information arity mismatch");
         require(targets.length != 0, "GovernorAlpha::propose: must provide actions");
         require(targets.length <= proposalMaxOperations(), "GovernorAlpha::propose: too many actions");
@@ -182,9 +182,9 @@ contract GovernorAlpha {
             forVotes: 0,
             againstVotes: 0,
             /// @notice change from original contract
-            thresholdAtStart: getVotesFromPercentOfsOHMSupply(proposalThresholdPercent()),
+            thresholdAtStart: getVotesFromPercentOfsFLOORSupply(proposalThresholdPercent()),
             /// @notice change from original contract
-            votesNeeded: getVotesFromPercentOfsOHMSupply(quorumPercent()),
+            votesNeeded: getVotesFromPercentOfsFLOORSupply(quorumPercent()),
             canceled: false,
             executed: false
         });
@@ -228,7 +228,7 @@ contract GovernorAlpha {
 
         Proposal storage proposal = proposals[proposalId];
         /// @notice change from original contract
-        require(msg.sender == guardian || gOHM.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposal.thresholdAtStart, "GovernorAlpha::cancel: proposer above threshold");
+        require(msg.sender == guardian || gFLOOR.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposal.thresholdAtStart, "GovernorAlpha::cancel: proposer above threshold");
 
         proposal.canceled = true;
         for (uint i = 0; i < proposal.targets.length; i++) {
@@ -249,8 +249,8 @@ contract GovernorAlpha {
       * @return votes
       */
       /// @notice change from original contract
-    function getVotesFromPercentOfsOHMSupply(uint percent) public view returns (uint256 votes) {
-        return gOHM.balanceTo(div256(mul256(sOHM.circulatingSupply(), percent), 1e6)); 
+    function getVotesFromPercentOfsFLOORSupply(uint percent) public view returns (uint256 votes) {
+        return gFLOOR.balanceTo(div256(mul256(sFLOOR.circulatingSupply(), percent), 1e6)); 
     }
 
     function getReceipt(uint proposalId, address voter) public view returns (Receipt memory) {
@@ -299,7 +299,7 @@ contract GovernorAlpha {
         Receipt storage receipt = proposal.receipts[voter];
         require(receipt.hasVoted == false, "GovernorAlpha::_castVote: voter already voted");
         /// @notice change from original contract
-        uint votes = gOHM.getPriorVotes(voter, proposal.startBlock);
+        uint votes = gFLOOR.getPriorVotes(voter, proposal.startBlock);
 
         if (support) {
             proposal.forVotes = add256(proposal.forVotes, votes);
@@ -382,13 +382,13 @@ interface TimelockInterface {
 }
 
 /// @notice change from original contract
-interface gOHMInterface {
+interface gFLOORInterface {
     function getPriorVotes(address account, uint blockNumber) external view returns (uint);
     function balanceTo( uint _amount ) external view returns ( uint );
 }
 
 /// @notice change from original contract
-interface sOHMInterface {
+interface sFLOORInterface {
     function circulatingSupply() external view returns ( uint );
 }
 

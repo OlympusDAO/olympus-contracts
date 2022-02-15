@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.7.5;
 
 interface ITreasury {
@@ -9,6 +9,10 @@ interface ITreasury {
     ) external returns (uint256);
 
     function withdraw(uint256 _amount, address _token) external;
+
+    function allocatorDeposit(uint256 _amount, address _token) external;
+
+    function allocatorWithdraw(uint256 _amount, address _token) external;
 
     function tokenValue(address _token, uint256 _amount) external view returns (uint256 value_);
 
@@ -21,6 +25,8 @@ interface ITreasury {
     function repayDebtWithReserve(uint256 amount_, address token_) external;
 
     function excessReserves() external view returns (uint256);
+    
+    function riskOffValuation(address _token) external view returns (uint256);
 
     function baseSupply() external view returns (uint256);
 }

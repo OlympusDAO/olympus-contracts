@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.7.5;
 
 import "./libraries/SafeERC20.sol";
@@ -8,9 +8,10 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IDistributor.sol";
 
-import "./types/OlympusAccessControlled.sol";
+import "./types/FloorAccessControlled.sol";
 
-contract Distributor is IDistributor, OlympusAccessControlled {
+
+contract Distributor is IDistributor, FloorAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -18,7 +19,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
 
     /* ====== VARIABLES ====== */
 
-    IERC20 private immutable ohm;
+    IERC20 private immutable floor;
     ITreasury private immutable treasury;
     address private immutable staking;
 
@@ -45,14 +46,14 @@ contract Distributor is IDistributor, OlympusAccessControlled {
 
     constructor(
         address _treasury,
-        address _ohm,
-        address _staking,
+        address _floor,
+        address _staking, 
         address _authority
-    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
+    ) FloorAccessControlled(IFloorAuthority(_authority)) {
         require(_treasury != address(0), "Zero address: Treasury");
         treasury = ITreasury(_treasury);
-        require(_ohm != address(0), "Zero address: OHM");
-        ohm = IERC20(_ohm);
+        require(_floor != address(0), "Zero address: FLOOR");
+        floor = IERC20(_floor);
         require(_staking != address(0), "Zero address: Staking");
         staking = _staking;
     }
@@ -125,7 +126,7 @@ contract Distributor is IDistributor, OlympusAccessControlled {
         @return uint
      */
     function nextRewardAt(uint256 _rate) public view override returns (uint256) {
-        return ohm.totalSupply().mul(_rate).div(rateDenominator);
+        return floor.totalSupply().mul(_rate).div(rateDenominator);
     }
 
     /**
