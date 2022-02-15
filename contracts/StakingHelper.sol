@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity >=0.7.5;
 
 
 interface IERC20 {
@@ -82,18 +82,18 @@ interface IStaking {
 contract StakingHelper {
 
     address public immutable staking;
-    address public immutable OHM;
+    address public immutable GOAT;
 
-    constructor ( address _staking, address _OHM ) {
+    constructor ( address _staking, address _GOAT ) {
         require( _staking != address(0) );
         staking = _staking;
-        require( _OHM != address(0) );
-        OHM = _OHM;
+        require( _GOAT != address(0) );
+        GOAT = _GOAT;
     }
 
     function stake( uint _amount ) external {
-        IERC20( OHM ).transferFrom( msg.sender, address(this), _amount );
-        IERC20( OHM ).approve( staking, _amount );
+        IERC20( GOAT ).transferFrom( msg.sender, address(this), _amount );
+        IERC20( GOAT ).approve( staking, _amount );
         IStaking( staking ).stake( _amount, msg.sender );
         IStaking( staking ).claim( msg.sender );
     }

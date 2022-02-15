@@ -629,7 +629,7 @@ interface IStakingHelper {
     function stake( uint _amount, address _recipient ) external;
 }
 
-contract OlympusBondDepository is Ownable {
+contract GOATBondDepository is Ownable {
 
     using FixedPoint for *;
     using SafeERC20 for IERC20;
@@ -650,9 +650,9 @@ contract OlympusBondDepository is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    address public immutable OHM; // token given as payment for bond
+    address public immutable GOAT; // token given as payment for bond
     address public immutable principle; // token used to create bond
-    address public immutable treasury; // mints OHM when receives principle
+    address public immutable treasury; // mints GOAT when receives principle
     address public immutable DAO; // receives profit share from bond
 
     AggregatorV3Interface internal priceFeed;
@@ -685,7 +685,7 @@ contract OlympusBondDepository is Ownable {
 
     // Info for bond holder
     struct Bond {
-        uint payout; // OHM remaining to be paid
+        uint payout; // GOAT remaining to be paid
         uint vesting; // Blocks left to vest
         uint lastBlock; // Last interaction
         uint pricePaid; // In DAI, for front end viewing
@@ -706,14 +706,14 @@ contract OlympusBondDepository is Ownable {
     /* ======== INITIALIZATION ======== */
 
     constructor ( 
-        address _OHM,
+        address _GOAT,
         address _principle,
         address _treasury, 
         address _DAO,
         address _feed
     ) {
-        require( _OHM != address(0) );
-        OHM = _OHM;
+        require( _GOAT != address(0) );
+        GOAT = _GOAT;
         require( _principle != address(0) );
         principle = _principle;
         require( _treasury != address(0) );
@@ -846,7 +846,7 @@ contract OlympusBondDepository is Ownable {
         uint value = ITreasury( treasury ).valueOf( principle, _amount );
         uint payout = payoutFor( value ); // payout to bonder is computed
 
-        require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
+        require( payout >= 10000000, "Bond too small" ); // must be > 0.01 GOAT ( underflow protection )
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
 
         /**
@@ -920,13 +920,13 @@ contract OlympusBondDepository is Ownable {
      */
     function stakeOrSend( address _recipient, bool _stake, uint _amount ) internal returns ( uint ) {
         if ( !_stake ) { // if user does not want to stake
-            IERC20( OHM ).transfer( _recipient, _amount ); // send payout
+            IERC20( GOAT ).transfer( _recipient, _amount ); // send payout
         } else { // if user wants to stake
             if ( useHelper ) { // use if staking warmup is 0
-                IERC20( OHM ).approve( stakingHelper, _amount );
+                IERC20( GOAT ).approve( stakingHelper, _amount );
                 IStakingHelper( stakingHelper ).stake( _amount, _recipient );
             } else {
-                IERC20( OHM ).approve( staking, _amount );
+                IERC20( GOAT ).approve( staking, _amount );
                 IStaking( staking ).stake( _amount, _recipient );
             }
         }
@@ -974,7 +974,7 @@ contract OlympusBondDepository is Ownable {
      *  @return uint
      */
     function maxPayout() public view returns ( uint ) {
-        return IERC20( OHM ).totalSupply().mul( terms.maxPayout ).div( 100000 );
+        return IERC20( GOAT ).totalSupply().mul( terms.maxPayout ).div( 100000 );
     }
 
     /**
@@ -1029,11 +1029,11 @@ contract OlympusBondDepository is Ownable {
 
 
     /**
-     *  @notice calculate current ratio of debt to OHM supply
+     *  @notice calculate current ratio of debt to GOAT supply
      *  @return debtRatio_ uint
      */
     function debtRatio() public view returns ( uint debtRatio_ ) {   
-        uint supply = IERC20( OHM ).totalSupply();
+        uint supply = IERC20( GOAT ).totalSupply();
         debtRatio_ = FixedPoint.fraction( 
             currentDebt().mul( 1e9 ), 
             supply
@@ -1087,7 +1087,7 @@ contract OlympusBondDepository is Ownable {
     }
 
     /**
-     *  @notice calculate amount of OHM available for claim by depositor
+     *  @notice calculate amount of GOAT available for claim by depositor
      *  @param _depositor address
      *  @return pendingPayout_ uint
      */
@@ -1108,11 +1108,11 @@ contract OlympusBondDepository is Ownable {
     /* ======= AUXILLIARY ======= */
 
     /**
-     *  @notice allow anyone to send lost tokens (excluding principle or OHM) to the DAO
+     *  @notice allow anyone to send lost tokens (excluding principle or GOAT) to the DAO
      *  @return bool
      */
     function recoverLostToken( address _token ) external returns ( bool ) {
-        require( _token != OHM );
+        require( _token != GOAT );
         require( _token != principle );
         IERC20( _token ).safeTransfer( DAO, IERC20( _token ).balanceOf( address(this) ) );
         return true;

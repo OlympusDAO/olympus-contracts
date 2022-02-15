@@ -5,7 +5,7 @@
 // const UniswapV2Pair = require("../../artifacts/contracts/dependencies/holyzeppelin/contracts/protocols/exchanges/uniswap/v2/core/UniswapV2Pair.sol/UniswapV2Pair.json")
 
 
-// describe('OlympusBondingCalculator', 
+// describe('GOATBondingCalculator', 
 //     () => {
 
 //     let
@@ -23,8 +23,8 @@
 //     pair,
 //     OlyUniV2CompatiableLPTokenBonding,
 //     olyUniV2CompatiableLPTokenBonding,
-//     OlympusBondingCalculator,
-//     olympusBondingCalculator
+//     GOATBondingCalculator,
+//     GOATBondingCalculator
 
 
 //     beforeEach(
@@ -43,11 +43,11 @@
 //         UniswapV2FactoryContract = await ethers.getContractFactory('UniswapV2Factory');
 //         uniFactory = await UniswapV2FactoryContract.deploy( deployer.address );
 
-//         OlympusTreasury = await ethers.getContractFactory('OlympusTreasury');
-//         olympusTreasury = await OlympusTreasury.deploy();
+//         GOATTreasury = await ethers.getContractFactory('GOATTreasury');
+//         GOATTreasury = await GOATTreasury.deploy();
 
-//         OlympusBondingCalculator = await ethers.getContractFactory('OlympusBondingCalculator');
-//         olympusBondingCalculator = await OlympusBondingCalculator.deploy();
+//         GOATBondingCalculator = await ethers.getContractFactory('GOATBondingCalculator');
+//         GOATBondingCalculator = await GOATBondingCalculator.deploy();
 
 //         OlyUniV2CompatiableLPTokenBonding = await ethers.getContractFactory('OlyUniV2CompatiableLPTokenBonding');
 //         olyUniV2CompatiableLPTokenBonding = await OlyUniV2CompatiableLPTokenBonding.deploy();
@@ -61,9 +61,9 @@
 //         await tt2.transfer( pair.address, ethers.utils.parseUnits( String( 5000 ) ) );
 //         await pair.mint( deployer.address );
 
-//         await olympusTreasury.setOlmypusTokenAddress(tt1.address);
-//         await olympusTreasury.setBondingContractAddress(olyUniV2CompatiableLPTokenBonding.address);
-//         await olympusTreasury.setBondingCalcContract(olympusBondingCalculator.address);
+//         await GOATTreasury.setOlmypusTokenAddress(tt1.address);
+//         await GOATTreasury.setBondingContractAddress(olyUniV2CompatiableLPTokenBonding.address);
+//         await GOATTreasury.setBondingCalcContract(GOATBondingCalculator.address);
 //     })
       
         
@@ -73,7 +73,7 @@
 //         it(
 //           'should revert if call is not from owner',
 //           async () => {
-//             await expect(olyUniV2CompatiableLPTokenBonding.connect(depositor).initialize(tt1.address,olympusTreasury.address))
+//             await expect(olyUniV2CompatiableLPTokenBonding.connect(depositor).initialize(tt1.address,GOATTreasury.address))
 //             .to.be.revertedWith( "Ownable: caller is not the owner" );
 //           }
 //         );
@@ -81,7 +81,7 @@
 //         it(
 //             'should pass if call is from owner',
 //             async () => {
-//                 await olyUniV2CompatiableLPTokenBonding.initialize(tt1.address,olympusTreasury.address);
+//                 await olyUniV2CompatiableLPTokenBonding.initialize(tt1.address,GOATTreasury.address);
 //                 expect( await olyUniV2CompatiableLPTokenBonding.initialized()).to.equal(true);
 //             }
 //         );
@@ -89,8 +89,8 @@
 //         it(
 //             'should revert if function is already initialized from owner',
 //             async () => {
-//                 await olyUniV2CompatiableLPTokenBonding.initialize(tt1.address,olympusTreasury.address);
-//                 await expect(olyUniV2CompatiableLPTokenBonding.initialize(tt1.address,olympusTreasury.address))
+//                 await olyUniV2CompatiableLPTokenBonding.initialize(tt1.address,GOATTreasury.address);
+//                 await expect(olyUniV2CompatiableLPTokenBonding.initialize(tt1.address,GOATTreasury.address))
 //                 .to.be.revertedWith( "already initialized");
 //             }
 //         );
@@ -105,7 +105,7 @@
 //                 async function() {
 //                     bondingPeriodInBlocks_ = 10;
 //                     bondSaclingFactor_ = 1;
-//                     await olyUniV2CompatiableLPTokenBonding.initialize(tt1.address,olympusTreasury.address);
+//                     await olyUniV2CompatiableLPTokenBonding.initialize(tt1.address,GOATTreasury.address);
 //                 }
 //             );
 
@@ -113,7 +113,7 @@
 //                 'should revert if call is not from owner',
 //                 async () => {
 //                     await expect(olyUniV2CompatiableLPTokenBonding.connect(depositor).addBondTerm(
-//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,olympusBondingCalculator.address))
+//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,GOATBondingCalculator.address))
 //                     .to.be.revertedWith( "Ownable: caller is not the owner" );
 //                 }
 //             );
@@ -122,7 +122,7 @@
 //                 'should pass if call is from owner',
 //                 async () => {
 //                     await olyUniV2CompatiableLPTokenBonding.addBondTerm(
-//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,olympusBondingCalculator.address
+//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,GOATBondingCalculator.address
 //                     )
 
 //                     let bondScalingFactor;
@@ -135,7 +135,7 @@
 //                     })
                     
 //                     expect(await olyUniV2CompatiableLPTokenBonding.isPrincipleAccepted(pair.address)).to.be.equal(true);
-//                     expect(await olyUniV2CompatiableLPTokenBonding.principleValuationCalculator(pair.address)).to.be.equal(olympusBondingCalculator.address);
+//                     expect(await olyUniV2CompatiableLPTokenBonding.principleValuationCalculator(pair.address)).to.be.equal(GOATBondingCalculator.address);
 //                     expect(await bondScalingFactor).to.be.equal(bondSaclingFactor_);
 //                     expect(await bondingPeriodInBlocks).to.be.equal(bondingPeriodInBlocks_);
 //                 }
@@ -151,7 +151,7 @@
 //                     const bondingPeriodInBlocks_ = 10;
 //                     const bondSaclingFactor_ = 1;
 //                     await olyUniV2CompatiableLPTokenBonding.addBondTerm(
-//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,olympusBondingCalculator.address
+//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,GOATBondingCalculator.address
 //                     )
 //                 }
 //             );
@@ -184,9 +184,9 @@
 //                     const bondSaclingFactor_ = 1;
 
 //                     amountToDeposit_ = ethers.utils.parseUnits( String( 100 ) );
-//                     await olyUniV2CompatiableLPTokenBonding.initialize(pair.address,olympusTreasury.address);
+//                     await olyUniV2CompatiableLPTokenBonding.initialize(pair.address,GOATTreasury.address);
 //                     await olyUniV2CompatiableLPTokenBonding.addBondTerm(
-//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,olympusBondingCalculator.address
+//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,GOATBondingCalculator.address
 //                     )
 
 //                     await tt1.mint( depositor.address, ethers.utils.parseUnits( String( 5000 ) ) );
@@ -229,7 +229,7 @@
 //                         bondingPeriodInBlocks =  Number(BigInt(result.bondMaturationBlock));
 //                     })
                     
-//                     const interest  = Number(BigInt(await olympusBondingCalculator.principleValuation(pair.address,amountToDeposit_)));
+//                     const interest  = Number(BigInt(await GOATBondingCalculator.principleValuation(pair.address,amountToDeposit_)));
 //                     const blockNumber =  Number(BigInt(await latestBlock())) + bondingPeriodInBlocks_;
 //                     const contractBalAfter = BigInt(await pair.balanceOf(olyUniV2CompatiableLPTokenBonding.address)).toString();
 
@@ -266,7 +266,7 @@
 //                     const userInitialBal = Number(BigInt(await pair.balanceOf(deployer.address)));
                     
 //                     await olyUniV2CompatiableLPTokenBonding.addBondTerm(
-//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,olympusBondingCalculator.address
+//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,GOATBondingCalculator.address
 //                     )
 //                     await pair.approve(olyUniV2CompatiableLPTokenBonding.address,amountToDeposit_);
 //                     await olyUniV2CompatiableLPTokenBonding.depositBondPrinciple(pair.address, amountToDeposit_);
@@ -317,10 +317,10 @@
 //                     const bondSaclingFactor_ = 1;
 
 //                     amountToDeposit_ = ethers.utils.parseUnits( String( 100 ) );
-//                     await olyUniV2CompatiableLPTokenBonding.initialize(pair.address,olympusTreasury.address);
+//                     await olyUniV2CompatiableLPTokenBonding.initialize(pair.address,GOATTreasury.address);
 
 //                     await olyUniV2CompatiableLPTokenBonding.addBondTerm(
-//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,olympusBondingCalculator.address
+//                         pair.address,bondSaclingFactor_,bondingPeriodInBlocks_,GOATBondingCalculator.address
 //                     )
 
 //                     await pair.approve(olyUniV2CompatiableLPTokenBonding.address,amountToDeposit_);
@@ -358,7 +358,7 @@
 //                         interestDueBeforeRedeem = Number(BigInt(result.interestDue))
 //                     })
 
-//                     const interest  = Number(BigInt(await olympusBondingCalculator.principleValuation(pair.address,amountToDeposit_)));
+//                     const interest  = Number(BigInt(await GOATBondingCalculator.principleValuation(pair.address,amountToDeposit_)));
 
 //                     const userTokenBalanceBeforeRedeem = BigInt(await tt1.balanceOf(deployer.address)).toString();
 //                     const userTokenBalanceBeforeRedeemInNumber = Number(BigInt(await tt1.balanceOf(deployer.address)));
@@ -369,10 +369,10 @@
 //                         await advanceBlock()
 //                     }
                     
-//                     const treasuryContractBalBeforeUserRedeem = BigInt(await pair.balanceOf(olympusTreasury.address)).toString();
+//                     const treasuryContractBalBeforeUserRedeem = BigInt(await pair.balanceOf(GOATTreasury.address)).toString();
 //                     await olyUniV2CompatiableLPTokenBonding.redeemBond(pair.address);
 //                     const contractBalAfterUserRedeem = BigInt(await pair.balanceOf(olyUniV2CompatiableLPTokenBonding.address)).toString();
-//                     const treasuryContractBalAfterUserRedeem = BigInt(await pair.balanceOf(olympusTreasury.address)).toString();
+//                     const treasuryContractBalAfterUserRedeem = BigInt(await pair.balanceOf(GOATTreasury.address)).toString();
 
 //                     let interestDueAfterRedeem;
 

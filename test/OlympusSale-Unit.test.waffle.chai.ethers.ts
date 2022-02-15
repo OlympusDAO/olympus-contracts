@@ -22,7 +22,7 @@ describe('OlySaleNew', () => {
     beforeEach(async () => {
         [deployer, addr1] = await ethers.getSigners();
 
-        OLY = await ethers.getContractFactory('OlympusERC20TOken');
+        OLY = await ethers.getContractFactory('GOATERC20TOken');
         oly = await OLY.deploy();
 
         DAI = await ethers.getContractFactory('DAI');

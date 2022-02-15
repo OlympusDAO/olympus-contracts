@@ -1,5 +1,5 @@
 // // Import helper functions
-// const { expectRevertOrFail, bn } = require('../Olympus2_token/helpers/helpers');
+// const { expectRevertOrFail, bn } = require('../GOAT2_token/helpers/helpers');
 
 // // We import Chai to use its asserting functions here.
 // const { expect } = require("chai");
@@ -11,7 +11,7 @@
 
 //     const tokenInfo = {
 //       // token info to test
-//       name: 'Olympus',
+//       name: 'GOAT',
 //       symbol: 'OLY',
 //       decimals: 18,
 //       supply: 100000000, // 100 Million $OLY
@@ -47,7 +47,7 @@
 //       options = {
 //         // factory method to create new token contract
 //         create: async function () {
-//           Token = await ethers.getContractFactory("Olympus");
+//           Token = await ethers.getContractFactory("GOAT");
 //           return Token.deploy();
 //         },
 

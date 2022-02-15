@@ -869,11 +869,11 @@ contract VaultOwned is Ownable {
 
 }
 
-contract OlympusERC20Token is ERC20Permit, VaultOwned {
+contract GOATERC20Token is ERC20Permit, VaultOwned {
 
     using SafeMath for uint256;
 
-    constructor() ERC20("Olympus", "OHM", 9) {
+    constructor() ERC20("GOAT", "GOAT", 9) {
     }
 
     function mint(address account_, uint256 amount_) external onlyVault() {

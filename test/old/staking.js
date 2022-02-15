@@ -23,8 +23,8 @@
 
 //         await oly.mint(treasury.address, 9000000000000000);
 
-//         sOLY = await ethers.getContractFactory('sOlympus');
-//         soly = await sOLY.deploy('sOlympus', 'sOLY', staking.address);
+//         sOLY = await ethers.getContractFactory('sGOAT');
+//         soly = await sOLY.deploy('sGOAT', 'sOLY', staking.address);
     
 //         await staking.setSOLY(soly.address);
 //         await staking.setOwner(treasury.address)

@@ -1,5 +1,5 @@
-// @dev. This script will deploy this V1.1 of Olympus. It will deploy the whole ecosystem except for the LP tokens and their bonds. 
-// This should be enough of a test environment to learn about and test implementations with the Olympus as of V1.1.
+// @dev. This script will deploy this V1.1 of GOAT. It will deploy the whole ecosystem except for the LP tokens and their bonds. 
+// This should be enough of a test environment to learn about and test implementations with the GOAT as of V1.1.
 // Not that the every instance of the Treasury's function 'valueOf' has been changed to 'valueOfToken'... 
 // This solidity function was conflicting w js object property name
 
@@ -58,9 +58,9 @@ async function main() {
     // Initial Bond debt
     const intialBondDebt = '0'
 
-    // Deploy OHM
-    const OHM = await ethers.getContractFactory('OlympusERC20Token');
-    const ohm = await OHM.deploy();
+    // Deploy GOAT
+    const GOAT = await ethers.getContractFactory('GOATERC20Token');
+    const GOAT = await GOAT.deploy();
 
     // Deploy DAI
     const DAI = await ethers.getContractFactory('DAI');
@@ -76,42 +76,42 @@ async function main() {
 
     // Deploy treasury
     //@dev changed function in treaury from 'valueOf' to 'valueOfToken'... solidity function was coflicting w js object property name
-    const Treasury = await ethers.getContractFactory('MockOlympusTreasury'); 
-    const treasury = await Treasury.deploy( ohm.address, dai.address, frax.address, 0 );
+    const Treasury = await ethers.getContractFactory('MockGOATTreasury'); 
+    const treasury = await Treasury.deploy( GOAT.address, dai.address, frax.address, 0 );
 
     // Deploy bonding calc
-    const OlympusBondingCalculator = await ethers.getContractFactory('OlympusBondingCalculator');
-    const olympusBondingCalculator = await OlympusBondingCalculator.deploy( ohm.address );
+    const GOATBondingCalculator = await ethers.getContractFactory('GOATBondingCalculator');
+    const GOATBondingCalculator = await GOATBondingCalculator.deploy( GOAT.address );
 
     // Deploy staking distributor
     const Distributor = await ethers.getContractFactory('Distributor');
-    const distributor = await Distributor.deploy(treasury.address, ohm.address, epochLengthInBlocks, firstEpochBlock);
+    const distributor = await Distributor.deploy(treasury.address, GOAT.address, epochLengthInBlocks, firstEpochBlock);
 
-    // Deploy sOHM
-    const SOHM = await ethers.getContractFactory('sOlympus');
-    const sOHM = await SOHM.deploy();
+    // Deploy sGOAT
+    const SGOAT = await ethers.getContractFactory('sGOAT');
+    const sGOAT = await SGOAT.deploy();
 
     // Deploy Staking
-    const Staking = await ethers.getContractFactory('OlympusStaking');
-    const staking = await Staking.deploy( ohm.address, sOHM.address, epochLengthInBlocks, firstEpochNumber, firstEpochBlock );
+    const Staking = await ethers.getContractFactory('GOATStaking');
+    const staking = await Staking.deploy( GOAT.address, sGOAT.address, epochLengthInBlocks, firstEpochNumber, firstEpochBlock );
 
     // Deploy staking warmpup
     const StakingWarmpup = await ethers.getContractFactory('StakingWarmup');
-    const stakingWarmup = await StakingWarmpup.deploy(staking.address, sOHM.address);
+    const stakingWarmup = await StakingWarmpup.deploy(staking.address, sGOAT.address);
 
     // Deploy staking helper
     const StakingHelper = await ethers.getContractFactory('StakingHelper');
-    const stakingHelper = await StakingHelper.deploy(staking.address, ohm.address);
+    const stakingHelper = await StakingHelper.deploy(staking.address, GOAT.address);
 
     // Deploy DAI bond
     //@dev changed function call to Treasury of 'valueOf' to 'valueOfToken' in BondDepository due to change in Treausry contract
-    const DAIBond = await ethers.getContractFactory('MockOlympusBondDepository');
-    const daiBond = await DAIBond.deploy(ohm.address, dai.address, treasury.address, MockDAO.address, zeroAddress);
+    const DAIBond = await ethers.getContractFactory('MockGOATBondDepository');
+    const daiBond = await DAIBond.deploy(GOAT.address, dai.address, treasury.address, MockDAO.address, zeroAddress);
 
     // Deploy Frax bond
     //@dev changed function call to Treasury of 'valueOf' to 'valueOfToken' in BondDepository due to change in Treausry contract
-    const FraxBond = await ethers.getContractFactory('MockOlympusBondDepository');
-    const fraxBond = await FraxBond.deploy(ohm.address, frax.address, treasury.address, MockDAO.address, zeroAddress);
+    const FraxBond = await ethers.getContractFactory('MockGOATBondDepository');
+    const fraxBond = await FraxBond.deploy(GOAT.address, frax.address, treasury.address, MockDAO.address, zeroAddress);
 
     // queue and toggle DAI and Frax bond reserve depositor
     await treasury.queue('0', daiBond.address);
@@ -127,16 +127,16 @@ async function main() {
     await daiBond.setStaking(staking.address, stakingHelper.address);
     await fraxBond.setStaking(staking.address, stakingHelper.address);
 
-    // Initialize sOHM and set the index
-    await sOHM.initialize(staking.address);
-    await sOHM.setIndex(initialIndex);
+    // Initialize sGOAT and set the index
+    await sGOAT.initialize(staking.address);
+    await sGOAT.setIndex(initialIndex);
 
     // set distributor contract and warmup contract
     await staking.setContract('0', distributor.address);
     await staking.setContract('1', stakingWarmup.address);
 
-    // Set treasury for OHM token
-    await ohm.setVault(treasury.address);
+    // Set treasury for GOAT token
+    await GOAT.setVault(treasury.address);
 
     // Add staking contract as distributor recipient
     await distributor.addRecipient(staking.address, initialRewardRate);
@@ -161,30 +161,30 @@ async function main() {
     await dai.approve(daiBond.address, largeApproval );
     await frax.approve(fraxBond.address, largeApproval );
 
-    // Approve staking and staking helper contact to spend deployer's OHM
-    await ohm.approve(staking.address, largeApproval);
-    await ohm.approve(stakingHelper.address, largeApproval);
+    // Approve staking and staking helper contact to spend deployer's GOAT
+    await GOAT.approve(staking.address, largeApproval);
+    await GOAT.approve(stakingHelper.address, largeApproval);
 
-    // Deposit 9,000,000 DAI to treasury, 600,000 OHM gets minted to deployer and 8,400,000 are in treasury as excesss reserves
+    // Deposit 9,000,000 DAI to treasury, 600,000 GOAT gets minted to deployer and 8,400,000 are in treasury as excesss reserves
     await treasury.deposit('9000000000000000000000000', dai.address, '8400000000000000');
 
     // Deposit 5,000,000 Frax to treasury, all is profit and goes as excess reserves
     await treasury.deposit('5000000000000000000000000', frax.address, '5000000000000000');
 
-    // Stake OHM through helper
+    // Stake GOAT through helper
     await stakingHelper.stake('100000000000');
 
-    // Bond 1,000 OHM and Frax in each of their bonds
+    // Bond 1,000 GOAT and Frax in each of their bonds
     await daiBond.deposit('1000000000000000000000', '60000', deployer.address );
     await fraxBond.deposit('1000000000000000000000', '60000', deployer.address );
 
-    console.log( "OHM: " + ohm.address );
+    console.log( "GOAT: " + GOAT.address );
     console.log( "DAI: " + dai.address );
     console.log( "Frax: " + frax.address );
     console.log( "Treasury: " + treasury.address );
-    console.log( "Calc: " + olympusBondingCalculator.address );
+    console.log( "Calc: " + GOATBondingCalculator.address );
     console.log( "Staking: " + staking.address );
-    console.log( "sOHM: " + sOHM.address );
+    console.log( "sGOAT: " + sGOAT.address );
     console.log( "Distributor " + distributor.address);
     console.log( "Staking Warmup " + stakingWarmup.address);
     console.log( "Staking Helper " + stakingHelper.address);

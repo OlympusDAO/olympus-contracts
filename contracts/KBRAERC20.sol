@@ -987,7 +987,7 @@ contract Ownable is IOwnable {
     }
 }
 
-contract sOlympus is ERC20Permit, Ownable {
+contract KBRA is ERC20Permit, Ownable {
 
     using SafeMath for uint256;
 
@@ -1031,7 +1031,7 @@ contract sOlympus is ERC20Permit, Ownable {
 
     mapping ( address => mapping ( address => uint256 ) ) private _allowedValue;
 
-    constructor() ERC20("Staked Olympus", "sOHM", 9) ERC20Permit() {
+    constructor() ERC20("Staked GOAT", "KBRA", 9) ERC20Permit() {
         initializer = msg.sender;
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
@@ -1057,7 +1057,7 @@ contract sOlympus is ERC20Permit, Ownable {
     }
 
     /**
-        @notice increases sOHM supply to increase staking balances relative to profit_
+        @notice increases KBRA supply to increase staking balances relative to profit_
         @param profit_ uint256
         @return uint256
      */
@@ -1126,7 +1126,7 @@ contract sOlympus is ERC20Permit, Ownable {
         return gons.div( _gonsPerFragment );
     }
 
-    // Staking contract holds excess sOHM
+    // Staking contract holds excess KBRA
     function circulatingSupply() public view returns ( uint ) {
         return _totalSupply.sub( balanceOf( stakingContract ) );
     }

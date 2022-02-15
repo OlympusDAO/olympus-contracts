@@ -3,7 +3,7 @@ const { solidity } = require("ethereum-waffle");
 const { expect } = require("chai");
 const { time } = require("@openzeppelin/test-helpers");
 
-describe('OlympusBondingCalculator', () => {
+describe('GOATBondingCalculator', () => {
 
     let
       // Used as default deployer for contracts, asks as owner of contracts.
@@ -49,7 +49,7 @@ describe('OlympusBondingCalculator', () => {
         MockDebtCalculatorContract = await ethers.getContractFactory('MockDebtCalculator');
         mockDebtCalculator = await MockDebtCalculatorContract.connect(deployer).deploy();
         
-        BondingCalcContract = await ethers.getContractFactory('OlympusBondingCalculator');
+        BondingCalcContract = await ethers.getContractFactory('GOATBondingCalculator');
         bondingCalc = await BondingCalcContract.connect(deployer).deploy();
 
       }

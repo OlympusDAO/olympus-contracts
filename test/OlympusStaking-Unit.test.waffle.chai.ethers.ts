@@ -13,7 +13,7 @@ const { expect } = require("chai");
 
 // type Contract = any
 
-describe('Olympus Staking', () => {
+describe('GOAT Staking', () => {
 
 
     let
@@ -51,10 +51,10 @@ describe('Olympus Staking', () => {
 
         [deployer, addr1, addr2, addr3] = await ethers.getSigners();
 
-        OLY = await ethers.getContractFactory('OlympusERC20TOken');
+        OLY = await ethers.getContractFactory('GOATERC20TOken');
         oly = await OLY.deploy();
 
-        Staking = await ethers.getContractFactory('OlympusStaking');
+        Staking = await ethers.getContractFactory('GOATStaking');
         staking = await Staking.deploy();
 
         Treasury = await ethers.getContractFactory('MockTreasury');
@@ -67,7 +67,7 @@ describe('Olympus Staking', () => {
 
         await oly.mint(treasury.address, 9000000000000000);
 
-        sOLY = await ethers.getContractFactory('sOlympus');
+        sOLY = await ethers.getContractFactory('sGOAT');
         soly = await sOLY.deploy(staking.address);
 
         await staking.initialize( oly.address, soly.address, treasury.address, calculateEpoch.address);

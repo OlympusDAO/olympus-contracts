@@ -1,12 +1,12 @@
 {
-  "name": "olympus-contracts",
+  "name": "goat-contracts",
   "version": "1.0.0",
-  "description": "Smart Contracts for Olympus",
+  "description": "Smart Contracts for GOAT",
   "directories": {
     "test": "test"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^3.4.0"
+    "@openzeppelin/contracts": "^3.4.2"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
@@ -30,11 +30,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OlympusDAO/olympus-contracts.git"
+    "url": "git+https://github.com/GOATDAO/goat-contracts.git"
   },
   "author": "",
   "bugs": {
-    "url": "https://github.com/OlympusDAO/olympus-contracts/issues"
+    "url": "https://github.com/GOATDAO/goat-contracts/issues"
   },
-  "homepage": "https://github.com/OlympusDAO/olympus-contracts#readme"
+  "homepage": "https://github.com/GOATDAO/goat-contracts#readme"
 }

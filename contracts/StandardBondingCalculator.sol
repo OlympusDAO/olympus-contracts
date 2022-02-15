@@ -259,26 +259,29 @@ interface IBondingCalculator {
   function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
 }
 
-contract OlympusBondingCalculator is IBondingCalculator {
+contract GOATBondingCalculator is IBondingCalculator {
 
     using FixedPoint for *;
     using SafeMath for uint;
     using SafeMath for uint112;
 
-    address public immutable OHM;
+    address public immutable GOAT;
 
-    constructor( address _OHM ) {
-        require( _OHM != address(0) );
-        OHM = _OHM;
+    constructor( address _GOAT ) {
+        require( _GOAT != address(0), "Zero address: GOAT" );
+        GOAT = _GOAT;
     }
 
     function getKValue( address _pair ) public view returns( uint k_ ) {
-        uint token0 = IERC20( IUniswapV2Pair( _pair ).token0() ).decimals();
-        uint token1 = IERC20( IUniswapV2Pair( _pair ).token1() ).decimals();
-        uint decimals = token0.add( token1 ).sub( IERC20( _pair ).decimals() );
+        uint token0Decimals = IERC20( IUniswapV2Pair( _pair ).token0() ).decimals();
+        uint token1Decimals = IERC20( IUniswapV2Pair( _pair ).token1() ).decimals();
+        uint token1Plus2Decimals = token0Decimals.add( token1Decimals );
+        uint pairDecimals = IERC20( _pair ).decimals();
+
+        uint decimalsDelta = token1Plus2Decimals >= pairDecimals ? token1Plus2Decimals.sub( pairDecimals ) : pairDecimals.sub( token1Plus2Decimals );
 
         (uint reserve0, uint reserve1, ) = IUniswapV2Pair( _pair ).getReserves();
-        k_ = reserve0.mul(reserve1).div( 10 ** decimals );
+         k_ = token1Plus2Decimals >= pairDecimals ? reserve0.mul(reserve1).div( 10 ** decimalsDelta ) : reserve0.mul(reserve1).mul( 10 ** decimalsDelta );
     }
 
     function getTotalValue( address _pair ) public view returns ( uint _value ) {
@@ -296,11 +299,11 @@ contract OlympusBondingCalculator is IBondingCalculator {
         ( uint reserve0, uint reserve1, ) = IUniswapV2Pair( _pair ).getReserves();
 
         uint reserve;
-        if ( IUniswapV2Pair( _pair ).token0() == OHM ) {
+        if ( IUniswapV2Pair( _pair ).token0() == GOAT ) {
             reserve = reserve1;
         } else {
             reserve = reserve0;
         }
-        return reserve.mul( 2 * ( 10 ** IERC20( OHM ).decimals() ) ).div( getTotalValue( _pair ) );
+        return reserve.mul( 2 * ( 10 ** IERC20( GOAT ).decimals() ) ).div( getTotalValue( _pair ) );
     }
 }
