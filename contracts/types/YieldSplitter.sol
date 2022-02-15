@@ -5,6 +5,11 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IgOHM} from "../interfaces/IgOHM.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
 
+/**
+    @title IOHMIndexWrapper
+    @notice This interface is used to wrap cross-chain oracles to also feed an index without needing IsOHM, 
+    while also being able to use sOHM on mainnet.
+ */
 interface IOHMIndexWrapper {
     function index() external view returns (uint256 index);
 }
