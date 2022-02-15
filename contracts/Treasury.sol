@@ -247,10 +247,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      * @param _amount uint256
      */
     function repayDebtWithOHM(uint256 _amount) external {
-        require(
-            permissions[STATUS.RESERVEDEBTOR][msg.sender] || permissions[STATUS.OHMDEBTOR][msg.sender],
-            notApproved
-        );
+        require(permissions[STATUS.RESERVEDEBTOR][msg.sender] || permissions[STATUS.OHMDEBTOR][msg.sender], notApproved);
         OHM.burnFrom(msg.sender, _amount);
         sOHM.changeDebt(_amount, msg.sender, false);
         totalDebt = totalDebt.sub(_amount);
@@ -275,9 +272,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
         address[] memory liquidityToken = registry[STATUS.LIQUIDITYTOKEN];
         for (uint256 i = 0; i < liquidityToken.length; i++) {
             if (permissions[STATUS.LIQUIDITYTOKEN][liquidityToken[i]]) {
-                reserves = reserves.add(
-                    tokenValue(liquidityToken[i], IERC20(liquidityToken[i]).balanceOf(address(this)))
-                );
+                reserves = reserves.add(tokenValue(liquidityToken[i], IERC20(liquidityToken[i]).balanceOf(address(this))));
             }
         }
         totalReserves = reserves;
@@ -377,14 +372,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
             timelock = block.number.add(blocksNeededForQueue.mul(2));
         }
         permissionQueue.push(
-            Queue({
-                managing: _status,
-                toPermit: _address,
-                calculator: _calculator,
-                timelockEnd: timelock,
-                nullify: false,
-                executed: false
-            })
+            Queue({managing: _status, toPermit: _address, calculator: _calculator, timelockEnd: timelock, nullify: false, executed: false})
         );
         emit PermissionQueued(_status, _address);
     }
