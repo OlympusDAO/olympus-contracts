@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import {IERC20} from "../interfaces/IERC20.sol";
 import {IgOHM} from "../interfaces/IgOHM.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
+import "../libraries/SafeMath.sol";
 
 interface IOHMIndexWrapper {
     function index() external view returns (uint256 index);
@@ -20,6 +21,7 @@ interface IOHMIndexWrapper {
  */
 abstract contract YieldSplitter {
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     error YieldSplitter_NotYourDeposit();
 
@@ -150,18 +152,18 @@ abstract contract YieldSplitter {
     /**
         @notice Convert flat sOHM value to agnostic gOHM value at current index
         @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
-             1e9 is because sOHM has 9 decimals.
+             1e18 is because sOHM has 9 decimals, gOHM has 18 and index has 9.
      */
     function _toAgnostic(uint256 amount_) internal view returns (uint256) {
-        return (amount_ * 1e9) / (indexWrapper.index());
+        return _amount.mul(1e18).div(indexWrapper.index());
     }
 
     /**
         @notice Convert agnostic gOHM value at current index to flat sOHM value
         @dev Agnostic value earns rebases. sOHM amount is gOHMamount * rebase_index.
-             1e9 is because sOHM has 9 decimals.
+             1e18 is because sOHM has 9 decimals, gOHM has 18 and index has 9.
      */
     function _fromAgnostic(uint256 amount_) internal view returns (uint256) {
-        return (amount_ * (indexWrapper.index())) / 1e9;
+        return _amount.mul(indexWrapper.index()).div(1e18);
     }
 }
