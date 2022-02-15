@@ -144,7 +144,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param amount_ Amount of gOHM debt to remove and return to donor
      */
     function withdrawPrincipal(uint256 depositId_, uint256 amount_) external {
-        uint256 amountWithdrawn = _withdraw(msg.sender, depositId_, amount_);
+        uint256 amountWithdrawn = _withdraw(depositId_, amount_);
 
         IERC20(gOHM).safeTransfer(msg.sender, amountWithdrawn);
     }
@@ -155,7 +155,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param amount_ Amount of gOHM debt to remove and return to donor as sOHM
      */
     function withdrawPrincipalAsSohm(uint256 depositId_, uint256 amount_) external {
-        uint256 amountWithdrawn = _withdraw(msg.sender, depositId_, amount_);
+        uint256 amountWithdrawn = _withdraw(depositId_, amount_);
 
         IERC20(sOHM).approve(address(staking), amountWithdrawn);
         staking.unwrap(msg.sender, amountWithdrawn);
@@ -326,7 +326,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param depositId_ Deposit id for this donation
     */
     function redeemYield(uint256 depositId_) external {
-        uint256 amountRedeemed = _redeem(msg.sender, depositId_);
+        uint256 amountRedeemed = _redeem(depositId_);
 
         IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
     }
@@ -336,7 +336,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param depositId_ Deposit id for this donation
     */
     function redeemYieldAsSohm(uint256 depositId_) external {
-        uint256 amountRedeemed = _redeem(msg.sender, depositId_);
+        uint256 amountRedeemed = _redeem(depositId_);
 
         IERC20(sOHM).approve(address(staking), amountRedeemed);
         staking.unwrap(msg.sender, amountRedeemed);
@@ -346,13 +346,13 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @notice Redeem recipient's full donated amount of sOHM at current index as gOHM
     */
     function redeemAllYield() external {
-        uint256 amountRedeemed = _redeemAll(msg.sender);
+        uint256 amountRedeemed = _redeemAll();
 
         IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
     }
 
     function redeemAllYieldAsSohm() external {
-        uint256 amountRedeemed = _redeemAll(msg.sender);
+        uint256 amountRedeemed = _redeemAll();
         
         IERC20(sOHM).approve(address(staking), amountRedeemed);
         staking.unwrap(msg.sender, amountRedeemed);
@@ -376,11 +376,11 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         emit Deposited(depositInfo[depositId_].depositor, recipientLookup[depositId_], amount_);
     }
 
-    function _withdraw(address donor_, uint256 depositId_, uint256 amount_) internal returns (uint256 amountWithdrawn) {
+    function _withdraw(uint256 depositId_, uint256 amount_) internal returns (uint256 amountWithdrawn) {
         if (isInvalidWithdrawal(amount_)) revert YieldDirector_InvalidWithdrawal();
 
         DepositInfo storage currDeposit = depositInfo[depositId_];
-        if (currDeposit.depositor != donor_) revert YieldDirector_NotYourDeposit();
+        if (currDeposit.depositor != msg.sender) revert YieldDirector_NotYourDeposit();
 
         uint256 withdrawableBalance = IgOHM(gOHM).balanceTo(currDeposit.principalAmount);
 
@@ -391,41 +391,41 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
             amountWithdrawn = amount_;
         }
 
-        emit Withdrawn(donor_, recipientLookup[depositId_], amountWithdrawn);
+        emit Withdrawn(msg.sender, recipientLookup[depositId_], amountWithdrawn);
     }
 
-    function _redeem(address recipient_, uint256 depositId_) internal returns (uint256 amountRedeemed) {
+    function _redeem(uint256 depositId_) internal returns (uint256 amountRedeemed) {
         if (redeemDisabled) revert YieldDirector_RedeemsDisabled();
-        if (recipientLookup[depositId_] != recipient_) revert YieldDirector_NotYourDeposit();
+        if (recipientLookup[depositId_] != msg.sender) revert YieldDirector_NotYourDeposit();
 
         amountRedeemed = _redeemYield(depositId_);
         if (amountRedeemed == 0) revert YieldDirector_NoRedeemableBalance();
 
         if (depositInfo[depositId_].principalAmount == 0) _closeDeposit(depositId_);
 
-        emit Redeemed(recipient_, amountRedeemed);
-        emit Donated(depositInfo[depositId_].depositor, recipient_, amountRedeemed);
+        emit Redeemed(msg.sender, amountRedeemed);
+        emit Donated(depositInfo[depositId_].depositor, msg.sender, amountRedeemed);
     }
 
-    function _redeemAll(address recipient_) internal returns (uint256 amountRedeemed) {
+    function _redeemAll() internal returns (uint256 amountRedeemed) {
         if (redeemDisabled) revert YieldDirector_RedeemsDisabled();
 
         amountRedeemed = 0;
 
-        uint256[] storage receiptIds = recipientIds[recipient_];
+        uint256[] storage receiptIds = recipientIds[msg.sender];
         
         for (uint256 index = 0; index < receiptIds.length; index++) {
-            uint256 currRedemption = _redeem(recipient_, receiptIds[index]);
+            uint256 currRedemption = _redeem(receiptIds[index]);
             amountRedeemed += currRedemption;
 
             if (depositInfo[receiptIds[index]].principalAmount == 0) _closeDeposit(receiptIds[index]);
 
-            emit Donated(depositInfo[receiptIds[index]].depositor, recipient_, currRedemption);
+            emit Donated(depositInfo[receiptIds[index]].depositor, msg.sender, currRedemption);
         }
 
         if (amountRedeemed == 0) revert YieldDirector_NoRedeemableBalance();
 
-        emit Redeemed(recipient_, amountRedeemed);
+        emit Redeemed(msg.sender, amountRedeemed);
     }
 
     /************************
