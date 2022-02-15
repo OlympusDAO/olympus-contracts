@@ -670,6 +670,7 @@ contract GOATBondDepository is Ownable {
 
 
 
+
     /* ======== EVENTS ======== */
 
     event BondCreated( uint deposit, uint indexed payout, uint indexed expires, uint indexed priceInUSD );
