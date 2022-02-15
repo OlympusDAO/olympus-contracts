@@ -95,7 +95,7 @@ abstract contract YieldSplitter {
     */
     function _withdrawAllPrincipal(uint256 id_) internal returns (uint256 amountWithdrawn) {
         if (depositInfo[id_].depositor != msg.sender) revert YieldSplitter_NotYourDeposit();
-        
+
         DepositInfo storage userDeposit = depositInfo[id_];
         amountWithdrawn = _toAgnostic(userDeposit.principalAmount);
         userDeposit.principalAmount = 0;
