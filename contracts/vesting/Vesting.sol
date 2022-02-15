@@ -86,6 +86,7 @@ contract VestingClaim is Ownable, FloorAccessControlled {
      * @param _amount uint256 The amount being claimed in FLOOR (9 decimals)
      */
     function claim(address _to, uint256 _amount) external {
+        // Convert our FLOOR input to WETH decimal accuracy
         FLOOR.safeTransfer(_to, _claim(_amount.mul(1e6)));
     }
 
@@ -108,12 +109,23 @@ contract VestingClaim is Ownable, FloorAccessControlled {
     function _claim(uint256 _amount) internal returns (uint256 toSend_) {
         Term memory info = terms[msg.sender];
 
+        // Get our total redeemable
+        uint256 redeemableForValue = redeemableFor(msg.sender);
+
+        // Sense check the amount requested
+        require(_amount > 0, "Nothing to claim");
+        require(redeemableForValue.mul(1e6) >= _amount, "Claim more than vested");
+
+        // Transfer WETH from sender to treasury
         WETH.safeTransferFrom(msg.sender, address(this), _amount);
         toSend_ = treasury.deposit(_amount, address(WETH), 0);
 
-        require(redeemableFor(msg.sender) >= toSend_, "Claim more than vested");
+        // Ensure our amount to send is valid
+        require(toSend_ > 0, "Nothing to claim");
+        require(redeemableForValue >= toSend_, "Claim more than vested");
         require(info.max.sub(claimed(msg.sender)) >= toSend_, "Claim more than max");
 
+        // Track claimed amount for sender
         terms[msg.sender].gClaimed = info.gClaimed.add(gFLOOR.balanceTo(toSend_));
     }
 
