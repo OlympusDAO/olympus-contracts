@@ -2,7 +2,7 @@ const { ethers, network } = require("hardhat");
 const { expect } = require("chai");
 const { smock } = require("@defi-wonderland/smock");
 
-describe("Bond Depository", async () => {
+describe.only("Bond Depository", async () => {
     const LARGE_APPROVAL = "100000000000000000000000000000000";
     // Initial mint for Frax, OHM and DAI (10,000,000)
     const initialMint = "10000000000000000000000000";
@@ -50,6 +50,7 @@ describe("Bond Depository", async () => {
         authFactory = await ethers.getContractFactory("OlympusAuthority");
         erc20Factory = await smock.mock("MockERC20");
         gOhmFactory = await smock.mock("MockGOhm");
+        treasuryFactory = await smock.mock("OlympusTreasury");
 
         depositoryFactory = await ethers.getContractFactory("OlympusBondDepositoryV2");
 
@@ -67,7 +68,9 @@ describe("Bond Depository", async () => {
             deployer.address
         );
         ohm = await erc20Factory.deploy("Olympus", "OHM", 9);
-        treasury = await smock.fake("ITreasury");
+        // treasury = await smock.fake("ITreasury");
+        treasury = await treasuryFactory.deploy(ohm.address, 0, auth.address);
+        await treasury.enable(2, dai.address, "0x0000000000000000000000000000000000000000");
         gOHM = await gOhmFactory.deploy("50000000000"); // Set index as 50
         staking = await smock.fake("OlympusStaking");
         depository = await depositoryFactory.deploy(
@@ -77,6 +80,7 @@ describe("Bond Depository", async () => {
             staking.address,
             treasury.address
         );
+        await treasury.enable(0, depository.address, "0x0000000000000000000000000000000000000000");
 
         // Setup for each component
         await dai.mint(bob.address, initialMint);

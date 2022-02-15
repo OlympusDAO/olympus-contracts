@@ -194,18 +194,10 @@ contract OlympusBondDepositoryV2 is IBondDepository, NoteKeeper {
 
             // get tokenValue from treasury to calculate profit for deposit
             uint256 value = treasury.tokenValue(address(market.quoteToken), _amount);
-            uint256 profit;
-            if (value > toMint) {
-                profit = value - toMint;
-            }
+            uint256 profit = value - toMint;
             
             // deposit the payment to the treasury
-            uint256 sent = treasury.deposit(_amount, address(market.quoteToken), profit);
-
-            // mint difference in OHM from what the treasury sent to get the correct payout
-            if (sent < toMint) {
-                treasury.mint(address(this), toMint - sent);
-            }
+            treasury.deposit(_amount, address(market.quoteToken), profit);
         } else {
             // transfer payment from user to treasury directly
             market.quoteToken.safeTransferFrom(msg.sender, address(treasury), _amount);
@@ -413,6 +405,9 @@ contract OlympusBondDepositoryV2 is IBondDepository, NoteKeeper {
         );
 
         marketsForQuote[address(_quoteToken)].push(id_);
+
+        // Approve the treasury for quoteToken if quoteTokenIsReserve
+        if (_booleans[1]) _quoteToken.approve(address(treasury), type(uint256).max);
 
         emit CreateMarket(id_, address(ohm), address(_quoteToken), _market[1]);
     }
