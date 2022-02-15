@@ -1,7 +1,6 @@
 .DS_Store
 cache/
 artifacts/
-types/
 
 coverage*
 /types/
