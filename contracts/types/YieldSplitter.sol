@@ -17,7 +17,10 @@ import {SafeERC20} from "../libraries/SafeERC20.sol";
 abstract contract YieldSplitter {
     using SafeERC20 for IERC20;
 
+    error YieldSplitter_NotYourDeposit();
+
     address public immutable gOHM;
+    address public immutable indexWrapper;
 
     struct DepositInfo {
         uint256 id;
@@ -74,6 +77,8 @@ abstract contract YieldSplitter {
         @param amount_ Amount of gOHM to withdraw.
     */
     function _withdrawPrincipal(uint256 id_, uint256 amount_) internal {
+        if (depositInfo[id_].depositor != msg.sender) revert YieldSplitter_NotYourDeposit();
+
         DepositInfo storage userDeposit = depositInfo[id_];
         userDeposit.principalAmount -= IgOHM(gOHM).balanceFrom(amount_); // Reverts if amount > principal due to underflow
         userDeposit.agnosticAmount -= amount_;
@@ -85,6 +90,8 @@ abstract contract YieldSplitter {
         @return amountWithdrawn : amount of gOHM withdrawn. 18 decimals.
     */
     function _withdrawAllPrincipal(uint256 id_) internal returns (uint256 amountWithdrawn) {
+        if (depositInfo[id_].depositor != msg.sender) revert YieldSplitter_NotYourDeposit();
+        
         DepositInfo storage userDeposit = depositInfo[id_];
         amountWithdrawn = IgOHM(gOHM).balanceTo(userDeposit.principalAmount);
         userDeposit.principalAmount = 0;
