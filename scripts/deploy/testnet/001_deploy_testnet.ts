@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { CONTRACTS, INITIAL_MINT, INITIAL_MINT_PROFIT } from "../../constants";
+import { CONTRACTS, INITIAL_MINT, INITIAL_MINT_PROFIT, TEST_WALLET_ADDRESS } from "../../constants";
 import { OlympusERC20Token__factory, OlympusTreasury__factory, DAI__factory } from "../../../types";
 import { waitFor } from "../../txHelper";
 import fs from "fs";
@@ -95,6 +95,10 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const contractFile = `${subDir}/addresses.json`;
     fs.writeFileSync(contractFile, JSON.stringify(addresses, null, 4));
     console.log(`Wrote contract addresses to ${contractFile}`);
+
+    console.log(
+        `Wallet at address ${TEST_WALLET_ADDRESS} has been seeded with 10,000 ETH. Check hardhat config for the mnemonic.`
+    );
 };
 
 func.tags = ["faucet", "testnet"];
