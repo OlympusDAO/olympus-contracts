@@ -75,6 +75,8 @@ abstract contract NoteKeeper is INoteKeeper, FrontEndRewarder {
       })
     );
 
+    emit CreateNote(_user, _marketID, index_, gFLOOR.balanceTo(_payout), _expiry);
+
     // front end operators can earn rewards by referring users
     uint256 rewards = _giveRewards(_payout, _referral);
 
@@ -83,8 +85,6 @@ abstract contract NoteKeeper is INoteKeeper, FrontEndRewarder {
 
     // note that only the payout gets staked (front end rewards are in FLOOR)
     staking.stake(address(this), _payout, false, true);
-
-    emit CreateNote(_user, _marketID, index_, gFLOOR.balanceTo(_payout), _expiry);
   }
 
 /* ========== REDEEM ========== */
