@@ -17,7 +17,7 @@ describe("Vesting", async () => {
      * Everything in this block is only run once before all tests.
      * This is the home for setup methods
      */
-    before(async () => {
+    beforeEach(async () => {
         [deployer, alice, bob, carol] = await ethers.getSigners();
 
         erc20Factory = await smock.mock("MockERC20");
@@ -54,14 +54,26 @@ describe("Vesting", async () => {
 
         await vestingClaim.approve();
         await vestingClaim.setTerms(
+            alice.address,
+            10000,  // 1% percent
+            0,  // 0 gClaimed
+            100000000000  // Max claim 100 FLOOR
+        );
+        await vestingClaim.setTerms(
             bob.address,
+            10000,  // 1% percent
+            0,  // 0 gClaimed
+            1000000000000  // Max claim 1000 FLOOR
+        );
+        await vestingClaim.setTerms(
+            carol.address,
             10000,  // 1% percent
             0,  // 0 gClaimed
             1000000000000  // Max claim 1000 FLOOR
         );
     });
 
-    it("should vest", async () => {
+    it("should be able to vest and claim", async () => {
         await _weth.mint(deployer.address, "10000000000000000000");
         await _weth.approve(vestingClaim.address, _weth.balanceOf(deployer.address));
         await _weth.approve(_treasury.address, _weth.balanceOf(deployer.address));
@@ -96,6 +108,108 @@ describe("Vesting", async () => {
 
         expect(await _weth.balanceOf(_treasury.address)).to.equal("1100000000000000000");
         expect(await _floor.balanceOf(_treasury.address)).to.equal("10000000000000");
+    });
+
+    it("should not allow a claim greater than max", async () => {
+        await _weth.mint(deployer.address, "10000000000000000000");
+        await _weth.approve(vestingClaim.address, _weth.balanceOf(deployer.address));
+        await _weth.approve(_treasury.address, _weth.balanceOf(deployer.address));
+        await _treasury.enable(0, deployer.address, ethers.constants.AddressZero)
+
+        // Give alice 10 WETH
+        await _weth.mint(alice.address, "10000000000000000000");
+
+        await _weth.connect(alice).approve(vestingClaim.address, _weth.balanceOf(alice.address));
+
+        // Put 100 WETH into the treasury to cover 100,000 FLOOR
+        await _weth.mint(_treasury.address, "100000000000000000000");
+
+        // Audit the reserves to generate corresponding FLOOR
+        await _treasury.auditReserves();
+
+        // Put 20,000 FLOOR in the treasury
+        await _floor.mint(_treasury.address, "20000000000000");
+
+        // At this point our treasury will have a totalReserves() value of 100 WETH and 20,000 FLOOR.
+        expect(await _weth.balanceOf(_treasury.address)).to.equal("100000000000000000000");
+        expect(await _floor.balanceOf(_treasury.address)).to.equal("20000000000000");
+
+        // Alice can only claim 1% of the total FLOOR which is 200 out of 20,000 but maxed at
+        // 100. This is set in her terms.
+        expect(await vestingClaim.redeemableFor(alice.address)).to.equal("100000000000");
+
+        let vesting_terms = await vestingClaim.terms(alice.address);
+        expect((vesting_terms.gClaimed).toString(), "0")
+
+        // Claim 70 FLOOR
+        await vestingClaim.connect(alice).claim(alice.address, "70000000000");
+
+        expect(await vestingClaim.redeemableFor(alice.address)).to.equal("30000000000");
+
+        vesting_terms = await vestingClaim.terms(alice.address);
+        expect((vesting_terms.gClaimed).toString(), "70000000000000000000")
+
+        // Try and claim 30.000000001 FLOOR
+        await expect(vestingClaim.connect(alice).claim(alice.address, "30000000001")).to.be.revertedWith("Claim more than vested");
+
+        // Claim 30 FLOOR
+        await vestingClaim.connect(alice).claim(alice.address, "30000000000");
+
+        // Nothing more should be vesting
+        expect(await vestingClaim.redeemableFor(alice.address)).to.equal("0");
+
+        a = await vestingClaim.terms(alice.address);
+        expect((vesting_terms.gClaimed).toString(), "100000000000000000000")
+
+        // Try and claim 1 FLOOR
+        await expect(vestingClaim.connect(alice).claim(alice.address, "1000000000")).to.be.revertedWith("Claim more than vested");
+    });
+
+    it("should not allow a claim greater than percentage", async () => {
+        await _weth.mint(deployer.address, "10000000000000000000");
+        await _weth.approve(vestingClaim.address, _weth.balanceOf(deployer.address));
+        await _weth.approve(_treasury.address, _weth.balanceOf(deployer.address));
+        await _treasury.enable(0, deployer.address, ethers.constants.AddressZero)
+
+        // Give carol 10 WETH
+        await _weth.mint(carol.address, "10000000000000000000");
+
+        await _weth.connect(carol).approve(vestingClaim.address, _weth.balanceOf(carol.address));
+
+        // Put 100 WETH into the treasury to cover 100,000 FLOOR
+        await _weth.mint(_treasury.address, "100000000000000000000");
+
+        // Audit the reserves to generate corresponding FLOOR
+        await _treasury.auditReserves();
+
+        // Put 20,000 FLOOR in the treasury
+        await _floor.mint(_treasury.address, "20000000000000");
+
+        // At this point our treasury will have a totalReserves() value of 100 WETH and 20,000 FLOOR.
+        expect(await _weth.balanceOf(_treasury.address)).to.equal("100000000000000000000");
+        expect(await _floor.balanceOf(_treasury.address)).to.equal("20000000000000");
+
+        // Carol can only claim 1% of the total FLOOR which is 200 out of 20,000.
+        expect(await vestingClaim.redeemableFor(carol.address)).to.equal("200000000000");
+
+        let vesting_terms = await vestingClaim.terms(carol.address);
+        expect((vesting_terms.gClaimed).toString(), "0")
+
+        // Claim 200 FLOOR
+        await vestingClaim.connect(carol).claim(carol.address, "200000000000");
+
+        // The claim has added more FLOOR to the treasury so it won't be 0, but instead still 1%
+        // including the additional WETH from the claim.
+        expect(await vestingClaim.redeemableFor(carol.address)).to.equal("2000000000");
+
+        vesting_terms = await vestingClaim.terms(carol.address);
+        expect((vesting_terms.gClaimed).toString(), "200000000000000000000")
+
+        // Increase Carol max supply by increase the number of floor in circulation by 10,000. This
+        // will give her another potential to claim 100 FLOOR.
+        await _floor.mint(_treasury.address, "10000000000000");
+
+        expect(await vestingClaim.redeemableFor(carol.address)).to.equal("102000000000");
     });
 
 });
