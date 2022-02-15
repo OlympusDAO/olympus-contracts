@@ -5,6 +5,10 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IgOHM} from "../interfaces/IgOHM.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
 
+interface IOHMIndexWrapper {
+    function index() external view returns (uint256 index);
+}
+
 /**
     @title YieldSplitter
     @notice Abstract contract that allows users to create deposits for their gOHM and have
@@ -19,8 +23,7 @@ abstract contract YieldSplitter {
 
     error YieldSplitter_NotYourDeposit();
 
-    address public immutable gOHM;
-    address public immutable indexWrapper;
+    IOHMIndexWrapper public immutable indexWrapper;
 
     struct DepositInfo {
         uint256 id;
@@ -35,10 +38,11 @@ abstract contract YieldSplitter {
 
     /**
         @notice Constructor
-        @param gOHM_ Address of gOHM.
+        @param indexWrapper_ Address of contract that will return the sOHM to gOHM index. 
+                             On mainnet this will be sOHM but on other chains can be an oracle wrapper.
     */
-    constructor(address gOHM_) {
-        gOHM = gOHM_;
+    constructor(address indexWrapper_) {
+        indexWrapper = IOHMIndexWrapper(indexWrapper_);
     }
 
     /**
@@ -52,7 +56,7 @@ abstract contract YieldSplitter {
         depositInfo[idCount] = DepositInfo({
             id: idCount,
             depositor: depositor_,
-            principalAmount: IgOHM(gOHM).balanceFrom(amount_),
+            principalAmount: _fromAgnostic(amount_),
             agnosticAmount: amount_
         });
 
@@ -67,7 +71,7 @@ abstract contract YieldSplitter {
     */
     function _addToDeposit(uint256 id_, uint256 amount_) internal {
         DepositInfo storage userDeposit = depositInfo[id_];
-        userDeposit.principalAmount += IgOHM(gOHM).balanceFrom(amount_);
+        userDeposit.principalAmount += _fromAgnostic(amount_);
         userDeposit.agnosticAmount += amount_;
     }
 
@@ -80,7 +84,7 @@ abstract contract YieldSplitter {
         if (depositInfo[id_].depositor != msg.sender) revert YieldSplitter_NotYourDeposit();
 
         DepositInfo storage userDeposit = depositInfo[id_];
-        userDeposit.principalAmount -= IgOHM(gOHM).balanceFrom(amount_); // Reverts if amount > principal due to underflow
+        userDeposit.principalAmount -= _fromAgnostic(amount_); // Reverts if amount > principal due to underflow
         userDeposit.agnosticAmount -= amount_;
     }
 
@@ -93,7 +97,7 @@ abstract contract YieldSplitter {
         if (depositInfo[id_].depositor != msg.sender) revert YieldSplitter_NotYourDeposit();
         
         DepositInfo storage userDeposit = depositInfo[id_];
-        amountWithdrawn = IgOHM(gOHM).balanceTo(userDeposit.principalAmount);
+        amountWithdrawn = _toAgnostic(userDeposit.principalAmount);
         userDeposit.principalAmount = 0;
         userDeposit.agnosticAmount -= amountWithdrawn;
     }
@@ -107,7 +111,7 @@ abstract contract YieldSplitter {
         DepositInfo storage userDeposit = depositInfo[id_];
 
         amountRedeemed = _getOutstandingYield(userDeposit.principalAmount, userDeposit.agnosticAmount);
-        userDeposit.agnosticAmount = IgOHM(gOHM).balanceTo(userDeposit.principalAmount);
+        userDeposit.agnosticAmount = _toAgnostic(userDeposit.principalAmount);
     }
 
     /**
@@ -119,7 +123,7 @@ abstract contract YieldSplitter {
         @return agnosticAmount : total amount of gOHM deleted. Principal + Yield. 18 decimals.
     */
     function _closeDeposit(uint256 id_) internal returns (uint256 principal, uint256 agnosticAmount) {
-        principal = IgOHM(gOHM).balanceTo(depositInfo[id_].principalAmount);
+        principal = _toAgnostic(depositInfo[id_].principalAmount);
         agnosticAmount = depositInfo[id_].agnosticAmount;
 
         uint256[] storage depositorIdsArray = depositorIds[depositInfo[id_].depositor];
@@ -140,6 +144,24 @@ abstract contract YieldSplitter {
         @return uint256 amount of yield in gOHM. 18 decimals.
      */
     function _getOutstandingYield(uint256 principal_, uint256 agnosticAmount_) internal view returns (uint256) {
-        return agnosticAmount_ - IgOHM(gOHM).balanceTo(principal_);
+        return agnosticAmount_ - _toAgnostic(principal_);
+    }
+
+    /**
+        @notice Convert flat sOHM value to agnostic gOHM value at current index
+        @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.
+             1e9 is because sOHM has 9 decimals.
+     */
+    function _toAgnostic(uint256 amount_) internal view returns (uint256) {
+        return (amount_ * 1e9) / (indexWrapper.index());
+    }
+
+    /**
+        @notice Convert agnostic gOHM value at current index to flat sOHM value
+        @dev Agnostic value earns rebases. sOHM amount is gOHMamount * rebase_index.
+             1e9 is because sOHM has 9 decimals.
+     */
+    function _fromAgnostic(uint256 amount_) internal view returns (uint256) {
+        return (amount_ * (indexWrapper.index())) / 1e9;
     }
 }
