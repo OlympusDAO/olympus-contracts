@@ -32,7 +32,7 @@ contract UniswapV2PairMock {
     }
 
     function totalSupply() external view returns (uint256 supply) {
-        supply = 10000000;
+        supply = 100000000000000000000;
     }
 
 }

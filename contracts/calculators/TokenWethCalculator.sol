@@ -14,7 +14,7 @@ contract TokenWethCalculator is IBondingCalculator {
     using FixedPoint for *;
     using SafeMath for uint256;
 
-    IERC20 internal immutable token;  // Ensure this is public to be quried
+    IERC20 public token;  // Ensure this is public to be quried
     IERC20 internal immutable WETH;
     uint256 public immutable percent;
 
@@ -43,10 +43,11 @@ contract TokenWethCalculator is IBondingCalculator {
             revert("Invalid pair");
         }
 
+        // Always dealing with SLP (18 decimals)
         uint256 totalValue = reserve.mul(2).mul(percent).div(1e5);
         uint256 totalSupply = IUniswapV2Pair(_pair).totalSupply();
-
-        _value = totalValue.mul(FixedPoint.fraction(amount_, totalSupply).decode112with18()).div(1e18);
+        uint256 share = amount_.mul(1e18).div(totalSupply);
+        _value = totalValue.mul(share).div(1e18);
     }
 
 }

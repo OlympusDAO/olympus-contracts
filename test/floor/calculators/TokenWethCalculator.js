@@ -1,5 +1,5 @@
-const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const {expect} = require("chai");
+const {ethers} = require("hardhat");
 
 
 /**
@@ -40,8 +40,8 @@ describe("TokenWethCalculator", function () {
     PUNK = await floorContract.deploy(authority.address);
     WETH = await floorContract.deploy(authority.address);
 
-    let punkReserve = 50000000000000;
-    let wethReserve = 10000000000000;
+    let punkReserve = "20000000000000000000";
+    let wethReserve = "1400000000000000000000";
 
     // Set up a mocked pair
     const mockedPairContract = await ethers.getContractFactory("UniswapV2PairMock");
@@ -80,30 +80,30 @@ describe("TokenWethCalculator", function () {
   it("Should return correct valuation based on percentage", async function () {
     // Set up our TokenWethCalculator at 40%
     let tokenCalculator = await tokenWethCalculatorContract.deploy(PUNK.address, WETH.address, 40_000);
-    expect(await tokenCalculator.valuation(mockedPair.address, 1_000)).to.equal(800_000000);
-    expect(await tokenCalculator.valuation(mockedPair.address, 10_000)).to.equal(8000_000000);
-    expect(await tokenCalculator.valuation(mockedPair.address, 25_000)).to.equal(20000_000000);
-    expect(await tokenCalculator.valuation(mockedPair.address, 100_000)).to.equal(80000_000000);
+    expect(await tokenCalculator.valuation(mockedPair.address, "1000000000000000000")).to.equal("11200000000000000000");
+    expect(await tokenCalculator.valuation(mockedPair.address, "10000000000000000000")).to.equal("112000000000000000000");
+    expect(await tokenCalculator.valuation(mockedPair.address, "25000000000000000000")).to.equal("280000000000000000000");
+    expect(await tokenCalculator.valuation(mockedPair.address, "100000000000000000000")).to.equal("1120000000000000000000");
 
     // Confirm that we can calculate our valuation regardless of pair ordering
-    expect(await tokenCalculator.valuation(reversedMockedPair.address, 1_000)).to.equal(800_000000);
-    expect(await tokenCalculator.valuation(reversedMockedPair.address, 10_000)).to.equal(8000_000000);
-    expect(await tokenCalculator.valuation(reversedMockedPair.address, 25_000)).to.equal(20000_000000);
-    expect(await tokenCalculator.valuation(reversedMockedPair.address, 100_000)).to.equal(80000_000000);
+    expect(await tokenCalculator.valuation(reversedMockedPair.address, "1000000000000000000")).to.equal("11200000000000000000");
+    expect(await tokenCalculator.valuation(reversedMockedPair.address, "10000000000000000000")).to.equal("112000000000000000000");
+    expect(await tokenCalculator.valuation(reversedMockedPair.address, "25000000000000000000")).to.equal("280000000000000000000");
+    expect(await tokenCalculator.valuation(reversedMockedPair.address, "100000000000000000000")).to.equal("1120000000000000000000");
 
     // Set up our TokenWethCalculator at 25%
     tokenCalculator = await tokenWethCalculatorContract.deploy(PUNK.address, WETH.address, 25_000);
-    expect(await tokenCalculator.valuation(mockedPair.address, 1_000)).to.equal(500_000000);
-    expect(await tokenCalculator.valuation(mockedPair.address, 10_000)).to.equal(5000_000000);
-    expect(await tokenCalculator.valuation(mockedPair.address, 25_000)).to.equal(12500_000000);
-    expect(await tokenCalculator.valuation(mockedPair.address, 100_000)).to.equal(50000_000000);
+    expect(await tokenCalculator.valuation(mockedPair.address, "1000000000000000000")).to.equal("7000000000000000000");
+    expect(await tokenCalculator.valuation(mockedPair.address, "10000000000000000000")).to.equal("70000000000000000000");
+    expect(await tokenCalculator.valuation(mockedPair.address, "25000000000000000000")).to.equal("175000000000000000000");
+    expect(await tokenCalculator.valuation(mockedPair.address, "100000000000000000000")).to.equal("700000000000000000000");
 
     // Set up our TokenWethCalculator at 0%
     tokenCalculator = await tokenWethCalculatorContract.deploy(PUNK.address, WETH.address, 0);
-    expect(await tokenCalculator.valuation(mockedPair.address, 1_000)).to.equal(0);
-    expect(await tokenCalculator.valuation(mockedPair.address, 10_000)).to.equal(0);
-    expect(await tokenCalculator.valuation(mockedPair.address, 25_000)).to.equal(0);
-    expect(await tokenCalculator.valuation(mockedPair.address, 100_000)).to.equal(0);
+    expect(await tokenCalculator.valuation(mockedPair.address, "1000000000000000000")).to.equal("0");
+    expect(await tokenCalculator.valuation(mockedPair.address, "10000000000000000000")).to.equal("0");
+    expect(await tokenCalculator.valuation(mockedPair.address, "25000000000000000000")).to.equal("0");
+    expect(await tokenCalculator.valuation(mockedPair.address, "100000000000000000000")).to.equal("0");
   });
 
 });

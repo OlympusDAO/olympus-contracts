@@ -4,12 +4,13 @@ async function main() {
     const [deployer] = await ethers.getSigners();
     console.log("Deploying contracts with the account: " + deployer.address);
 
-    const floorTokenAddr = "0x46A5f5d91F02a5250e83ebE6bb8B0bDF0669b809";
+    const weeth = "0x4F2645F3D8e2542076A49De3F505016DC0a496B0";
+    const punk = "0x286AaF440879dBeAF6AFec6df1f9bfC907101f9D";
 
     console.log("Deploying FloorBondingCalculator...");
 
-    const BondingCalculator = await ethers.getContractFactory("FloorBondingCalculator");
-    const bondingCalculator = await BondingCalculator.deploy(floorTokenAddr);
+    const BondingCalculator = await ethers.getContractFactory("TokenWethCalculator");
+    const bondingCalculator = await BondingCalculator.deploy(punk, weeth, 40000);
 
     console.log("BondingCalculator:", bondingCalculator.address);
 }
