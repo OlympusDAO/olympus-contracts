@@ -69,7 +69,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     /**
      * Here we grab the deployment addresses and write them to a file.
-     * 
+     *
      * These can be used by a local developer, but primarily they will be used to
      * pass the addresses onto the frontend in an automated fashion.
      */
@@ -86,14 +86,15 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         STAKING_V2: (await deployments.get(CONTRACTS.staking)).address,
         OHM_FAUCET: faucetDeployment.address,
     };
-    
+
     // Create the output directory
     const subDir = "addresses";
-    if (!fs.existsSync(subDir))
-        fs.mkdirSync(subDir);
+    if (!fs.existsSync(subDir)) fs.mkdirSync(subDir);
 
     // Write the file (prettified)
-    fs.writeFileSync(`${subDir}/addresses.json`, JSON.stringify(addresses, null, 4));
+    const contractFile = `${subDir}/addresses.json`;
+    fs.writeFileSync(contractFile, JSON.stringify(addresses, null, 4));
+    console.log(`Wrote contract addresses to ${contractFile}`);
 };
 
 func.tags = ["faucet", "testnet"];
