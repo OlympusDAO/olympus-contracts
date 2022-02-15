@@ -538,6 +538,18 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
             return _amount.mul(riskOffValuation(_token)).div(10**IERC20Metadata(address(_token)).decimals());
         }
 
+        // If our token is present in our LIQUIDITYTOKEN array then we will utilise our bonding
+        // calculator to generate a valuation based on the liquidity pool balance. Again, this is
+        // converted to finney in the closing `mul`.
+
+        if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
+            return IBondingCalculator(bondCalculator[_token])
+              .valuation(_token, _amount)
+              .mul(10**IERC20Metadata(address(FLOOR)).decimals())
+              .div(10**IERC20Metadata(_token).decimals())
+              .mul(10**3);
+        }
+
         // The following calculation gets the equivalent FLOOR value by taking the decimal accuracy
         // of our FLOOR address, normalising it against the token being passed and then converting
         // the value to finney. The amount passed by default is expected to be WETH.
@@ -546,14 +558,6 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
             .mul(10**IERC20Metadata(address(FLOOR)).decimals())
             .div(10**IERC20Metadata(_token).decimals())
             .mul(10**3);
-
-        // If our token is present in our LIQUIDITYTOKEN array then we will utilise our bonding
-        // calculator to generate a valuation based on the liquidity pool balance. Again, this is
-        // converted to finney in the closing `mul`.
-
-        if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
-            value_ = IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount).mul(10**3);
-        }
     }
 
     /**
