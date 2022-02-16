@@ -8,6 +8,8 @@ interface ITreasury {
         uint256 _profit
     ) external returns (uint256);
 
+    function bondCalculator(address _address) external view returns (address);
+
     function withdraw(uint256 _amount, address _token) external;
 
     function tokenValue(address _token, uint256 _amount) external view returns (uint256 value_);

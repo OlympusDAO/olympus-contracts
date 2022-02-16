@@ -12,7 +12,7 @@ import "../interfaces/INFTXLPStaking.sol";
 import "../interfaces/INFTXVault.sol";
 import "../interfaces/ITreasury.sol";
 
-contract XTokenWethCalculator is IBondingCalculator {
+contract NFTXXTokenWethCalculator is IBondingCalculator {
 
     using FixedPoint for *;
     using SafeMath for uint256;

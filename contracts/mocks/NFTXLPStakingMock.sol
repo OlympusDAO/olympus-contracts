@@ -7,7 +7,7 @@ import "../libraries/SafeERC20.sol";
 import "../interfaces/INFTXLPStaking.sol";
 
 
-abstract contract NFTXLPStakingMock is INFTXLPStaking {
+contract NFTXLPStakingMock is INFTXLPStaking {
 
     using SafeERC20 for IERC20;
 
@@ -47,9 +47,13 @@ abstract contract NFTXLPStakingMock is INFTXLPStaking {
     }
 
     function vaultStakingInfo(uint256 vaultId) external view override returns (StakingPool memory _stakingPool) {
-      _stakingPool = StakingPool({
-        stakingToken: address(0),
-        rewardToken: address(0)
-      });
+        _stakingPool = StakingPool({
+            stakingToken: address(0),
+            rewardToken: address(0)
+        });
+    }
+
+    function _setAllocatorToken(address _allocatorToken) external {
+        allocatorToken = _allocatorToken;
     }
 }

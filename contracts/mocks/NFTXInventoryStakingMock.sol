@@ -6,7 +6,7 @@ import "../libraries/SafeERC20.sol";
 import "../interfaces/INFTXInventoryStaking.sol";
 
 
-abstract contract NFTXInventoryStaking is INFTXInventoryStaking {
+contract NFTXInventoryStaking is INFTXInventoryStaking {
 
     using SafeERC20 for IERC20;
 

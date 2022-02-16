@@ -44,6 +44,7 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         address underlying; // stakingToken
         address xToken; // dividendToken
         uint256 deployed;
+        bool exists;
     }
 
 
@@ -143,8 +144,11 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         require(stakingTokenInfo[_token].exists, "Unsupported staking token");
         require(dividendTokenInfo[_token].underlying == _token, "Unsupported dividend token");
 
+        // Ensure that a calculator exists for the `dividendTokenInfo[_token].xToken`
+        require(treasury.bondCalculator(dividendTokenInfo[_token].xToken) != address(0), "Unsupported xToken calculator");
+
         // Retrieve amount of asset from treasury, decreasing total reserves
-        treasury.withdraw(_amount, _token);
+        treasury.manage(_token, _amount);
 
         // Approve and deposit into inventory pool, returning xToken
         if (stakingTokenInfo[_token].isLiquidityPool) {
@@ -160,6 +164,7 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         uint256 value = treasury.tokenValue(dividendTokenInfo[_token].xToken, balance);
         
         // Deposit the xToken back into the treasury, increasing total reserves and minting 0 FLOOR
+        IERC20(dividendTokenInfo[_token].xToken).approve(address(treasury), balance);
         treasury.deposit(balance, dividendTokenInfo[_token].xToken, value);
 
         // Account for deposit
@@ -176,7 +181,7 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         require(dividendTokenInfo[_token].underlying == _token, "Unsupported dividend token");
 
         // Retrieve amount of asset from treasury, decreasing total reserves
-        treasury.withdraw(_amount, dividendTokenInfo[_token].xToken);
+        treasury.manage(dividendTokenInfo[_token].xToken, _amount);
 
         // Approve and withdraw from lending pool, returning asset and potentially reward tokens
         if (stakingTokenInfo[_token].isLiquidityPool) {
@@ -192,6 +197,7 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         uint256 value = treasury.tokenValue(_token, balance);
 
         // Deposit the token back into the treasury, increasing total reserves and minting 0 FLOOR
+        IERC20(_token).approve(address(treasury), balance);
         treasury.deposit(balance, _token, value);
 
         // Account for withdrawal
@@ -206,12 +212,13 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
     function addDividendToken(address _token, address _xToken) external override onlyPolicy {
         require(_token != address(0), "Token: Zero address");
         require(_xToken != address(0), "xToken: Zero address");
-        require(dividendTokenInfo[_token].deployed == 0, "Token already added");
+        require(!dividendTokenInfo[_token].exists, "Token already added");
 
         dividendTokenInfo[_token] = dividendTokenData({
             underlying: _token,
             xToken: _xToken,
-            deployed: 0
+            deployed: 0,
+            exists: true
         });
     }
 

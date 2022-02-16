@@ -24,8 +24,6 @@ contract TreasuryMock is FloorAccessControlled, ITreasury {
 
     event Deposit(address indexed token, uint256 amount, uint256 value);
     event Withdrawal(address indexed token, uint256 amount, uint256 value);
-    event AllocatorDeposit(address indexed token, uint256 amount, uint256 value);
-    event AllocatorWithdrawal(address indexed token, uint256 amount, uint256 value);
     event CreateDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
     event RepayDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
     event Managed(address indexed token, uint256 amount);
@@ -50,7 +48,7 @@ contract TreasuryMock is FloorAccessControlled, ITreasury {
         REWARDMANAGER,
         SFLOOR,
         FLOORDEBTOR,
-        ALLOCATOR
+        XTOKEN
     }
 
     struct Queue {
@@ -69,7 +67,7 @@ contract TreasuryMock is FloorAccessControlled, ITreasury {
 
     mapping(STATUS => address[]) public registry;
     mapping(STATUS => mapping(address => bool)) public permissions;
-    mapping(address => address) public bondCalculator;
+    mapping(address => address) public override bondCalculator;
     mapping(address => uint256) public _riskOffValuation; // 18 decimal in ETH terms 
 
     mapping(address => uint256) public debtLimit;
@@ -316,7 +314,7 @@ contract TreasuryMock is FloorAccessControlled, ITreasury {
         } else {
             permissions[_status][_address] = true;
 
-            if (_status == STATUS.LIQUIDITYTOKEN) {
+            if (_status == STATUS.LIQUIDITYTOKEN || _status == STATUS.XTOKEN) {
                 bondCalculator[_address] = _calculator;
             }
 
