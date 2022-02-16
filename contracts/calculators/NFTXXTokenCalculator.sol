@@ -11,7 +11,7 @@ import "../interfaces/INFTXInventoryStaking.sol";
 import "../interfaces/INFTXVault.sol";
 import "../interfaces/ITreasury.sol";
 
-contract XTokenCalculator is IBondingCalculator {
+contract NFTXXTokenCalculator is IBondingCalculator {
 
     using FixedPoint for *;
     using SafeMath for uint256;
