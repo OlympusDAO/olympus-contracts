@@ -165,34 +165,6 @@ contract TreasuryMock is FloorAccessControlled, ITreasury {
     }
 
     /**
-     * @notice allow our allocator to withdraw without affecting our reserves or FLOOR
-     * @param _amount uint256
-     * @param _token address
-     */
-    function allocatorDeposit(uint256 _amount, address _token) external override {
-        require(permissions[STATUS.ALLOCATOR][msg.sender], notApproved);
-
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
-
-        uint256 value = tokenValue(_token, _amount);
-        emit AllocatorDeposit(_token, _amount, value);
-    }
-
-    /**
-     * @notice allow our allocator to withdraw without affecting our reserves
-     * @param _amount uint256
-     * @param _token address
-     */
-    function allocatorWithdraw(uint256 _amount, address _token) external override {
-        require(permissions[STATUS.ALLOCATOR][msg.sender], notApproved);
-
-        IERC20(_token).safeTransfer(msg.sender, _amount);
-
-        uint256 value = tokenValue(_token, _amount);
-        emit AllocatorWithdrawal(_token, _amount, value);
-    }
-
-    /**
      * @notice allow approved address to withdraw assets
      * @param _token address
      * @param _amount uint256

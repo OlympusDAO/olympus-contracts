@@ -3,10 +3,10 @@ pragma solidity >=0.7.5;
 
 import "../libraries/SafeERC20.sol";
 
-import "../interfaces/allocators/INFTXInventoryStaking.sol";
+import "../interfaces/INFTXInventoryStaking.sol";
 
 
-contract NFTXInventoryStaking is INFTXInventoryStaking {
+abstract contract NFTXInventoryStaking is INFTXInventoryStaking {
 
     using SafeERC20 for IERC20;
 
@@ -36,6 +36,10 @@ contract NFTXInventoryStaking is INFTXInventoryStaking {
 
     function _setAllocatorToken(address _allocatorToken) external {
         allocatorToken = _allocatorToken;
+    }
+
+    function xTokenShareValue(uint256 vaultId) external pure override returns (uint256 _value) {
+      _value = 0;
     }
 
 }

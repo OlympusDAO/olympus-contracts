@@ -24,8 +24,6 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
 
     event Deposit(address indexed token, uint256 amount, uint256 value);
     event Withdrawal(address indexed token, uint256 amount, uint256 value);
-    event AllocatorDeposit(address indexed token, uint256 amount, uint256 value);
-    event AllocatorWithdrawal(address indexed token, uint256 amount, uint256 value);
     event CreateDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
     event RepayDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
     event Managed(address indexed token, uint256 amount);
@@ -50,7 +48,7 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
         REWARDMANAGER,
         SFLOOR,
         FLOORDEBTOR,
-        ALLOCATOR
+        XTOKEN
     }
 
     struct Queue {
@@ -73,8 +71,6 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
     mapping(address => uint256) public _riskOffValuation; // 18 decimal in ETH terms 
 
     mapping(address => uint256) public debtLimit;
-
-    mapping(address => mapping(address => uint256)) allocatorReserves;
 
     uint256 public totalReserves;
     uint256 public totalDebt;
@@ -159,38 +155,6 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
         IERC20(_token).safeTransfer(msg.sender, _amount);
 
         emit Withdrawal(_token, _amount, value);
-    }
-
-    /**
-     * @notice allow our allocator to deposit without affecting our reserves or FLOOR
-     * @param _amount uint256
-     * @param _token address
-     */
-    function allocatorDeposit(uint256 _amount, address _token) external override {
-        require(permissions[STATUS.ALLOCATOR][msg.sender], notApproved);
-
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
-
-        allocatorReserves[msg.sender][_token] = (_amount < allocatorReserves[msg.sender][_token]) ? allocatorReserves[msg.sender][_token].sub(_amount) : 0;
-
-        uint256 value = tokenValue(_token, _amount);
-        emit AllocatorDeposit(_token, _amount, value);
-    }
-
-    /**
-     * @notice allow our allocator to withdraw without affecting our reserves
-     * @param _amount uint256
-     * @param _token address
-     */
-    function allocatorWithdraw(uint256 _amount, address _token) external override {
-        require(permissions[STATUS.ALLOCATOR][msg.sender], notApproved);
-
-        IERC20(_token).safeTransfer(msg.sender, _amount);
-
-        allocatorReserves[msg.sender][_token].add(_amount);
-
-        uint256 value = tokenValue(_token, _amount);
-        emit AllocatorWithdrawal(_token, _amount, value);
     }
 
     /**
@@ -299,7 +263,7 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
 
     /**
      * @notice takes inventory of all tracked assets
-     * @notice always withdraw from allocators and consolidate to recognized reserves before audit
+     * @notice always consolidate to recognized reserves before audit
      */
     function auditReserves() external onlyGovernor {
         uint256 reserves;
@@ -536,6 +500,12 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
             // unsupported token we will revert.
 
             return _amount.mul(riskOffValuation(_token)).div(10**IERC20Metadata(address(_token)).decimals());
+        }
+
+        // If our token is an XTOKEN used in NFTX then we will utilise our bonding calculator
+        // to generate a valuation based on the underlying vToken amounts.
+        if (permissions[STATUS.XTOKEN][_token]) {
+            return IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);
         }
 
         // If our token is present in our LIQUIDITYTOKEN array then we will utilise our bonding

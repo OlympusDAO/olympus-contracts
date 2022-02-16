@@ -7,10 +7,10 @@ import "../libraries/SafeERC20.sol";
 
 import "../interfaces/IERC20.sol";
 import "../interfaces/ITreasury.sol";
+import "../interfaces/INFTXInventoryStaking.sol";
+import "../interfaces/INFTXLPStaking.sol";
 
 import "../interfaces/allocators/IAllocator.sol";
-import "../interfaces/allocators/INFTXInventoryStaking.sol";
-import "../interfaces/allocators/INFTXLPStaking.sol";
 
 import "../types/FloorAccessControlled.sol";
 
@@ -143,8 +143,8 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         require(stakingTokenInfo[_token].exists, "Unsupported staking token");
         require(dividendTokenInfo[_token].underlying == _token, "Unsupported dividend token");
 
-        // Retrieve amount of asset from treasury
-        treasury.allocatorWithdraw(_amount, _token);
+        // Retrieve amount of asset from treasury, decreasing total reserves
+        treasury.withdraw(_amount, _token);
 
         // Approve and deposit into inventory pool, returning xToken
         if (stakingTokenInfo[_token].isLiquidityPool) {
@@ -154,6 +154,13 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
             IERC20(_token).approve(address(inventoryStaking), _amount);
             inventoryStaking.deposit(stakingTokenInfo[_token].vaultId, _amount);
         }
+
+        // Get the balance of the returned xToken
+        uint256 balance = IERC20(dividendTokenInfo[_token].xToken).balanceOf(address(this));
+        uint256 value = treasury.tokenValue(dividendTokenInfo[_token].xToken, balance);
+        
+        // Deposit the xToken back into the treasury, increasing total reserves and minting 0 FLOOR
+        treasury.deposit(balance, dividendTokenInfo[_token].xToken, value);
 
         // Account for deposit
         accountingFor(_token, _amount, true); 
@@ -168,56 +175,27 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         require(stakingTokenInfo[_token].exists, "Unsupported staking token");
         require(dividendTokenInfo[_token].underlying == _token, "Unsupported dividend token");
 
-        address gainToken;
+        // Retrieve amount of asset from treasury, decreasing total reserves
+        treasury.withdraw(_amount, dividendTokenInfo[_token].xToken);
 
         // Approve and withdraw from lending pool, returning asset and potentially reward tokens
         if (stakingTokenInfo[_token].isLiquidityPool) {
             IERC20(dividendTokenInfo[_token].xToken).approve(address(liquidityStaking), _amount);
             liquidityStaking.withdraw(stakingTokenInfo[_token].vaultId, _amount);
-
-            gainToken = stakingTokenInfo[_token].rewardToken;
         } else {
             IERC20(dividendTokenInfo[_token].xToken).approve(address(inventoryStaking), _amount);
             inventoryStaking.withdraw(stakingTokenInfo[_token].vaultId, _amount); 
-
-            gainToken = _token;
         }
 
-        // Capture the balance of our token
+        // Get the balance of the returned vToken or vTokenWeth
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        uint256 base = balance;
-        uint256 gain;
+        uint256 value = treasury.tokenValue(_token, balance);
 
-        // The liquidity pool withdraw() method also claims the rewardToken so we will need
-        // to calculate the additional rewardToken gain and deposit that into the treasury.
-        if (stakingTokenInfo[_token].isLiquidityPool) {
-            gain = IERC20(gainToken).balanceOf(address(this));
-            IERC20(gainToken).approve(address(treasury), gain);
-        }
-        // Otherwise, we expect our reward gains to be the same token as staked, so we just
-        // calculate the difference from our accounted deployed amount.
-        else {
-            if (balance > dividendTokenInfo[_token].deployed) {
-                base = dividendTokenInfo[_token].deployed;
-                gain = balance - base;
-            }
-        }
+        // Deposit the token back into the treasury, increasing total reserves and minting 0 FLOOR
+        treasury.deposit(balance, _token, value);
 
         // Account for withdrawal
         accountingFor(_token, balance, false);
-
-        // Approve and deposit asset into treasury
-        IERC20(_token).approve(address(treasury), balance);
-
-        // Deposit the tokens into the treasury without affecting total reserves
-        treasury.allocatorDeposit(base, _token);
-
-        // If we have additional returns then we need to deposit the additional value
-        // into the treasury via the standard function call.
-        if (gain > 0) {
-            uint256 gain_value = treasury.tokenValue(gainToken, gain);
-            treasury.deposit(gain, gainToken, gain_value);
-        }
     }
 
 
