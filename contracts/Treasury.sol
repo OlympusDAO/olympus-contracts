@@ -502,8 +502,8 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
             return _amount.mul(riskOffValuation(_token)).div(10**IERC20Metadata(address(_token)).decimals());
         }
 
-        // If our token is an XTOKEN used in NFTX then we will utilise our bonding calculator
-        // to generate a valuation based on the underlying vToken amounts.
+        // If our token is an XTOKEN then we will utilise our bonding calculator to generate a
+        // valuation based on the underlying vToken amounts.
         if (permissions[STATUS.XTOKEN][_token]) {
             return IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);
         }
