@@ -7,7 +7,7 @@ import {SafeERC20} from "../libraries/SafeERC20.sol";
 
 /**
     @title IOHMIndexWrapper
-    @notice This interface is used to wrap cross-chain oracles to also feed an index without needing IsOHM, 
+    @notice This interface is used to wrap cross-chain oracles to feed an index without needing IsOHM, 
     while also being able to use sOHM on mainnet.
  */
 interface IOHMIndexWrapper {
