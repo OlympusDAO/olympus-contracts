@@ -162,7 +162,7 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
     }
 
     /**
-     * @notice allow our allocator to withdraw without affecting our reserves or FLOOR
+     * @notice allow our allocator to deposit without affecting our reserves or FLOOR
      * @param _amount uint256
      * @param _token address
      */
