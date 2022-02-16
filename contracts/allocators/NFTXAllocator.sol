@@ -136,8 +136,7 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
 
 
     /**
-     * @notice withdraws asset from treasury, deposits asset into lending pool,
-     * then deposits xToken into treasury.
+     * @notice withdraws asset from treasury, deposits asset into NFTX staking.
      */
 
     function deposit(address _token, uint256 _amount) external override onlyPolicy {
