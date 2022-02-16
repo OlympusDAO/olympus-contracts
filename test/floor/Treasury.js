@@ -65,7 +65,7 @@ describe("FLOOR Treasury - tokenValue Tests", function () {
    * back the expected number of FLOOR tokens in the response.
    */
 
-  xit("Should allow for WETH -> FLOOR", async function () {
+  it("Should allow for WETH -> FLOOR", async function () {
     test_cases = {
       "0"                    : "0",
       "1000000000"           : "1000",
@@ -90,7 +90,7 @@ describe("FLOOR Treasury - tokenValue Tests", function () {
    * and that the RiskOffValuation can be set.
    */
 
-  xit("Should allow for RiskOff Valuation -> FLOOR", async function () {
+  it("Should allow for RiskOff Valuation -> FLOOR", async function () {
     // Set contract addresses that we want to apply RiskOff to
     const address_x = PUNK_ADDRESS;
     const address_y = USDC_ADDRESS;
