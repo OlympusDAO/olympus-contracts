@@ -312,6 +312,7 @@ describe("NFTX Allocator Logic", function () {
     await treasury.enable(3, allocator.address, bondingCalculator.address);  // RESERVEMANAGER
     await treasury.enable(4, allocator.address, bondingCalculator.address);  // LIQUIDITYDEPOSITOR
     await treasury.enable(6, allocator.address, bondingCalculator.address);  // LIQUIDITYMANAGER
+    await treasury.enable(13, allocator.address, bondingCalculator.address); // ALLOCATOR
 
     // Populate our treasury with a risk valuation. The 2 doesn't matter.
     await treasury.setRiskOffValuation(punk.address, 2);
@@ -469,6 +470,7 @@ describe("NFTX Allocator Logic", function () {
     await treasury.enable(3, allocator.address, bondingCalculator.address);   // RESERVEMANAGER
     await treasury.enable(2, punk.address, bondingCalculator.address);        // RESERVETOKEN
     await treasury.enable(2, xPunkToken.address, bondingCalculator.address);  // RESERVETOKEN
+    await treasury.enable(13, allocator.address, bondingCalculator.address);  // ALLOCATOR
 
     // Add a calculator for the xToken
     const tokenCalculator = await ethers.getContractFactory("NFTXXTokenCalculator");
@@ -529,6 +531,7 @@ describe("NFTX Allocator Logic", function () {
     await treasury.enable(3, allocator.address, bondingCalculator.address);   // RESERVEMANAGER
     await treasury.enable(2, punk.address, bondingCalculator.address);        // RESERVETOKEN
     await treasury.enable(2, xPunkToken.address, bondingCalculator.address);  // RESERVETOKEN
+    await treasury.enable(13, allocator.address, bondingCalculator.address);  // ALLOCATOR
 
     // Add a calculator for the xToken
     const tokenCalculator = await ethers.getContractFactory("NFTXXTokenCalculator");
