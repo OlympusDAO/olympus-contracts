@@ -101,8 +101,8 @@ describe("NFTX Allocator Logic", function () {
     const bondingCalculatorContract = await ethers.getContractFactory("BondingCalculatorMock");
     bondingCalculator = await bondingCalculatorContract.deploy();
 
-    // Approve our allocator in the treasury
-    await treasury.enable(12, allocator.address, NULL_ADDRESS);  // ALLOCATOR
+    // Reset our treasury audit
+    await treasury.auditReserves();
   });
 
 
@@ -303,6 +303,9 @@ describe("NFTX Allocator Logic", function () {
     await treasury.enable(8, punk.address, bondingCalculator.address);       // RISKRESERVETOKEN
     await treasury.enable(5, punketh.address, bondingCalculator.address);    // LIQUIDITYTOKEN
 
+    await treasury.enable(2, xPunkToken.address, bondingCalculator.address);    // RESERVETOKEN
+    await treasury.enable(2, xPunkEthToken.address, bondingCalculator.address); // RESERVETOKEN
+
     // Give our contract the required permissions
     await treasury.enable(0, allocator.address, bondingCalculator.address);  // RESERVEDEPOSITOR
     await treasury.enable(1, allocator.address, bondingCalculator.address);  // RESERVESPENDER
@@ -312,6 +315,19 @@ describe("NFTX Allocator Logic", function () {
 
     // Populate our treasury with a risk valuation. The 2 doesn't matter.
     await treasury.setRiskOffValuation(punk.address, 2);
+
+    // Confirm that our deposit will fail as we haven't set up a calculator for our xToken
+    expect(allocator.deposit(punk.address, 1_000)).to.be.revertedWith('Unsupported xToken calculator');
+
+    // Add a calculator for the xToken
+    const tokenCalculator = await ethers.getContractFactory("NFTXXTokenCalculator");
+    xTokenCalculator = await tokenCalculator.deploy(inventoryStakingMock.address, treasury.address);
+    await treasury.enable(12, xPunkToken.address, xTokenCalculator.address);  // XTOKEN
+
+    // Add a calculator for the LP xToken
+    const tokenWethCalculator = await ethers.getContractFactory("NFTXXTokenWethCalculator");
+    xTokenWethCalculator = await tokenWethCalculator.deploy(liquidityStakingMock.address, treasury.address);
+    await treasury.enable(12, xPunkEthToken.address, xTokenWethCalculator.address);  // XTOKEN
 
     // Sent to inventory
     await allocator.deposit(punk.address, 1_000);
@@ -323,7 +339,11 @@ describe("NFTX Allocator Logic", function () {
     // supply equivalent in the allocator.
     expect(await punk.balanceOf(treasury.address)).to.equal(9_000);
     expect(await punketh.balanceOf(treasury.address)).to.equal(10_000);
-    expect(await xPunkToken.balanceOf(allocator.address)).to.equal(1_000);
+    expect(await xPunkToken.balanceOf(treasury.address)).to.equal(1_000);
+    expect(await xPunkEthToken.balanceOf(treasury.address)).to.equal(0);
+    expect(await punk.balanceOf(allocator.address)).to.equal(0);
+    expect(await punketh.balanceOf(allocator.address)).to.equal(0);
+    expect(await xPunkToken.balanceOf(allocator.address)).to.equal(0);
     expect(await xPunkEthToken.balanceOf(allocator.address)).to.equal(0);
 
     let dividendTokenInfo = await allocator.dividendTokenInfo(punk.address);
@@ -337,8 +357,12 @@ describe("NFTX Allocator Logic", function () {
     // Validate our accountingFor output
     expect(await punk.balanceOf(treasury.address)).to.equal(9_000);
     expect(await punketh.balanceOf(treasury.address)).to.equal(5_000);
-    expect(await xPunkToken.balanceOf(allocator.address)).to.equal(1_000);
-    expect(await xPunkEthToken.balanceOf(allocator.address)).to.equal(5_000);
+    expect(await xPunkToken.balanceOf(treasury.address)).to.equal(1_000);
+    expect(await xPunkEthToken.balanceOf(treasury.address)).to.equal(5_000);
+    expect(await punk.balanceOf(allocator.address)).to.equal(0);
+    expect(await punketh.balanceOf(allocator.address)).to.equal(0);
+    expect(await xPunkToken.balanceOf(allocator.address)).to.equal(0);
+    expect(await xPunkEthToken.balanceOf(allocator.address)).to.equal(0);
 
     dividendTokenInfo = await allocator.dividendTokenInfo(punketh.address);
     expect(dividendTokenInfo.underlying).to.equal(punketh.address);
@@ -358,8 +382,12 @@ describe("NFTX Allocator Logic", function () {
     // Validate our accountingFor output
     expect(await punk.balanceOf(treasury.address)).to.equal(10_000);
     expect(await punketh.balanceOf(treasury.address)).to.equal(5_000);
+    expect(await xPunkToken.balanceOf(treasury.address)).to.equal(0);
+    expect(await xPunkEthToken.balanceOf(treasury.address)).to.equal(5_000);
+    expect(await punk.balanceOf(allocator.address)).to.equal(0);
+    expect(await punketh.balanceOf(allocator.address)).to.equal(0);
     expect(await xPunkToken.balanceOf(allocator.address)).to.equal(0);
-    expect(await xPunkEthToken.balanceOf(allocator.address)).to.equal(5_000);
+    expect(await xPunkEthToken.balanceOf(allocator.address)).to.equal(0);
 
     dividendTokenInfo = await allocator.dividendTokenInfo(punk.address);
     expect(dividendTokenInfo.underlying).to.equal(punk.address);
@@ -372,6 +400,10 @@ describe("NFTX Allocator Logic", function () {
     // Validate our accountingFor output
     expect(await punk.balanceOf(treasury.address)).to.equal(10_000);
     expect(await punketh.balanceOf(treasury.address)).to.equal(10_000);
+    expect(await xPunkToken.balanceOf(treasury.address)).to.equal(0);
+    expect(await xPunkEthToken.balanceOf(treasury.address)).to.equal(0);
+    expect(await punk.balanceOf(allocator.address)).to.equal(0);
+    expect(await punketh.balanceOf(allocator.address)).to.equal(0);
     expect(await xPunkToken.balanceOf(allocator.address)).to.equal(0);
     expect(await xPunkEthToken.balanceOf(allocator.address)).to.equal(0);
 
@@ -432,49 +464,45 @@ describe("NFTX Allocator Logic", function () {
     await allocator.addDividendToken(punk.address, xPunkToken.address);
 
     // Approve the token in the treasury
-    await treasury.enable(2, punk.address, bondingCalculator.address);  // RESERVETOKEN
+    await treasury.enable(0, allocator.address, bondingCalculator.address);   // RESERVEDEPOSITOR
+    await treasury.enable(0, deployer.address, bondingCalculator.address);    // RESERVEDEPOSITOR
+    await treasury.enable(3, allocator.address, bondingCalculator.address);   // RESERVEMANAGER
+    await treasury.enable(2, punk.address, bondingCalculator.address);        // RESERVETOKEN
+    await treasury.enable(2, xPunkToken.address, bondingCalculator.address);  // RESERVETOKEN
+
+    // Add a calculator for the xToken
+    const tokenCalculator = await ethers.getContractFactory("NFTXXTokenCalculator");
+    xTokenCalculator = await tokenCalculator.deploy(inventoryStakingMock.address, treasury.address);
+    await treasury.enable(12, xPunkToken.address, xTokenCalculator.address);  // XTOKEN
 
     // Deposit PUNK in treasury
-    await punk.mint(treasury.address, 5_000);
+    await punk.mint(deployer.address, 5_000);
+    await punk.connect(deployer).approve(treasury.address, 5_000);
+    await treasury.deposit(5_000, punk.address, treasury.tokenValue(punk.address, 5_000));
 
     expect(await punk.balanceOf(allocator.address)).to.equal(0);
+    expect(await punk.balanceOf(deployer.address)).to.equal(0);
     expect(await punk.balanceOf(treasury.address)).to.equal(5_000);
-
-    // Audit reserves
-    await treasury.auditReserves()
-
     expect(await treasury.totalReserves()).to.equal(5_000);
     expect(await treasury.excessReserves()).to.equal(5_000);
-
-    expect(await punk.balanceOf(allocator.address)).to.equal(0);
-    expect(await punk.balanceOf(treasury.address)).to.equal(5_000);
 
     // Allocate PUNK to NFTX
     await allocator.deposit(punk.address, 3_000);
 
+    expect(await punk.balanceOf(allocator.address)).to.equal(0);
     expect(await punk.balanceOf(deployer.address)).to.equal(0);
     expect(await punk.balanceOf(treasury.address)).to.equal(2_000);
-
-    // Audit reserves and expect excess to reduce by the amount allocated
-    await treasury.auditReserves()
-
-    expect(await treasury.totalReserves()).to.equal(2_000);
-    expect(await treasury.excessReserves()).to.equal(2_000);
+    expect(await treasury.totalReserves()).to.equal(5_000);
+    expect(await treasury.excessReserves()).to.equal(5_000);
 
     // Withdraw allocation to treasury
     await allocator.withdraw(punk.address, 3_000);
 
+    expect(await punk.balanceOf(allocator.address)).to.equal(0);
     expect(await punk.balanceOf(deployer.address)).to.equal(0);
     expect(await punk.balanceOf(treasury.address)).to.equal(5_000);
-
-    // Audit reserves
-    await treasury.auditReserves()
-
     expect(await treasury.totalReserves()).to.equal(5_000);
     expect(await treasury.excessReserves()).to.equal(5_000);
-
-    expect(await punk.balanceOf(allocator.address)).to.equal(0);
-    expect(await punk.balanceOf(treasury.address)).to.equal(5_000);
   })
 
 
@@ -496,14 +524,25 @@ describe("NFTX Allocator Logic", function () {
     await allocator.addDividendToken(punk.address, xPunkToken.address);
 
     // Approve the token in the treasury
-    await treasury.enable(2, punk.address, bondingCalculator.address);  // RESERVETOKEN
+    await treasury.enable(0, allocator.address, bondingCalculator.address);   // RESERVEDEPOSITOR
+    await treasury.enable(0, deployer.address, bondingCalculator.address);    // RESERVEDEPOSITOR
+    await treasury.enable(3, allocator.address, bondingCalculator.address);   // RESERVEMANAGER
+    await treasury.enable(2, punk.address, bondingCalculator.address);        // RESERVETOKEN
+    await treasury.enable(2, xPunkToken.address, bondingCalculator.address);  // RESERVETOKEN
+
+    // Add a calculator for the xToken
+    const tokenCalculator = await ethers.getContractFactory("NFTXXTokenCalculator");
+    xTokenCalculator = await tokenCalculator.deploy(inventoryStakingMock.address, treasury.address);
+    await treasury.enable(12, xPunkToken.address, xTokenCalculator.address);  // XTOKEN
 
     // Set up our permissions, allowing the deployer to set risk valuation
     await treasury.enable(8, punk.address, punk.address)  // RISKRESERVETOKEN
     await treasury.setRiskOffValuation(punk.address, 20_000 * 1e9);
 
     // Deposit PUNK in treasury
-    await punk.mint(treasury.address, 5_000);
+    await punk.mint(deployer.address, 5_000);
+    await punk.connect(deployer).approve(treasury.address, 5_000);
+    await treasury.deposit(5_000, punk.address, treasury.tokenValue(punk.address, 5_000));
 
     expect(await punk.balanceOf(allocator.address)).to.equal(0);
     expect(await punk.balanceOf(treasury.address)).to.equal(5_000);
@@ -525,21 +564,14 @@ describe("NFTX Allocator Logic", function () {
 
     await treasury.setRiskOffValuation(punk.address, 40_000 * 1e9);
 
-    // Audit reserves
-    await treasury.auditReserves()
-
-    expect(await treasury.totalReserves()).to.equal(2_000);
-    expect(await treasury.excessReserves()).to.equal(2_000);
+    expect(await treasury.totalReserves()).to.equal(5_000);
+    expect(await treasury.excessReserves()).to.equal(5_000);
 
     // Withdraw allocation to treasury
     await allocator.withdraw(punk.address, 3_000);
 
     expect(await punk.balanceOf(deployer.address)).to.equal(0);
     expect(await punk.balanceOf(treasury.address)).to.equal(5_000);
-
-    // Audit reserves
-    await treasury.auditReserves()
-
     expect(await treasury.totalReserves()).to.equal(5_000);
     expect(await treasury.excessReserves()).to.equal(5_000);
 
@@ -556,10 +588,6 @@ describe("NFTX Allocator Logic", function () {
 
     expect(await punk.balanceOf(deployer.address)).to.equal(0);
     expect(await punk.balanceOf(treasury.address)).to.equal(5_000);
-
-    // Audit reserves
-    await treasury.auditReserves()
-
     expect(await treasury.totalReserves()).to.equal(5_000);
     expect(await treasury.excessReserves()).to.equal(5_000);
   })

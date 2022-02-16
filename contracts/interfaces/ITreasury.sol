@@ -8,17 +8,17 @@ interface ITreasury {
         uint256 _profit
     ) external returns (uint256);
 
+    function bondCalculator(address _address) external view returns (address);
+
     function withdraw(uint256 _amount, address _token) external;
-
-    function allocatorDeposit(uint256 _amount, address _token) external;
-
-    function allocatorWithdraw(uint256 _amount, address _token) external;
 
     function tokenValue(address _token, uint256 _amount) external view returns (uint256 value_);
 
     function mint(address _recipient, uint256 _amount) external;
 
     function manage(address _token, uint256 _amount) external;
+
+    function allocatorManage(address _token, uint256 _amount) external;
 
     function incurDebt(uint256 amount_, address token_) external;
 

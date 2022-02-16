@@ -4,4 +4,5 @@ pragma solidity >=0.7.5;
 interface INFTXInventoryStaking {
     function deposit(uint256 vaultId, uint256 _amount) external;
     function withdraw(uint256 vaultId, uint256 _share) external;
+    function xTokenShareValue(uint256 vaultId) external view returns (uint256);
 }
