@@ -798,4 +798,13 @@ describe("YieldDirectorV2", async () => {
     it("test deposit gas", async () => {
         await tyche.deposit(`1${e18}`, bob.address);
     });
+
+    it("test sOHM deposit gas", async () => {
+        await tyche.depositSohm(`1${e9}`, bob.address);
+    });
+
+    it("test withdraw gas", async () => {
+        await tyche.deposit(`1${e18}`, bob.address);
+        await tyche.withdrawPrincipal("0", `1${e18}`);
+    });
 });
