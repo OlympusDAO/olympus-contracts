@@ -51,6 +51,7 @@ contract TreasuryMock is FloorAccessControlled, ITreasury {
         REWARDMANAGER,
         SFLOOR,
         FLOORDEBTOR,
+        XTOKEN,
         ALLOCATOR
     }
 
