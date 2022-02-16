@@ -144,6 +144,9 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         require(stakingTokenInfo[_token].exists, "Unsupported staking token");
         require(dividendTokenInfo[_token].underlying == _token, "Unsupported dividend token");
 
+        // Ensure that a calculator exists for the `dividendTokenInfo[_token].xToken`
+        require(treasury.bondCalculator(dividendTokenInfo[_token].xToken) != address(0), "Unsupported xToken calculator");
+
         // Retrieve amount of asset from treasury, decreasing total reserves
         treasury.allocatorManage(_token, _amount);
 
@@ -162,7 +165,7 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         // Get the balance of the returned xToken
         uint256 balance = IERC20(dividendTokenInfo[_token].xToken).balanceOf(address(this));
         uint256 value = treasury.tokenValue(dividendTokenInfo[_token].xToken, balance);
-
+        
         // Ensure that the amount being deposited is greater than or equal to the amount withdrawn
         require(value >= valueWithdrawn, "Unauthorized decrease of Treasury total reserves");
         
