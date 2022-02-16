@@ -144,11 +144,11 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         require(stakingTokenInfo[_token].exists, "Unsupported staking token");
         require(dividendTokenInfo[_token].underlying == _token, "Unsupported dividend token");
 
-        // Ensure that a calculator exists for the `dividendTokenInfo[_token].xToken`
-        require(treasury.bondCalculator(dividendTokenInfo[_token].xToken) != address(0), "Unsupported xToken calculator");
-
         // Retrieve amount of asset from treasury, decreasing total reserves
-        treasury.manage(_token, _amount);
+        treasury.allocatorManage(_token, _amount);
+
+        // Get the treasury value for the withdrawn amount
+        uint256 valueWithdrawn = treasury.tokenValue(_token, _amount);
 
         // Approve and deposit into inventory pool, returning xToken
         if (stakingTokenInfo[_token].isLiquidityPool) {
@@ -162,6 +162,9 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         // Get the balance of the returned xToken
         uint256 balance = IERC20(dividendTokenInfo[_token].xToken).balanceOf(address(this));
         uint256 value = treasury.tokenValue(dividendTokenInfo[_token].xToken, balance);
+
+        // Ensure that the amount being deposited is greater than or equal to the amount withdrawn
+        require(value >= valueWithdrawn, "Unauthorized decrease of Treasury total reserves");
         
         // Deposit the xToken back into the treasury, increasing total reserves and minting 0 FLOOR
         IERC20(dividendTokenInfo[_token].xToken).approve(address(treasury), balance);
@@ -173,7 +176,7 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
 
 
     /**
-     * @notice Withdraws from lending pool, and deposits asset into treasury.
+     * @notice Withdraws from staking pool, and deposits asset into treasury.
      */
 
     function withdraw(address _token, uint256 _amount) external override onlyPolicy {
@@ -181,9 +184,12 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         require(dividendTokenInfo[_token].underlying == _token, "Unsupported dividend token");
 
         // Retrieve amount of asset from treasury, decreasing total reserves
-        treasury.manage(dividendTokenInfo[_token].xToken, _amount);
+        treasury.allocatorManage(dividendTokenInfo[_token].xToken, _amount);
 
-        // Approve and withdraw from lending pool, returning asset and potentially reward tokens
+        // Get the treasury value for the withdrawn amount
+        uint256 valueWithdrawn = treasury.tokenValue(dividendTokenInfo[_token].xToken, _amount);
+
+        // Approve and withdraw from staking pool, returning asset and potentially reward tokens
         if (stakingTokenInfo[_token].isLiquidityPool) {
             IERC20(dividendTokenInfo[_token].xToken).approve(address(liquidityStaking), _amount);
             liquidityStaking.withdraw(stakingTokenInfo[_token].vaultId, _amount);
@@ -195,6 +201,9 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         // Get the balance of the returned vToken or vTokenWeth
         uint256 balance = IERC20(_token).balanceOf(address(this));
         uint256 value = treasury.tokenValue(_token, balance);
+
+        // Ensure that the amount being deposited is greater than or equal to the amount withdrawn
+        require(value >= valueWithdrawn, "Unauthorized decrease of Treasury total reserves");
 
         // Deposit the token back into the treasury, increasing total reserves and minting 0 FLOOR
         IERC20(_token).approve(address(treasury), balance);

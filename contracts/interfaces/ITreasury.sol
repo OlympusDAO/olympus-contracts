@@ -18,6 +18,8 @@ interface ITreasury {
 
     function manage(address _token, uint256 _amount) external;
 
+    function allocatorManage(address _token, uint256 _amount) external;
+
     function incurDebt(uint256 amount_, address token_) external;
 
     function repayDebtWithReserve(uint256 amount_, address token_) external;

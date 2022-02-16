@@ -27,6 +27,7 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
     event CreateDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
     event RepayDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
     event Managed(address indexed token, uint256 amount);
+    event AllocatorManaged(address indexed token, uint256 amount);
     event ReservesAudited(uint256 indexed totalReserves);
     event Minted(address indexed caller, address indexed recipient, uint256 amount);
     event PermissionQueued(STATUS indexed status, address queued);
@@ -48,7 +49,8 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
         REWARDMANAGER,
         SFLOOR,
         FLOORDEBTOR,
-        XTOKEN
+        XTOKEN,
+        ALLOCATOR
     }
 
     struct Queue {
@@ -175,6 +177,23 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
         }
         IERC20(_token).safeTransfer(msg.sender, _amount);
         emit Managed(_token, _amount);
+    }
+
+    /**
+     * @notice allocators can manage assets without being limited by excessReserves
+     * @notice always ensure the reserves are repalaced in the same transaction
+     * @param _token address
+     * @param _amount uint256
+     */
+    function allocatorManage(address _token, uint256 _amount) external override {
+        require(permissions[STATUS.ALLOCATOR][msg.sender], notApproved);
+
+        if (permissions[STATUS.RESERVETOKEN][_token] || permissions[STATUS.LIQUIDITYTOKEN][_token]) {
+            uint256 value = tokenValue(_token, _amount);
+            totalReserves = (value < totalReserves) ? totalReserves.sub(value) : 0;
+        }
+        IERC20(_token).safeTransfer(msg.sender, _amount);
+        emit AllocatorManaged(_token, _amount);
     }
 
     /**
@@ -502,8 +521,8 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
             return _amount.mul(riskOffValuation(_token)).div(10**IERC20Metadata(address(_token)).decimals());
         }
 
-        // If our token is an XTOKEN then we will utilise our bonding calculator to generate a
-        // valuation based on the underlying vToken amounts.
+        // If our token is an XTOKEN used in NFTX then we will utilise our bonding calculator
+        // to generate a valuation based on the underlying vToken amounts.
         if (permissions[STATUS.XTOKEN][_token]) {
             return IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);
         }
