@@ -373,7 +373,9 @@ describe("YieldDirectorV2", async () => {
         await tyche.withdrawPrincipal("0", withdrawalAmount);
 
         const balanceAfter = await gOhm.balanceOf(deployer.address);
-        await expect(balanceAfter.sub(balanceBefore)).is.equal(BigNumber.from("2").mul(withdrawalAmount));
+        await expect(balanceAfter.sub(balanceBefore)).is.equal(
+            BigNumber.from("2").mul(withdrawalAmount)
+        );
 
         const donationInfo = await tyche.depositInfo("0");
 
@@ -786,7 +788,7 @@ describe("YieldDirectorV2", async () => {
         const principal = `1${e18}`;
         await tyche.deposit(principal, bob.address);
         await tyche.deposit(principal, alice.address);
-        
+
         await triggerRebase();
 
         const allDeposits = await tyche.getAllDeposits(deployer.address);
@@ -807,7 +809,7 @@ describe("YieldDirectorV2", async () => {
         await tyche.deposit(`1${e18}`, bob.address);
         await tyche.withdrawPrincipal("0", `1${e18}`);
     });
-    
+
     it("test withdrawAll gas", async () => {
         await tyche.deposit(`1${e18}`, bob.address);
         await tyche.withdrawAll();

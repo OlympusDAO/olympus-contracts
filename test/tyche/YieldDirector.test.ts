@@ -524,5 +524,5 @@ describe("YieldDirector", async () => {
 
     it("test deposit gas", async () => {
         await tyche.deposit("100000000000", bob.address);
-    })
+    });
 });

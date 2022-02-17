@@ -55,12 +55,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         address staking_,
         address authority_
     ) OlympusAccessControlled(IOlympusAuthority(authority_)) YieldSplitter(sOhm_) {
-        if (
-            sOhm_ == address(0) ||
-            gOhm_ == address(0) ||
-            staking_ == address(0) ||
-            authority_ == address(0)
-        ) revert YieldDirector_InvalidAddress();
+        if (sOhm_ == address(0) || gOhm_ == address(0) || staking_ == address(0) || authority_ == address(0))
+            revert YieldDirector_InvalidAddress();
 
         sOHM = sOhm_;
         gOHM = gOhm_;
@@ -357,7 +353,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     */
     function redeemAllYieldAsSohm() external {
         uint256 amountRedeemed = _redeemAll();
-        
+
         IERC20(sOHM).approve(address(staking), amountRedeemed);
         staking.unwrap(msg.sender, amountRedeemed);
     }
@@ -432,7 +428,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
                     break;
                 }
             }
-            
+
             delete recipientLookup[depositId_];
         }
 
@@ -451,7 +447,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         // Have to read the IDs into memory because with each redemption
         // an ID is removed from the state array
         uint256[] memory receiptIds = recipientIds[msg.sender];
-        
+
         for (uint256 index = 0; index < receiptIds.length; ++index) {
             uint256 currRedemption = _redeem(receiptIds[index]);
             amountRedeemed += currRedemption;
