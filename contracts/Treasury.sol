@@ -49,7 +49,7 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
         REWARDMANAGER,
         SFLOOR,
         FLOORDEBTOR,
-        XTOKEN,
+        XTOKEN, // Any token that requires a calculator to determine its value
         ALLOCATOR
     }
 
@@ -181,7 +181,7 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
 
     /**
      * @notice allocators can manage assets without being limited by excessReserves
-     * @notice always ensure the reserves are repalaced in the same transaction
+     * @notice always ensure the reserves are repalaced
      * @param _token address
      * @param _amount uint256
      */
