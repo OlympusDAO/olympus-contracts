@@ -151,9 +151,10 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         require(treasury.bondCalculator(dividendTokenInfo[_token].xToken) != address(0), "Unsupported xToken calculator");
 
         // Retrieve amount of asset from treasury, decreasing total reserves
-        uint256 value = treasury.tokenValue(_token, _amount);
         treasury.allocatorManage(_token, _amount);
-        TreasuryAssetDeployed(_token, _amount, value);
+
+        uint256 value = treasury.tokenValue(_token, _amount);
+        emit TreasuryAssetDeployed(_token, _amount, value);
 
         // Approve and deposit into inventory pool, returning xToken
         if (stakingTokenInfo[_token].isLiquidityPool) {
@@ -177,9 +178,10 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         require(dividendTokenInfo[_token].underlying == _token, "Unsupported dividend token");
 
         // Retrieve amount of asset from treasury, decreasing total reserves
-        uint256 valueWithdrawn = treasury.tokenValue(dividendTokenInfo[_token].xToken, _amount);
         treasury.allocatorManage(dividendTokenInfo[_token].xToken, _amount);
-        TreasuryAssetDeployed(dividendTokenInfo[_token].xToken, _amount, valueWithdrawn);
+
+        uint256 valueWithdrawn = treasury.tokenValue(dividendTokenInfo[_token].xToken, _amount);
+        emit TreasuryAssetDeployed(dividendTokenInfo[_token].xToken, _amount, valueWithdrawn);
 
         // Approve and withdraw from staking pool, returning asset and potentially reward tokens
         if (stakingTokenInfo[_token].isLiquidityPool) {
@@ -197,7 +199,8 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         // Deposit the token back into the treasury, increasing total reserves and minting 0 FLOOR
         IERC20(_token).approve(address(treasury), balance);
         treasury.deposit(balance, _token, value);
-        TreasuryAssetReturned(_token, balance, value);
+
+        emit TreasuryAssetReturned(_token, balance, value);
 
         // Account for withdrawal
         accountingFor(_token, balance, false);
@@ -205,8 +208,8 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
 
     /**
      * @notice Staked positions return an xToken which should be regularly deposited
-     * @notice back into the Treasury to account for their value. This cannot be done
-     * @notice in the same transaction as `deposit()` because of a 2 second timelock in NFTX
+     * back into the Treasury to account for their value. This cannot be done
+     * in the same transaction as `deposit()` because of a 2 second timelock in NFTX.
      */
 
     function depositXTokenToTreasury(address _token) external onlyPolicy {
@@ -220,7 +223,8 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         // Deposit the xToken back into the treasury, increasing total reserves and minting 0 FLOOR
         IERC20(dividendTokenInfo[_token].xToken).approve(address(treasury), balance);
         treasury.deposit(balance, dividendTokenInfo[_token].xToken, value);
-        TreasuryAssetReturned(dividendTokenInfo[_token].xToken, balance, value);
+
+        emit TreasuryAssetReturned(dividendTokenInfo[_token].xToken, balance, value);
     }
 
     /**
