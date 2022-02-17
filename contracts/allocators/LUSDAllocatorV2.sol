@@ -197,8 +197,8 @@ contract LUSDAllocatorV2 is BaseAllocator {
 
     function deallocate(uint256[] memory amounts) public override {
         _onlyGuardian();
-        if(amounts[0] > 0) lusdStabilityPool.withdrawFromSP(amounts[0]);
-        if(amounts[1] > 0) lqtyStaking.unstake(amounts[1]);
+        if (amounts[0] > 0) lusdStabilityPool.withdrawFromSP(amounts[0]);
+        if (amounts[1] > 0) lqtyStaking.unstake(amounts[1]);
     }
 
     function _deactivate(bool panic) internal override {
