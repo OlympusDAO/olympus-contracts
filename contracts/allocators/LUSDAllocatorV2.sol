@@ -6,6 +6,9 @@ import "./interfaces/IWETH.sol";
 import "./interfaces/LiquityInterfaces.sol";
 import "../types/BaseAllocator.sol";
 
+error LUSDAllocator_InputTooLarge();
+error LUSDAllocator_TreasuryAddressZero();
+
 /**
  *  Contract deploys LUSD from treasury into the liquity stabilty pool. Each update, rewards are harvested.
  *  The allocator stakes the LQTY rewards and sells part of the ETH rewards to stack more LUSD.
@@ -82,7 +85,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
      */
     function setEthToLUSDRatio(uint256 _ethToLUSDRatio) external {
         _onlyGuardian();
-        require(_ethToLUSDRatio <= FEE_PRECISION, "Value must be between 0 and 1e6");
+        if (_ethToLUSDRatio > FEE_PRECISION) revert LUSDAllocator_InputTooLarge();
         ethToLUSDRatio = _ethToLUSDRatio;
     }
 
@@ -92,7 +95,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
      */
     function setPoolFee(uint256 _poolFee) external {
         _onlyGuardian();
-        require(_poolFee <= POOL_FEE_MAX, "Value must be between 0 and 10000");
+        if (_poolFee > POOL_FEE_MAX) revert LUSDAllocator_InputTooLarge();
         poolFee = _poolFee;
     }
 
@@ -119,8 +122,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
      */
     function updateTreasury() public {
         _onlyGuardian();
-        require(authority.vault() != address(0), "Zero address: Vault");
-        require(address(authority.vault()) != treasuryAddress, "Treasury has not changed");
+        if (authority.vault() == address(0)) revert LUSDAllocator_TreasuryAddressZero();
         treasuryAddress = address(authority.vault());
     }
 
