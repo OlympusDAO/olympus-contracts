@@ -4,8 +4,8 @@ pragma solidity 0.7.5;
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "../interfaces/ITreasury.sol";
-import "../interfaces/IERC20.sol";
+import "../../interfaces/ITreasury.sol";
+import "../../interfaces/IERC20.sol";
 import "./FraxSharesAllocator.sol";
 
 /**
