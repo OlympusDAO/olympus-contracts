@@ -35,8 +35,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     address public immutable gOHM;
     IStaking public immutable staking;
 
-    mapping(address => uint256[]) public recipientIds;
-    mapping(uint256 => address) public recipientLookup;
+    mapping(address => uint256[]) public recipientIds; // address -> array of deposit id's donating yield to the user
+    mapping(uint256 => address) public recipientLookup; // depositId -> recipient
 
     bool public depositDisabled;
     bool public withdrawDisabled;
@@ -173,7 +173,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     function withdrawAll() external {
         if (withdrawDisabled) revert YieldDirector_WithdrawalsDisabled();
 
-        uint256[] storage depositIds = depositorIds[msg.sender];
+        uint256[] memory depositIds = depositorIds[msg.sender];
 
         uint256 depositsLength = depositIds.length;
         if (depositsLength == 0) revert YieldDirector_NoDeposits();
@@ -185,7 +185,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
 
             principalTotal += currDeposit.principalAmount;
 
-            _withdrawAllPrincipal(currDeposit.id);
+            _withdrawAllPrincipal(depositIds[index]);
         }
 
         IERC20(gOHM).safeTransfer(msg.sender, _toAgnostic(principalTotal));
@@ -399,10 +399,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     function _withdraw(uint256 depositId_, uint256 amount_) internal returns (uint256 amountWithdrawn) {
         if (isInvalidWithdrawal(amount_)) revert YieldDirector_InvalidWithdrawal();
 
-        DepositInfo storage currDeposit = depositInfo[depositId_];
-        uint256 withdrawableBalance = _toAgnostic(currDeposit.principalAmount);
-
-        if (amount_ >= withdrawableBalance) {
+        if (amount_ >= _toAgnostic(depositInfo[depositId_].principalAmount)) {
             amountWithdrawn = _withdrawAllPrincipal(depositId_);
         } else {
             _withdrawPrincipal(depositId_, amount_);
@@ -423,9 +420,10 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         amountRedeemed = _redeemYield(depositId_);
         if (amountRedeemed == 0) revert YieldDirector_NoRedeemableBalance();
 
-        uint256[] storage receiptIds = recipientIds[msg.sender];
         if (depositInfo[depositId_].principalAmount == 0) {
             _closeDeposit(depositId_);
+
+            uint256[] storage receiptIds = recipientIds[msg.sender];
             for (uint256 i = 0; i < receiptIds.length; ++i) {
                 if (receiptIds[i] == depositId_) {
                     // Remove id from depositor's ids array
@@ -460,8 +458,6 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
 
             emit Donated(depositInfo[receiptIds[index]].depositor, msg.sender, currRedemption);
         }
-
-        if (amountRedeemed == 0) revert YieldDirector_NoRedeemableBalance();
 
         emit Redeemed(msg.sender, amountRedeemed);
     }
