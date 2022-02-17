@@ -18,7 +18,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
     IStabilityPool public immutable lusdStabilityPool;
     ILQTYStaking public immutable lqtyStaking;
     ISwapRouter public immutable swapRouter;
-    ITreasury public treasury;
+    address public treasuryAddress;
     address public immutable wethAddress;
     address public immutable lqtyTokenAddress; // LQTY Address (0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D)  from https://github.com/liquity/dev/blob/a12f8b737d765bfee6e1bfcf8bf7ef155c814e1e/packages/contracts/mainnetDeployment/realDeploymentOutput/output14.txt#L61
     address public hopTokenAddress = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // Dai. Could be something else or use dex aggregator.
@@ -50,7 +50,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
      */
     constructor(
         AllocatorInitData memory data,
-        address _treasury,
+        address _treasuryAddress,
         address _stabilityPool,
         address _lqtyStaking,
         address _frontEndAddress,
@@ -59,7 +59,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
         address _uniswapV3Router,
         uint256 _minETHLUSDRate
     ) BaseAllocator(data) {
-        treasury = ITreasury(_treasury);
+        treasuryAddress = _treasuryAddress;
         lusdStabilityPool = IStabilityPool(_stabilityPool);
         lqtyStaking = ILQTYStaking(_lqtyStaking);
         frontEndAddress = _frontEndAddress; // address can be 0
@@ -68,11 +68,11 @@ contract LUSDAllocatorV2 is BaseAllocator {
         swapRouter = ISwapRouter(_uniswapV3Router);
         minETHLUSDRate = _minETHLUSDRate;
 
-        IERC20(wethAddress).safeApprove(address(treasury), type(uint256).max);
+        IERC20(wethAddress).safeApprove(treasuryAddress, type(uint256).max);
         IERC20(wethAddress).safeApprove(address(swapRouter), type(uint256).max);
         data.tokens[0].safeApprove(address(lusdStabilityPool), type(uint256).max);
-        data.tokens[0].safeApprove(address(treasury), type(uint256).max);
-        IERC20(lqtyTokenAddress).safeApprove(address(treasury), type(uint256).max);
+        data.tokens[0].safeApprove(treasuryAddress, type(uint256).max);
+        IERC20(lqtyTokenAddress).safeApprove(treasuryAddress, type(uint256).max);
     }
 
     /* ======== CONFIGURE FUNCTIONS for Guardian only ======== */
@@ -120,8 +120,8 @@ contract LUSDAllocatorV2 is BaseAllocator {
     function updateTreasury() public {
         _onlyGuardian();
         require(authority.vault() != address(0), "Zero address: Vault");
-        require(address(authority.vault()) != address(treasury), "Treasury has not changed");
-        treasury = ITreasury(authority.vault());
+        require(address(authority.vault()) != treasuryAddress, "Treasury has not changed");
+        treasuryAddress = address(authority.vault());
     }
 
     /* ======== INTERNAL FUNCTIONS ======== */
@@ -171,10 +171,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
                 });
 
                 // Executes the swap
-                gain = uint128(swapRouter.exactInput(params));
-                if (gain > 0) {
-                    swappedLUSDSuccessfully = true;
-                }
+                uint128(swapRouter.exactInput(params));
             }
         }
 
@@ -182,7 +179,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
         if (ethToLUSDRatio == 0 || swappedLUSDSuccessfully) {
             uint256 wethBalance = IWETH(wethAddress).balanceOf(address(this));
             if (wethBalance > 0) {
-                IERC20(wethAddress).safeTransfer(address(treasury), wethBalance);
+                IERC20(wethAddress).safeTransfer(treasuryAddress, wethBalance);
             }
         }
 
@@ -190,15 +187,18 @@ contract LUSDAllocatorV2 is BaseAllocator {
         uint256 lusdBalance = _tokens[0].balanceOf(address(this));
         if (lusdBalance > 0) {
             lusdStabilityPool.provideToSP(lusdBalance, frontEndAddress); //s either a front-end address OR 0x0
+
+            uint128 total = uint128(lusdStabilityPool.getCompoundedLUSDDeposit(address(this)));
+            uint128 last = extender.getAllocatorPerformance(id).gain + uint128(extender.getAllocatorAllocated(id));
+            if (total >= last) gain = total - last;
+            else loss = last - total;
         }
     }
 
     function deallocate(uint256[] memory amounts) public override {
-        require(amounts.length == _tokens.length, "input array invalid length");
-
-        if (amounts[0] > 0) {
-            lusdStabilityPool.withdrawFromSP(amounts[0]);
-        }
+        _onlyGuardian();
+        if(amounts[0] > 0) lusdStabilityPool.withdrawFromSP(amounts[0]);
+        if(amounts[1] > 0) lqtyStaking.unstake(amounts[1]);
     }
 
     function _deactivate(bool panic) internal override {
@@ -211,15 +211,13 @@ contract LUSDAllocatorV2 is BaseAllocator {
     function _prepareMigration() internal override {
         _withdrawEverything();
 
-        // Could have leftover eth from unstaking unclaimed yield and leftover WETH from failed swaps to LUSD.
+        // Could have leftover eth from unstaking unclaimed yield.
         uint256 ethBalance = address(this).balance;
         if (ethBalance > 0) {
             IWETH(wethAddress).deposit{value: ethBalance}();
         }
-        uint256 wethBalance = IWETH(wethAddress).balanceOf(address(this));
-        if (wethBalance > 0) {
-            IERC20(wethAddress).safeTransfer(address(treasury), wethBalance);
-        }
+
+        // Don't need to to WETH since its a utility token it will be migrated
     }
 
     /**
@@ -250,8 +248,9 @@ contract LUSDAllocatorV2 is BaseAllocator {
     }
 
     function utilityTokens() public view override returns (IERC20[] memory) {
-        IERC20[] memory utility = new IERC20[](1);
+        IERC20[] memory utility = new IERC20[](2);
         utility[0] = IERC20(lqtyTokenAddress);
+        utility[1] = IERC20(wethAddress);
         return utility;
     }
 
