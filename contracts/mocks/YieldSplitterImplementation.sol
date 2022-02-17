@@ -11,9 +11,9 @@ import {IgOHM} from "../interfaces/IgOHM.sol";
 contract YieldSplitterImpl is YieldSplitter {
     /**
     @notice Constructor
-    @param gOHM_ Address of gOHM.
+    @param sOHM_ Address of gOHM.
     */
-    constructor(address gOHM_) YieldSplitter(gOHM_) {}
+    constructor(address sOHM_) YieldSplitter(sOHM_) {}
 
     /**
         @notice Create a deposit.
@@ -26,7 +26,7 @@ contract YieldSplitterImpl is YieldSplitter {
         address recipient_,
         uint256 amount_
     ) external returns (uint256 depositId) {
-        depositId = _deposit(depositor_, recipient_, amount_);
+        depositId = _deposit(depositor_, amount_);
     }
 
     /**
@@ -48,6 +48,15 @@ contract YieldSplitterImpl is YieldSplitter {
     }
 
     /**
+        @notice Withdraw all of the principal amount deposited.
+        @param id_ Id of the deposit.
+        @return amountWithdrawn : amount of gOHM withdrawn. 18 decimals.
+    */
+    function withdrawAllPrincipal(uint256 id_) external returns (uint256 amountWithdrawn) {
+        return _withdrawAllPrincipal(id_);
+    }
+
+    /**
         @notice Redeem excess yield from your deposit in sOHM.
         @param id_ Id of the deposit.
         @return amountRedeemed : amount of yield redeemed in gOHM. 18 decimals.
@@ -55,15 +64,6 @@ contract YieldSplitterImpl is YieldSplitter {
     function redeemYield(uint256 id_) external returns (uint256) {
         uint256 amountRedeemed = _redeemYield(id_);
         return amountRedeemed;
-    }
-
-    /**
-        @notice Redeem all excess yield from your all deposits recipient can redeem from.
-        @param recipient_ Recipient that wants to redeem their yield.
-        @return amountRedeemed : amount of yield redeemed in gOHM. 18 decimals.
-    */
-    function redeemAllYield(address recipient_) external returns (uint256 amountRedeemed) {
-        amountRedeemed = _redeemAllYield(recipient_);
     }
 
     /**
