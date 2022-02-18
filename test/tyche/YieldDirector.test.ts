@@ -521,8 +521,4 @@ describe("YieldDirector", async () => {
         await expect(allDeposits[0][0]).is.equal(bob.address);
         await expect(allDeposits[1][0]).is.equal(principal);
     });
-
-    it("test deposit gas", async () => {
-        await tyche.deposit("100000000000", bob.address);
-    });
 });

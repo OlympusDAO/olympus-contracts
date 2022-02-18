@@ -387,6 +387,13 @@ describe("YieldDirectorV2", async () => {
 
         const redeemable = await tyche.redeemableBalance("0");
         await tyche.connect(bob).redeemYield("0");
+
+        await expect(tyche.recipientIds(bob.address, "0")).to.be.reverted;
+        await expect(tyche.depositorIds(deployer.address, "0")).to.be.reverted;
+        const newDeposit = await tyche.depositInfo("0");
+        await expect(newDeposit.depositor).is.equal("0x0000000000000000000000000000000000000000")
+        await expect(newDeposit.principalAmount).is.equal("0");
+        await expect(newDeposit.agnosticAmount).is.equal("0");
     });
 
     it("should partial withdraw and full withdraw to sOHM", async () => {
@@ -596,7 +603,10 @@ describe("YieldDirectorV2", async () => {
         await expect(await tyche.redeemableBalance("0")).is.equal(await gOhm.balanceTo("10000000"));
 
         const withdrawableBalance = await gOhm.balanceTo(donationInfo.principalAmount);
-        await tyche.withdrawPrincipal("0", withdrawableBalance);
+        const balanceBefore = await gOhm.balanceOf(deployer.address);
+        await tyche.withdrawPrincipal("0", `10000${e18}`);
+        const balanceAfter = await gOhm.balanceOf(deployer.address);
+        await expect(balanceAfter.sub(balanceBefore)).is.equal(withdrawableBalance);
 
         // This amount should be the exact same as before withdrawal.
         await expect(await tyche.redeemableBalance("0")).is.equal(await gOhm.balanceTo("10000000"));
@@ -795,23 +805,5 @@ describe("YieldDirectorV2", async () => {
         await expect(allDeposits[0].length).is.equal(2);
         await expect(allDeposits[0][0]).is.equal(bob.address);
         await expect(allDeposits[1][0]).is.equal(await gOhm.balanceTo(`10${e9}`));
-    });
-
-    it("test deposit gas", async () => {
-        await tyche.deposit(`1${e18}`, bob.address);
-    });
-
-    it("test sOHM deposit gas", async () => {
-        await tyche.depositSohm(`1${e9}`, bob.address);
-    });
-
-    it("test withdraw gas", async () => {
-        await tyche.deposit(`1${e18}`, bob.address);
-        await tyche.withdrawPrincipal("0", `1${e18}`);
-    });
-
-    it("test withdrawAll gas", async () => {
-        await tyche.deposit(`1${e18}`, bob.address);
-        await tyche.withdrawAll();
     });
 });
