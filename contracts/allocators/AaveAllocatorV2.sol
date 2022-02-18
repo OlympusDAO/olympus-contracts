@@ -39,11 +39,11 @@ contract AaveAllocatorV2 is BaseAllocator {
     address public constant treasury = 0x9A315BdF513367C0377FB36545857d12e85813Ef;
 
     // stkAave incentive controller
-    IStakedTokenIncentivesController internal immutable incentives =
+    IStakedTokenIncentivesController public immutable incentives =
         IStakedTokenIncentivesController(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5);
 
     // Aave Lending Pool
-    ILendingPool internal immutable pool = ILendingPool(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
+    ILendingPool public immutable pool = ILendingPool(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
 
     IERC20[] internal _aTokens;
 
