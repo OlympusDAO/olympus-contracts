@@ -31,10 +31,10 @@ contract Drip is Ownable {
     function drip() public {
         require(!dripped[msg.sender], "Already dripped");
         dripped[msg.sender] = true;
-        PUNK.transfer(msg.sender, 500_000_000_000_000_000); // 0.5 PUNK
-        PUNKWEETH.transfer(msg.sender, 8_000_000_000_000_000_000); // 8 PUNKWEETH SLP
-        AFLOOR.transfer(msg.sender, 1000_000_000_000); // 1000 AFLOOR
-        WEETH.transfer(msg.sender, 10_000_000_000_000_000_000); // 10 WEETH
+        PUNK.transfer(msg.sender, 500_000_000_000_000_00); // 0.05 PUNK
+        PUNKWEETH.transfer(msg.sender, 8_000_000_000_000_000); // .008 PUNKWEETH SLP
+        AFLOOR.transfer(msg.sender, 20_000_000_000); // 20 AFLOOR
+        WEETH.transfer(msg.sender, 1_000_000_000_000_000_000); // 1 WEETH
     }
 
     function withdraw() external onlyOwner() {
