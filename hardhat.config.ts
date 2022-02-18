@@ -52,6 +52,12 @@ const config: HardhatUserConfig = {
             forking: {
                 url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`,
             },
+            accounts: {
+                // This will result in 10000 ETH being deposited into this wallet on the local testnet
+                // Obviously don't use this on mainnet
+                mnemonic:
+                    "subway bright wet favorite tide muscle alley marble must ecology result treat",
+            },
             chainId: chainIds.hardhat,
         },
         // Uncomment for testing. Commented due to CI issues
