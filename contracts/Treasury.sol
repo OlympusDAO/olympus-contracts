@@ -49,7 +49,7 @@ contract FloorTreasury is FloorAccessControlled, ITreasury {
         REWARDMANAGER,
         SFLOOR,
         FLOORDEBTOR,
-        XTOKEN,
+        XTOKEN, // Any token that requires a calculator to determine its value
         ALLOCATOR
     }
 
