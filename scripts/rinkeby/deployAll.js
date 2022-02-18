@@ -89,6 +89,8 @@ async function main() {
   await floorTreasury.enable("13", nftxAllocator.address, "0x0000000000000000000000000000000000000000"); // Allocator
   await floorTreasury.enable("0", nftxAllocator.address, "0x0000000000000000000000000000000000000000"); // Reserve Depositor
 
+  // @TODO set xtokens as reserve tokens
+
   console.log('Setting vault authority as', floorTreasury.address);
   await authority.pushVault(floorTreasury.address, true);
 
