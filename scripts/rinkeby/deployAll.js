@@ -75,8 +75,13 @@ async function main() {
   await floorTreasury.enable("2", "0x4F2645F3D8e2542076A49De3F505016DC0a496B0", "0x0000000000000000000000000000000000000000"); // WEETH as reserve asset
   await floorTreasury.enable("2", "0x286AaF440879dBeAF6AFec6df1f9bfC907101f9D", "0x0000000000000000000000000000000000000000"); // PUNK as reserve asset
   await floorTreasury.enable("8", "0x286AaF440879dBeAF6AFec6df1f9bfC907101f9D", "0x0000000000000000000000000000000000000000"); // PUNK as risk asset
+
   await floorTreasury.enable("12", "0xeaeA4134D1fA90cdF506f669033Ecd24ec941F3a", "0xe7e0eED2511E9fa055b8923a0CE38e979e99435e"); // xPUNK as xToken
   await floorTreasury.enable("12", "0x9120BcE55a8D8038DD45C033C0573389fC255bc4", "0xf0a8251AC171b76B2aE5D316C2353506D69c64dd"); // xPUNKWETH as xToken
+
+  await floorTreasury.enable("2", "0xeaeA4134D1fA90cdF506f669033Ecd24ec941F3a", "0x0000000000000000000000000000000000000000"); // xPUNK as reserve asset
+  await floorTreasury.enable("2", "0x9120BcE55a8D8038DD45C033C0573389fC255bc4", "0x0000000000000000000000000000000000000000"); // xPUNKWETH as reserve asset
+
   await floorTreasury.enable("5", "0x1a8818eabe7f88f9c2a2dd39f2e7a9b55354f87a", "0x374488353cd9F438D2A11a78B5B0E91abF215Af2"); // PUNKWETH SLP as liquidity asset
   await floorTreasury.enable("5", punkWeeth, "0x53cC90aDEC82d143Ea0f7a9E150c977FE6a96012"); // PUNKWEETH SLP  as liquidity asset
   await floorTreasury.enable("0", "0x6ce798Bc8C8C93F3C312644DcbdD2ad6698622C5", "0x0000000000000000000000000000000000000000"); // Governor multi-sig
