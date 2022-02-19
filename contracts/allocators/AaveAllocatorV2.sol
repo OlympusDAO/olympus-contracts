@@ -59,14 +59,16 @@ contract AaveAllocatorV2 is BaseAllocator {
         uint256 balance = token.balanceOf(address(this));
 
         // interactions
-        token.approve(address(pool), balance);
-        pool.deposit(address(token), balance, address(this), referralCode);
+        if (balance > 0) {
+            token.approve(address(pool), balance);
+            pool.deposit(address(token), balance, address(this), referralCode);
+        }
 
         uint256 aBalance = aToken.balanceOf(address(this));
         uint256 allocated = extender.getAllocatorAllocated(id);
 
         // we can do this because aToken is 1:1 with deposited
-        if (aBalance > allocated) {
+        if (aBalance >= allocated) {
             gain = uint128(aBalance - allocated);
         } else {
             loss = uint128(allocated - aBalance);
