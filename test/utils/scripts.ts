@@ -62,4 +62,9 @@ export async function addEth(address: string, value: BigNumber): Promise<void> {
     await network.provider.send("hardhat_setBalance", [address, value._hex]);
 }
 
+export async function tmine(elapsed: number): Promise<void> {
+    await network.provider.send("evm_increaseTime", [elapsed]);
+    await network.provider.send("evm_mine");
+}
+
 export const addressZero = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
