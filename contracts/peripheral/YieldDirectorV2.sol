@@ -288,6 +288,10 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         return _getOutstandingYield(principalTotal, agnosticTotal);
     }
 
+    function getDepositorIds(address donor_) external view returns (uint256[] memory) {
+        return depositorIds[donor_];
+    }
+
     /************************
      * Recipient Functions
      ************************/
@@ -316,6 +320,10 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         }
 
         return agnosticRedeemable;
+    }
+
+    function getRecipientIds(address recipient_) external view returns (uint256[] memory) {
+        return recipientIds[recipient_];
     }
 
     /**
