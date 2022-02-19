@@ -17,4 +17,18 @@ const aweth = "0x030bA81f1c18d280636F32af80b9AAd02Cf0854e";
 const ausdc = "0xBcca60bB61934080951369a648Fb03DF4F96263C";
 const afrax = "0xd4937682df3C8aEF4FE912A96A74121C0829E664";
 
-export const coins = { ohm, gohm, sohm, dai, usdc, usdt, mim, weth, frax, adai, aweth, ausdc, afrax };
+export const coins = {
+    ohm,
+    gohm,
+    sohm,
+    dai,
+    usdc,
+    usdt,
+    mim,
+    weth,
+    frax,
+    adai,
+    aweth,
+    ausdc,
+    afrax,
+};
