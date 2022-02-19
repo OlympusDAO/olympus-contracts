@@ -107,6 +107,7 @@ describe.only("YieldStreamer", async () => {
         )) as Distributor;
         yieldStreamer = (await yieldStreamerFactory.deploy(
             gOhm.address,
+            sOhm.address,
             ohm.address,
             dai.address,
             sushiRouter.address,
@@ -195,8 +196,9 @@ describe.only("YieldStreamer", async () => {
 
         await expect(await yieldStreamer.idCount()).is.equal("2");
         await expect((await yieldStreamer.depositInfo(0)).principalAmount).is.equal(toOhm(100));
-        await expect((await yieldStreamer.upkeepInfo(0)).paymentInterval).is.equal(1);
-        await expect((await yieldStreamer.upkeepInfo(0)).userMinimumDaiThreshold).is.equal(
+        await expect((await yieldStreamer.recipientInfo(0)).recipientAddress).is.equal(bob.address);
+        await expect((await yieldStreamer.recipientInfo(0)).paymentInterval).is.equal(1);
+        await expect((await yieldStreamer.recipientInfo(0)).userMinimumDaiThreshold).is.equal(
             toDecimals(5)
         );
         await expect(await yieldStreamer.activeDepositIds(1)).is.equal(1);
@@ -260,14 +262,13 @@ describe.only("YieldStreamer", async () => {
             .deposit(toDecimals(10), alice.address, 1, toDecimals(1000));
         await triggerRebase();
 
-        const actualYield = await yieldStreamer.getOutstandingYield(0); // yield is around 0.1sOhm convert this to gOhm
         const amountOfDai = toOhm(0.1).mul(100).mul(1000000000); // Mock the amount of Dai coming out of swap. 0.1 Ohm should give roughly 10 DAi. Assuming Ohm=100DAI
         sushiRouter.getAmountsOut.returns([BigNumber.from("0"), amountOfDai]);
         sushiRouter.swapExactTokensForTokens.returns([BigNumber.from("0"), amountOfDai]);
 
         await expect(await yieldStreamer.upkeep()).to.emit(yieldStreamer, "UpkeepComplete");
 
-        await expect((await yieldStreamer.upkeepInfo(0)).unclaimedDai).is.equals(toDecimals(10));
+        await expect((await yieldStreamer.recipientInfo(0)).unclaimedDai).is.equals(toDecimals(10));
         await yieldStreamer.connect(alice).harvestDai(0);
         await expect(await dai.balanceOf(alice.address)).is.equals(toDecimals(10));
     });
@@ -300,16 +301,12 @@ describe.only("YieldStreamer", async () => {
         await yieldStreamer
             .connect(alice)
             .deposit(toDecimals(10), alice.address, 604800, toDecimals(1000));
-        await expect((await yieldStreamer.upkeepInfo(0)).paymentInterval).is.equal(604800);
-        await expect((await yieldStreamer.upkeepInfo(0)).userMinimumDaiThreshold).is.equal(
-            toDecimals(1000)
-        );
 
         await yieldStreamer.connect(alice).updatePaymentInterval(0, 2419200);
         await yieldStreamer.connect(alice).updateUserMinDaiThreshold(0, toDecimals(2000));
 
-        await expect((await yieldStreamer.upkeepInfo(0)).paymentInterval).is.equal(2419200);
-        await expect((await yieldStreamer.upkeepInfo(0)).userMinimumDaiThreshold).is.equal(
+        await expect((await yieldStreamer.recipientInfo(0)).paymentInterval).is.equal(2419200);
+        await expect((await yieldStreamer.recipientInfo(0)).userMinimumDaiThreshold).is.equal(
             toDecimals(2000)
         );
     });
