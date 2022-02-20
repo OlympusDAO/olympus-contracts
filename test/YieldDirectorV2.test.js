@@ -391,7 +391,7 @@ describe("YieldDirectorV2", async () => {
         await expect(tyche.recipientIds(bob.address, "0")).to.be.reverted;
         await expect(tyche.depositorIds(deployer.address, "0")).to.be.reverted;
         const newDeposit = await tyche.depositInfo("0");
-        await expect(newDeposit.depositor).is.equal("0x0000000000000000000000000000000000000000")
+        await expect(newDeposit.depositor).is.equal("0x0000000000000000000000000000000000000000");
         await expect(newDeposit.principalAmount).is.equal("0");
         await expect(newDeposit.agnosticAmount).is.equal("0");
     });

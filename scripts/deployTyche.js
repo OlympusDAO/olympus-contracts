@@ -16,7 +16,12 @@ async function main() {
     const yieldDirectorFactory = await ethers.getContractFactory("YieldDirectorV2");
     //const yieldDirector = await yieldDirectorFactory.deploy(mockSOhm.address);
 
-    const yieldDirector = await yieldDirectorFactory.deploy(sohmDeployment, gohmDeployment, stakingDeployment, authorityDeployment);
+    const yieldDirector = await yieldDirectorFactory.deploy(
+        sohmDeployment,
+        gohmDeployment,
+        stakingDeployment,
+        authorityDeployment
+    );
 
     //console.log("SOHM DEPLOYED AT", mockSOhm.address);
     console.log("YIELD DIRECTOR DEPLOYED AT", yieldDirector.address);
