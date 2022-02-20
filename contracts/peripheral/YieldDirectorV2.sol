@@ -88,11 +88,9 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param recipient_ Address to direct staking yield and vault shares to
     */
     function deposit(uint256 amount_, address recipient_) external returns (uint256 depositId) {
-        if (isInvalidDeposit(amount_, recipient_)) revert YieldDirector_InvalidDeposit();
+        depositId = _createDeposit(amount_, recipient_);
 
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
-
-        depositId = _createDeposit(amount_, recipient_);
     }
 
     /**
@@ -101,13 +99,12 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param recipient_ Address to direct staking yield and vault shares to
     */
     function depositSohm(uint256 amount_, address recipient_) external returns (uint256 depositId) {
-        if (isInvalidDeposit(amount_, recipient_)) revert YieldDirector_InvalidDeposit();
+        uint256 gohmAmount = _toAgnostic(amount_);
+        depositId = _createDeposit(gohmAmount, recipient_);
 
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
         IERC20(sOHM).approve(address(staking), amount_);
-        uint256 gohmAmount = staking.wrap(address(this), amount_);
-
-        depositId = _createDeposit(gohmAmount, recipient_);
+        staking.wrap(address(this), amount_);
     }
 
     /**
@@ -116,12 +113,9 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param amount_ Amount of new gOHM debt issued from donor to recipient
     */
     function addToDeposit(uint256 depositId_, uint256 amount_) external {
-        if (isInvalidUpdate(depositId_, amount_)) revert YieldDirector_InvalidUpdate();
-        if (depositInfo[depositId_].depositor != msg.sender) revert YieldDirector_NotYourDeposit();
+        _increaseDeposit(depositId_, amount_);
 
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
-
-        _increaseDeposit(depositId_, amount_);
     }
 
     /**
@@ -130,14 +124,12 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param amount_ Amount of new sOHM debt issued from donor to recipient
     */
     function addToSohmDeposit(uint256 depositId_, uint256 amount_) external {
-        if (isInvalidUpdate(depositId_, amount_)) revert YieldDirector_InvalidUpdate();
-        if (depositInfo[depositId_].depositor != msg.sender) revert YieldDirector_NotYourDeposit();
+        uint256 gohmAmount = _toAgnostic(amount_);
+        _increaseDeposit(depositId_, gohmAmount);
 
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
         IERC20(sOHM).approve(address(staking), amount_);
-        uint256 gohmAmount = staking.wrap(address(this), amount_);
-
-        _increaseDeposit(depositId_, gohmAmount);
+        staking.wrap(address(this), amount_);
     }
 
     /**
@@ -301,7 +293,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param depositId_ Deposit ID for this donation
     */
     function redeemableBalance(uint256 depositId_) public view returns (uint256) {
-        DepositInfo storage currDeposit = depositInfo[depositId_];
+        DepositInfo memory currDeposit = depositInfo[depositId_];
 
         return _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);
     }
@@ -311,7 +303,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param recipient_ Address of user receiving donated yield
      */
     function totalRedeemableBalance(address recipient_) public view returns (uint256) {
-        uint256[] storage receiptIds = recipientIds[recipient_];
+        uint256[] memory receiptIds = recipientIds[recipient_];
 
         uint256 agnosticRedeemable = 0;
 
@@ -377,6 +369,8 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param recipient_ The address of the user who will be entitled to claim the donated yield
     */
     function _createDeposit(uint256 amount_, address recipient_) internal returns (uint256 depositId) {
+        if (isInvalidDeposit(amount_, recipient_)) revert YieldDirector_InvalidDeposit();
+
         depositId = _deposit(msg.sender, amount_);
         recipientIds[recipient_].push(depositId);
         recipientLookup[depositId] = recipient_;
@@ -390,6 +384,9 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param amount_ Quantity of new gOHM deposited redirecting yield to the current deposit's recipient
     */
     function _increaseDeposit(uint256 depositId_, uint256 amount_) internal {
+        if (isInvalidUpdate(depositId_, amount_)) revert YieldDirector_InvalidUpdate();
+        if (depositInfo[depositId_].depositor != msg.sender) revert YieldDirector_NotYourDeposit();
+
         _addToDeposit(depositId_, amount_);
 
         emit Deposited(depositInfo[depositId_].depositor, recipientLookup[depositId_], amount_);
