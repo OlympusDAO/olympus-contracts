@@ -11,7 +11,7 @@ import {IgOHM} from "../interfaces/IgOHM.sol";
 contract YieldSplitterImpl is YieldSplitter {
     /**
     @notice Constructor
-    @param sOHM_ Address of gOHM.
+    @param sOHM_ Address of sOHM.
     */
     constructor(address sOHM_) YieldSplitter(sOHM_) {}
 
@@ -19,13 +19,8 @@ contract YieldSplitterImpl is YieldSplitter {
         @notice Create a deposit.
         @param depositor_ Address of depositor
         @param amount_ Amount in gOhm. 18 decimals.
-        @param recipient_ Address to direct staking yield to.
     */
-    function deposit(
-        address depositor_,
-        address recipient_,
-        uint256 amount_
-    ) external returns (uint256 depositId) {
+    function deposit(address depositor_, uint256 amount_) external returns (uint256 depositId) {
         depositId = _deposit(depositor_, amount_);
     }
 

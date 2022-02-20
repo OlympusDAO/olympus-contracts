@@ -17,7 +17,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { toDecimals, toOhm, advanceEpoch, fromDecimals } from "../utils/Utilities";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
-describe.only("YieldStreamer", async () => {
+describe("YieldStreamer", async () => {
     const LARGE_APPROVAL = "100000000000000000000000000000000";
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
     // Initial mint for Frax and DAI (10,000,000)

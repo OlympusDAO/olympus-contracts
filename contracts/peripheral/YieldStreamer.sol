@@ -117,8 +117,6 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         if (amount_ <= 0) revert InvalidAmount();
         if (userMinimumDaiThreshold_ < minimumDaiThreshold) revert MinDaiThresholdTooLow();
 
-        IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
-
         uint256 depositId = _deposit(msg.sender, amount_);
 
         recipientInfo[depositId] = RecipientInfo({
@@ -132,6 +130,8 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         activeDepositIds.push(depositId);
         recipientIds[recipient_].push(depositId);
 
+        IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
+
         emit Deposited(msg.sender, amount_);
     }
 
@@ -142,11 +142,11 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
     */
     function addToDeposit(uint256 id_, uint256 amount_) external override {
         if (depositDisabled) revert DepositDisabled();
-        // Protect customer from depositing into anothet addresses deposit?
-
-        IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
+        if (depositInfo[id_].depositor != msg.sender) revert UnauthorisedAction();
 
         _addToDeposit(id_, amount_);
+
+        IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
 
         emit Deposited(msg.sender, amount_);
     }
