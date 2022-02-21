@@ -54,8 +54,8 @@ contract VestingClaim is Ownable, FloorAccessControlled {
     // as percent of supply (4 decimals: 10000 = 1%)
     uint256 public totalAllocated;
 
-    // maximum portion of supply can allocate. == 4%
-    uint256 public maximumAllocated = 40000; 
+    // maximum portion of supply can allocate. == 9%
+    uint256 public maximumAllocated = 90000; 
 
     constructor(
       address _floor,
