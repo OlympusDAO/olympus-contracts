@@ -102,6 +102,12 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
         require(stakingTokenInfo[_token].exists, "Unsupported token");
         require(stakingTokenInfo[_token].isLiquidityPool, "Must be liquidity staking token");
 
+        // Get the Treasury's balance of the xToken
+        uint256 balance = IERC20(dividendTokenInfo[_token].xToken).balanceOf(address(treasury));
+
+        // Retrieve full balance of asset from treasury, decreasing total reserves
+        treasury.allocatorManage(dividendTokenInfo[_token].xToken, balance);
+
         // Trigger our rewards to be claimed
         liquidityStaking.claimRewards(stakingTokenInfo[_token].vaultId);
 
@@ -117,6 +123,12 @@ contract NFTXAllocator is IAllocator, FloorAccessControlled {
 
         // Pass the tokenValue as profit to stop the treasury minting FLOOR
         treasury.deposit(balance, _rewardToken, value);
+
+        // Deposit the xToken back into the treasury, increasing total reserves and minting 0 FLOOR
+        uint256 xTokenValue = treasury.tokenValue(dividendTokenInfo[_token].xToken, balance);
+
+        IERC20(dividendTokenInfo[_token].xToken).approve(address(treasury), balance);
+        treasury.deposit(balance, dividendTokenInfo[_token].xToken, xTokenValue);
     }
 
 
