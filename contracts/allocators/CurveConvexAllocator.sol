@@ -32,8 +32,9 @@ struct NewDepositData {
 }
 
 contract CurveConvexAllocator is BaseAllocator {
-    // constants
-    uint256 public constant slippage = 9e17;
+    // constants and globals
+    address public constant treasury = 0x9A315BdF513367C0377FB36545857d12e85813Ef;
+    uint256 public slippage = 9e17;
 
     // curve
     ICurveAddressProvider internal constant _curveAddressProvider =
@@ -54,6 +55,8 @@ contract CurveConvexAllocator is BaseAllocator {
     // base overrides
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
         // reads
+        uint256[4] memory fixedInputArray;
+        uint256 depositAmount;
         uint256 index = tokenIds[id];
 
         AllocatorTargetData memory target = _targets[index];
@@ -63,14 +66,22 @@ contract CurveConvexAllocator is BaseAllocator {
 
         address pool = _registry.get_pool_from_lp_token(address(lpCurve));
 
-        uint256[4] memory fixedInputArray;
-        uint256 depositAmount = underlying.balanceOf(address(this));
-        fixedInputArray[target.curve.cid] = depositAmount;
-
         // checks
         _onlyGuardian();
 
         // interactions
+        // rewards
+        IConvexRewards rewards = target.convex.pool;
+        rewards.getReward();
+
+        for (uint256 i; i < rewards.extraRewardsLength(); i++) {
+            IConvexVirtualBalanceRewards(rewards.extraRewards(i)).getReward();
+        }
+
+        // redeposit (reads here just in case rewards contain underlying)
+        depositAmount = underlying.balanceOf(address(this));
+        fixedInputArray[target.curve.cid] = depositAmount;
+
         underlying.approve(address(_zap3), depositAmount);
         depositAmount = _zapIntoCurve(pool, fixedInputArray);
 
@@ -104,8 +115,12 @@ contract CurveConvexAllocator is BaseAllocator {
                 IERC20 lpCurve = target.curve.lp;
                 address curvePool = _registry.get_pool_from_lp_token(address(lpCurve));
 
-                fixedInputArray[target.curve.cid] = amount;
-                lpCurveChange = _zap3.calc_token_amount(curvePool, fixedInputArray, false);
+                if (amount < type(uint256).max) {
+                    fixedInputArray[target.curve.cid] = amount;
+                    lpCurveChange = _zap3.calc_token_amount(curvePool, fixedInputArray, false);
+                } else {
+                    lpCurveChange = target.convex.pool.balanceOf(address(this));
+                }
 
                 // interactions
                 // check if approve necessary
@@ -122,9 +137,38 @@ contract CurveConvexAllocator is BaseAllocator {
         }
     }
 
-    function _deactivate(bool panic) internal override {}
+    function _deactivate(bool panic) internal override {
+        uint256 length = _targets.length;
 
-    function _prepareMigration() internal override {}
+        if (status == AllocatorStatus.ACTIVATED) {
+            uint256[] memory inputArray = new uint256[](length);
+
+            for (uint256 i; i < length; i++) {
+                inputArray[i] = type(uint256).max;
+            }
+
+            deallocate(inputArray);
+        }
+
+        if (panic) {
+            for (uint256 i; i < length; i++) {
+                IERC20 token = _tokens[i];
+                token.transfer(address(treasury), token.balanceOf(address(this)));
+            }
+
+            for (uint256 i; i < _rewardTokens.length; i++) {
+                IERC20 rewardToken = _rewardTokens[i];
+                rewardToken.transfer(address(treasury), rewardToken.balanceOf(address(this)));
+            }
+        }
+    }
+
+    function _prepareMigration() internal override {
+        for (uint256 i; i < _targets.length; i++) {
+            _targets[i].convex.pool.withdrawAllAndUnwrap(true);
+        }
+        _claimAllRewards();
+    }
 
     function amountAllocated(uint256 id) public view override returns (uint256) {
         uint256 index = tokenIds[id];
@@ -218,6 +262,11 @@ contract CurveConvexAllocator is BaseAllocator {
         _targets[index] = target;
     }
 
+    function setSlippage(uint256 slippageNew) external {
+        _onlyGuardian();
+        slippage = slippageNew;
+    }
+
     function setRegistry() public {
         _onlyGuardian();
         _registry = ICurveRegistry(_curveAddressProvider.get_registry());
@@ -225,6 +274,22 @@ contract CurveConvexAllocator is BaseAllocator {
 
     function _zapIntoCurve(address pool, uint256[4] memory amounts) internal returns (uint256) {
         return _zap3.add_liquidity(pool, amounts, (_zap3.calc_token_amount(pool, amounts, true) * slippage) / 1e18);
+    }
+
+    function _claimAllRewards() internal {
+        for (uint256 i; i < _targets.length; i++) {
+            AllocatorTargetData memory target = _targets[i];
+            IConvexRewards rewards = target.convex.pool;
+
+            // two tokens can have the same reward pool
+            if (rewards.earned(address(this)) > 0) {
+                rewards.getReward();
+
+                for (uint256 j; j < rewards.extraRewardsLength(); i++) {
+                    IConvexVirtualBalanceRewards(rewards.extraRewards(j)).getReward();
+                }
+            }
+        }
     }
 
     function _amountAllocated(
