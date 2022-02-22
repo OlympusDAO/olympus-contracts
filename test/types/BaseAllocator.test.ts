@@ -21,18 +21,10 @@ import {
 // data
 import { coins } from "../utils/coins";
 import { olympus } from "../utils/olympus";
-import {
-    impersonate,
-    snapshot,
-    revert,
-    getCoin,
-    bne,
-    bnn,
-    pinBlock,
-    addressZero,
-    setStorage,
-    addEth,
-} from "../utils/scripts";
+import { helpers } from "../utils/helpers";
+
+const bne = helpers.bne;
+const bnn = helpers.bnn;
 
 describe("BaseAllocator", async () => {
     // signers
@@ -62,13 +54,13 @@ describe("BaseAllocator", async () => {
     let localSnapId: number = 0;
 
     before(async () => {
-        await pinBlock(14026252, url);
+        await helpers.pinBlock(14026252, url);
 
-        frax = await getCoin(coins.frax);
-        usdc = await getCoin(coins.usdc);
-        dai = await getCoin(coins.dai);
-        usdt = await getCoin(coins.usdt);
-        weth = await getCoin(coins.weth);
+        frax = await helpers.getCoin(coins.frax);
+        usdc = await helpers.getCoin(coins.usdc);
+        dai = await helpers.getCoin(coins.dai);
+        usdt = await helpers.getCoin(coins.usdt);
+        weth = await helpers.getCoin(coins.weth);
         tokens = [frax, usdc, dai, usdt, weth];
 
         treasury = (await ethers.getContractAt(
@@ -89,15 +81,15 @@ describe("BaseAllocator", async () => {
 
         owner = (await ethers.getSigners())[0];
 
-        guardian = await impersonate(await authority.guardian());
-        governor = await impersonate(await authority.governor());
+        guardian = await helpers.impersonate(await authority.guardian());
+        governor = await helpers.impersonate(await authority.governor());
 
         extender = extender.connect(guardian);
 
         treasury = treasury.connect(governor);
 
-        treasury.enable(3, extender.address, addressZero);
-        treasury.enable(0, extender.address, addressZero);
+        treasury.enable(3, extender.address, helpers.constants.addressZero);
+        treasury.enable(0, extender.address, helpers.constants.addressZero);
 
         let simplestFactory: SimplestMockAllocator__factory = (await ethers.getContractFactory(
             "SimplestMockAllocator"
@@ -113,11 +105,11 @@ describe("BaseAllocator", async () => {
     });
 
     beforeEach(async () => {
-        snapshotId = await snapshot();
+        snapshotId = await helpers.snapshot();
     });
 
     afterEach(async () => {
-        await revert(snapshotId);
+        await helpers.revert(snapshotId);
     });
 
     it("initial: proper contract config", async () => {
@@ -139,10 +131,10 @@ describe("BaseAllocator", async () => {
         });
 
         it("passing: should register allocator", async () => {
-            const snapId = await snapshot();
+            const snapId = await helpers.snapshot();
             await extender.registerDeposit(allocator.address);
             expect((await allocator.ids())[0]).to.equal(1);
-            await revert(snapId);
+            await helpers.revert(snapId);
         });
     });
 
@@ -159,7 +151,7 @@ describe("BaseAllocator", async () => {
 
     describe("update", async () => {
         before(async () => {
-            localSnapId = await snapshot();
+            localSnapId = await helpers.snapshot();
 
             await extender.registerDeposit(allocator.address);
             await extender.setAllocatorLimits(1, {
@@ -177,7 +169,7 @@ describe("BaseAllocator", async () => {
         it("revert: should revert if sender is not guardian or if offline", async () => {
             await expect(allocator.connect(owner).update(1)).to.be.revertedWith("UNAUTHORIZED()");
 
-            await setStorage(allocator.address, bnn(4), bnn(0));
+            await helpers.setStorage(allocator.address, bnn(4), bnn(0));
 
             expect(await allocator.status()).to.equal(0);
 
@@ -185,7 +177,7 @@ describe("BaseAllocator", async () => {
                 "BaseAllocator_AllocatorOffline()"
             );
 
-            await setStorage(allocator.address, bnn(4), bnn(1));
+            await helpers.setStorage(allocator.address, bnn(4), bnn(1));
 
             expect(await allocator.status()).to.equal(1);
         });
@@ -245,13 +237,13 @@ describe("BaseAllocator", async () => {
         });
 
         after(async () => {
-            await revert(localSnapId);
+            await helpers.revert(localSnapId);
         });
     });
 
     describe("prepareMigration + migrate", async () => {
         before(async () => {
-            localSnapId = await snapshot();
+            localSnapId = await helpers.snapshot();
             await extender.registerDeposit(allocator.address);
             await extender.setAllocatorLimits(1, {
                 allocated: bne(10, 35),
@@ -293,8 +285,8 @@ describe("BaseAllocator", async () => {
             fakeAllocator.ids.returns([2]);
             fakeAllocator.status.returns(1);
 
-            const treasuryWallet: SignerWithAddress = await impersonate(treasury.address);
-            await addEth(treasuryWallet.address, bne(10, 23));
+            const treasuryWallet: SignerWithAddress = await helpers.impersonate(treasury.address);
+            await helpers.addEth(treasuryWallet.address, bne(10, 23));
 
             await extender.requestFundsFromTreasury(1, bne(10, 23));
             await dai.connect(treasuryWallet).transfer(allocator.address, bne(10, 22));
@@ -316,7 +308,7 @@ describe("BaseAllocator", async () => {
         });
 
         after(async () => {
-            await revert(localSnapId);
+            await helpers.revert(localSnapId);
         });
     });
 });
