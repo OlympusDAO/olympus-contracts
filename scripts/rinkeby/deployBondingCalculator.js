@@ -12,7 +12,7 @@ async function main() {
   const BondingCalculator = await ethers.getContractFactory("TokenWethCalculator");
   const bondingCalculator = await BondingCalculator.deploy(punk, weeth, 40000);
 
-  console.log("BondingCalculator:", bondingCalculator.address);
+  console.log("TokenWethCalculator:", bondingCalculator.address);
 }
 
 main()

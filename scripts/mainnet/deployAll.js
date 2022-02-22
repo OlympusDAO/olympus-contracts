@@ -5,13 +5,14 @@ const punk = '0x286AaF440879dBeAF6AFec6df1f9bfC907101f9D';
 const punkWeeth = '0xE21724BCa797be59FF477431026602e12200023D';
 const weeth = '0x4F2645F3D8e2542076A49De3F505016DC0a496B0';
 
+// @note deploy calculators first and add to this script
+
 async function main() {
   const [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts to Rinkeby with the account: " + deployer.address);
+  console.log("Deploying contracts to Mainnet with the account: " + deployer.address);
 
   const firstEpochNumber = "0";
-  const nowInSeconds = parseInt(new Date().getTime() / 1000);
-  const firstEpochTime = nowInSeconds + 28800;
+  const firstEpochTime = 1646067600; // 28th February 5pm UTC
   console.log("First epoch time:", firstEpochTime);
 
   const Authority = await ethers.getContractFactory("FloorAuthority");
@@ -30,21 +31,6 @@ async function main() {
 
   const FloorTreasury = await ethers.getContractFactory("FloorTreasury");
   const floorTreasury = await FloorTreasury.deploy(floor.address, "0", authority.address);
-
-  const NFTXXTokenCalculator = await ethers.getContractFactory("NFTXXTokenCalculator");
-  const nftxXTokenCalculator = await NFTXXTokenCalculator.deploy(
-    nftxInventoryStakingAddr,
-    floorTreasury.address
-  );
-
-  const NFTXXTokenWethCalculator = await ethers.getContractFactory("NFTXXTokenWethCalculator");
-  const nftxXTokenWethCalculator = await NFTXXTokenWethCalculator.deploy(
-    nftxLiquidityStakingAddr,
-    floorTreasury.address
-  );
-
-  const BondingCalculator = await ethers.getContractFactory("TokenWethCalculator");
-  const bondingCalculator = await BondingCalculator.deploy(punk, weeth, 40000); // 40% of SLP reserves value
 
   const NftxAllocator = await ethers.getContractFactory("NFTXAllocator");
   const nftxAllocator = await NftxAllocator.deploy(authority.address, nftxInventoryStakingAddr, nftxLiquidityStakingAddr, floorTreasury.address);
@@ -84,7 +70,7 @@ async function main() {
   const bondDepo = await BondDepo.deploy(authority.address, floor.address, gFLOOR.address, staking.address, floorTreasury.address);
 
   // Enable Treasury permissions
-  /* console.log("Setting treasury permissions");
+  console.log("Setting treasury permissions");
   await floorTreasury.enable("2", "0x4F2645F3D8e2542076A49De3F505016DC0a496B0", "0x0000000000000000000000000000000000000000"); // WEETH as reserve asset
   await floorTreasury.enable("2", "0x286AaF440879dBeAF6AFec6df1f9bfC907101f9D", "0x0000000000000000000000000000000000000000"); // PUNK as reserve asset
   await floorTreasury.enable("8", "0x286AaF440879dBeAF6AFec6df1f9bfC907101f9D", "0x0000000000000000000000000000000000000000"); // PUNK as risk asset
@@ -105,26 +91,20 @@ async function main() {
   await floorTreasury.enable("9", bondDepo.address, "0x0000000000000000000000000000000000000000"); // Reward Manager
   await floorTreasury.enable("9", distributor.address, "0x0000000000000000000000000000000000000000"); // Reward Manager
   await floorTreasury.enable("13", nftxAllocator.address, "0x0000000000000000000000000000000000000000"); // Allocator
-  await floorTreasury.enable("0", nftxAllocator.address, "0x0000000000000000000000000000000000000000"); // Reserve Depositor */
+  await floorTreasury.enable("0", nftxAllocator.address, "0x0000000000000000000000000000000000000000"); // Reserve Depositor
 
   // @TODO set xtokens as reserve tokens
 
   console.log('Setting vault authority as', floorTreasury.address);
   await authority.pushVault(floorTreasury.address, true);
 
-  console.log('Deploying aFLOOR and pFLOOR');
-  const AFLOOR = await ethers.getContractFactory("AlphaFLOOR");
-  const aFLOOR = await AFLOOR.deploy(deployer.address);
-
+  console.log('Deploying aFLOOR migration');
   const AFLOORMigration = await ethers.getContractFactory("AlphaFloorMigration");
   const aFloorMigration = await AFLOORMigration.deploy();
 
+  console.log('Deploying pFLOOR');
   const PFLOOR = await ethers.getContractFactory("VestingClaim");
   const pFLOOR = await PFLOOR.deploy(floor.address, weeth, gFLOOR.address, floorTreasury.address, staking.address, authority.address);
-
-  // Faucet contract for Rinkeby only
-  const Drip = await ethers.getContractFactory("Drip");
-  const drip = await Drip.deploy(punk, punkWeeth, aFLOOR.address, weeth);
 
   console.log("FLOOR:", floor.address);
   console.log("gFLOOR:", gFLOOR.address);
@@ -135,15 +115,10 @@ async function main() {
   console.log("Distributor:", distributor.address);
   console.log("BondDepo:", bondDepo.address);
 
-  console.log("aFLOOR:", aFLOOR.address);
   console.log("aFLOORMigration:", aFloorMigration.address);
   console.log("pFLOOR:", pFLOOR.address);
 
   console.log("NFTXAllocator:", nftxAllocator.address);
-
-  console.log("TokenWethCalculator:", bondingCalculator.address);
-  console.log("NFTXXTokenCalculator:", nftxXTokenCalculator.address);
-  console.log("NFTXXTokenWethCalculator:", nftxXTokenWethCalculator.address);
 
   console.log("Drip:", drip.address);
 
