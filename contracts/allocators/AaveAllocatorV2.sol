@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.10;
 
 // types
@@ -65,13 +66,13 @@ contract AaveAllocatorV2 is BaseAllocator {
         }
 
         uint256 aBalance = aToken.balanceOf(address(this));
-        uint256 allocated = extender.getAllocatorAllocated(id);
+        uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
 
         // we can do this because aToken is 1:1 with deposited
-        if (aBalance >= allocated) {
-            gain = uint128(aBalance - allocated);
+        if (aBalance >= last) {
+            gain = uint128(aBalance - last);
         } else {
-            loss = uint128(allocated - aBalance);
+            loss = uint128(last - aBalance);
         }
     }
 
