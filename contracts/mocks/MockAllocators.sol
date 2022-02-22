@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.10;
 
 // interfaces
@@ -21,7 +22,7 @@ contract SimplestMockAllocator is BaseAllocator {
         losses = loss;
     }
 
-    function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
+    function _update(uint256) internal view override returns (uint128 gain, uint128 loss) {
         gain = gains;
         loss = losses;
     }
@@ -38,19 +39,19 @@ contract SimplestMockAllocator is BaseAllocator {
         return _tokens[id].balanceOf(address(this));
     }
 
-    function rewardTokens() public view override returns (IERC20[] memory) {
+    function rewardTokens() public pure override returns (IERC20[] memory) {
         IERC20[] memory coin = new IERC20[](1);
         coin[0] = IERC20(DAI);
         return coin;
     }
 
-    function utilityTokens() public view override returns (IERC20[] memory) {
+    function utilityTokens() public pure override returns (IERC20[] memory) {
         IERC20[] memory coin = new IERC20[](1);
         coin[0] = IERC20(DAI);
         return coin;
     }
 
-    function name() external view override returns (string memory) {
+    function name() external pure override returns (string memory) {
         return "SimpleFraxAllocator";
     }
 }
