@@ -3,6 +3,8 @@ import { BigNumber, BaseContract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { MockERC20 } from "../../types";
 
+// FUNCTIONS
+
 export async function impersonate(address: string): Promise<SignerWithAddress> {
     await network.provider.send("hardhat_impersonateAccount", [address]);
     return await ethers.getSigner(address);
@@ -67,4 +69,23 @@ export async function tmine(elapsed: number): Promise<void> {
     await network.provider.send("evm_mine");
 }
 
-export const addressZero = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
+// CONSTANTS
+
+const addressZero = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
+
+const constants = { addressZero };
+
+export const helpers = {
+    impersonate,
+    snapshot,
+    revert,
+    getCoin,
+    getCoins,
+    bnn,
+    bne,
+    pinBlock,
+    setStorage,
+    addEth,
+    tmine,
+    constants,
+};
