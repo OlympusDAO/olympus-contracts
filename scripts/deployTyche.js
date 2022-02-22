@@ -8,10 +8,10 @@ async function main() {
 
     // Testnet
     //const mockSohmDeployment = "0x22C0b7Dc53a4caa95fEAbb05ea0729995a10D727";
-    const sohmDeployment = "0x0fa861D68db468A477415445fBCA71995d8Ed591";
-    const gohmDeployment = "0xB4Aaf6857411248A79B95bcb1C13E86140fE9C29";
-    const stakingDeployment = "0x9Aca02ceBD184624DCc1869B33aeD9f8c9670462";
-    const authorityDeployment = "0x4208befD8f546282aB43A30085774513227B656C";
+    const sohmDeployment = "0xebED323CEbe4FfF65F7D7612Ea04313F718E5A75";
+    const gohmDeployment = "0xcF2D6893A1CB459fD6B48dC9C41c6110B968611E";
+    const stakingDeployment = "0x06984c3A9EB8e3A8df02A4C09770D5886185792D";
+    const authorityDeployment = "0x4208befd8f546282ab43a30085774513227b656c";
 
     const yieldDirectorFactory = await ethers.getContractFactory("YieldDirectorV2");
     //const yieldDirector = await yieldDirectorFactory.deploy(mockSOhm.address);

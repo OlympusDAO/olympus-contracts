@@ -293,7 +293,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param depositId_ Deposit ID for this donation
     */
     function redeemableBalance(uint256 depositId_) public view returns (uint256) {
-        DepositInfo memory currDeposit = depositInfo[depositId_];
+        DepositInfo storage currDeposit = depositInfo[depositId_];
 
         return _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);
     }
