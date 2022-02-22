@@ -16,8 +16,8 @@ contract gOHM is IgOHM, ERC20 {
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyApproved() {
-        require(msg.sender == approved, "Only approved");
+    modifier onlyMinter() {
+        require(msg.sender == minter, "Only minter");
         _;
     }
 
@@ -37,7 +37,7 @@ contract gOHM is IgOHM, ERC20 {
     /* ========== STATE VARIABLES ========== */
 
     IsOHM public sOHM;
-    address public approved; // minter
+    address public minter;
     bool public migrated;
 
     mapping(address => mapping(uint256 => Checkpoint)) public checkpoints;
@@ -53,25 +53,12 @@ contract gOHM is IgOHM, ERC20 {
         sOHM = IsOHM(_sOHM);
     }
 
+	function initialize(address _minter) public {
+		require(minter == address(0), "gOHM::initialize: Already initialized");
+		minter = _minter;
+	}
+
     /* ========== MUTATIVE FUNCTIONS ========== */
-
-    /**
-     * @notice transfer mint rights from migrator to staking
-     * @notice can only be done once, at the time of contract migration
-     * @param _staking address
-     * @param _sOHM address
-     */
-    function migrate(address _staking, address _sOHM) external override onlyApproved {
-        require(!migrated, "Migrated");
-        migrated = true;
-
-        require(_staking != approved, "Invalid argument");
-        require(_staking != address(0), "Zero address found");
-        approved = _staking;
-
-        require(_sOHM != address(0), "Zero address found");
-        sOHM = IsOHM(_sOHM);
-    }
 
     /**
      * @notice Delegate votes from `msg.sender` to `delegatee`
@@ -86,7 +73,7 @@ contract gOHM is IgOHM, ERC20 {
         @param _to address
         @param _amount uint
      */
-    function mint(address _to, uint256 _amount) external override onlyApproved {
+    function mint(address _to, uint256 _amount) external override onlyMinter {
         _mint(_to, _amount);
     }
 
@@ -95,7 +82,7 @@ contract gOHM is IgOHM, ERC20 {
         @param _from address
         @param _amount uint
      */
-    function burn(address _from, uint256 _amount) external override onlyApproved {
+    function burn(address _from, uint256 _amount) external override onlyMinter {
         _burn(_from, _amount);
     }
 
