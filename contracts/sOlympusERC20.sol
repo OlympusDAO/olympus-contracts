@@ -71,7 +71,7 @@ contract sOlympus is IsOHM, ERC20Permit {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor() ERC20("Staked OHM", "sOHM", 9) ERC20Permit("Staked OHM") {
+    constructor() ERC20("Staked GEN", "sGEN", 9) ERC20Permit("Staked GEN") {
         initializer = msg.sender;
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
