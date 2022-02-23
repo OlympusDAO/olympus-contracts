@@ -96,10 +96,10 @@ contract OlympusERC1155BondWrapper is ERC1155 {
         (uint256 payout_, uint256 expiry_,) = IBondDepository(bondDepository).deposit(_bid, _amount, _maxPrice, address(this), _referral);
 
         if(id_ == 0) {
-            fixedExpiration = fixedExpirationDetails[nextID];
+            id_ = nextID;
+            fixedExpiration = fixedExpirationDetails[id_];
             fixedExpiration.bid = _bid;
             fixedExpiration.expiry = expiry_;
-            id_ = nextID;
             fixedExpirationToID[_bid] = id_;
             nextID++;
         } else {
