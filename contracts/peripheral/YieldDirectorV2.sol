@@ -61,6 +61,9 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         sOHM = sOhm_;
         gOHM = gOhm_;
         staking = IStaking(staking_);
+
+        uint256 maxApproval = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+        IERC20(sOHM).safeApprove(address(staking), maxApproval);
     }
 
     /************************
@@ -103,7 +106,6 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         depositId = _createDeposit(gohmAmount, recipient_);
 
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
-        IERC20(sOHM).approve(address(staking), amount_);
         staking.wrap(address(this), amount_);
     }
 
@@ -128,7 +130,6 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         _increaseDeposit(depositId_, gohmAmount);
 
         IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);
-        IERC20(sOHM).approve(address(staking), amount_);
         staking.wrap(address(this), amount_);
     }
 
@@ -151,7 +152,6 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     function withdrawPrincipalAsSohm(uint256 depositId_, uint256 amount_) external {
         uint256 amountWithdrawn = _withdraw(depositId_, amount_);
 
-        IERC20(sOHM).approve(address(staking), amountWithdrawn);
         staking.unwrap(msg.sender, amountWithdrawn);
     }
 
@@ -335,7 +335,6 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     function redeemYieldAsSohm(uint256 depositId_) external {
         uint256 amountRedeemed = _redeem(depositId_);
 
-        IERC20(sOHM).approve(address(staking), amountRedeemed);
         staking.unwrap(msg.sender, amountRedeemed);
     }
 
@@ -354,7 +353,6 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
     function redeemAllYieldAsSohm() external {
         uint256 amountRedeemed = _redeemAll();
 
-        IERC20(sOHM).approve(address(staking), amountRedeemed);
         staking.unwrap(msg.sender, amountRedeemed);
     }
 
