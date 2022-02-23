@@ -92,4 +92,6 @@ interface IBondDepository {
     function debtRatio(uint256 _bid) external view returns (uint256);
 
     function debtDecay(uint256 _bid) external view returns (uint64);
+
+    function terms(uint256 _bid) external view returns (Terms memory);
 }

@@ -9,7 +9,7 @@ import "../libraries/SafeERC20.sol";
 /// @title   ERC1155 Bond Wrapper
 /// @notice  Mints an ERC1155 to reprsent a bond in the Olympus bond depository
 /// @author  JeffX
-contract FixedTermERC1155 is ERC1155 {
+contract OlympusERC1155BondWrapper is ERC1155 {
     using SafeERC20 for IERC20;
 
     /// ERRORS ///
@@ -22,6 +22,8 @@ contract FixedTermERC1155 is ERC1155 {
     error NoParts();
     /// @notice Error if when trying to redeem id and parts are different lengths
     error DifferentLength();
+
+    error NotFixedExpiration();
 
 
     /// STRUCTS ///
@@ -38,6 +40,12 @@ contract FixedTermERC1155 is ERC1155 {
         uint256 totalParts;
     }
 
+    struct FixedExpirationIDs {
+        uint256 bid;
+        uint256 total;
+        uint256 expiry;
+    }
+
 
     /// STATE VARIABLES ///
 
@@ -51,6 +59,11 @@ contract FixedTermERC1155 is ERC1155 {
     /// @notice NFT ID to its bond details
     mapping(uint256 => IDDetails) public idDetails;
 
+    /// @notice Fixed Expiration ID to its details
+    mapping(uint256 => FixedExpirationIDs) public fixedExpirationDetails;
+
+    mapping(uint256 => uint256) public fixedExpirationToID;
+
     /// @notice Next ID of NFT that will be minted
     uint public nextID;
 
@@ -61,6 +74,43 @@ contract FixedTermERC1155 is ERC1155 {
 
 
     /// USER FUNCTIONS ///
+
+    function depositFixedExpiration(
+        uint256 _bid,
+        uint256 _amount,
+        uint256 _maxPrice,
+        address _user,
+        address _referral,
+        IERC20 _token
+    ) 
+        external
+        returns(uint256 id_) 
+    {
+        IBondDepository.Terms memory term = IBondDepository(bondDepository).terms(_bid);
+        if(term.fixedTerm) revert NotFixedExpiration();
+
+        FixedExpirationIDs memory fixedExpiration;
+        id_ = fixedExpirationToID[_bid];
+
+        _token.approve(bondDepository, _amount);
+        (uint256 payout_, uint256 expiry_,) = IBondDepository(bondDepository).deposit(_bid, _amount, _maxPrice, address(this), _referral);
+
+        if(id_ == 0) {
+            fixedExpiration = fixedExpirationDetails[nextID];
+            fixedExpiration.bid = _bid;
+            fixedExpiration.expiry = expiry_;
+            id_ = nextID;
+            fixedExpirationToID[_bid] = id_;
+            nextID++;
+        } else {
+            fixedExpiration = fixedExpirationDetails[id_];
+        }
+
+        fixedExpiration.total += payout_;
+        fixedExpirationDetails[id_] = fixedExpiration;
+
+        _mint(_user, id_, payout_, "");
+    }
 
     /// @notice           Deposits into Olympus Bond Depo and mints token that represents the bond
     /// @param _bid       Bond ID that will be deposited
