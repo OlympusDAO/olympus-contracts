@@ -271,7 +271,7 @@ describe("CurveConvexAllocator", () => {
     });
 
     describe.only("_update()", () => {
-	beforeEach(async () => {
+        beforeEach(async () => {
             allocator = await factory.deploy({
                 authority: authority.address,
                 tokens: [],
@@ -300,18 +300,36 @@ describe("CurveConvexAllocator", () => {
 
             await allocator.activate();
 
-	    await expect(() => extender.requestFundsFromTreasury(1, bne(10, 21))).to.changeTokenBalance(dai, allocator, bne(10, 21))
-	    await expect(() => extender.requestFundsFromTreasury(3, bne(10, 21))).to.changeTokenBalance(agEUR, allocator, bne(10, 21))
-	})
+            await expect(() =>
+                extender.requestFundsFromTreasury(1, bne(10, 21))
+            ).to.changeTokenBalance(dai, allocator, bne(10, 21));
+            await expect(() =>
+                extender.requestFundsFromTreasury(3, bne(10, 21))
+            ).to.changeTokenBalance(agEUR, allocator, bne(10, 21));
+        });
 
-	it("passing: _update should transfer funds to contracts", async () => {
-	    await expect(() => allocator.update(1)).to.changeTokenBalance(dai, allocator, bnn(0).sub(bne(10 ,21)))
+        it("passing: _update should transfer funds to contracts", async () => {
+            await expect(() => allocator.update(1)).to.changeTokenBalance(
+                dai,
+                allocator,
+                bnn(0).sub(bne(10, 21))
+            );
 
-	    // need to transfer after otherwise will deposit all
-	    await expect(() => extender.requestFundsFromTreasury(2, bne(10, 21))).to.changeTokenBalance(dai, allocator, bne(10, 21))
-	    await expect(() => allocator.update(2)).to.changeTokenBalance(dai, allocator, bnn(0).sub(bne(10 ,21)))
+            // need to transfer after otherwise will deposit all
+            await expect(() =>
+                extender.requestFundsFromTreasury(2, bne(10, 21))
+            ).to.changeTokenBalance(dai, allocator, bne(10, 21));
+            await expect(() => allocator.update(2)).to.changeTokenBalance(
+                dai,
+                allocator,
+                bnn(0).sub(bne(10, 21))
+            );
 
-	    await expect(() => allocator.update(3)).to.changeTokenBalance(agEUR, allocator, bnn(0).sub(bne(10 ,21)))
-	})
-    })
+            await expect(() => allocator.update(3)).to.changeTokenBalance(
+                agEUR,
+                allocator,
+                bnn(0).sub(bne(10, 21))
+            );
+        });
+    });
 });

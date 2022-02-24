@@ -77,10 +77,10 @@ contract CurveConvexAllocator is BaseAllocator {
         rewards.getReward();
 
         for (uint256 i; i < rewards.extraRewardsLength(); i++) {
-	    IConvexVirtualBalanceRewards extras = IConvexVirtualBalanceRewards(rewards.extraRewards(i));
-	    if(extras.earned(address(this)) > 0) {
+            IConvexVirtualBalanceRewards extras = IConvexVirtualBalanceRewards(rewards.extraRewards(i));
+            if (extras.earned(address(this)) > 0) {
                 extras.getReward();
-	    }
+            }
         }
 
         // redeposit (reads here just in case rewards contain underlying)
