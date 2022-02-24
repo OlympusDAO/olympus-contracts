@@ -13,8 +13,8 @@ import "../types/OlympusAccessControlled.sol";
 
 interface ICurveFactory {
     function exchange_underlying(
-        uint256 i,
-        uint256 j,
+        int128 i,
+        int128 j,
         uint256 dx,
         uint256 min_dy
     ) external returns (uint256);
