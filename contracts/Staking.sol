@@ -11,7 +11,7 @@ import "./interfaces/IDistributor.sol";
 
 import "./types/OlympusAccessControlled.sol";
 
-contract OlympusStaking is OlympusAccessControlled {
+contract Staking is OlympusAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;

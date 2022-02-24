@@ -8,7 +8,7 @@ import "../interfaces/IsOHM.sol";
 import "../interfaces/IgOHM.sol";
 import "../types/ERC20.sol";
 
-contract gOHM is IgOHM, ERC20 {
+contract GovernanceGenesisToken is IgOHM, ERC20 {
     /* ========== DEPENDENCIES ========== */
 
     using Address for address;

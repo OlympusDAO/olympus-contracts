@@ -10,7 +10,7 @@ import "./interfaces/IgOHM.sol";
 import "./interfaces/IsOHM.sol";
 import "./interfaces/IStaking.sol";
 
-contract sOlympus is IsOHM, ERC20Permit {
+contract StakedGenesisToken is IsOHM, ERC20Permit {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;

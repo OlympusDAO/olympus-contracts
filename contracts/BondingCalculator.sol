@@ -12,7 +12,7 @@ import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/IUniswapV2ERC20.sol";
 import "./interfaces/IUniswapV2Pair.sol";
 
-contract OlympusBondingCalculator is IBondingCalculator {
+contract BondingCalculator is IBondingCalculator {
     using FixedPoint for *;
     using SafeMath for uint256;
 

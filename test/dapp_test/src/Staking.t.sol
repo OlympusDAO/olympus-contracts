@@ -8,12 +8,12 @@ import "../../../contracts/libraries/SafeMath.sol";
 import "../../../contracts/libraries/FixedPoint.sol";
 import "../../../contracts/libraries/FullMath.sol";
 import "../../../contracts/Staking.sol";
-import "../../../contracts/OlympusERC20.sol";
-import "../../../contracts/sOlympusERC20.sol";
-import "../../../contracts/governance/gOHM.sol";
+import "../../../contracts/GenesisToken.sol";
+import "../../../contracts/StakedGenesisToken.sol";
+import "../../../contracts/governance/GovernanceGenesisToken.sol";
 import "../../../contracts/Treasury.sol";
 import "../../../contracts/StakingDistributor.sol";
-import "../../../contracts/OlympusAuthority.sol";
+import "../../../contracts/Authority.sol";
 
 import "./util/Hevm.sol";
 import "./util/MockContract.sol";

@@ -12,7 +12,7 @@ import "./interfaces/IBondDepository.sol";
 /// @author Zeus, Indigo
 /// Review by: JeffX
 
-contract OlympusBondDepositoryV2 is IBondDepository, NoteKeeper {
+contract BondDepository is IBondDepository, NoteKeeper {
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;

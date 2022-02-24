@@ -2,9 +2,9 @@
 pragma solidity 0.7.5;
 
 import "ds-test/test.sol"; // ds-test
-import "../../../contracts/OlympusERC20.sol";
+import "../../../contracts/GenesisToken.sol";
 
-import "../../../contracts/OlympusAuthority.sol";
+import "../../../contracts/Authority.sol";
 
 contract OlymppusERC20TokenTest is DSTest {
     OlympusERC20Token internal ohmContract;

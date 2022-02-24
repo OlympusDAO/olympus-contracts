@@ -10,7 +10,7 @@ import "./interfaces/IDistributor.sol";
 
 import "./types/OlympusAccessControlled.sol";
 
-contract Distributor is IDistributor, OlympusAccessControlled {
+contract StakingDistributor is IDistributor, OlympusAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;

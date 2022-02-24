@@ -14,7 +14,7 @@ import "./interfaces/ITreasury.sol";
 
 import "./types/OlympusAccessControlled.sol";
 
-contract OlympusTreasury is OlympusAccessControlled, ITreasury {
+contract Treasury is OlympusAccessControlled, ITreasury {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;

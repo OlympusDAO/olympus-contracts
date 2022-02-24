@@ -2,7 +2,7 @@
 pragma solidity 0.7.5;
 
 import "ds-test/test.sol"; // ds-test
-import "../../../contracts/OlympusAuthority.sol";
+import "../../../contracts/Authority.sol";
 import "../../../contracts/mocks/AccessControlledMock.sol";
 
 contract OlympusAuthorityTest is DSTest {

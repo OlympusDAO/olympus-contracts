@@ -10,7 +10,7 @@ import "./interfaces/IERC20Permit.sol";
 import "./types/ERC20Permit.sol";
 import "./types/OlympusAccessControlled.sol";
 
-contract OlympusERC20Token is ERC20Permit, IOHM, OlympusAccessControlled {
+contract GenesisToken is ERC20Permit, IOHM, OlympusAccessControlled {
     using SafeMath for uint256;
 
     constructor(address _authority)
