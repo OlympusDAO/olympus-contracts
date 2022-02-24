@@ -34,7 +34,7 @@ struct NewDepositData {
 contract CurveConvexAllocator is BaseAllocator {
     // constants and globals
     address public constant treasury = 0x9A315BdF513367C0377FB36545857d12e85813Ef;
-    uint256 public slippage = 9e17;
+    uint256 public slippage;
 
     // curve
     ICurveAddressProvider internal constant _curveAddressProvider =
@@ -50,7 +50,9 @@ contract CurveConvexAllocator is BaseAllocator {
 
     AllocatorTargetData[] internal _targets;
 
-    constructor(AllocatorInitData memory data) BaseAllocator(data) {}
+    constructor(AllocatorInitData memory data) BaseAllocator(data) {
+        slippage = 6e17;
+    }
 
     // base overrides
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
@@ -75,7 +77,10 @@ contract CurveConvexAllocator is BaseAllocator {
         rewards.getReward();
 
         for (uint256 i; i < rewards.extraRewardsLength(); i++) {
-            IConvexVirtualBalanceRewards(rewards.extraRewards(i)).getReward();
+	    IConvexVirtualBalanceRewards extras = IConvexVirtualBalanceRewards(rewards.extraRewards(i));
+	    if(extras.earned(address(this)) > 0) {
+                extras.getReward();
+	    }
         }
 
         // redeposit (reads here just in case rewards contain underlying)
@@ -228,11 +233,14 @@ contract CurveConvexAllocator is BaseAllocator {
                 // read
                 IERC20 rewardToken = data.tokens[i];
 
-                // interaction
-                rewardToken.approve(address(extender), type(uint256).max);
+                // checks
+                if (rewardToken.allowance(address(this), address(extender)) == 0) {
+                    // interaction
+                    rewardToken.approve(address(extender), type(uint256).max);
 
-                // effect
-                _rewardTokens.push(rewardToken);
+                    // effect
+                    _rewardTokens.push(rewardToken);
+                }
             }
         }
     }

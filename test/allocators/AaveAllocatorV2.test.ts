@@ -1,12 +1,10 @@
 // libraries, functionality...
-import { ethers, waffle, network, config } from "hardhat";
-import chai, { expect } from "chai";
-import { smock } from "@defi-wonderland/smock";
-import { BigNumber, BaseContract, ContractFactory, Contract } from "ethers";
+import { ethers, config } from "hardhat";
+import { expect } from "chai";
+import { BigNumber } from "ethers";
 
 // types
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { FakeContract, MockContract, MockContractFactory } from "@defi-wonderland/smock";
 import {
     OlympusTreasury,
     TreasuryExtender,
@@ -54,7 +52,6 @@ describe("AaveAllocatorV2", () => {
 
     // variables
     let snapshotId: number = 0;
-    let localSnapId: number = 0;
 
     before(async () => {
         await helpers.pinBlock(14026252, url);
