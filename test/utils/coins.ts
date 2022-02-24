@@ -10,6 +10,13 @@ const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 const usdt = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const mim = "0x99D8a9C45b2ecA8864373A26D1459e3Dff1e17F3";
 const frax = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
+const lusd = "0x5f98805a4e8be255a32880fdec7f6728c6568ba0";
+const agEUR = "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8";
+
+// GOV TOKENS
+const cvx = "0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B";
+const crv = "0xD533a949740bb3306d119CC777fa900bA034cd52";
+const angle = "0x31429d1856ad1377a8a0079410b297e1a9e214c2";
 
 // AAVE
 const adai = "0x028171bCA77440897B824Ca71D1c56caC55b68A3";
@@ -21,12 +28,17 @@ export const coins = {
     ohm,
     gohm,
     sohm,
+    weth,
     dai,
     usdc,
     usdt,
     mim,
-    weth,
     frax,
+    lusd,
+    agEUR,
+    cvx,
+    crv,
+    angle,
     adai,
     aweth,
     ausdc,
