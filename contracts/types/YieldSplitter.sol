@@ -74,7 +74,11 @@ abstract contract YieldSplitter {
         @param id_ Id of the deposit.
         @param amount_ Amount of gOhm to add. 18 decimals.
     */
-    function _addToDeposit(uint256 id_, uint256 amount_, address depositorAddress) internal {
+    function _addToDeposit(
+        uint256 id_,
+        uint256 amount_,
+        address depositorAddress
+    ) internal {
         if (depositInfo[id_].depositor != depositorAddress) revert YieldSplitter_NotYourDeposit();
 
         DepositInfo storage userDeposit = depositInfo[id_];
@@ -87,7 +91,11 @@ abstract contract YieldSplitter {
         @param id_ Id of the deposit.
         @param amount_ Amount of gOHM to withdraw.
     */
-    function _withdrawPrincipal(uint256 id_, uint256 amount_, address depositorAddress) internal {
+    function _withdrawPrincipal(
+        uint256 id_,
+        uint256 amount_,
+        address depositorAddress
+    ) internal {
         if (depositInfo[id_].depositor != depositorAddress) revert YieldSplitter_NotYourDeposit();
 
         DepositInfo storage userDeposit = depositInfo[id_];
@@ -129,7 +137,10 @@ abstract contract YieldSplitter {
         @return principal : amount of principal that was deleted. in gOHM. 18 decimals.
         @return agnosticAmount : total amount of gOHM deleted. Principal + Yield. 18 decimals.
     */
-    function _closeDeposit(uint256 id_, address depositorAddress) internal returns (uint256 principal, uint256 agnosticAmount) {
+    function _closeDeposit(uint256 id_, address depositorAddress)
+        internal
+        returns (uint256 principal, uint256 agnosticAmount)
+    {
         if (depositInfo[id_].depositor != depositorAddress) revert YieldSplitter_NotYourDeposit();
 
         principal = _toAgnostic(depositInfo[id_].principalAmount);
