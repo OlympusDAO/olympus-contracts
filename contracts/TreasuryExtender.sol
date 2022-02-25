@@ -166,7 +166,6 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         AllocatorData storage data = allocatorData[allocator][id];
         AllocatorPerformance memory perf = data.performance;
         AllocatorStatus status = allocator.status();
-        address token = address(allocator.tokens()[allocator.tokenIds(id)]);
 
         // checks
         // above could send in any id with gain == 0 and loss == 0, but he could only fake
