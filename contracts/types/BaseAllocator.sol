@@ -209,16 +209,6 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
 
     /**
      * @notice
-     *  Receive to reject ether transfers. We only want
-     *  Guardian depositing Ether into this contract.
-     */
-    receive() external payable {
-        _onlyGuardian();
-        emit EtherReceived(msg.value);
-    }
-
-    /**
-     * @notice
      *  Updates an Allocators state and reports to `TreasuryExtender` if necessary.
      * @dev
      *  Can only be called by the Guardian.
