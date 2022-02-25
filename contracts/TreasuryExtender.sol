@@ -13,7 +13,8 @@ import "./types/OlympusAccessControlledV2.sol";
 import "./libraries/SafeERC20.sol";
 
 error TreasuryExtender_AllocatorOffline();
-error TreasuryExtender_AllocatorActivated();
+error TreasuryExtender_AllocatorNotActivated();
+error TreasuryExtender_AllocatorNotOffline();
 error TreasuryExtender_AllocatorRegistered(uint256 id);
 error TreasuryExtender_OnlyAllocator(uint256 id, address sender);
 error TreasuryExtender_MaxAllocation(uint256 allocated, uint256 limit);
@@ -76,11 +77,11 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     //// "MODIFIERS"
 
     function _allocatorActivated(AllocatorStatus status) internal pure {
-        if (AllocatorStatus.ACTIVATED != status) revert TreasuryExtender_AllocatorOffline();
+        if (AllocatorStatus.ACTIVATED != status) revert TreasuryExtender_AllocatorNotActivated();
     }
 
     function _allocatorOffline(AllocatorStatus status) internal pure {
-        if (AllocatorStatus.OFFLINE != status) revert TreasuryExtender_AllocatorActivated();
+        if (AllocatorStatus.OFFLINE != status) revert TreasuryExtender_AllocatorNotOffline();
     }
 
     function _onlyAllocator(uint256 id, address sender) internal view {

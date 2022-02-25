@@ -197,7 +197,7 @@ describe("TreasuryExtender", () => {
 
             await expect(
                 extender.setAllocatorLimits(1, { allocated: bne(10, 27), loss: bne(10, 20) })
-            ).to.be.revertedWith("TreasuryExtender_AllocatorActivated()");
+            ).to.be.revertedWith("TreasuryExtender_AllocatorNotOffline()");
 
             fakeAllocator.status.returns(0);
         });
@@ -378,7 +378,7 @@ describe("TreasuryExtender", () => {
             // OFFLINE
             fakeAllocator.status.returns(0);
             await expect(extender.requestFundsFromTreasury(1, bne(10, 21))).to.be.revertedWith(
-                "TreasuryExtender_AllocatorOffline()"
+                "TreasuryExtender_AllocatorNotActivated()"
             );
             fakeAllocator.status.returns(1);
 
