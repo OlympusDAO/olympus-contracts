@@ -62,8 +62,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         gOHM = gOhm_;
         staking = IStaking(staking_);
 
-        uint256 maxApproval = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
-        IERC20(sOHM).safeApprove(address(staking), maxApproval);
+        IERC20(sOHM).safeApprove(address(staking), type(uint256).max);
     }
 
     /************************
@@ -188,7 +187,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param recipient_ Address of user receiving donated yield
     */
     function depositsTo(address donor_, address recipient_) external view returns (uint256) {
-        uint256[] storage depositIds = depositorIds[donor_];
+        uint256[] memory depositIds = depositorIds[donor_];
 
         for (uint256 index = 0; index < depositIds.length; ++index) {
             uint256 id = depositIds[index];
@@ -207,7 +206,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param donor_ Address of user donating yield
     */
     function totalDeposits(address donor_) external view returns (uint256) {
-        uint256[] storage depositIds = depositorIds[donor_];
+        uint256[] memory depositIds = depositorIds[donor_];
         uint256 principalTotal = 0;
 
         for (uint256 index = 0; index < depositIds.length; ++index) {
@@ -223,7 +222,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param donor_ Address of user donating yield
     */
     function getAllDeposits(address donor_) external view returns (address[] memory, uint256[] memory) {
-        uint256[] storage depositIds = depositorIds[donor_];
+        uint256[] memory depositIds = depositorIds[donor_];
 
         uint256 len = depositIds.length == 0 ? 1 : depositIds.length;
 
@@ -249,7 +248,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param recipient_ Address of user recieiving donated yield
     */
     function donatedTo(address donor_, address recipient_) external view returns (uint256) {
-        uint256[] storage depositIds = depositorIds[donor_];
+        uint256[] memory depositIds = depositorIds[donor_];
 
         for (uint256 index = 0; index < depositIds.length; ++index) {
             if (recipientLookup[depositIds[index]] == recipient_) {
@@ -265,7 +264,7 @@ contract YieldDirectorV2 is YieldSplitter, OlympusAccessControlled {
         @param donor_ Address of user donating yield
     */
     function totalDonated(address donor_) external view returns (uint256) {
-        uint256[] storage depositIds = depositorIds[donor_];
+        uint256[] memory depositIds = depositorIds[donor_];
 
         uint256 principalTotal = 0;
         uint256 agnosticTotal = 0;
