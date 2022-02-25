@@ -284,6 +284,10 @@ describe("AaveAllocatorV2", () => {
             await expect(allocator.connect(owner).update(3)).to.be.reverted;
         });
 
+        it("revert: should revert if not fourth token", async () => {
+            await expect(extender.registerDeposit(allocator.address)).to.be.reverted;
+        });
+
         it("passing: update should work for all coins", async () => {
             const amount: BigNumber = bne(10, 21);
 
