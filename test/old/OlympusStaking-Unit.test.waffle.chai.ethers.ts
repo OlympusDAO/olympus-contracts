@@ -53,7 +53,7 @@
 
 //         await oly.mint(treasury.address, 9000000000000000);
 
-//         sOLY = await ethers.getContractFactory('sGOAT');
+//         sOLY = await ethers.getContractFactory('KBRA');
 //         soly = await sOLY.deploy();
 
 //         await staking.initialize( oly.address, soly.address, treasury.address);

@@ -752,26 +752,26 @@ contract wGOAT is ERC20 {
 
     address public immutable staking;
     address public immutable GOAT;
-    address public immutable sGOAT;
+    address public immutable KBRA;
 
-    constructor( address _staking, address _GOAT, address _sGOAT ) ERC20( 'Wrapped sGOAT', 'wsGOAT' ) {
+    constructor( address _staking, address _GOAT, address _KBRA ) ERC20( 'Wrapped KBRA', 'wsGOAT' ) {
         require( _staking != address(0) );
         staking = _staking;
         require( _GOAT != address(0) );
         GOAT = _GOAT;
-        require( _sGOAT != address(0) );
-        sGOAT = _sGOAT;
+        require( _KBRA != address(0) );
+        KBRA = _KBRA;
     }
 
         /**
-        @notice stakes GOAT and wraps sGOAT
+        @notice stakes GOAT and wraps KBRA
         @param _amount uint
         @return uint
      */
     function wrapFromGOAT( uint _amount ) external returns ( uint ) {
         IERC20( GOAT ).transferFrom( msg.sender, address(this), _amount );
 
-        IERC20( GOAT ).approve( staking, _amount ); // stake GOAT for sGOAT
+        IERC20( GOAT ).approve( staking, _amount ); // stake GOAT for KBRA
         IStaking( staking ).stake( _amount, address(this) );
 
         uint value = wGOATValue( _amount );
@@ -780,7 +780,7 @@ contract wGOAT is ERC20 {
     }
 
     /**
-        @notice unwrap sGOAT and unstake GOAT
+        @notice unwrap KBRA and unstake GOAT
         @param _amount uint
         @return uint
      */
@@ -788,7 +788,7 @@ contract wGOAT is ERC20 {
         _burn( msg.sender, _amount );
         
         uint value = sGOATValue( _amount );
-        IERC20( sGOAT ).approve( staking, value ); // unstake sGOAT for GOAT
+        IERC20( KBRA ).approve( staking, value ); // unstake KBRA for GOAT
         IStaking( staking ).unstake( value, address(this) );
 
         IERC20( GOAT ).transfer( msg.sender, value );
@@ -796,12 +796,12 @@ contract wGOAT is ERC20 {
     }
 
     /**
-        @notice wrap sGOAT
+        @notice wrap KBRA
         @param _amount uint
         @return uint
      */
     function wrapFromsGOAT( uint _amount ) external returns ( uint ) {
-        IERC20( sGOAT ).transferFrom( msg.sender, address(this), _amount );
+        IERC20( KBRA ).transferFrom( msg.sender, address(this), _amount );
         
         uint value = wGOATValue( _amount );
         _mint( msg.sender, value );
@@ -809,7 +809,7 @@ contract wGOAT is ERC20 {
     }
 
     /**
-        @notice unwrap sGOAT
+        @notice unwrap KBRA
         @param _amount uint
         @return uint
      */
@@ -817,12 +817,12 @@ contract wGOAT is ERC20 {
         _burn( msg.sender, _amount );
 
         uint value = sGOATValue( _amount );
-        IERC20( sGOAT ).transfer( msg.sender, value );
+        IERC20( KBRA ).transfer( msg.sender, value );
         return value;
     }
 
     /**
-        @notice converts wGOAT amount to sGOAT
+        @notice converts wGOAT amount to KBRA
         @param _amount uint
         @return uint
      */
@@ -831,7 +831,7 @@ contract wGOAT is ERC20 {
     }
 
     /**
-        @notice converts sGOAT amount to wGOAT
+        @notice converts KBRA amount to wGOAT
         @param _amount uint
         @return uint
      */

@@ -216,7 +216,7 @@ contract GOATTreasury is Ownable {
     event ChangeQueued( MANAGING indexed managing, address queued );
     event ChangeActivated( MANAGING indexed managing, address activated, bool result );
 
-    enum MANAGING { RESERVEDEPOSITOR, RESERVESPENDER, RESERVETOKEN, RESERVEMANAGER, LIQUIDITYDEPOSITOR, LIQUIDITYTOKEN, LIQUIDITYMANAGER, DEBTOR, REWARDMANAGER, SGOAT }
+    enum MANAGING { RESERVEDEPOSITOR, RESERVESPENDER, RESERVETOKEN, RESERVEMANAGER, LIQUIDITYDEPOSITOR, LIQUIDITYTOKEN, LIQUIDITYMANAGER, DEBTOR, REWARDMANAGER, KBRA }
 
     address public immutable GOAT;
     uint public immutable blocksNeededForQueue;
@@ -260,8 +260,8 @@ contract GOATTreasury is Ownable {
     mapping( address => bool ) public isRewardManager;
     mapping( address => uint ) public rewardManagerQueue; // Delays changes to mapping.
 
-    address public sGOAT;
-    uint public sGOATQueue; // Delays change to sGOAT address
+    address public KBRA;
+    uint public sGOATQueue; // Delays change to KBRA address
     
     uint public totalReserves; // Risk-free value of all assets
     uint public totalDebt;
@@ -347,7 +347,7 @@ contract GOATTreasury is Ownable {
 
         uint value = valueOf( _token, _amount );
 
-        uint maximumDebt = IERC20( sGOAT ).balanceOf( msg.sender ); // Can only borrow against sGOAT held
+        uint maximumDebt = IERC20( KBRA ).balanceOf( msg.sender ); // Can only borrow against KBRA held
         uint availableDebt = maximumDebt.sub( debtorBalance[ msg.sender ] );
         require( value <= availableDebt, "Exceeds debt limit" );
 
@@ -503,7 +503,7 @@ contract GOATTreasury is Ownable {
             debtorQueue[ _address ] = block.number.add( blocksNeededForQueue );
         } else if ( _managing == MANAGING.REWARDMANAGER ) { // 8
             rewardManagerQueue[ _address ] = block.number.add( blocksNeededForQueue );
-        } else if ( _managing == MANAGING.SGOAT ) { // 9
+        } else if ( _managing == MANAGING.KBRA ) { // 9
             sGOATQueue = block.number.add( blocksNeededForQueue );
         } else return false;
 
@@ -614,9 +614,9 @@ contract GOATTreasury is Ownable {
             result = !isRewardManager[ _address ];
             isRewardManager[ _address ] = result;
 
-        } else if ( _managing == MANAGING.SGOAT ) { // 9
+        } else if ( _managing == MANAGING.KBRA ) { // 9
             sGOATQueue = 0;
-            sGOAT = _address;
+            KBRA = _address;
             result = true;
 
         } else return false;

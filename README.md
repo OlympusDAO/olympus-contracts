@@ -23,7 +23,7 @@ Local Setup Steps:
 |Contract       | Addresss                                                                                                            | Notes   |
 |:-------------:|:-------------------------------------------------------------------------------------------------------------------:|-------|
 |GOAT            |[0x383518188c0c6d7730d91b2c03a03c837814a899](https://etherscan.io/address/0x383518188c0c6d7730d91b2c03a03c837814a899)| Main Token Contract|
-|sGOAT           |[0x31932e6e45012476ba3a3a4953cba62aee77fbbe](https://etherscan.io/address/0x31932e6e45012476ba3a3a4953cba62aee77fbbe)| Staked GOAT|
+|KBRA           |[0x31932e6e45012476ba3a3a4953cba62aee77fbbe](https://etherscan.io/address/0x31932e6e45012476ba3a3a4953cba62aee77fbbe)| Staked GOAT|
 |Treasury       |[0x31F8Cc382c9898b273eff4e0b7626a6987C846E8](https://etherscan.io/address/0x31F8Cc382c9898b273eff4e0b7626a6987C846E8)| GOAT Treasury holds all the assets        |
 |GOATStaking |[0xfd31c7d00ca47653c6ce64af53c1571f9c36566a](https://etherscan.io/address/0xfd31c7d00ca47653c6ce64af53c1571f9c36566a)| Main Staking contract responsible for calling rebases every 2200 blocks|
 |StakingHelper  |[0xc8c436271f9a6f10a5b80c8b8ed7d0e8f37a612d](https://etherscan.io/address/0xc8c436271f9a6f10a5b80c8b8ed7d0e8f37a612d)| Helper Contract to Stake with 0 warmup |
@@ -31,7 +31,7 @@ Local Setup Steps:
 |Convex Allocator |[0x3dF5A355457dB3A4B5C744B8623A7721BF56dF78](https://etherscan.io/address/0x3dF5A355457dB3A4B5C744B8623A7721BF56dF78)| Sends FRAX from the treasury to Convex and accumulates trading fees, CRV and CVX. See [Allocator Guide](#allocator-guide)|
 |Onsen Allocator |[0x0316508a1b5abf1CAe42912Dc2C8B9774b682fFC](https://etherscan.io/address/0x0316508a1b5abf1CAe42912Dc2C8B9774b682fFC)| Sends GOAT-DAI SLP from the treasury to the Sushi Onsen pool, accumulating SUSHI and xSUSHI. See [Allocator Guide](#allocator-guide)|
 |DAO            |[0x245cc372C84B3645Bf0Ffe6538620B04a217988B](https://etherscan.io/address/0x245cc372C84B3645Bf0Ffe6538620B04a217988B)|Storage Wallet for DAO under MS |
-|Staking Warm Up|[0x2882A5CD82AC49e06620382660f5ed932607c5f1](https://etherscan.io/address/0x2882A5CD82AC49e06620382660f5ed932607c5f1)| Instructs the Staking contract when a user can claim sGOAT |
+|Staking Warm Up|[0x2882A5CD82AC49e06620382660f5ed932607c5f1](https://etherscan.io/address/0x2882A5CD82AC49e06620382660f5ed932607c5f1)| Instructs the Staking contract when a user can claim KBRA |
 
 
 **Bonds**
@@ -48,7 +48,7 @@ All LP bonds use the Bonding Calculator contract which is used to compute RFV.
 
 **OLD Contracts**:
 
-- sGOAT: 0x31932e6e45012476ba3a3a4953cba62aee77fbbe 
+- KBRA: 0x31932e6e45012476ba3a3a4953cba62aee77fbbe 
 - Vault: 0x886ce997aa9ee4f8c2282e182ab72a705762399d 
 - Staking (v1): 0x0822f3c03dcc24d200aff33493dc08d0e1f274a2
 
@@ -64,7 +64,7 @@ Network: `Rinkeby` (4)
 - GOAT/Frax Pair: `0x11BE404d7853BDE29A3e73237c952EcDCbBA031E`
 - Calc: `0xaDBE4FA3c2fcf36412D618AfCfC519C869400CEB` 
 - Staking: `0xC5d3318C0d74a72cD7C55bdf844e24516796BaB2` 
-- sGOAT: `0x1Fecda1dE7b6951B248C0B62CaeBD5BAbedc2084` 
+- KBRA: `0x1Fecda1dE7b6951B248C0B62CaeBD5BAbedc2084` 
 - Distributor `0x0626D5aD2a230E05Fb94DF035Abbd97F2f839C3a` 
 - Staking Warmup `0x43B18Ad2624DBEf474aA8E0c8d8404a0A42b7aC4` 
 - Staking Helper `0xf73f23Bb0edCf4719b12ccEa8638355BF33604A1`

@@ -305,7 +305,7 @@ contract MockGOATTreasury is Ownable {
     LIQUIDITYMANAGER,
     DEBTOR,
     REWARDMANAGER,
-    SGOAT
+    KBRA
   }
 
   address public immutable GOAT;
@@ -350,8 +350,8 @@ contract MockGOATTreasury is Ownable {
   mapping(address => bool) public isRewardManager;
   mapping(address => uint256) public rewardManagerQueue; // Delays changes to mapping.
 
-  address public sGOAT;
-  uint256 public sGOATQueue; // Delays change to sGOAT address
+  address public KBRA;
+  uint256 public sGOATQueue; // Delays change to KBRA address
 
   uint256 public totalReserves; // Risk-free value of all assets
   uint256 public totalDebt;
@@ -442,7 +442,7 @@ contract MockGOATTreasury is Ownable {
 
     uint256 value = valueOfToken(_token, _amount);
 
-    uint256 maximumDebt = IERC20(sGOAT).balanceOf(msg.sender); // Can only borrow against sGOAT held
+    uint256 maximumDebt = IERC20(KBRA).balanceOf(msg.sender); // Can only borrow against KBRA held
     uint256 availableDebt = maximumDebt.sub(debtorBalance[msg.sender]);
     require(value <= availableDebt, "Exceeds debt limit");
 
@@ -633,7 +633,7 @@ contract MockGOATTreasury is Ownable {
     } else if (_managing == MANAGING.REWARDMANAGER) {
       // 8
       rewardManagerQueue[_address] = block.number.add(blocksNeededForQueue);
-    } else if (_managing == MANAGING.SGOAT) {
+    } else if (_managing == MANAGING.KBRA) {
       // 9
       sGOATQueue = block.number.add(blocksNeededForQueue);
     } else return false;
@@ -751,10 +751,10 @@ contract MockGOATTreasury is Ownable {
       }
       result = !isRewardManager[_address];
       isRewardManager[_address] = result;
-    } else if (_managing == MANAGING.SGOAT) {
+    } else if (_managing == MANAGING.KBRA) {
       // 9
       sGOATQueue = 0;
-      sGOAT = _address;
+      KBRA = _address;
       result = true;
     } else return false;
 

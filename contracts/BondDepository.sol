@@ -130,6 +130,17 @@ library SafeMath {
         return c;
     }
 
+    function sub32(uint32 a, uint32 b) internal pure returns (uint32) {
+        return sub32(a, b, "SafeMath: subtraction overflow");
+    }
+
+    function sub32(uint32 a, uint32 b, string memory errorMessage) internal pure returns (uint32) {
+        require(b <= a, errorMessage);
+        uint32 c = a - b;
+
+        return c;
+    }
+
     function mul(uint256 a, uint256 b) internal pure returns (uint256) {
         if (a == 0) {
             return 0;
@@ -196,7 +207,11 @@ library Address {
       return functionCall(target, data, "Address: low-level call failed");
     }
 
-    function functionCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {
+    function functionCall(
+        address target, 
+        bytes memory data, 
+        string memory errorMessage
+    ) internal returns (bytes memory) {
         return _functionCallWithValue(target, data, 0, errorMessage);
     }
 
@@ -204,7 +219,12 @@ library Address {
         return functionCallWithValue(target, data, value, "Address: low-level call with value failed");
     }
 
-    function functionCallWithValue(address target, bytes memory data, uint256 value, string memory errorMessage) internal returns (bytes memory) {
+    function functionCallWithValue(
+        address target, 
+        bytes memory data, 
+        uint256 value, 
+        string memory errorMessage
+    ) internal returns (bytes memory) {
         require(address(this).balance >= value, "Address: insufficient balance for call");
         require(isContract(target), "Address: call to non-contract");
 
@@ -213,7 +233,12 @@ library Address {
         return _verifyCallResult(success, returndata, errorMessage);
     }
 
-    function _functionCallWithValue(address target, bytes memory data, uint256 weiValue, string memory errorMessage) private returns (bytes memory) {
+    function _functionCallWithValue(
+        address target, 
+        bytes memory data, 
+        uint256 weiValue, 
+        string memory errorMessage
+    ) private returns (bytes memory) {
         require(isContract(target), "Address: call to non-contract");
 
         // solhint-disable-next-line avoid-low-level-calls
@@ -240,7 +265,11 @@ library Address {
         return functionStaticCall(target, data, "Address: low-level static call failed");
     }
 
-    function functionStaticCall(address target, bytes memory data, string memory errorMessage) internal view returns (bytes memory) {
+    function functionStaticCall(
+        address target, 
+        bytes memory data, 
+        string memory errorMessage
+    ) internal view returns (bytes memory) {
         require(isContract(target), "Address: static call to non-contract");
 
         // solhint-disable-next-line avoid-low-level-calls
@@ -252,7 +281,11 @@ library Address {
         return functionDelegateCall(target, data, "Address: low-level delegate call failed");
     }
 
-    function functionDelegateCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {
+    function functionDelegateCall(
+        address target, 
+        bytes memory data, 
+        string memory errorMessage
+    ) internal returns (bytes memory) {
         require(isContract(target), "Address: delegate call to non-contract");
 
         // solhint-disable-next-line avoid-low-level-calls
@@ -260,7 +293,11 @@ library Address {
         return _verifyCallResult(success, returndata, errorMessage);
     }
 
-    function _verifyCallResult(bool success, bytes memory returndata, string memory errorMessage) private pure returns(bytes memory) {
+    function _verifyCallResult(
+        bool success, 
+        bytes memory returndata, 
+        string memory errorMessage
+    ) private pure returns(bytes memory) {
         if (success) {
             return returndata;
         } else {
@@ -375,7 +412,8 @@ abstract contract ERC20 is IERC20 {
 
     function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        _approve(sender, msg.sender, _allowances[sender][msg.sender]
+            .sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
     }
 
@@ -385,7 +423,8 @@ abstract contract ERC20 is IERC20 {
     }
 
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
+        _approve(msg.sender, spender, _allowances[msg.sender][spender]
+            .sub(subtractedValue, "ERC20: decreased allowance below zero"));
         return true;
     }
 
@@ -546,7 +585,8 @@ library SafeERC20 {
     }
 
     function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {
-        uint256 newAllowance = token.allowance(address(this), spender).sub(value, "SafeERC20: decreased allowance below zero");
+        uint256 newAllowance = token.allowance(address(this), spender)
+            .sub(value, "SafeERC20: decreased allowance below zero");
         _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
     }
 
@@ -646,6 +686,9 @@ library FixedPoint {
 interface ITreasury {
     function deposit( uint _amount, address _token, uint _profit ) external returns ( bool );
     function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
+    function mintRewards( address _recipient, uint _amount ) external;
+    function bondStartTime() external view returns ( uint );
+    function endTime() external view returns ( uint );
 }
 
 interface IBondCalculator {
@@ -661,12 +704,11 @@ interface IStakingHelper {
     function stake( uint _amount, address _recipient ) external;
 }
 
-contract GOATBondDepository is Ownable {
+contract MPBondDepository is Ownable, ReentrancyGuard {
 
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
-
 
 
 
@@ -701,29 +743,32 @@ contract GOATBondDepository is Ownable {
     mapping( address => Bond ) public bondInfo; // stores bond information for depositors
 
     uint public totalDebt; // total value of outstanding bonds; used for pricing
-    uint public lastDecay; // reference block for debt decay
+    uint public lastDecay; // reference time for debt decay
 
 
+    bool public useStableValuation = true;
 
+    // TODO: ADJUST TIMININGS TO LIKING
+    uint public constant fixedVestingTerm = 3600 * 24 * 3;
 
     /* ======== STRUCTS ======== */
 
     // Info for creating new bonds
     struct Terms {
         uint controlVariable; // scaling variable for price
-        uint vestingTerm; // in blocks
-        uint minimumPrice; // vs principle value
+        uint minimumPrice; // vs principle value. 5 decimals (15000 = 0.15)
         uint maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
         uint fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
         uint maxDebt; // 9 decimal debt ratio, max % total supply created as debt
+        uint vestingTerm; // in seconds
     }
 
     // Info for bond holder
     struct Bond {
         uint payout; // GOAT remaining to be paid
-        uint vesting; // Blocks left to vest
-        uint lastBlock; // Last interaction
-        uint pricePaid; // In MIM, for front end viewing
+        uint pricePaid; // In DAI, for front end viewing
+        uint lastTime; // Last interaction
+        uint vesting; // Seconds left to vest
     }
 
     // Info for incremental adjustments to control variable 
@@ -731,8 +776,8 @@ contract GOATBondDepository is Ownable {
         bool add; // addition or subtraction
         uint rate; // increment
         uint target; // BCV when adjustment finished
-        uint buffer; // minimum length (in blocks) between adjustments
-        uint lastBlock; // block when last adjustment made
+        uint buffer; // minimum length (in seconds) between adjustments
+        uint lastTime; // time when last adjustment made
     }
 
 
@@ -763,33 +808,30 @@ contract GOATBondDepository is Ownable {
     /**
      *  @notice initializes bond parameters
      *  @param _controlVariable uint
-     *  @param _vestingTerm uint
      *  @param _minimumPrice uint
      *  @param _maxPayout uint
      *  @param _fee uint
      *  @param _maxDebt uint
-     *  @param _initialDebt uint
      */
     function initializeBondTerms( 
         uint _controlVariable, 
-        uint _vestingTerm,
         uint _minimumPrice,
         uint _maxPayout,
         uint _fee,
-        uint _maxDebt,
-        uint _initialDebt
+        uint _maxDebt
     ) external onlyPolicy() {
         require( terms.controlVariable == 0, "Bonds must be initialized from 0" );
+
         terms = Terms ({
             controlVariable: _controlVariable,
-            vestingTerm: _vestingTerm,
             minimumPrice: _minimumPrice,
             maxPayout: _maxPayout,
             fee: _fee,
-            maxDebt: _maxDebt
+            maxDebt: _maxDebt,
+            vestingTerm: fixedVestingTerm
         });
-        totalDebt = _initialDebt;
-        lastDecay = block.number;
+
+        lastDecay = uint(block.timestamp);
     }
 
 
@@ -797,7 +839,7 @@ contract GOATBondDepository is Ownable {
     
     /* ======== POLICY FUNCTIONS ======== */
 
-    enum PARAMETER { VESTING, PAYOUT, FEE, DEBT , MINPRICE}
+    enum PARAMETER { VESTING, PAYOUT, FEE, DEBT, MINPRICE }
     /**
      *  @notice set parameters for new bonds
      *  @param _parameter PARAMETER
@@ -805,10 +847,9 @@ contract GOATBondDepository is Ownable {
      */
     function setBondTerms ( PARAMETER _parameter, uint _input ) external onlyPolicy() {
         if ( _parameter == PARAMETER.VESTING ) { // 0
-            require( _input >= 10000, "Vesting must be longer than 36 hours" );
-            terms.vestingTerm = _input;
+            require(false, "cannot change the vesting term from 3 days!" );
         } else if ( _parameter == PARAMETER.PAYOUT ) { // 1
-            require( _input <= 1000, "Payout cannot be above 1 percent" );
+            require( _input <= 10000, "Payout cannot be above 10 percent" );
             terms.maxPayout = _input;
         } else if ( _parameter == PARAMETER.FEE ) { // 2
             require( _input <= 10000, "DAO fee cannot exceed payout" );
@@ -818,6 +859,10 @@ contract GOATBondDepository is Ownable {
         } else if ( _parameter == PARAMETER.MINPRICE ) { // 4
             terms.minimumPrice = _input;
         }
+    }
+
+    function setUseStableValuation ( bool _useStableValuation ) external onlyPolicy() {
+        useStableValuation = _useStableValuation;
     }
 
     /**
@@ -833,14 +878,18 @@ contract GOATBondDepository is Ownable {
         uint _target,
         uint _buffer 
     ) external onlyPolicy() {
-        require( _increment <= terms.controlVariable.mul( 25 ).div( 1000 ), "Increment too large" );
+        require( _increment != 0 && ( _addition && terms.controlVariable < _target || !_addition && terms.controlVariable > _target ),
+            "Invalid adjustment" );
+        uint256 maxIncrement = terms.controlVariable.mul( 100 ).div( 1000 );
+        require( _increment <= maxIncrement ||
+                    maxIncrement == 0 && _increment == 1, "Increment too large" );
 
         adjustment = Adjust({
             add: _addition,
             rate: _increment,
             target: _target,
             buffer: _buffer,
-            lastBlock: block.number
+            lastTime: uint(block.timestamp)
         });
     }
 
@@ -876,53 +925,65 @@ contract GOATBondDepository is Ownable {
         uint _amount, 
         uint _maxPrice,
         address _depositor
-    ) external returns ( uint ) {
+    ) external nonReentrant returns ( uint ) {
+        require( block.timestamp >= ITreasury( treasury ).bondStartTime(), "Bonding hasn't started yet!" );
+        require( block.timestamp < ITreasury( treasury ).endTime() - fixedVestingTerm, "No depositing after 3 days before end time!" );
+        require( _depositor == msg.sender, "Sender not authorized" );
         require( _depositor != address(0), "Invalid address" );
 
         decayDebt();
-        require( totalDebt <= terms.maxDebt, "Max capacity reached" );
+
+        uint value = ITreasury( treasury ).valueOf( principle, _amount );
+        require( totalDebt.add(value) <= terms.maxDebt, "Max capacity reached" );
         
         uint priceInUSD = bondPriceInUSD(); // Stored in bond info
         uint nativePrice = _bondPrice();
 
         require( _maxPrice >= nativePrice, "Slippage limit: more than max price" ); // slippage protection
 
-        uint value = ITreasury( treasury ).valueOf( principle, _amount );
         uint payout = payoutFor( value ); // payout to bonder is computed
 
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 GOAT ( underflow protection )
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
 
+        // total debt is increased
+        totalDebt = totalDebt.add( value );
+
         // profits are calculated
         uint fee = payout.mul( terms.fee ).div( 10000 );
-        uint profit = value.sub( payout ).sub( fee );
 
         /**
             principle is transferred in
             approved and
             deposited into the treasury, returning (_amount - profit) GOAT
          */
-        IERC20( principle ).safeTransferFrom( msg.sender, address(this), _amount );
-        IERC20( principle ).approve( address( treasury ), _amount );
-        ITreasury( treasury ).deposit( _amount, principle, profit );
-        
-        if ( fee != 0 ) { // fee is transferred to dao 
-            IERC20( GOAT ).safeTransfer( DAO, fee ); 
+
+        if ( useStableValuation ) {
+            uint profit = value.sub( payout ).sub( fee );
+
+            IERC20( principle ).safeTransferFrom( msg.sender, address(this), _amount );
+            IERC20( principle ).approve( treasury, _amount );
+            ITreasury( treasury ).deposit( _amount, principle, profit );
+
+            if ( fee != 0 ) { // fee is transferred to dao 
+                IERC20( GOAT ).safeTransfer( DAO, fee ); 
+            }
+        } else {
+            IERC20( principle ).safeTransferFrom( msg.sender, treasury, _amount );
+            ITreasury( treasury ).mintRewards( address(this), payout );
+            ITreasury( treasury ).mintRewards( DAO, fee );
         }
-        
-        // total debt is increased
-        totalDebt = totalDebt.add( value ); 
                 
         // depositor info is stored
         bondInfo[ _depositor ] = Bond({ 
             payout: bondInfo[ _depositor ].payout.add( payout ),
             vesting: terms.vestingTerm,
-            lastBlock: block.number,
+            lastTime: uint(block.timestamp),
             pricePaid: priceInUSD
         });
 
         // indexed events are emitted
-        emit BondCreated( _amount, payout, block.number.add( terms.vestingTerm ), priceInUSD );
+        emit BondCreated( _amount, payout, block.timestamp.add( terms.vestingTerm ), priceInUSD );
         emit BondPriceChanged( bondPriceInUSD(), _bondPrice(), debtRatio() );
 
         adjust(); // control variable is adjusted
@@ -935,9 +996,13 @@ contract GOATBondDepository is Ownable {
      *  @param _stake bool
      *  @return uint
      */ 
-    function redeem( address _recipient, bool _stake ) external returns ( uint ) {        
+    function redeem( address _recipient, bool _stake ) external returns ( uint ) {
+        require( _recipient == msg.sender, "Recipient not authorized" );
+        require( _recipient != address(0), "Invalid address" );
+
         Bond memory info = bondInfo[ _recipient ];
-        uint percentVested = percentVestedFor( _recipient ); // (blocks since last interaction / vesting term remaining)
+        // (seconds since last interaction / vesting term remaining)
+        uint percentVested = percentVestedFor( _recipient );
 
         if ( percentVested >= 10000 ) { // if fully vested
             delete bondInfo[ _recipient ]; // delete user info
@@ -947,12 +1012,11 @@ contract GOATBondDepository is Ownable {
         } else { // if unfinished
             // calculate payout vested
             uint payout = info.payout.mul( percentVested ).div( 10000 );
-
             // store updated deposit info
             bondInfo[ _recipient ] = Bond({
                 payout: info.payout.sub( payout ),
-                vesting: info.vesting.sub( block.number.sub( info.lastBlock ) ),
-                lastBlock: block.number,
+                vesting: info.vesting.sub( uint( block.timestamp ).sub( info.lastTime ) ),
+                lastTime: uint(block.timestamp),
                 pricePaid: info.pricePaid
             });
 
@@ -991,21 +1055,25 @@ contract GOATBondDepository is Ownable {
      *  @notice makes incremental adjustment to control variable
      */
     function adjust() internal {
-        uint blockCanAdjust = adjustment.lastBlock.add( adjustment.buffer );
-        if( adjustment.rate != 0 && block.number >= blockCanAdjust ) {
+        uint timeCanAdjust = adjustment.lastTime.add( adjustment.buffer );
+        if( adjustment.rate != 0 && block.timestamp >= timeCanAdjust ) {
             uint initial = terms.controlVariable;
             if ( adjustment.add ) {
                 terms.controlVariable = terms.controlVariable.add( adjustment.rate );
                 if ( terms.controlVariable >= adjustment.target ) {
+                    terms.controlVariable = adjustment.target;
+                    adjustment.target = 0;
                     adjustment.rate = 0;
                 }
             } else {
-                terms.controlVariable = terms.controlVariable.sub( adjustment.rate );
+                terms.controlVariable = terms.controlVariable > adjustment.rate ? terms.controlVariable.sub( adjustment.rate ) : 0;
                 if ( terms.controlVariable <= adjustment.target ) {
+                    terms.controlVariable = adjustment.target;
+                    adjustment.target = 0;
                     adjustment.rate = 0;
                 }
             }
-            adjustment.lastBlock = block.number;
+            adjustment.lastTime = block.timestamp;
             emit ControlVariableAdjustment( initial, terms.controlVariable, adjustment.rate, adjustment.add );
         }
     }
@@ -1015,7 +1083,7 @@ contract GOATBondDepository is Ownable {
      */
     function decayDebt() internal {
         totalDebt = totalDebt.sub( debtDecay() );
-        lastDecay = block.number;
+        lastDecay = uint(block.timestamp);
     }
 
 
@@ -1037,7 +1105,7 @@ contract GOATBondDepository is Ownable {
      *  @return uint
      */
     function payoutFor( uint _value ) public view returns ( uint ) {
-        return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e16 );
+        return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e13 );
     }
 
 
@@ -1046,7 +1114,7 @@ contract GOATBondDepository is Ownable {
      *  @return price_ uint
      */
     function bondPrice() public view returns ( uint price_ ) {        
-        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e7 );
+        price_ = terms.controlVariable.mul( debtRatio() ).div( 1e4 );
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;
         }
@@ -1057,7 +1125,7 @@ contract GOATBondDepository is Ownable {
      *  @return price_ uint
      */
     function _bondPrice() internal returns ( uint price_ ) {
-        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e7 );
+        price_ = terms.controlVariable.mul( debtRatio() ).div( 1e4 );
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;        
         } else if ( terms.minimumPrice != 0 ) {
@@ -1071,9 +1139,9 @@ contract GOATBondDepository is Ownable {
      */
     function bondPriceInUSD() public view returns ( uint price_ ) {
         if( isLiquidityBond ) {
-            price_ = bondPrice().mul( IBondCalculator( bondCalculator ).markdown( principle ) ).div( 100 );
+            price_ = bondPrice().mul( IBondCalculator( bondCalculator ).markdown( principle ) ).div( 100000 );
         } else {
-            price_ = bondPrice().mul( 10 ** IERC20( principle ).decimals() ).div( 100 );
+            price_ = bondPrice().mul( 10 ** IERC20( principle ).decimals() ).div( 100000 );
         }
     }
 
@@ -1115,8 +1183,8 @@ contract GOATBondDepository is Ownable {
      *  @return decay_ uint
      */
     function debtDecay() public view returns ( uint decay_ ) {
-        uint blocksSinceLast = block.number.sub( lastDecay );
-        decay_ = totalDebt.mul( blocksSinceLast ).div( terms.vestingTerm );
+        uint timeSinceLast = uint(block.timestamp).sub( lastDecay );
+        decay_ = totalDebt.mul( timeSinceLast ).div( terms.vestingTerm );
         if ( decay_ > totalDebt ) {
             decay_ = totalDebt;
         }
@@ -1130,11 +1198,11 @@ contract GOATBondDepository is Ownable {
      */
     function percentVestedFor( address _depositor ) public view returns ( uint percentVested_ ) {
         Bond memory bond = bondInfo[ _depositor ];
-        uint blocksSinceLast = block.number.sub( bond.lastBlock );
+        uint secondsSinceLast = uint(block.timestamp).sub( bond.lastTime );
         uint vesting = bond.vesting;
 
         if ( vesting > 0 ) {
-            percentVested_ = blocksSinceLast.mul( 10000 ).div( vesting );
+            percentVested_ = secondsSinceLast.mul( 10000 ).div( vesting );
         } else {
             percentVested_ = 0;
         }

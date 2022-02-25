@@ -87,17 +87,17 @@ async function main() {
     const Distributor = await ethers.getContractFactory('Distributor');
     const distributor = await Distributor.deploy(treasury.address, GOAT.address, epochLengthInBlocks, firstEpochBlock);
 
-    // Deploy sGOAT
-    const SGOAT = await ethers.getContractFactory('sGOAT');
-    const sGOAT = await SGOAT.deploy();
+    // Deploy KBRA
+    const KBRA = await ethers.getContractFactory('KBRA');
+    const KBRA = await KBRA.deploy();
 
     // Deploy Staking
     const Staking = await ethers.getContractFactory('GOATStaking');
-    const staking = await Staking.deploy( GOAT.address, sGOAT.address, epochLengthInBlocks, firstEpochNumber, firstEpochBlock );
+    const staking = await Staking.deploy( GOAT.address, KBRA.address, epochLengthInBlocks, firstEpochNumber, firstEpochBlock );
 
     // Deploy staking warmpup
     const StakingWarmpup = await ethers.getContractFactory('StakingWarmup');
-    const stakingWarmup = await StakingWarmpup.deploy(staking.address, sGOAT.address);
+    const stakingWarmup = await StakingWarmpup.deploy(staking.address, KBRA.address);
 
     // Deploy staking helper
     const StakingHelper = await ethers.getContractFactory('StakingHelper');
@@ -127,9 +127,9 @@ async function main() {
     await daiBond.setStaking(staking.address, stakingHelper.address);
     await fraxBond.setStaking(staking.address, stakingHelper.address);
 
-    // Initialize sGOAT and set the index
-    await sGOAT.initialize(staking.address);
-    await sGOAT.setIndex(initialIndex);
+    // Initialize KBRA and set the index
+    await KBRA.initialize(staking.address);
+    await KBRA.setIndex(initialIndex);
 
     // set distributor contract and warmup contract
     await staking.setContract('0', distributor.address);
@@ -184,7 +184,7 @@ async function main() {
     console.log( "Treasury: " + treasury.address );
     console.log( "Calc: " + GOATBondingCalculator.address );
     console.log( "Staking: " + staking.address );
-    console.log( "sGOAT: " + sGOAT.address );
+    console.log( "KBRA: " + KBRA.address );
     console.log( "Distributor " + distributor.address);
     console.log( "Staking Warmup " + stakingWarmup.address);
     console.log( "Staking Helper " + stakingHelper.address);

@@ -543,7 +543,7 @@ contract GOATStaking is Ownable {
     using SafeERC20 for IERC20;
 
     address public immutable GOAT;
-    address public immutable sGOAT;
+    address public immutable KBRA;
 
     struct Epoch {
         uint length;
@@ -563,15 +563,15 @@ contract GOATStaking is Ownable {
     
     constructor ( 
         address _GOAT, 
-        address _sGOAT, 
+        address _KBRA, 
         uint _epochLength,
         uint _firstEpochNumber,
         uint _firstEpochBlock
     ) {
         require( _GOAT != address(0) );
         GOAT = _GOAT;
-        require( _sGOAT != address(0) );
-        sGOAT = _sGOAT;
+        require( _KBRA != address(0) );
+        KBRA = _KBRA;
         
         epoch = Epoch({
             length: _epochLength,
@@ -604,35 +604,35 @@ contract GOATStaking is Ownable {
 
         warmupInfo[ _recipient ] = Claim ({
             deposit: info.deposit.add( _amount ),
-            gons: info.gons.add( IsGOAT( sGOAT ).gonsForBalance( _amount ) ),
+            gons: info.gons.add( IsGOAT( KBRA ).gonsForBalance( _amount ) ),
             expiry: epoch.number.add( warmupPeriod ),
             lock: false
         });
         
-        IERC20( sGOAT ).safeTransfer( warmupContract, _amount );
+        IERC20( KBRA ).safeTransfer( warmupContract, _amount );
         return true;
     }
 
     /**
-        @notice retrieve sGOAT from warmup
+        @notice retrieve KBRA from warmup
         @param _recipient address
      */
     function claim ( address _recipient ) public {
         Claim memory info = warmupInfo[ _recipient ];
         if ( epoch.number >= info.expiry && info.expiry != 0 ) {
             delete warmupInfo[ _recipient ];
-            IWarmup( warmupContract ).retrieve( _recipient, IsGOAT( sGOAT ).balanceForGons( info.gons ) );
+            IWarmup( warmupContract ).retrieve( _recipient, IsGOAT( KBRA ).balanceForGons( info.gons ) );
         }
     }
 
     /**
-        @notice forfeit sGOAT in warmup and retrieve GOAT
+        @notice forfeit KBRA in warmup and retrieve GOAT
      */
     function forfeit() external {
         Claim memory info = warmupInfo[ msg.sender ];
         delete warmupInfo[ msg.sender ];
 
-        IWarmup( warmupContract ).retrieve( address(this), IsGOAT( sGOAT ).balanceForGons( info.gons ) );
+        IWarmup( warmupContract ).retrieve( address(this), IsGOAT( KBRA ).balanceForGons( info.gons ) );
         IERC20( GOAT ).safeTransfer( msg.sender, info.deposit );
     }
 
@@ -644,7 +644,7 @@ contract GOATStaking is Ownable {
     }
 
     /**
-        @notice redeem sGOAT for GOAT
+        @notice redeem KBRA for GOAT
         @param _amount uint
         @param _trigger bool
      */
@@ -652,16 +652,16 @@ contract GOATStaking is Ownable {
         if ( _trigger ) {
             rebase();
         }
-        IERC20( sGOAT ).safeTransferFrom( msg.sender, address(this), _amount );
+        IERC20( KBRA ).safeTransferFrom( msg.sender, address(this), _amount );
         IERC20( GOAT ).safeTransfer( msg.sender, _amount );
     }
 
     /**
-        @notice returns the sGOAT index, which tracks rebase growth
+        @notice returns the KBRA index, which tracks rebase growth
         @return uint
      */
     function index() public view returns ( uint ) {
-        return IsGOAT( sGOAT ).index();
+        return IsGOAT( KBRA ).index();
     }
 
     /**
@@ -670,7 +670,7 @@ contract GOATStaking is Ownable {
     function rebase() public {
         if( epoch.endBlock <= block.number ) {
 
-            IsGOAT( sGOAT ).rebase( epoch.distribute, epoch.number );
+            IsGOAT( KBRA ).rebase( epoch.distribute, epoch.number );
 
             epoch.endBlock = epoch.endBlock.add( epoch.length );
             epoch.number++;
@@ -680,7 +680,7 @@ contract GOATStaking is Ownable {
             }
 
             uint balance = contractBalance();
-            uint staked = IsGOAT( sGOAT ).circulatingSupply();
+            uint staked = IsGOAT( KBRA ).circulatingSupply();
 
             if( balance <= staked ) {
                 epoch.distribute = 0;
@@ -705,7 +705,7 @@ contract GOATStaking is Ownable {
     function giveLockBonus( uint _amount ) external {
         require( msg.sender == locker );
         totalBonus = totalBonus.add( _amount );
-        IERC20( sGOAT ).safeTransfer( locker, _amount );
+        IERC20( KBRA ).safeTransfer( locker, _amount );
     }
 
     /**
@@ -715,7 +715,7 @@ contract GOATStaking is Ownable {
     function returnLockBonus( uint _amount ) external {
         require( msg.sender == locker );
         totalBonus = totalBonus.sub( _amount );
-        IERC20( sGOAT ).safeTransferFrom( locker, address(this), _amount );
+        IERC20( KBRA ).safeTransferFrom( locker, address(this), _amount );
     }
 
     enum CONTRACTS { DISTRIBUTOR, WARMUP, LOCKER }
