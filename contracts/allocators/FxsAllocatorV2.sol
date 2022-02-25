@@ -4,6 +4,11 @@ pragma solidity ^0.8.10;
 // types
 import "../types/BaseAllocator.sol";
 
+// interfaces
+import "../../interfaces/ITreasury.sol";
+import "../../interfaces/IERC20.sol";
+import "../../libraries/SafeERC20.sol";
+
 interface IveFXS is IERC20 {
     /**
      * @notice Deposit `_value` tokens for `msg.sender` and lock until `_unlock_time`
@@ -30,6 +35,8 @@ interface IveFXS is IERC20 {
      * @return Epoch time of the lock end
      */
     function locked__end(address _addr) external view returns (uint256);
+
+    function withdraw() external;
 }
 
 interface IveFXSYieldDistributorV4 {
@@ -67,6 +74,80 @@ interface IveFXSYieldDistributorV4 {
     function yieldDuration() external returns (uint256);
 }
 
+error FxsAllocator_InvalidAddress();
+
 contract FxsAllocatorV2.sol is BaseAllocator {
-    
+    using SafeERC20 for IERC20;
+
+    uint256 private constant MAX_TIME = 4 * 365 * 86400 + 1; // 4 years and 1 second
+    ITreasury public treasury;
+    IveFXS public veFXS;
+    IveFXSYieldDistributorV4 public veFXSYieldDistributorV4;
+
+    uint256 public lockEnd;
+
+    constructor(
+        AllocatorInitData memory data,
+        address treasury_,
+        address veFXS_,
+        address veFXSYieldDistributorV4_
+    ) BaseAllocator(data) {
+        require(treasury != address(0), FxsAllocator_InvalidAddress());
+        require(veFXS_ != address(0), FxsAllocator_InvalidAddress());
+        require(veFXSYieldDistributorV4 != address(0), FxsAllocator_InvalidAddress());
+
+        treasury = ITreasury(treasury);
+        veFXS = IveFXS(veFXS_);
+        veFXSYieldDistributorV4 = IveFXSYieldDistributorV4(veFXSYieldDistributorV4_);
+
+        IERC20(data.tokens[0]).approve(address(veFXS), type(uint256).max);
+    }
+
+    function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
+        uint256 balance = _tokens[0].balanceOf(address(this));
+        uint256 veBalance = veFXS.balanceOf(address(this));
+
+        if (balance > 0 && veBalance == 0) {
+            lockEnd = block.timestamp + MAX_TIME;
+            veFXS.create_lock(balance, lockEnd);
+        } else if (balance > 0 && veBalance > 0) {
+            uint256 amount = veFXSYieldDistributorV4.getYield();
+            veFXS.increase_amount(balance + amount);
+            if (_canExtendLock()) {
+                lockEnd = block.timestamp + MAX_TIME;
+                veFXS.increase_unlock_time(block.timestamp + MAX_TIME);
+            }
+        }
+
+        veBalance = veFXS.balanceOf(address(this));
+        uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
+
+        if (veBalance > last) gain = veBalance - last;
+        else loss = last - veBalance;
+    }
+
+    function deallocate(uint256[] memory amounts) public override {
+        _onlyGuardian();
+        veFXSYieldDistributorV4.getYield();
+
+        if (block.timestamp >= veFXS.locked__end(address(this))) {
+            veFXS.withdraw();
+        }
+    }
+
+    function _deactivate(bool panic) internal override {
+        uint256[] memory amounts = [0];
+        deallocate(amounts);
+
+        if (panic) {
+            _tokens[0].transfer(treasury, _tokens[0].balanceOf(address(this)));
+        }
+    }
+
+    function _prepareMigration() internal override {}
+
+    /* ======== VIEW FUNCTIONS ======== */
+    function _canExtendLock() internal view returns (bool) {
+        return lockEnd < block.timestamp + MAX_TIME - 7 * 86400;
+    }
 }
