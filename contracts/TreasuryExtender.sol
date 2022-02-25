@@ -54,6 +54,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     ITreasury immutable treasury;
 
     // Enumerable Allocators according to deposit IDs.
+    /// @dev NOTE: Allocator enumeration starts from index 1.
     IAllocator[] public allocators;
 
     // Get an an Allocator's Data for for an Allocator and deposit ID
@@ -67,6 +68,8 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         OlympusAccessControlledV2(IOlympusAuthority(authorityAddress))
     {
         treasury = ITreasury(treasuryAddress);
+        // This nonexistent allocator at address(0) is pushed
+        // as a placeholder so enumeration may start from index 1.
         allocators.push(IAllocator(address(0)));
     }
 
@@ -373,8 +376,8 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @notice
      *  Get an Allocators address by it's ID.
      * @dev
-     *  Our first Allocator is at index 1, 0 is a placeholder.
-     * @param id the deposit id of the allocator's address to find
+     *  Our first Allocator is at index 1, NOTE: 0 is a placeholder.
+     * @param id the id of the allocator, NOTE: valid interval: 1 =< id < allocators.length
      * @return allocatorAddress the allocator's address
      */
     function getAllocatorByID(uint256 id) external view override returns (address allocatorAddress) {
