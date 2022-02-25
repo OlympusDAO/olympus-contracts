@@ -281,9 +281,10 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  migrating.
      *
      *  Steps to migrate:
-     *   - FIRST deploy the new Allocator and activate it according to the normal procedure.
-     *   - IN THE MEANWHILE call `_prepareMigration()` to prepare funds for migration.
-     *   - THEN call migrate. This is going to migrate the funds to the LAST allocator registered.
+     *   - FIRST call `_prepareMigration()` to prepare funds for migration.
+     *   - THEN deploy the new Allocator and activate it according to the normal procedure.
+     *     NOTE: This is to be done RIGHT BEFORE migration as to avoid allocating to the wrong allocator.
+     *   - FINALLY call migrate. This is going to migrate the funds to the LAST allocator registered.
      *   - Check if everything went fine.
      *
      *  End state should be that allocator amounts have been swapped for allocators, that gain + loss is netted out 0
