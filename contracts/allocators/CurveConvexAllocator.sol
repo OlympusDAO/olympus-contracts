@@ -31,6 +31,8 @@ struct NewDepositData {
     IERC20[] tokens;
 }
 
+import "hardhat/console.sol";
+
 contract CurveConvexAllocator is BaseAllocator {
     // constants and globals
     address public constant treasury = 0x9A315BdF513367C0377FB36545857d12e85813Ef;
@@ -41,6 +43,7 @@ contract CurveConvexAllocator is BaseAllocator {
         ICurveAddressProvider(0x0000000022D53366457F9d5E68Ec105046FC4383);
     ICurveDepositZap internal constant _zap3 = ICurveDepositZap(0xA79828DF1850E8a3A3064576f380D90aECDD3359);
     ICurveRegistry internal _registry;
+    ICurveFactory internal _factory;
 
     // convex
     IConvex internal immutable _booster = IConvex(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
@@ -51,13 +54,12 @@ contract CurveConvexAllocator is BaseAllocator {
     AllocatorTargetData[] internal _targets;
 
     constructor(AllocatorInitData memory data) BaseAllocator(data) {
-        slippage = 6e17;
+        slippage = 9e17;
     }
 
     // base overrides
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
         // reads
-        uint256[4] memory fixedInputArray;
         uint256 depositAmount;
         uint256 index = tokenIds[id];
 
@@ -66,7 +68,7 @@ contract CurveConvexAllocator is BaseAllocator {
         IERC20 lpCurve = target.curve.lp;
         IERC20 underlying = _tokens[index];
 
-        address pool = _registry.get_pool_from_lp_token(address(lpCurve));
+        (address pool, uint256 nCoins) = _getCurvePoolData(address(lpCurve));
 
         // checks
         _onlyGuardian();
@@ -85,16 +87,17 @@ contract CurveConvexAllocator is BaseAllocator {
 
         // redeposit (reads here just in case rewards contain underlying)
         depositAmount = underlying.balanceOf(address(this));
-        fixedInputArray[target.curve.cid] = depositAmount;
 
-        underlying.approve(address(_zap3), depositAmount);
-        depositAmount = _zapIntoCurve(pool, fixedInputArray);
+        if (nCoins < 4) underlying.approve(address(pool), depositAmount);
+        else underlying.approve(address(_zap3), depositAmount);
+
+        depositAmount = _addCurveLiquidity(pool, target.curve.cid, depositAmount, nCoins);
 
         lpCurve.approve(address(_booster), depositAmount);
         _booster.depositAll(target.convex.pid, true);
 
         // effects
-        uint256 received = _amountAllocated(ICurvePool(pool), _booster, target.convex.pid, target.curve.cid);
+        uint256 received = _amountAllocated(pool, _booster, target.convex.pid, target.curve.cid, nCoins);
         uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
 
         if (received >= last) gain = uint128(received - last);
@@ -103,7 +106,6 @@ contract CurveConvexAllocator is BaseAllocator {
 
     function deallocate(uint256[] memory amounts) public override {
         // reads
-        uint256[4] memory fixedInputArray;
         uint256 amount;
         uint256 lpCurveChange;
 
@@ -118,11 +120,10 @@ contract CurveConvexAllocator is BaseAllocator {
                 // reads
                 AllocatorTargetData memory target = _targets[index];
                 IERC20 lpCurve = target.curve.lp;
-                address curvePool = _registry.get_pool_from_lp_token(address(lpCurve));
+                (address curvePool, uint256 nCoins) = _getCurvePoolData(address(lpCurve));
 
                 if (amount < type(uint256).max) {
-                    fixedInputArray[target.curve.cid] = amount;
-                    lpCurveChange = _zap3.calc_token_amount(curvePool, fixedInputArray, false);
+                    lpCurveChange = _calcTokenAmounts(curvePool, target.curve.cid, amount, false, nCoins);
                 } else {
                     lpCurveChange = target.convex.pool.balanceOf(address(this));
                 }
@@ -132,12 +133,8 @@ contract CurveConvexAllocator is BaseAllocator {
                 target.convex.pool.withdrawAndUnwrap(lpCurveChange, false);
 
                 lpCurve.approve(address(_zap3), lpCurveChange);
-                _zap3.remove_liquidity_one_coin(
-                    curvePool,
-                    lpCurveChange,
-                    int128(int96(target.curve.cid)),
-                    (amount * slippage) / 1e18
-                );
+
+                _removeCurveLiquidity(curvePool, target.curve.cid, amount, nCoins);
             }
         }
     }
@@ -178,13 +175,8 @@ contract CurveConvexAllocator is BaseAllocator {
     function amountAllocated(uint256 id) public view override returns (uint256) {
         uint256 index = tokenIds[id];
         AllocatorTargetData memory target = _targets[index];
-        return
-            _amountAllocated(
-                ICurvePool(_registry.get_pool_from_lp_token(address(target.curve.lp))),
-                _booster,
-                target.convex.pid,
-                target.curve.cid
-            );
+        (address pool, uint256 nCoins) = _getCurvePoolData(address(target.curve.lp));
+        return _amountAllocated(pool, _booster, target.convex.pid, target.curve.cid, nCoins);
     }
 
     function rewardTokens() public view override returns (IERC20[] memory) {
@@ -209,6 +201,7 @@ contract CurveConvexAllocator is BaseAllocator {
 
     function _activate() internal override {
         setRegistry();
+        setFactory();
     }
 
     // specific
@@ -253,7 +246,7 @@ contract CurveConvexAllocator is BaseAllocator {
         // reads
         uint256 index = tokenIds[id];
         uint256[] memory inputArray = new uint256[](index + 1);
-        uint256[4] memory fixedInputArray;
+        (address pool, uint256 nCoins) = _getCurvePoolData(address(newLpToken));
 
         inputArray[index] = amountAllocated(id);
 
@@ -263,9 +256,7 @@ contract CurveConvexAllocator is BaseAllocator {
         // effects + interactions
         deallocate(inputArray);
 
-        fixedInputArray[target.curve.cid] = _tokens[index].balanceOf(address(this));
-
-        _zapIntoCurve(_registry.get_pool_from_lp_token(address(newLpToken)), fixedInputArray);
+        _addCurveLiquidity(pool, target.curve.cid, _tokens[index].balanceOf(address(this)), nCoins);
 
         _targets[index] = target;
     }
@@ -280,8 +271,9 @@ contract CurveConvexAllocator is BaseAllocator {
         _registry = ICurveRegistry(_curveAddressProvider.get_registry());
     }
 
-    function _zapIntoCurve(address pool, uint256[4] memory amounts) internal returns (uint256) {
-        return _zap3.add_liquidity(pool, amounts, (_zap3.calc_token_amount(pool, amounts, true) * slippage) / 1e18);
+    function setFactory() public {
+        _onlyGuardian();
+        _factory = ICurveFactory(_curveAddressProvider.get_address(3));
     }
 
     function _claimAllRewards() internal {
@@ -300,21 +292,139 @@ contract CurveConvexAllocator is BaseAllocator {
         }
     }
 
-    function _amountAllocated(
-        ICurvePool pool,
-        IConvex booster,
-        uint256 pidConvex,
-        uint256 cidCurve
-    ) internal view returns (uint256) {
-        return
-            pool.calc_withdraw_one_coin(
-                _getConvexRewardPool(booster, pidConvex).balanceOf(address(this)),
-                int128(int256(cidCurve))
-            );
-    }
-
     function _getConvexRewardPool(IConvex booster, uint256 pid) internal view returns (IConvexRewards) {
         (, , , address rewards, , ) = booster.poolInfo(pid);
         return IConvexRewards(rewards);
+    }
+
+    function _amountAllocated(
+        address pool,
+        IConvex booster,
+        uint256 pidConvex,
+        uint256 cidCurve,
+        uint256 nCoins
+    ) internal view returns (uint256) {
+        if (nCoins == 4)
+            return
+                ICurveMetapool(pool).calc_withdraw_one_coin(
+                    _getConvexRewardPool(booster, pidConvex).balanceOf(address(this)),
+                    0
+                );
+        else
+            return
+                ICurveStableSwapPool(pool).calc_withdraw_one_coin(
+                    _getConvexRewardPool(booster, pidConvex).balanceOf(address(this)),
+                    int128(int256(cidCurve))
+                );
+    }
+
+    function _addCurveLiquidity(
+        address pool,
+        uint256 cid,
+        uint256 amount,
+        uint256 nCoins
+    ) internal returns (uint256) {
+        if (nCoins == 2) {
+            uint256[2] memory amounts;
+            amounts[cid] = amount;
+            return _addCurveLiquidity(pool, amounts);
+        } else if (nCoins == 3) {
+            uint256[3] memory amounts;
+            amounts[cid] = amount;
+            return _addCurveLiquidity(pool, amounts);
+        } else {
+            uint256[4] memory amounts;
+            amounts[cid] = amount;
+            return _addCurveLiquidity(pool, amounts);
+        }
+    }
+
+    function _addCurveLiquidity(address pool, uint256[2] memory amounts) internal returns (uint256) {
+        ICurveStableSwapPool stableSwap = ICurveStableSwapPool(pool);
+        return stableSwap.add_liquidity(amounts, (stableSwap.calc_token_amount(amounts, true) * slippage) / 1e18);
+    }
+
+    function _addCurveLiquidity(address pool, uint256[3] memory amounts) internal returns (uint256) {
+        ICurveStableSwapPool stableSwap = ICurveStableSwapPool(pool);
+        return stableSwap.add_liquidity(amounts, (stableSwap.calc_token_amount(amounts, true) * slippage) / 1e18);
+    }
+
+    function _addCurveLiquidity(address pool, uint256[4] memory amounts) internal returns (uint256) {
+        return _zap3.add_liquidity(pool, amounts, (_zap3.calc_token_amount(pool, amounts, true) * slippage) / 1e18);
+    }
+
+    function _removeCurveLiquidity(
+        address pool,
+        uint256 cid,
+        uint256 amount,
+        uint256 nCoins
+    ) internal returns (uint256) {
+        if (nCoins == 2) {
+            ICurveStableSwapPool stableSwap = ICurveStableSwapPool(pool);
+            uint256[2] memory amounts;
+            amounts[cid] = amount;
+            return
+                stableSwap.remove_liquidity_one_coin(
+                    amount,
+                    int128(int256(cid)),
+                    (stableSwap.calc_token_amount(amounts, true) * slippage) / 1e18
+                );
+        } else if (nCoins == 3) {
+            ICurveStableSwapPool stableSwap = ICurveStableSwapPool(pool);
+            uint256[3] memory amounts;
+            amounts[cid] = amount;
+            return
+                stableSwap.remove_liquidity_one_coin(
+                    amount,
+                    int128(int256(cid)),
+                    (stableSwap.calc_token_amount(amounts, true) * slippage) / 1e18
+                );
+        } else {
+            uint256[4] memory amounts;
+            amounts[cid] = amount;
+            return
+                _zap3.remove_liquidity_one_coin(
+                    pool,
+                    amount,
+                    int128(int256(cid)),
+                    (_zap3.calc_token_amount(pool, amounts, true) * slippage) / 1e18
+                );
+        }
+    }
+
+    function _calcTokenAmounts(
+        address pool,
+        uint256 cidCurve,
+        uint256 amount,
+        bool deposit,
+        uint256 nCoins
+    ) internal view returns (uint256) {
+        if (nCoins == 2) {
+            uint256[2] memory amounts;
+            amounts[cidCurve] = amount;
+            return ICurveStableSwapPool(pool).calc_token_amount(amounts, deposit);
+        } else if (nCoins == 3) {
+            uint256[3] memory amounts;
+            amounts[cidCurve] = amount;
+            return ICurveStableSwapPool(pool).calc_token_amount(amounts, deposit);
+        } else {
+            uint256[4] memory amounts;
+            amounts[cidCurve] = amount;
+            return _zap3.calc_token_amount(pool, amounts, deposit);
+        }
+    }
+
+    function _getCurvePoolData(address lpCurve) internal view returns (address pool, uint256 nCoins) {
+        pool = _registry.get_pool_from_lp_token(address(lpCurve));
+
+        if (pool == address(0)) {
+            pool = lpCurve;
+
+            (, nCoins) = _factory.get_meta_n_coins(pool);
+
+            if (nCoins < 4) nCoins = _factory.get_n_coins(pool);
+        } else {
+            nCoins = _registry.get_n_coins(pool)[1];
+        }
     }
 }

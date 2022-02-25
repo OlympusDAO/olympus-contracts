@@ -270,7 +270,7 @@ describe("CurveConvexAllocator", () => {
         });
     });
 
-    describe.only("_update()", () => {
+    describe("_update()", () => {
         beforeEach(async () => {
             allocator = await factory.deploy({
                 authority: authority.address,
@@ -285,17 +285,17 @@ describe("CurveConvexAllocator", () => {
 
             await extender.setAllocatorLimits(1, {
                 allocated: bne(10, 23),
-                loss: bne(10, 19),
+                loss: bne(10, 21),
             });
 
             await extender.setAllocatorLimits(2, {
                 allocated: bne(10, 23),
-                loss: bne(10, 19),
+                loss: bne(10, 21),
             });
 
             await extender.setAllocatorLimits(3, {
                 allocated: bne(10, 23),
-                loss: bne(10, 19),
+                loss: bne(10, 21),
             });
 
             await allocator.activate();
@@ -303,6 +303,7 @@ describe("CurveConvexAllocator", () => {
             await expect(() =>
                 extender.requestFundsFromTreasury(1, bne(10, 21))
             ).to.changeTokenBalance(dai, allocator, bne(10, 21));
+
             await expect(() =>
                 extender.requestFundsFromTreasury(3, bne(10, 21))
             ).to.changeTokenBalance(agEUR, allocator, bne(10, 21));
@@ -319,6 +320,7 @@ describe("CurveConvexAllocator", () => {
             await expect(() =>
                 extender.requestFundsFromTreasury(2, bne(10, 21))
             ).to.changeTokenBalance(dai, allocator, bne(10, 21));
+
             await expect(() => allocator.update(2)).to.changeTokenBalance(
                 dai,
                 allocator,
