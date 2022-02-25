@@ -26,10 +26,6 @@ error TreasuryExtender_MaxAllocation(uint256 allocated, uint256 limit);
  *  will interact with the Olympus Treasury to fund Allocators.
  *
  *  Accounting:
- *  Each time an allocator is funded with `requestFundsFromTreasury` the
- *  `totalValueAllocated` is incremented, which can be done because it is
- *  always denominated in the same unit.
- *
  *  For each Allocator there are multiple deposit IDs referring to individual tokens,
  *  for each deposit ID we record 5 distinct values grouped into 3 fields,
  *  together grouped as AllocatorData:
@@ -60,10 +56,6 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
 
     // Get an an Allocator's Data for for an Allocator and deposit ID
     mapping(IAllocator => mapping(uint256 => AllocatorData)) public allocatorData;
-
-    // The total value allocated according to `treasury.tokenValue`
-    // (see Treasury.sol)
-    uint256 private totalValueAllocated;
 
     constructor(address treasuryAddress, address authorityAddress)
         OlympusAccessControlledV2(IOlympusAuthority(authorityAddress))
@@ -154,8 +146,8 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  There is 3 different combinations the Allocator may report:
      *
      *  (gain + loss) == 0, the Allocator will NEVER report this state
-     *  gain > loss, gain is reported and gain + totalValueAllocated is incremented but allocated not.
-     *  loss > gain, loss is reported, allocated, totalValueAllocated is decremented and loss incremented.
+     *  gain > loss, gain is reported and incremented but allocated not.
+     *  loss > gain, loss is reported, allocated and incremented.
      *  loss == gain, (loss + gain) > 0, migration case, zero out gain, loss, allocated
      *
      *  note when migrating the next Allocator should report his state to the Extender, in say an `_activate` call.
@@ -199,8 +191,6 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
 
                 // GAIN
             } else {
-                totalValueAllocated += treasury.tokenValue(token, gain);
-
                 perf.gain += gain;
 
                 emit AllocatorReportedGain(id, gain);
@@ -209,7 +199,6 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
             // LOSS
         } else {
             data.holdings.allocated -= loss;
-            totalValueAllocated -= treasury.tokenValue(token, loss);
 
             perf.loss += loss;
 
@@ -252,7 +241,6 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         treasury.manage(token, amount);
 
         // effects
-        totalValueAllocated += value;
         allocatorData[allocator][id].holdings.allocated += amount;
 
         // interaction (depositing)
@@ -275,7 +263,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *
      *  The maximum amount which can be withdrawn is `gain` + `allocated`.
      *  `allocated` is decremented first after which `gain` is decremented in the case
-     *  that `allocated` is not sufficient. The `totalValueAllocated` is also decremented.
+     *  that `allocated` is not sufficient.
      * @param id the deposit id of the token to fund allocator with
      * @param amount the amount of token to withdraw, the token is known in the Allocator
      */
@@ -311,7 +299,6 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         IERC20(token).safeTransferFrom(address(allocator), address(this), amount);
 
         // effects
-        totalValueAllocated -= value;
         allocatorData[allocator][id].holdings.allocated = allocated;
         if (allocated == 0) allocatorData[allocator][id].performance.gain = gain;
 
@@ -358,19 +345,6 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         uint256 amount
     ) external {
         _returnRewardsToTreasury(IAllocator(allocatorAddress), IERC20(token), amount);
-    }
-
-    /**
-     * @notice
-     *  Get the `totalValueAllocated` to Allocators by the Treasury.
-     * @dev
-     *  For each individual incrementation, the value allocated is calculated by the
-     *  `tokenValue` function of the treasury, which returns the OHM valuation of the asset.
-     *  Thus, totalValueAllocated could also be called "totalOHMValueAllocated", the name is for simplicity.
-     * @return the TotalValueAllocated
-     */
-    function getTotalValueAllocated() external view override returns (uint256) {
-        return totalValueAllocated;
     }
 
     /**

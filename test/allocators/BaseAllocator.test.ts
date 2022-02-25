@@ -219,9 +219,6 @@ describe("BaseAllocator", async () => {
 
             expect((await extender.getAllocatorPerformance(1))[1]).to.equal(bne(10, 21));
             expect(await extender.getAllocatorAllocated(1)).to.equal(bne(10, 23).sub(bne(10, 21)));
-            expect(await extender.getTotalValueAllocated()).to.equal(
-                await treasury.tokenValue(coins.frax, bne(10, 23).sub(bne(10, 21)))
-            );
         });
 
         it("passing: should report loss and trigger panic", async () => {
