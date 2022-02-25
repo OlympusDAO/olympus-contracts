@@ -124,7 +124,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @param id the deposit id to set AllocatorLimits for
      * @param limits the AllocatorLimits to set
      */
-    function setAllocatorLimits(uint256 id, AllocatorLimits memory limits) external override {
+    function setAllocatorLimits(uint256 id, AllocatorLimits calldata limits) external override {
         IAllocator allocator = allocators[id];
 
         // checks
