@@ -250,7 +250,7 @@ describe("CurveConvexAllocator", () => {
 
             expect(
                 helpers.addressify(
-                    (await helpers.sload(allocator.address, bnn(6), String)) as string
+                    (await helpers.sload(allocator.address, bnn(7), String)) as string
                 )
             ).to.equal("0x90E00ACe148ca3b23Ac1bC8C240C2a7Dd9c2d7f5");
 
