@@ -66,7 +66,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         allocators.push(IAllocator(address(0)));
     }
 
-    //// "MODIFIERS"
+    //// CHECKS
 
     function _allocatorActivated(AllocatorStatus status) internal pure {
         if (AllocatorStatus.ACTIVATED != status) revert TreasuryExtender_AllocatorNotActivated();
@@ -76,8 +76,12 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         if (AllocatorStatus.OFFLINE != status) revert TreasuryExtender_AllocatorNotOffline();
     }
 
-    function _onlyAllocator(uint256 id, address sender) internal view {
-        if (IAllocator(sender) != allocators[id]) revert TreasuryExtender_OnlyAllocator(id, sender);
+    function _onlyAllocator(
+        IAllocator byStatedId,
+        address sender,
+        uint256 id
+    ) internal pure {
+        if (IAllocator(sender) != byStatedId) revert TreasuryExtender_OnlyAllocator(id, sender);
     }
 
     //// FUNCTIONS
@@ -90,12 +94,9 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  Calls `addId` from `IAllocator` with the index of the deposit in `allocators`
      * @param newAllocator the Allocator to be registered
      */
-    function registerDeposit(address newAllocator) external override {
+    function registerDeposit(address newAllocator) external override onlyGuardian {
         // reads
         IAllocator allocator = IAllocator(newAllocator);
-
-        // checks
-        _onlyGuardian();
 
         // effects
         allocators.push(allocator);
@@ -120,11 +121,10 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @param id the deposit id to set AllocatorLimits for
      * @param limits the AllocatorLimits to set
      */
-    function setAllocatorLimits(uint256 id, AllocatorLimits calldata limits) external override {
+    function setAllocatorLimits(uint256 id, AllocatorLimits calldata limits) external override onlyGuardian {
         IAllocator allocator = allocators[id];
 
         // checks
-        _onlyGuardian();
         _allocatorOffline(allocator.status());
 
         // effects
@@ -170,9 +170,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         AllocatorStatus status = allocator.status();
 
         // checks
-        // above could send in any id with gain == 0 and loss == 0, but he could only fake
-        // address(0) in that case, otherwise, all allocators need to be registered by guardian
-        _onlyAllocator(id, msg.sender);
+        _onlyAllocator(allocator, msg.sender, id);
         if (status == AllocatorStatus.OFFLINE) revert TreasuryExtender_AllocatorOffline();
 
         // EFFECTS
@@ -228,7 +226,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @param id the deposit id of the token to fund allocator with
      * @param amount the amount of token to withdraw, the token is known in the Allocator
      */
-    function requestFundsFromTreasury(uint256 id, uint256 amount) external override {
+    function requestFundsFromTreasury(uint256 id, uint256 amount) external override onlyGuardian {
         // reads
         IAllocator allocator = allocators[id];
         AllocatorData memory data = allocatorData[allocator][id];
@@ -236,7 +234,6 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         uint256 value = treasury.tokenValue(token, amount);
 
         // checks
-        _onlyGuardian();
         _allocatorActivated(allocator.status());
         _allocatorBelowLimit(data, amount);
 
@@ -270,7 +267,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @param id the deposit id of the token to fund allocator with
      * @param amount the amount of token to withdraw, the token is known in the Allocator
      */
-    function returnFundsToTreasury(uint256 id, uint256 amount) external override {
+    function returnFundsToTreasury(uint256 id, uint256 amount) external override onlyGuardian {
         // reads
         IAllocator allocator = allocators[id];
         uint256 allocated = allocatorData[allocator][id].holdings.allocated;
@@ -295,7 +292,6 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         uint256 value = treasury.tokenValue(token, amount);
 
         // checks
-        _onlyGuardian();
         _allowTreasuryWithdrawal(IERC20(token));
 
         // interaction (withdrawing)
@@ -377,7 +373,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @notice
      *  Get an Allocators limits.
      * @dev
-     *  For an explanation of AllocatorLimits, see `_setAllocatorLimits`
+     *  For an explanation of AllocatorLimits, see `setAllocatorLimits`
      * @return the Allocator's limits
      */
     function getAllocatorLimits(uint256 id) external view override returns (AllocatorLimits memory) {
@@ -411,31 +407,6 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
 
     /**
      * @notice
-     *  Sets an Allocators AllocatorLimits.
-     *  AllocatorLimits is part of AllocatorData, variable meanings follow:
-     *  allocated - The maximum amount a Guardian may allocate this Allocator from Treasury.
-     *  loss - The maximum loss amount this Allocator can take.
-     * @dev
-     *  Can only be called while the Allocator is offline.
-     * @param id the deposit id of the token to set limits for
-     * @param limits the AllocatorLimits to set
-     */
-    function _setAllocatorLimits(uint256 id, AllocatorLimits memory limits) internal {
-        IAllocator allocator = allocators[id];
-
-        // checks
-        _onlyGuardian();
-        _allocatorOffline(allocator.status());
-
-        // effects
-        allocatorData[allocator][id].limits = limits;
-
-        // events
-        emit AllocatorLimitsChanged(id, limits.allocated, limits.loss);
-    }
-
-    /**
-     * @notice
      *  Returns rewards from an Allocator to the Treasury.
      * @dev
      *  External hook: Logic is handled in the internal function.
@@ -453,14 +424,13 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         IAllocator allocator,
         IERC20 token,
         uint256 amount
-    ) internal {
+    ) internal onlyGuardian {
         // reads
         uint256 balance = token.balanceOf(address(allocator));
         amount = (balance < amount) ? balance : amount;
         uint256 value = treasury.tokenValue(address(token), amount);
 
         // checks
-        _onlyGuardian();
         _allowTreasuryWithdrawal(token);
 
         // interactions

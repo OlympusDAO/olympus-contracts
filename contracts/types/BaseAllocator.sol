@@ -10,8 +10,8 @@ import "../types/OlympusAccessControlledV2.sol";
 // libraries
 import "../libraries/SafeERC20.sol";
 
-error BaseAllocator_AllocatorOffline();
-error BaseAllocator_AllocatorActivated();
+error BaseAllocator_AllocatorNotActivated();
+error BaseAllocator_AllocatorNotOffline();
 error BaseAllocator_Migrating();
 error BaseAllocator_NotMigrating();
 error BaseAllocator_OnlyExtender(address sender);
@@ -98,26 +98,31 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
         emit AllocatorDeployed(address(data.authority), address(data.extender));
     }
 
-    /////// "MODIFIERS"
+    /////// MODIFIERS
 
-    function _onlyExtender(address sender) internal view {
-        if (sender != address(extender)) revert BaseAllocator_OnlyExtender(sender);
+    modifier onlyExtender {
+	_onlyExtender(msg.sender);
+	_;
     }
 
-    function _onlyActivated(AllocatorStatus inputStatus) internal pure {
-        if (inputStatus != AllocatorStatus.ACTIVATED) revert BaseAllocator_AllocatorOffline();
+    modifier onlyActivated {
+	_onlyActivated(status);
+	_;
     }
 
-    function _onlyOffline(AllocatorStatus inputStatus) internal pure {
-        if (inputStatus != AllocatorStatus.OFFLINE) revert BaseAllocator_AllocatorActivated();
+    modifier onlyOffline {
+	_onlyOffline(status);
+	_;
     }
 
-    function _notMigrating(AllocatorStatus inputStatus) internal pure {
-        if (inputStatus == AllocatorStatus.MIGRATING) revert BaseAllocator_Migrating();
+    modifier notMigrating {
+	_notMigrating(status);
+	_;
     }
 
-    function _isMigrating(AllocatorStatus inputStatus) internal pure {
-        if (inputStatus != AllocatorStatus.MIGRATING) revert BaseAllocator_NotMigrating();
+    modifier isMigrating {
+	_isMigrating(status);
+	_;
     }
 
     /////// VIRTUAL FUNCTIONS WHICH NEED TO BE IMPLEMENTED
@@ -227,11 +232,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  The documentation on this can be found in `TreasuryExtender.sol`.
      * @param id the id of the deposit in `TreasuryExtender`
      */
-    function update(uint256 id) external override {
-        // checks
-        _onlyGuardian();
-        _onlyActivated(status);
-
+    function update(uint256 id) external override onlyGuardian onlyActivated {
         // effects
         // handle depositing, harvesting, compounding logic inside of _update()
         // if gain is in allocated then gain > 0 otherwise gain == 0
@@ -259,11 +260,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  from the contract. The ALLOCATED token and THE UTILITY TOKEN is going to be migrated, while the REWARD
      *  tokens can be withdrawn by the Extender to the Treasury.
      */
-    function prepareMigration() external override {
-        // checks
-        _onlyGuardian();
-        _notMigrating(status);
-
+    function prepareMigration() external override onlyGuardian notMigrating {
         // effects
         _prepareMigration();
 
@@ -292,16 +289,12 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  We don't transfer the loss because we have the information how much was initially invested + gain,
      *  and the new allocator didn't cause any loss thus we don't really need to add to it.
      */
-    function migrate() external override {
+    function migrate() external override onlyGuardian isMigrating {
         // reads
         IERC20[] memory utilityTokensArray = utilityTokens();
         address newAllocator = extender.getAllocatorByID(extender.getTotalAllocatorCount() - 1);
 	uint256 idLength = _ids.length;
 	uint256 utilLength = utilityTokensArray.length;
-
-        // checks
-        _onlyGuardian();
-        _isMigrating(status);
 
         // interactions
         for (uint256 i; i < idLength; i++) {
@@ -331,11 +324,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  Add any logic you need during activation, say interactions with Extender or something else,
      *  in the virtual method `_activate`.
      */
-    function activate() external override {
-        // checks
-        _onlyGuardian();
-        _onlyOffline(status);
-
+    function activate() external override onlyGuardian onlyOffline {
         // effects
         _activate();
         status = AllocatorStatus.ACTIVATED;
@@ -350,8 +339,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  Only the Extender calls this.
      * @param id id to add to the allocator
      */
-    function addId(uint256 id) external override {
-        _onlyExtender(msg.sender);
+    function addId(uint256 id) external override onlyExtender {
         _ids.push(id);
         tokenIds[id] = _ids.length - 1;
     }
@@ -385,10 +373,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
      *  depending on what you need.
      * @param panic should panic logic be executed
      */
-    function deactivate(bool panic) public override {
-        // checks
-        _onlyGuardian();
-
+    function deactivate(bool panic) public override onlyGuardian {
         // effects
         _deactivate(panic);
         status = AllocatorStatus.OFFLINE;
@@ -426,5 +411,45 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
         }
 
         return false;
+    }
+
+    /**
+     * @notice
+     *  Internal check to see if sender is extender.
+     */
+    function _onlyExtender(address sender) internal view {
+        if (sender != address(extender)) revert BaseAllocator_OnlyExtender(sender);
+    }
+
+    /**
+     * @notice
+     *  Internal check to see if allocator is activated.
+     */
+    function _onlyActivated(AllocatorStatus inputStatus) internal pure {
+        if (inputStatus != AllocatorStatus.ACTIVATED) revert BaseAllocator_AllocatorNotActivated();
+    }
+
+    /**
+     * @notice
+     *  Internal check to see if allocator is offline.
+     */
+    function _onlyOffline(AllocatorStatus inputStatus) internal pure {
+        if (inputStatus != AllocatorStatus.OFFLINE) revert BaseAllocator_AllocatorNotOffline();
+    }
+
+    /**
+     * @notice
+     *  Internal check to see if allocator is not migrating.
+     */
+    function _notMigrating(AllocatorStatus inputStatus) internal pure {
+        if (inputStatus == AllocatorStatus.MIGRATING) revert BaseAllocator_Migrating();
+    }
+
+    /**
+     * @notice
+     *  Internal check to see if allocator is migrating.
+     */
+    function _isMigrating(AllocatorStatus inputStatus) internal pure {
+        if (inputStatus != AllocatorStatus.MIGRATING) revert BaseAllocator_NotMigrating();
     }
 }

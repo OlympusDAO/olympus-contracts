@@ -27,20 +27,24 @@ abstract contract OlympusAccessControlledV2 {
 
     /* ========== "MODIFIERS" ========== */
 
-    function _onlyGovernor() internal view {
-        if (msg.sender != authority.governor()) revert UNAUTHORIZED();
+    modifier onlyGovernor {
+	_onlyGovernor();
+	_;
     }
 
-    function _onlyGuardian() internal view {
-        if (msg.sender != authority.guardian()) revert UNAUTHORIZED();
+    modifier onlyGuardian {
+	_onlyGuardian();
+	_;
     }
 
-    function _onlyPolicy() internal view {
-        if (msg.sender != authority.policy()) revert UNAUTHORIZED();
+    modifier onlyPolicy {
+	_onlyPolicy();
+	_;
     }
 
-    function _onlyVault() internal view {
-        if (msg.sender != authority.vault()) revert UNAUTHORIZED();
+    modifier onlyVault {
+	_onlyVault();
+	_;
     }
 
     /* ========== GOV ONLY ========== */
@@ -55,5 +59,23 @@ abstract contract OlympusAccessControlledV2 {
         _onlyGovernor();
         authority = _newAuthority;
         emit AuthorityUpdated(_newAuthority);
+    }
+
+    /* ========== INTERNAL CHECKS ========== */
+
+    function _onlyGovernor() internal view {
+        if (msg.sender != authority.governor()) revert UNAUTHORIZED();
+    }
+
+    function _onlyGuardian() internal view {
+        if (msg.sender != authority.guardian()) revert UNAUTHORIZED();
+    }
+
+    function _onlyPolicy() internal view {
+        if (msg.sender != authority.policy()) revert UNAUTHORIZED();
+    }
+
+    function _onlyVault() internal view {
+        if (msg.sender != authority.vault()) revert UNAUTHORIZED();
     }
 }
