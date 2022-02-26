@@ -150,6 +150,8 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  loss > gain, loss is reported, allocated and incremented.
      *  loss == gain == type(uint128).max , migration case, zero out gain, loss, allocated
      *
+     *  NOTE: please take care to properly calculate loss by, say, only reporting loss above a % threshold
+     *        of allocated. This is to serve as a low pass filter of sorts to ignore noise in price movements.
      *  NOTE: when migrating the next Allocator should report his state to the Extender, in say an `_activate` call.
      *
      * @param id the deposit id of the token to report state for
