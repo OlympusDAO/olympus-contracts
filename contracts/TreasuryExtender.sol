@@ -48,7 +48,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
     using SafeERC20 for IERC20;
 
     // The Olympus Treasury.
-    ITreasury immutable public treasury;
+    ITreasury public immutable treasury;
 
     // Enumerable Allocators according to deposit IDs.
     /// @dev NOTE: Allocator enumeration starts from index 1.
