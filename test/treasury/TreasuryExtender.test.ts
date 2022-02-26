@@ -1,5 +1,5 @@
 // libraries, functionality...
-import { ethers, waffle, network, config } from "hardhat";
+import { ethers, network, config } from "hardhat";
 import chai, { expect } from "chai";
 import { smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
@@ -191,7 +191,7 @@ describe("TreasuryExtender", () => {
 
             await expect(
                 extender.setAllocatorLimits(1, { allocated: bne(10, 27), loss: bne(10, 20) })
-            ).to.be.revertedWith("TreasuryExtender_AllocatorActivated()");
+            ).to.be.revertedWith("TreasuryExtender_AllocatorNotOffline()");
 
             fakeAllocator.status.returns(0);
         });
@@ -358,7 +358,6 @@ describe("TreasuryExtender", () => {
 
             expect(await extender.getAllocatorAllocated(1)).to.equal(0);
             expect((await fakeAllocator.tokens())[0]).to.equal(frax.address);
-            expect(await extender.getTotalValueAllocated()).to.equal(0);
         });
 
         it("revert: check if it will revert if not guardian, offline or above limit", async () => {
@@ -372,7 +371,7 @@ describe("TreasuryExtender", () => {
             // OFFLINE
             fakeAllocator.status.returns(0);
             await expect(extender.requestFundsFromTreasury(1, bne(10, 21))).to.be.revertedWith(
-                "TreasuryExtender_AllocatorOffline()"
+                "TreasuryExtender_AllocatorNotActivated()"
             );
             fakeAllocator.status.returns(1);
 
@@ -389,9 +388,6 @@ describe("TreasuryExtender", () => {
                 extender.requestFundsFromTreasury(1, bne(10, 21).mul(99))
             ).to.changeTokenBalance(frax, fakeAllocator.wallet, bne(10, 21).mul(99));
 
-            expect(await extender.getTotalValueAllocated()).to.equal(
-                await treasury.tokenValue(coins.frax, bne(10, 21).mul(99))
-            );
             expect(await extender.getAllocatorAllocated(1)).to.equal(bne(10, 21).mul(99));
             expect(await frax.balanceOf(extender.address)).to.equal(0);
         });
@@ -402,9 +398,6 @@ describe("TreasuryExtender", () => {
                 extender.requestFundsFromTreasury(1, bne(10, 21))
             ).to.changeTokenBalance(frax, fakeAllocator.wallet, bne(10, 21));
 
-            expect(await extender.getTotalValueAllocated()).to.equal(
-                await treasury.tokenValue(coins.frax, bne(10, 23))
-            );
             expect(await extender.getAllocatorAllocated(1)).to.equal(bne(10, 23));
             expect(await frax.balanceOf(extender.address)).to.equal(0);
 
@@ -423,11 +416,6 @@ describe("TreasuryExtender", () => {
                 balance
             );
 
-            expect(await extender.getTotalValueAllocated()).to.equal(
-                (await treasury.tokenValue(coins.dai, balance)).add(
-                    await treasury.tokenValue(coins.frax, bne(10, 23))
-                )
-            );
             expect(await extender.getAllocatorAllocated(2)).to.equal(balance);
             expect(await usdc.balanceOf(extender.address)).to.equal(0);
         });
@@ -501,7 +489,6 @@ describe("TreasuryExtender", () => {
 
             // gain reporting
             // fakeAllocator
-            const tv1 = await extender.getTotalValueAllocated();
             const response1 = await extender.report(1, gain, 0);
             const receipt1 = await response1.wait();
 
@@ -513,13 +500,8 @@ describe("TreasuryExtender", () => {
             expect(performance1[0]).to.equal(gain);
             expect(performance1[1]).to.equal(0);
 
-            const tv2 = await extender.getTotalValueAllocated();
-
-            expect(tv1).to.be.lt(tv2);
-
             // loss reporting
             // fakeAllocator
-            const tv3 = await extender.getTotalValueAllocated();
             const response2 = await extender.report(1, 0, loss);
             const receipt2 = await response2.wait();
 
@@ -533,15 +515,10 @@ describe("TreasuryExtender", () => {
             expect(performance1[0]).to.equal(gain);
             expect(performance1[1]).to.equal(loss);
 
-            const tv4 = await extender.getTotalValueAllocated();
-
-            expect(tv3).to.be.gt(tv4);
-
             // gain reporting
             // veryfakeAllocator
             extender = extender.connect(veryfakeAllocator.wallet);
 
-            const tv5 = await extender.getTotalValueAllocated();
             const response3 = await extender.report(2, gain, 0);
             const receipt3 = await response3.wait();
 
@@ -553,13 +530,8 @@ describe("TreasuryExtender", () => {
             expect(performance2[0]).to.equal(gain);
             expect(performance2[1]).to.equal(0);
 
-            const tv6 = await extender.getTotalValueAllocated();
-
-            expect(tv5).to.be.lt(tv6);
-
             // loss reporting
             // veryfakeAllocator
-            const tv7 = await extender.getTotalValueAllocated();
             const response4 = await extender.report(2, 0, loss);
             const receipt4 = await response4.wait();
 
@@ -572,10 +544,6 @@ describe("TreasuryExtender", () => {
 
             expect(performance2[0]).to.equal(gain);
             expect(performance2[1]).to.equal(loss);
-
-            const tv8 = await extender.getTotalValueAllocated();
-
-            expect(tv7).to.be.gt(tv8);
         });
     });
 
@@ -686,8 +654,6 @@ describe("TreasuryExtender", () => {
             let balf: BigNumber = await extender.getAllocatorAllocated(1);
             let balv: BigNumber = await extender.getAllocatorAllocated(2);
 
-            let tv: BigNumber = await extender.getTotalValueAllocated();
-
             let pf: any = await extender.getAllocatorPerformance(1);
             let pv: any = await extender.getAllocatorPerformance(2);
 
@@ -708,12 +674,8 @@ describe("TreasuryExtender", () => {
             let balfe: BigNumber = await extender.getAllocatorAllocated(1);
             let balve: BigNumber = await extender.getAllocatorAllocated(2);
 
-            let tve: BigNumber = await extender.getTotalValueAllocated();
-
             let pfe: any = await extender.getAllocatorPerformance(1);
             let pve: any = await extender.getAllocatorPerformance(2);
-
-            expect(tv).to.be.gte(tve);
 
             expect(balfe).to.equal(balf.sub(withf));
             expect(balve).to.equal(balv.sub(withv));
@@ -733,8 +695,6 @@ describe("TreasuryExtender", () => {
             let balf: BigNumber = await extender.getAllocatorAllocated(1);
             let balv: BigNumber = await extender.getAllocatorAllocated(2);
 
-            let tv: BigNumber = await extender.getTotalValueAllocated();
-
             let pf: any = await extender.getAllocatorPerformance(1);
             let pv: any = await extender.getAllocatorPerformance(2);
 
@@ -752,12 +712,8 @@ describe("TreasuryExtender", () => {
             let balfe: BigNumber = await extender.getAllocatorAllocated(1);
             let balve: BigNumber = await extender.getAllocatorAllocated(2);
 
-            let tve: BigNumber = await extender.getTotalValueAllocated();
-
             let pfe: any = await extender.getAllocatorPerformance(1);
             let pve: any = await extender.getAllocatorPerformance(2);
-
-            expect(tv).to.be.gte(tve);
 
             expect(balfe).to.equal(0);
             expect(balve).to.equal(0);
@@ -776,8 +732,6 @@ describe("TreasuryExtender", () => {
 
             let balf: BigNumber = await extender.getAllocatorAllocated(1);
             let balv: BigNumber = await extender.getAllocatorAllocated(2);
-
-            let tv: BigNumber = await extender.getTotalValueAllocated();
 
             let pf: any = await extender.getAllocatorPerformance(1);
             let pv: any = await extender.getAllocatorPerformance(2);
@@ -800,12 +754,8 @@ describe("TreasuryExtender", () => {
             let balfe: BigNumber = await extender.getAllocatorAllocated(1);
             let balve: BigNumber = await extender.getAllocatorAllocated(2);
 
-            let tve: BigNumber = await extender.getTotalValueAllocated();
-
             let pfe: any = await extender.getAllocatorPerformance(1);
             let pve: any = await extender.getAllocatorPerformance(2);
-
-            expect(tv).to.be.gte(tve);
 
             expect(balfe).to.equal(0);
             expect(balve).to.equal(0);
@@ -846,12 +796,8 @@ describe("TreasuryExtender", () => {
             let balfe: BigNumber = await extender.getAllocatorAllocated(1);
             let balve: BigNumber = await extender.getAllocatorAllocated(2);
 
-            let tve: BigNumber = await extender.getTotalValueAllocated();
-
             let pfe: any = await extender.getAllocatorPerformance(1);
             let pve: any = await extender.getAllocatorPerformance(2);
-
-            expect(tve).to.equal(0);
 
             expect(balfe).to.equal(0);
             expect(balve).to.equal(0);
