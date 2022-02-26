@@ -85,7 +85,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
     AllocatorStatus public status;
 
     // The extender with which the Allocator communicates.
-    ITreasuryExtender public extender;
+    ITreasuryExtender public immutable extender;
 
     constructor(AllocatorInitData memory data) OlympusAccessControlledV2(data.authority) {
         _tokens = data.tokens;
