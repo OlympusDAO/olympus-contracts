@@ -148,9 +148,9 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      *  (gain + loss) == 0, the Allocator will NEVER report this state
      *  gain > loss, gain is reported and incremented but allocated not.
      *  loss > gain, loss is reported, allocated and incremented.
-     *  loss == gain, (loss + gain) > 0, migration case, zero out gain, loss, allocated
+     *  loss == gain == type(uint128).max , migration case, zero out gain, loss, allocated
      *
-     *  note when migrating the next Allocator should report his state to the Extender, in say an `_activate` call.
+     *  NOTE: when migrating the next Allocator should report his state to the Extender, in say an `_activate` call.
      *
      * @param id the deposit id of the token to report state for
      * @param gain the gain the Allocator has made in allocated token
@@ -176,7 +176,9 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
         // EFFECTS
         if (gain >= loss) {
             // MIGRATION
-            if (loss != 0) {
+            // according to above gain must equal loss because
+            // gain can't be larger than max uint128 value
+            if (loss == type(uint128).max) {
                 AllocatorData storage newAllocatorData = allocatorData[allocators[allocators.length - 1]][id];
 
                 newAllocatorData.holdings.allocated = data.holdings.allocated;

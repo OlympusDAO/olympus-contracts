@@ -306,7 +306,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
             IERC20 token = _tokens[i];
 
             token.safeTransfer(newAllocator, token.balanceOf(address(this)));
-            extender.report(_ids[i], 1, 1);
+            extender.report(_ids[i], type(uint128).max, type(uint128).max);
         }
 
         for (uint256 i; i < utilityTokensArray.length; i++) {
