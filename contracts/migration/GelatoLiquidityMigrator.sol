@@ -72,7 +72,14 @@ contract GelatoLiquidityMigrator is OlympusAccessControlled {
         IERC20(OHM).approve(address(gUniRouter), amountOHM);
         IERC20(FRAX).approve(address(gUniRouter), amountFRAX);
 
-        gUniRouter.addLiquidity(OHMFRAXGUniPool, amountOHM, amountFRAX, _minOHMFRAXGUni[0], _minOHMFRAXGUni[1], address(treasury));
+        gUniRouter.addLiquidity(
+            OHMFRAXGUniPool,
+            amountOHM,
+            amountFRAX,
+            _minOHMFRAXGUni[0],
+            _minOHMFRAXGUni[1],
+            address(treasury)
+        );
 
         // Send any leftover OHM back to guardian and FRAX to treasury
         IERC20(OHM).safeTransfer(authority.guardian(), IERC20(OHM).balanceOf(address(this)));
