@@ -12,7 +12,7 @@ error AUTHORITY_INITIALIZED();
 abstract contract OlympusAccessControlledV2 {
     /* ========== EVENTS ========== */
 
-    event AuthorityUpdated(IOlympusAuthority indexed authority);
+    event AuthorityUpdated(IOlympusAuthority authority);
 
     /* ========== STATE VARIABLES ========== */
 
