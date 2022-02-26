@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.10;
 
 import "../interfaces/IOlympusAuthority.sol";
@@ -13,7 +12,7 @@ error AUTHORITY_INITIALIZED();
 abstract contract OlympusAccessControlledV2 {
     /* ========== EVENTS ========== */
 
-    event AuthorityUpdated(IOlympusAuthority indexed authority);
+    event AuthorityUpdated(IOlympusAuthority authority);
 
     /* ========== STATE VARIABLES ========== */
 
@@ -27,6 +26,42 @@ abstract contract OlympusAccessControlledV2 {
     }
 
     /* ========== "MODIFIERS" ========== */
+
+    modifier onlyGovernor {
+	_onlyGovernor();
+	_;
+    }
+
+    modifier onlyGuardian {
+	_onlyGuardian();
+	_;
+    }
+
+    modifier onlyPolicy {
+	_onlyPolicy();
+	_;
+    }
+
+    modifier onlyVault {
+	_onlyVault();
+	_;
+    }
+
+    /* ========== GOV ONLY ========== */
+
+    function initializeAuthority(IOlympusAuthority _newAuthority) internal {
+        if (authority != IOlympusAuthority(address(0))) revert AUTHORITY_INITIALIZED();
+        authority = _newAuthority;
+        emit AuthorityUpdated(_newAuthority);
+    }
+
+    function setAuthority(IOlympusAuthority _newAuthority) external {
+        _onlyGovernor();
+        authority = _newAuthority;
+        emit AuthorityUpdated(_newAuthority);
+    }
+
+    /* ========== INTERNAL CHECKS ========== */
 
     function _onlyGovernor() internal view {
         if (msg.sender != authority.governor()) revert UNAUTHORIZED();
@@ -42,19 +77,5 @@ abstract contract OlympusAccessControlledV2 {
 
     function _onlyVault() internal view {
         if (msg.sender != authority.vault()) revert UNAUTHORIZED();
-    }
-
-    /* ========== GOV ONLY ========== */
-
-    function initializeAuthority(IOlympusAuthority _newAuthority) internal {
-        if (authority != IOlympusAuthority(address(0))) revert AUTHORITY_INITIALIZED();
-        authority = _newAuthority;
-        emit AuthorityUpdated(_newAuthority);
-    }
-
-    function setAuthority(IOlympusAuthority _newAuthority) external {
-        _onlyGovernor();
-        authority = _newAuthority;
-        emit AuthorityUpdated(_newAuthority);
     }
 }
