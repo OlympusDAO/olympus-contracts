@@ -11,6 +11,8 @@ interface ICurveRegistry {
     function get_pool_from_lp_token(address lp_token) external view returns (address);
 
     function get_n_coins(address _pool) external view returns (uint256[2] memory);
+
+    function is_meta(address _pool) external view returns (bool);
 }
 
 interface ICurveFactory {
