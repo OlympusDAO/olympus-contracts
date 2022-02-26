@@ -113,8 +113,8 @@ describe("YieldStreamer", async () => {
             sushiRouter.address,
             staking.address,
             auth.address,
-            1,
-            1,
+            1000,
+            1000,
             toDecimals(1)
         )) as YieldStreamer;
 
@@ -312,8 +312,8 @@ describe("YieldStreamer", async () => {
     });
 
     it("Governor can update contract settins", async () => {
-        await expect(await yieldStreamer.maxSwapSlippagePercent()).is.equal(1);
-        await expect(await yieldStreamer.feeToDaoPercent()).is.equal(1);
+        await expect(await yieldStreamer.maxSwapSlippagePercent()).is.equal(1000);
+        await expect(await yieldStreamer.feeToDaoPercent()).is.equal(1000);
         await expect(await yieldStreamer.minimumDaiThreshold()).is.equal(toDecimals(1));
 
         await yieldStreamer.setMaxSwapSlippagePercent(10);
