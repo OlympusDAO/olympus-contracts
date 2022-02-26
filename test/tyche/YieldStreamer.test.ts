@@ -198,7 +198,7 @@ describe("YieldStreamer", async () => {
         await expect((await yieldStreamer.depositInfo(0)).principalAmount).is.equal(toOhm(100));
         await expect((await yieldStreamer.recipientInfo(0)).recipientAddress).is.equal(bob.address);
         await expect((await yieldStreamer.recipientInfo(0)).paymentInterval).is.equal(1);
-        await expect((await yieldStreamer.recipientInfo(0)).userMinimumDaiThreshold).is.equal(
+        await expect((await yieldStreamer.recipientInfo(0)).userMinimumAmountThreshold).is.equal(
             toDecimals(5)
         );
         await expect(await yieldStreamer.activeDepositIds(1)).is.equal(1);
@@ -268,8 +268,10 @@ describe("YieldStreamer", async () => {
 
         await expect(await yieldStreamer.upkeep()).to.emit(yieldStreamer, "UpkeepComplete");
 
-        await expect((await yieldStreamer.recipientInfo(0)).unclaimedDai).is.equals(toDecimals(10));
-        await yieldStreamer.connect(alice).harvestDai(0);
+        await expect((await yieldStreamer.recipientInfo(0)).unclaimedStreamTokens).is.equals(
+            toDecimals(10)
+        );
+        await yieldStreamer.connect(alice).harvestStreamTokens(0);
         await expect(await dai.balanceOf(alice.address)).is.equals(toDecimals(10));
     });
 
@@ -293,8 +295,10 @@ describe("YieldStreamer", async () => {
             "WithdrawDisabled"
         );
         await expect(yieldStreamer.withdrawYield(0)).to.be.revertedWith("WithdrawDisabled");
-        await expect(yieldStreamer.withdrawYieldAsDai(0)).to.be.revertedWith("WithdrawDisabled");
-        await expect(yieldStreamer.harvestDai(0)).to.be.revertedWith("WithdrawDisabled");
+        await expect(yieldStreamer.withdrawYieldInStreamTokens(0)).to.be.revertedWith(
+            "WithdrawDisabled"
+        );
+        await expect(yieldStreamer.harvestStreamTokens(0)).to.be.revertedWith("WithdrawDisabled");
     });
 
     it("User can update user settings", async () => {
@@ -306,7 +310,7 @@ describe("YieldStreamer", async () => {
         await yieldStreamer.connect(alice).updateUserMinDaiThreshold(0, toDecimals(2000));
 
         await expect((await yieldStreamer.recipientInfo(0)).paymentInterval).is.equal(2419200);
-        await expect((await yieldStreamer.recipientInfo(0)).userMinimumDaiThreshold).is.equal(
+        await expect((await yieldStreamer.recipientInfo(0)).userMinimumAmountThreshold).is.equal(
             toDecimals(2000)
         );
     });
@@ -314,15 +318,15 @@ describe("YieldStreamer", async () => {
     it("Governor can update contract settins", async () => {
         await expect(await yieldStreamer.maxSwapSlippagePercent()).is.equal(1000);
         await expect(await yieldStreamer.feeToDaoPercent()).is.equal(1000);
-        await expect(await yieldStreamer.minimumDaiThreshold()).is.equal(toDecimals(1));
+        await expect(await yieldStreamer.minimumTokenThreshold()).is.equal(toDecimals(1));
 
         await yieldStreamer.setMaxSwapSlippagePercent(10);
         await yieldStreamer.setFeeToDaoPercent(10);
-        await yieldStreamer.setMinimumDaiThreshold(toDecimals(1000));
+        await yieldStreamer.setminimumTokenThreshold(toDecimals(1000));
 
         await expect(await yieldStreamer.maxSwapSlippagePercent()).is.equal(10);
         await expect(await yieldStreamer.feeToDaoPercent()).is.equal(10);
-        await expect(await yieldStreamer.minimumDaiThreshold()).is.equal(toDecimals(1000));
+        await expect(await yieldStreamer.minimumTokenThreshold()).is.equal(toDecimals(1000));
     });
 
     it("Upkeep Eligibility returns correct values", async () => {
