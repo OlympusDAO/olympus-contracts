@@ -92,7 +92,7 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
         extender = data.extender;
 
         for (uint256 i; i < data.tokens.length; i++) {
-            data.tokens[i].safeApprove(address(data.extender), type(uint256).max);
+            data.tokens[i].approve(address(data.extender), type(uint256).max);
         }
 
         emit AllocatorDeployed(address(data.authority), address(data.extender));
