@@ -129,7 +129,7 @@ contract InvestorClaimV2 is Ownable {
      */
     function pullWalletChange(address _oldAddress) external {
         require(walletChange[_oldAddress] == msg.sender, "Old wallet did not push");
-        require(terms[msg.sender].percent != 0, "Wallet already exists");
+        require(terms[msg.sender].percent == 0, "Wallet already exists");
 
         walletChange[_oldAddress] = address(0);
         terms[msg.sender] = terms[_oldAddress];
