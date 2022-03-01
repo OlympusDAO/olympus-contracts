@@ -279,8 +279,10 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
     }
 
     /**
-        @notice Upkeeps all deposits if they are eligible to be upkept. Converts excess yield from gOHM to streamTokens. 
+        @notice Upkeeps all deposits if they are eligible.
+                Upkeep consists of converting all eligible deposits yield from gOhm into streamToken(usually DAI).
                 Sends the yield to recipient wallets if above user set threshold.
+                Eligible for upkeep means enough time(payment interval) has passed since their last upkeep.
     */
     function upkeep() external override {
         if (upkeepDisabled) revert YieldStreamer_UpkeepDisabled();
@@ -348,6 +350,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
 
     /**
         @notice Gets the number of deposits eligible for upkeep and amount of ohm of yield available to swap.
+                Eligible for upkeep means enough time(payment interval of deposit) has passed since last upkeep.
         @return numberOfDepositsEligible : number of deposits eligible for upkeep.
         @return amountOfYieldToSwap : total amount of yield in gOHM ready to be swapped in next upkeep.
      */
@@ -377,14 +380,12 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
     }
 
     /**
-        @notice Returns whether deposit id is eligible for upkeep
+        @notice Returns whether deposit id is eligible for upkeep.
+                Eligible for upkeep means enough time(payment interval of deposit) has passed since last upkeep.
         @return bool
      */
     function _isUpkeepEligible(uint256 id_) internal view returns (bool) {
-        if (block.timestamp >= recipientInfo[id_].lastUpkeepTimestamp + recipientInfo[id_].paymentInterval) {
-            return true;
-        }
-        return false;
+        return block.timestamp >= recipientInfo[id_].lastUpkeepTimestamp + recipientInfo[id_].paymentInterval;
     }
 
     /************************
@@ -393,19 +394,19 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
 
     /**
         @notice Setter for maxSwapSlippagePercent.
-        @param slippagePercent_ new slippage value as a fraction / 1000.
+        @param slippagePercent_ new slippage value is a percentage with 6 decimals. 1e6 = 100%
     */
     function setMaxSwapSlippagePercent(uint256 slippagePercent_) external onlyGovernor {
-        if (slippagePercent_ > 1000000) revert YieldStreamer_InvalidAmount();
+        if (slippagePercent_ > 1e6) revert YieldStreamer_InvalidAmount();
         maxSwapSlippagePercent = slippagePercent_;
     }
 
     /**
         @notice Setter for feeToDaoPercent.
-        @param feePercent_ new fee value as a fraction / 1000.
+        @param feePercent_ new fee value is a percentage with 6 decimals. 1e6 = 100%
     */
     function setFeeToDaoPercent(uint256 feePercent_) external onlyGovernor {
-        if (feePercent_ > 1000000) revert YieldStreamer_InvalidAmount();
+        if (feePercent_ > 1e6) revert YieldStreamer_InvalidAmount();
         feeToDaoPercent = feePercent_;
     }
 
