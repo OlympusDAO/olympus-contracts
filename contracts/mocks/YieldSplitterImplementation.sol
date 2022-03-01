@@ -30,7 +30,7 @@ contract YieldSplitterImpl is YieldSplitter {
         @param amount_ Amount of gOhm to add. 18 decimals.
     */
     function addToDeposit(uint256 id_, uint256 amount_) external {
-        _addToDeposit(id_, amount_);
+        _addToDeposit(id_, amount_, msg.sender);
     }
 
     /**
@@ -39,7 +39,7 @@ contract YieldSplitterImpl is YieldSplitter {
         @param amount_ Amount of gOHM to withdraw.
     */
     function withdrawPrincipal(uint256 id_, uint256 amount_) external {
-        _withdrawPrincipal(id_, amount_);
+        _withdrawPrincipal(id_, amount_, msg.sender);
     }
 
     /**
@@ -48,7 +48,7 @@ contract YieldSplitterImpl is YieldSplitter {
         @return amountWithdrawn : amount of gOHM withdrawn. 18 decimals.
     */
     function withdrawAllPrincipal(uint256 id_) external returns (uint256 amountWithdrawn) {
-        return _withdrawAllPrincipal(id_);
+        return _withdrawAllPrincipal(id_, msg.sender);
     }
 
     /**
@@ -70,7 +70,7 @@ contract YieldSplitterImpl is YieldSplitter {
         @return agnosticAmount : total amount of gOHM deleted. Principal + Yield. 18 decimals.
     */
     function closeDeposit(uint256 id_) external returns (uint256 principal, uint256 agnosticAmount) {
-        (principal, agnosticAmount) = _closeDeposit(id_);
+        (principal, agnosticAmount) = _closeDeposit(id_, msg.sender);
     }
 
     /**

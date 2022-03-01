@@ -142,9 +142,8 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
     */
     function addToDeposit(uint256 id_, uint256 amount_) external override {
         if (depositDisabled) revert YieldStreamer_DepositDisabled();
-        if (depositInfo[id_].depositor != msg.sender) revert YieldStreamer_UnauthorisedAction();
 
-        _addToDeposit(id_, amount_);
+        _addToDeposit(id_, amount_, msg.sender);
 
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);
 
@@ -164,7 +163,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         if (amount_ >= IgOHM(gOHM).balanceTo(depositInfo[id_].principalAmount)) {
             address recipient = recipientInfo[id_].recipientAddress;
             uint256 unclaimedStreamTokens = recipientInfo[id_].unclaimedStreamTokens;
-            (uint256 principal, uint256 totalGOHM) = _closeDeposit(id_);
+            (uint256 principal, uint256 totalGOHM) = _closeDeposit(id_, msg.sender);
             delete recipientInfo[id_];
 
             for (uint256 i = 0; i < activeDepositIds.length; i++) {
@@ -192,7 +191,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
                 IERC20(streamToken).safeTransfer(recipient, unclaimedStreamTokens);
             }
         } else {
-            _withdrawPrincipal(id_, amount_);
+            _withdrawPrincipal(id_, amount_, msg.sender);
             IERC20(gOHM).safeTransfer(msg.sender, amount_);
         }
 
