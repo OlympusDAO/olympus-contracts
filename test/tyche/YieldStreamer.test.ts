@@ -244,6 +244,22 @@ describe("YieldStreamer", async () => {
         );
     });
 
+    it("withdrawing all yield does it for all deposits recipient is liable for", async () => {
+        await yieldStreamer
+            .connect(deployer)
+            .deposit(toDecimals(10), alice.address, 1, toDecimals(5));
+        await yieldStreamer.connect(alice).deposit(toDecimals(10), alice.address, 1, toDecimals(5));
+        await triggerRebase();
+        await expect(await gOhm.balanceOf(alice.address)).is.equal("0");
+
+        let expectedYield = await yieldStreamer.getOutstandingYield(0);
+
+        await yieldStreamer.connect(alice).withdrawAllYield();
+        await expect(await yieldStreamer.getOutstandingYield(0)).is.equal(0);
+        await expect(await yieldStreamer.getOutstandingYield(1)).is.equal(0);
+        await expect(await gOhm.balanceOf(alice.address)).is.equal(expectedYield.mul(2));
+    });
+
     it("withdrawing part of principal", async () => {
         await yieldStreamer.connect(alice).deposit(toDecimals(10), alice.address, 1, toDecimals(5)); //10gOhm deposited. 100sOhm principal
         await triggerRebase();

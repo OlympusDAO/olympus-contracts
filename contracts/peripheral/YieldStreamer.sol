@@ -207,11 +207,26 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         if (withdrawDisabled) revert YieldStreamer_WithdrawDisabled();
         if (recipientInfo[id_].recipientAddress != msg.sender) revert YieldStreamer_UnauthorisedAction();
 
-        recipientInfo[id_].lastUpkeepTimestamp = uint128(block.timestamp);
-
         uint256 yield = _redeemYield(id_);
 
         IERC20(gOHM).safeTransfer(msg.sender, yield);
+    }
+
+    /**
+        @notice Withdraw all excess yield from your all deposits you are the recipient of in gOHM.
+        @dev  Use withdrawYieldInStreamTokens() to withdraw yield in stream tokens.
+    */
+    function withdrawAllYield() external override {
+        if (withdrawDisabled) revert YieldStreamer_WithdrawDisabled();
+
+        uint256 total;
+        uint256[] memory receiptIds = recipientIds[msg.sender];
+
+        for (uint256 i = 0; i < receiptIds.length; i++) {
+            total += _redeemYield(receiptIds[i]);
+        }
+
+        IERC20(gOHM).safeTransfer(msg.sender, total);
     }
 
     /**

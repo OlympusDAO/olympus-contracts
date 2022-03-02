@@ -16,6 +16,8 @@ interface IYieldStreamer {
 
     function withdrawYield(uint256 id_) external;
 
+    function withdrawAllYield() external;
+
     function withdrawYieldInStreamTokens(uint256 id_) external;
 
     function harvestStreamTokens(uint256 id_) external;
