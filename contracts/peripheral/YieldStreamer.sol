@@ -44,10 +44,10 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
 
     struct RecipientInfo {
         address recipientAddress;
-        uint256 lastUpkeepTimestamp;
-        uint256 paymentInterval; // Time before yield is able to be swapped to stream tokens
-        uint256 unclaimedStreamTokens;
-        uint256 userMinimumAmountThreshold;
+        uint128 lastUpkeepTimestamp;
+        uint128 paymentInterval; // Time before yield is able to be swapped to stream tokens
+        uint128 unclaimedStreamTokens;
+        uint128 userMinimumAmountThreshold;
     }
 
     mapping(uint256 => RecipientInfo) public recipientInfo; // depositId -> RecipientInfo
@@ -81,8 +81,8 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         address sushiRouter_,
         address staking_,
         address authority_,
-        uint256 maxSwapSlippagePercent_,
-        uint256 feeToDaoPercent_,
+        uint128 maxSwapSlippagePercent_,
+        uint128 feeToDaoPercent_,
         uint256 minimumTokenThreshold_
     ) YieldSplitter(sOHM_) OlympusAccessControlled(IOlympusAuthority(authority_)) {
         gOHM = gOHM_;
@@ -110,8 +110,8 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
     function deposit(
         uint256 amount_,
         address recipient_,
-        uint256 paymentInterval_,
-        uint256 userMinimumAmountThreshold_
+        uint128 paymentInterval_,
+        uint128 userMinimumAmountThreshold_
     ) external override {
         if (depositDisabled) revert YieldStreamer_DepositDisabled();
         if (amount_ <= 0) revert YieldStreamer_InvalidAmount();
@@ -121,7 +121,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
 
         recipientInfo[depositId] = RecipientInfo({
             recipientAddress: recipient_,
-            lastUpkeepTimestamp: block.timestamp,
+            lastUpkeepTimestamp: uint128(block.timestamp),
             paymentInterval: paymentInterval_,
             unclaimedStreamTokens: 0,
             userMinimumAmountThreshold: userMinimumAmountThreshold_
@@ -207,7 +207,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         if (withdrawDisabled) revert YieldStreamer_WithdrawDisabled();
         if (recipientInfo[id_].recipientAddress != msg.sender) revert YieldStreamer_UnauthorisedAction();
 
-        recipientInfo[id_].lastUpkeepTimestamp = block.timestamp;
+        recipientInfo[id_].lastUpkeepTimestamp = uint128(block.timestamp);
 
         uint256 yield = _redeemYield(id_);
 
@@ -222,7 +222,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         if (withdrawDisabled) revert YieldStreamer_WithdrawDisabled();
         if (recipientInfo[id_].recipientAddress != msg.sender) revert YieldStreamer_UnauthorisedAction();
 
-        recipientInfo[id_].lastUpkeepTimestamp = block.timestamp;
+        recipientInfo[id_].lastUpkeepTimestamp = uint128(block.timestamp);
 
         uint256 gOHMYield = _redeemYield(id_);
         uint256 totalOhmToSwap = staking.unwrap(address(this), gOHMYield);
@@ -260,7 +260,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         @param id_ Id of the deposit
         @param threshold_ amount of streamTokens
     */
-    function updateUserMinDaiThreshold(uint256 id_, uint256 threshold_) external override {
+    function updateUserMinDaiThreshold(uint256 id_, uint128 threshold_) external override {
         if (threshold_ < minimumTokenThreshold) revert YieldStreamer_MinTokenThresholdTooLow();
         if (depositInfo[id_].depositor != msg.sender) revert YieldStreamer_UnauthorisedAction();
 
@@ -272,7 +272,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         @param id_ Id of the deposit
         @param paymentInterval_ amount of time in seconds
     */
-    function updatePaymentInterval(uint256 id_, uint256 paymentInterval_) external override {
+    function updatePaymentInterval(uint256 id_, uint128 paymentInterval_) external override {
         if (depositInfo[id_].depositor != msg.sender) revert YieldStreamer_UnauthorisedAction();
 
         recipientInfo[id_].paymentInterval = paymentInterval_;
@@ -319,8 +319,10 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
             if (_isUpkeepEligible(currentId)) {
                 RecipientInfo storage currentrecipientInfo = recipientInfo[currentId];
 
-                currentrecipientInfo.lastUpkeepTimestamp = block.timestamp;
-                currentrecipientInfo.unclaimedStreamTokens += (amounts[1] * _redeemYield(currentId)) / totalGOHM;
+                currentrecipientInfo.lastUpkeepTimestamp = uint128(block.timestamp);
+                currentrecipientInfo.unclaimedStreamTokens += uint128(
+                    (amounts[1] * _redeemYield(currentId)) / totalGOHM
+                );
 
                 if (currentrecipientInfo.unclaimedStreamTokens >= currentrecipientInfo.userMinimumAmountThreshold) {
                     uint256 streamTokensToSend = currentrecipientInfo.unclaimedStreamTokens;

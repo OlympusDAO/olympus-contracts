@@ -6,8 +6,8 @@ interface IYieldStreamer {
     function deposit(
         uint256 amount_,
         address recipient_,
-        uint256 paymentInterval_,
-        uint256 userMinimumDaiThreshold_
+        uint128 paymentInterval_,
+        uint128 userMinimumDaiThreshold_
     ) external;
 
     function addToDeposit(uint256 id_, uint256 amount_) external;
@@ -20,9 +20,9 @@ interface IYieldStreamer {
 
     function harvestStreamTokens(uint256 id_) external;
 
-    function updateUserMinDaiThreshold(uint256 id_, uint256 threshold_) external;
+    function updateUserMinDaiThreshold(uint256 id_, uint128 threshold_) external;
 
-    function updatePaymentInterval(uint256 id_, uint256 paymentInterval) external;
+    function updatePaymentInterval(uint256 id_, uint128 paymentInterval) external;
 
     function upkeep() external;
 
