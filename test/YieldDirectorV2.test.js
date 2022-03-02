@@ -76,7 +76,7 @@ describe("YieldDirectorV2", async () => {
         gOhmFactory = await ethers.getContractFactory("gOHM");
         treasuryFactory = await ethers.getContractFactory("OlympusTreasury");
         distributorFactory = await ethers.getContractFactory("Distributor");
-        tycheFactory = await ethers.getContractFactory("YieldDirectorV2");
+        tycheFactory = await ethers.getContractFactory("YieldDirector");
     });
 
     beforeEach(async () => {
