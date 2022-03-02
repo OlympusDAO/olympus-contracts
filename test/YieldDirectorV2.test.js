@@ -736,7 +736,7 @@ describe("YieldDirectorV2", async () => {
         );
 
         const balanceBefore = await gOhm.balanceOf(deployer.address);
-        await tyche.connect(bob).redeemAllYield()
+        await tyche.connect(bob).redeemAllYield();
         const balanceAfter = await gOhm.balanceOf(deployer.address);
         await expect(balanceAfter.sub(balanceBefore)).is.equal("0");
     });

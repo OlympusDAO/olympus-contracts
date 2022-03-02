@@ -192,7 +192,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @param donor_ Address of user donating yield
         @param recipient_ Address of user receiving donated yield
     */
-    function depositsTo(address donor_, address recipient_) external override view returns (uint256) {
+    function depositsTo(address donor_, address recipient_) external view override returns (uint256) {
         uint256[] memory depositIds = depositorIds[donor_];
 
         for (uint256 index = 0; index < depositIds.length; ++index) {
@@ -211,7 +211,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
                 on sOHM equivalent amount deposited)
         @param donor_ Address of user donating yield
     */
-    function totalDeposits(address donor_) external override view returns (uint256) {
+    function totalDeposits(address donor_) external view override returns (uint256) {
         uint256[] memory depositIds = depositorIds[donor_];
         uint256 principalTotal = 0;
 
@@ -227,7 +227,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
                 sOHM equivalent deposit), matched by index
         @param donor_ Address of user donating yield
     */
-    function getAllDeposits(address donor_) external override view returns (address[] memory, uint256[] memory) {
+    function getAllDeposits(address donor_) external view override returns (address[] memory, uint256[] memory) {
         uint256[] memory depositIds = depositorIds[donor_];
 
         uint256 len = depositIds.length == 0 ? 1 : depositIds.length;
@@ -253,7 +253,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @param donor_ Address of user donating yield
         @param recipient_ Address of user recieiving donated yield
     */
-    function donatedTo(address donor_, address recipient_) external override view returns (uint256) {
+    function donatedTo(address donor_, address recipient_) external view override returns (uint256) {
         uint256[] memory depositIds = depositorIds[donor_];
 
         for (uint256 index = 0; index < depositIds.length; ++index) {
@@ -269,7 +269,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @notice Return total amount of gOHM donated from donor since last full redemption
         @param donor_ Address of user donating yield
     */
-    function totalDonated(address donor_) external override view returns (uint256) {
+    function totalDonated(address donor_) external view override returns (uint256) {
         uint256[] memory depositIds = depositorIds[donor_];
 
         uint256 principalTotal = 0;
@@ -285,13 +285,12 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         return _getOutstandingYield(principalTotal, agnosticTotal);
     }
 
-
     /**
         @notice Getter function for a depositor's list of IDs. This is needed for the frontend
                 as public state variables that map to arrays only return one element at a time
                 rather than the full array
     */
-    function getDepositorIds(address donor_) external override view returns (uint256[] memory) {
+    function getDepositorIds(address donor_) external view override returns (uint256[] memory) {
         return depositorIds[donor_];
     }
 
@@ -303,7 +302,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @notice Get redeemable gOHM balance of a specific deposit
         @param depositId_ Deposit ID for this donation
     */
-    function redeemableBalance(uint256 depositId_) public override view returns (uint256) {
+    function redeemableBalance(uint256 depositId_) public view override returns (uint256) {
         DepositInfo storage currDeposit = depositInfo[depositId_];
 
         return _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);
@@ -313,7 +312,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @notice Get redeemable gOHM balance of a recipient address
         @param recipient_ Address of user receiving donated yield
      */
-    function totalRedeemableBalance(address recipient_) public override view returns (uint256) {
+    function totalRedeemableBalance(address recipient_) public view override returns (uint256) {
         uint256[] memory receiptIds = recipientIds[recipient_];
 
         uint256 agnosticRedeemable = 0;
@@ -330,7 +329,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
                 as public state variables that map to arrays only return one element at a time
                 rather than the full array
     */
-    function getRecipientIds(address recipient_) external override view returns (uint256[] memory) {
+    function getRecipientIds(address recipient_) external view override returns (uint256[] memory) {
         return recipientIds[recipient_];
     }
 
@@ -472,7 +471,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         for (uint256 index = idsLength; index > 0; index--) {
             uint256 currRedemption = _redeemYield(receiptIds[index - 1]);
             amountRedeemed += currRedemption;
-            
+
             emit Donated(depositInfo[receiptIds[index - 1]].depositor, msg.sender, currRedemption);
 
             if (depositInfo[receiptIds[index - 1]].principalAmount == 0) {
