@@ -405,6 +405,22 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         return block.timestamp >= recipientInfo[id_].lastUpkeepTimestamp + recipientInfo[id_].paymentInterval;
     }
 
+    /**
+        @notice Returns the array of deposit id's belonging to the recipient
+        @return uint256[] array of recipient Id's
+     */
+    function getRecipientIds(address recipient_) external view returns (uint256[] memory) {
+        return recipientIds[recipient_];
+    }
+
+    /**
+        @notice Returns the array of deposit id's belonging to the depositor
+        @return uint256[] array of depositor Id's
+     */
+    function getDepositorIds(address donor_) external view returns (uint256[] memory) {
+        return depositorIds[donor_];
+    }
+
     /************************
      * Restricted Setter Functions
      ************************/
