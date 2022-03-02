@@ -735,7 +735,10 @@ describe("YieldDirectorV2", async () => {
             (await gOhm.balanceTo(donated)).add("1")
         );
 
-        await expect(tyche.connect(bob).redeemAllYield()).to.be.reverted;
+        const balanceBefore = await gOhm.balanceOf(deployer.address);
+        await tyche.connect(bob).redeemAllYield()
+        const balanceAfter = await gOhm.balanceOf(deployer.address);
+        await expect(balanceAfter.sub(balanceBefore)).is.equal("0");
     });
 
     it("should display total donated to recipient", async () => {

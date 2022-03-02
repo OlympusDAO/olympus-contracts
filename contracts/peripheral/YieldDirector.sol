@@ -28,7 +28,6 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
     error YieldDirector_InvalidWithdrawal();
     error YieldDirector_NotYourYield();
     error YieldDirector_NoDeposits();
-    error YieldDirector_NoRedeemableBalance();
     error YieldDirector_WithdrawalsDisabled();
     error YieldDirector_RedeemsDisabled();
 
@@ -433,7 +432,6 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         if (recipientLookup[depositId_] != msg.sender) revert YieldDirector_NotYourYield();
 
         amountRedeemed = _redeemYield(depositId_);
-        if (amountRedeemed == 0) revert YieldDirector_NoRedeemableBalance();
 
         if (depositInfo[depositId_].principalAmount == 0) {
             _closeDeposit(depositId_, depositInfo[depositId_].depositor);
@@ -487,8 +485,6 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
                 receiptIds.pop();
             }
         }
-
-        if (amountRedeemed == 0) revert YieldDirector_NoRedeemableBalance();
 
         emit Redeemed(msg.sender, amountRedeemed);
     }
