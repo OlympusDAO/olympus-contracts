@@ -166,20 +166,22 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
             (uint256 principal, uint256 totalGOHM) = _closeDeposit(id_, msg.sender);
             delete recipientInfo[id_];
 
-            for (uint256 i = 0; i < activeDepositIds.length; i++) {
+            uint256 depositLength = activeDepositIds.length;
+            for (uint256 i = 0; i < depositLength; i++) {
                 // Delete integer from array by swapping with last element and calling pop()
                 if (activeDepositIds[i] == id_) {
-                    activeDepositIds[i] = activeDepositIds[activeDepositIds.length - 1];
+                    activeDepositIds[i] = activeDepositIds[depositLength - 1];
                     activeDepositIds.pop();
                     break;
                 }
             }
 
             uint256[] storage recipientIdsArray = recipientIds[recipient];
-            for (uint256 i = 0; i < recipientIdsArray.length; i++) {
+            uint256 recipientLength = recipientIdsArray.length;
+            for (uint256 i = 0; i < recipientLength; i++) {
                 // Delete integer from array by swapping with last element and calling pop()
                 if (recipientIdsArray[i] == id_) {
-                    recipientIdsArray[i] = recipientIdsArray[recipientIdsArray.length - 1];
+                    recipientIdsArray[i] = recipientIdsArray[recipientLength - 1];
                     recipientIdsArray.pop();
                     break;
                 }
@@ -303,8 +305,9 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         if (upkeepDisabled) revert YieldStreamer_UpkeepDisabled();
 
         uint256 totalGOHM;
+        uint256 depositLength = activeDepositIds.length;
 
-        for (uint256 i = 0; i < activeDepositIds.length; i++) {
+        for (uint256 i = 0; i < depositLength; i++) {
             uint256 currentId = activeDepositIds[i];
 
             if (_isUpkeepEligible(currentId)) {
@@ -327,7 +330,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
             block.timestamp
         );
 
-        for (uint256 i = 0; i < activeDepositIds.length; i++) {
+        for (uint256 i = 0; i < depositLength; i++) {
             // TODO: Is there a more gas efficient way than looping through this again and checking same condition
             uint256 currentId = activeDepositIds[i];
 

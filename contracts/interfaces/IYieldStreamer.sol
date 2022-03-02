@@ -36,4 +36,8 @@ interface IYieldStreamer {
     function getPrincipalInGOHM(uint256 id_) external view returns (uint256);
 
     function getTotalHarvestableYieldGOHM(address recipient_) external view returns (uint256 totalGOHM);
+
+    function getRecipientIds(address recipient_) external view returns (uint256[] memory);
+
+    function getDepositorIds(address donor_) external view returns (uint256[] memory);
 }
