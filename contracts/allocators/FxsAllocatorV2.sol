@@ -5,9 +5,9 @@ pragma solidity ^0.8.10;
 import "../types/BaseAllocator.sol";
 
 // interfaces
-import "../../interfaces/ITreasury.sol";
-import "../../interfaces/IERC20.sol";
-import "../../libraries/SafeERC20.sol";
+import "../interfaces/ITreasury.sol";
+import "../interfaces/IERC20.sol";
+import "../libraries/SafeERC20.sol";
 
 interface IveFXS is IERC20 {
     /**
@@ -76,7 +76,7 @@ interface IveFXSYieldDistributorV4 {
 
 error FxsAllocator_InvalidAddress();
 
-contract FxsAllocatorV2.sol is BaseAllocator {
+contract FxsAllocatorV2 is BaseAllocator {
     using SafeERC20 for IERC20;
 
     uint256 private constant MAX_TIME = 4 * 365 * 86400 + 1; // 4 years and 1 second
@@ -92,9 +92,8 @@ contract FxsAllocatorV2.sol is BaseAllocator {
         address veFXS_,
         address veFXSYieldDistributorV4_
     ) BaseAllocator(data) {
-        require(treasury != address(0), FxsAllocator_InvalidAddress());
-        require(veFXS_ != address(0), FxsAllocator_InvalidAddress());
-        require(veFXSYieldDistributorV4 != address(0), FxsAllocator_InvalidAddress());
+        if (treasury_ == address(0) || veFXS_ == address(0) || veFXSYieldDistributorV4_ == address(0))
+            revert FxsAllocator_InvalidAddress();
 
         treasury = ITreasury(treasury);
         veFXS = IveFXS(veFXS_);
@@ -122,8 +121,8 @@ contract FxsAllocatorV2.sol is BaseAllocator {
         veBalance = veFXS.balanceOf(address(this));
         uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
 
-        if (veBalance > last) gain = veBalance - last;
-        else loss = last - veBalance;
+        if (veBalance > last) gain = uint128(veBalance - last);
+        else loss = uint128(last - veBalance);
     }
 
     function deallocate(uint256[] memory amounts) public override {
@@ -136,15 +135,35 @@ contract FxsAllocatorV2.sol is BaseAllocator {
     }
 
     function _deactivate(bool panic) internal override {
-        uint256[] memory amounts = [0];
+        uint256[] memory amounts = new uint256[](1);
         deallocate(amounts);
 
         if (panic) {
-            _tokens[0].transfer(treasury, _tokens[0].balanceOf(address(this)));
+            _tokens[0].transfer(address(treasury), _tokens[0].balanceOf(address(this)));
         }
     }
 
     function _prepareMigration() internal override {}
+
+    function amountAllocated(uint256 id) public view override returns (uint256) {
+        return veFXS.balanceOf(address(this));
+    }
+
+    function rewardTokens() public pure override returns (IERC20[] memory) {
+        IERC20[] memory empty = new IERC20[](0);
+        return empty;
+    }
+
+    function utilityTokens() public view override returns (IERC20[] memory) {
+        IERC20[] memory utilTokens = new IERC20[](1);
+        utilTokens[0] = IERC20(address(veFXS));
+
+        return utilTokens;
+    }
+
+    function name() external pure override returns (string memory) {
+        return "FxsAllocatorV2";
+    }
 
     /* ======== VIEW FUNCTIONS ======== */
     function _canExtendLock() internal view returns (bool) {
