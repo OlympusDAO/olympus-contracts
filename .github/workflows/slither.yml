@@ -5,6 +5,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - run: pwd
+      - run: ls -al
       - uses: crytic/slither-action@v0.1.0
         name: Perform Slither Analysis
         id: slither
