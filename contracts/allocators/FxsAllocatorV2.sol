@@ -95,7 +95,7 @@ contract FxsAllocatorV2 is BaseAllocator {
         if (treasury_ == address(0) || veFXS_ == address(0) || veFXSYieldDistributorV4_ == address(0))
             revert FxsAllocator_InvalidAddress();
 
-        treasury = ITreasury(treasury);
+        treasury = ITreasury(treasury_);
         veFXS = IveFXS(veFXS_);
         veFXSYieldDistributorV4 = IveFXSYieldDistributorV4(veFXSYieldDistributorV4_);
 
