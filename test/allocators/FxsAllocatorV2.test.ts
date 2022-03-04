@@ -1,5 +1,5 @@
 import { ethers, waffle, network, config } from "hardhat";
-import chai, { expect } from "chai";
+import chai, { expect, util } from "chai";
 import { smock } from "@defi-wonderland/smock";
 import { BigNumber, BaseContract, ContractFactory, Contract} from "ethers";
 
@@ -110,7 +110,7 @@ describe("FxsAllocatorV2", () => {
             },
             olympus.treasury,
             vefxs.address,
-            "0x62C4cf364078C98fA08AfDB4D3d8D87e780Ebd45",
+            "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
         );
     });
 
@@ -132,12 +132,12 @@ describe("FxsAllocatorV2", () => {
                 },
                 olympus.treasury,
                 vefxs.address,
-                "0x62C4cf364078C98fA08AfDB4D3d8D87e780Ebd45",
+                "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
             );
             
             expect(await allocator.treasury()).to.equal(olympus.treasury);
             expect(await allocator.veFXS()).to.equal("0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0");
-            expect(await allocator.veFXSYieldDistributorV4()).to.equal("0x62C4cf364078C98fA08AfDB4D3d8D87e780Ebd45");
+            expect(await allocator.veFXSYieldDistributorV4()).to.equal("0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872");
 
             expect(await allocator.lockEnd()).to.equal("0");
         });
@@ -151,7 +151,7 @@ describe("FxsAllocatorV2", () => {
                 },
                 olympus.treasury,
                 vefxs.address,
-                "0x62C4cf364078C98fA08AfDB4D3d8D87e780Ebd45",
+                "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
             );
 
             await expect(extender.registerDeposit(allocator.address)).to.not.be.reverted;
@@ -168,7 +168,7 @@ describe("FxsAllocatorV2", () => {
                 },
                 olympus.treasury,
                 vefxs.address,
-                "0x62C4cf364078C98fA08AfDB4D3d8D87e780Ebd45",
+                "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
             );
 
             let walletWhitelist = (await ethers.getContractAt(
@@ -214,6 +214,56 @@ describe("FxsAllocatorV2", () => {
 
             expect(await utilTokens[0].balanceOf(allocator.address)).to.be.gt("0");
             expect(await extender.getAllocatorAllocated(1)).to.equal(amount);
+        });
+
+        it("should deposit more", async () => {
+            const amount: BigNumber = bne(10, 20);
+
+            expect(await utilTokens[0].balanceOf(allocator.address)).to.be.equal("0");
+            await expect(() => allocator.update(1)).to.changeTokenBalance(
+                tokens[0],
+                allocator,
+                BigNumber.from("0").sub(amount),
+            );
+
+            expect(await utilTokens[0].balanceOf(allocator.address)).to.be.gt("0");
+            expect(await extender.getAllocatorAllocated(1)).to.equal(amount);
+
+            await expect(() => extender.requestFundsFromTreasury(1, amount)).to.changeTokenBalance(
+                fxs,
+                allocator,
+                amount
+            );
+            
+            const balance: BigNumber = await utilTokens[0].balanceOf(allocator.address);
+            await expect(() => allocator.update(1)).to.changeTokenBalance(
+                tokens[0],
+                allocator,
+                BigNumber.from("0").sub(amount)
+            );
+
+            expect(await utilTokens[0].balanceOf(allocator.address)).to.be.gt(balance);
+            expect(await extender.getAllocatorAllocated(1)).to.equal(amount.mul("2"));
+        });
+
+        context("with deposits", () => {
+            beforeEach(async () => {
+                const amount: BigNumber = bne(10, 20);
+
+                await allocator.update(1);
+            });
+
+            it("should gain over time", async () => {
+                const balance = await utilTokens[0].balanceOf(allocator.address);
+
+                await tmine(1552000);
+                await allocator.update(1);
+
+                const balanceAfter = await utilTokens[0].balanceOf(allocator.address);
+
+                expect(balanceAfter).to.be.gt(balance);
+                expect(await allocator.amountAllocated(1)).to.equal(balanceAfter);
+            });
         });
     });
 });

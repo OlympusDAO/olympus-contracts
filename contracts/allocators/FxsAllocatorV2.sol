@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.10;
 
+import "hardhat/console.sol";
+
 // types
 import "../types/BaseAllocator.sol";
 
@@ -109,12 +111,16 @@ contract FxsAllocatorV2 is BaseAllocator {
         if (balance > 0 && veBalance == 0) {
             lockEnd = block.timestamp + MAX_TIME;
             veFXS.create_lock(balance, lockEnd);
-        } else if (balance > 0 && veBalance > 0) {
+            veFXSYieldDistributorV4.checkpointOtherUser(address(this));
+        } else if (balance > 0 || veBalance > 0) {
             uint256 amount = veFXSYieldDistributorV4.getYield();
-            veFXS.increase_amount(balance + amount);
-            if (_canExtendLock()) {
-                lockEnd = block.timestamp + MAX_TIME;
-                veFXS.increase_unlock_time(block.timestamp + MAX_TIME);
+            console.log(amount);
+            if (balance + amount > 0) {
+                veFXS.increase_amount(balance + amount);
+                if (_canExtendLock()) {
+                    lockEnd = block.timestamp + MAX_TIME;
+                    veFXS.increase_unlock_time(block.timestamp + MAX_TIME);
+                }
             }
         }
 
