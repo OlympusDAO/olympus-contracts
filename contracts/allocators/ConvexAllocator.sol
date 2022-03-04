@@ -7,7 +7,6 @@ import "../libraries/SafeERC20.sol";
 
 import "../interfaces/IERC20.sol";
 import "../interfaces/ITreasury.sol";
-import "../interfaces/IAllocator.sol";
 
 import "../types/OlympusAccessControlled.sol";
 
