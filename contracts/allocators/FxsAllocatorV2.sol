@@ -114,7 +114,6 @@ contract FxsAllocatorV2 is BaseAllocator {
             veFXSYieldDistributorV4.checkpointOtherUser(address(this));
         } else if (balance > 0 || veBalance > 0) {
             uint256 amount = veFXSYieldDistributorV4.getYield();
-            console.log(amount);
             if (balance + amount > 0) {
                 veFXS.increase_amount(balance + amount);
                 if (_canExtendLock()) {
