@@ -148,7 +148,9 @@ contract FxsAllocatorV2 is BaseAllocator {
         }
     }
 
-    function _prepareMigration() internal override {}
+    function _prepareMigration() internal override {
+        _deactivate(false);
+    }
 
     function amountAllocated(uint256 id) public view override returns (uint256) {
         return veFXS.balanceOf(address(this));

@@ -357,4 +357,89 @@ describe("FxsAllocatorV2", () => {
         });
         */
     });
+
+    describe("migrate()", () => {
+        beforeEach(async () => {
+            allocator = await factory.deploy(
+                {
+                    authority: authority.address,
+                    tokens: [fxs.address],
+                    extender: extender.address,
+                },
+                olympus.treasury,
+                vefxs.address,
+                "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
+            );
+
+            let walletWhitelist = (await ethers.getContractAt(
+                [{"inputs":[{"internalType":"address","name":"_owner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"","type":"address"}],"name":"ApproveWallet","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"oldOwner","type":"address"},{"indexed":false,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnerChanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnerNominated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"","type":"address"}],"name":"RevokeWallet","type":"event"},{"inputs":[],"name":"acceptOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"applySetChecker","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_wallet","type":"address"}],"name":"approveWallet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_wallet","type":"address"}],"name":"check","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"checker","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_checker","type":"address"}],"name":"commitSetChecker","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"future_checker","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_owner","type":"address"}],"name":"nominateNewOwner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"nominatedOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_wallet","type":"address"}],"name":"revokeWallet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"wallets","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"}],
+                "0x53c13BA8834a1567474b19822aAD85c6F90D9f9F",
+            ));
+
+            walletWhitelist = walletWhitelist.connect(wlOwner);
+
+            walletWhitelist.approveWallet(allocator.address);
+
+            await extender.registerDeposit(allocator.address);
+
+            await extender.setAllocatorLimits(1, {
+                allocated: bne(10, 23),
+                loss: bne(10, 19),
+            });
+
+            await allocator.activate();
+
+            const amount: BigNumber = bne(10, 20);
+
+            await expect(() => extender.requestFundsFromTreasury(1, amount)).to.changeTokenBalance(
+                fxs,
+                allocator,
+                amount
+            ); 
+
+            await allocator.update(1);
+            
+            const mAllocator: FxsAllocatorV2 = await factory.deploy(
+                {
+                    authority: authority.address,
+                    tokens: [fxs.address],
+                    extender: extender.address,
+                },
+                olympus.treasury,
+                vefxs.address,
+                "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872",
+            );
+
+            walletWhitelist = walletWhitelist.connect(wlOwner);
+
+            walletWhitelist.approveWallet(mAllocator.address);
+
+            await extender.registerDeposit(mAllocator.address);
+
+            await extender.setAllocatorLimits(2, {
+                allocated: bne(10, 23),
+                loss: bne(10, 19),
+            });
+
+            await mAllocator.activate();
+        });
+
+        it("should successfully migrate when lock is up", async () => {
+            await tmine(4 * 365 * 86400 + 2);
+
+            await allocator.prepareMigration();
+
+            expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("0");
+            expect(await allocator.status()).to.equal(2);
+
+            await allocator.migrate();
+
+            const mAddress: string = await extender.allocators(2);
+
+            expect(await fxs.balanceOf(mAddress)).to.be.gte("0");
+            expect(await fxs.balanceOf(allocator.address)).to.equal("0");
+
+            expect(await allocator.status()).to.equal("0");
+        });
+    });
 });
