@@ -1,3 +1,6 @@
+out/
+dist/
+build/
 .DS_Store
 cache/
 artifacts/
