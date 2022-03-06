@@ -32,6 +32,13 @@ interface IveFXS is IERC20 {
     function increase_unlock_time(uint256 _unlock_time) external;
 
     /**
+     * @notice Get FXS balance locked in the contract as well as it's unlock date
+     * @param _addr wallet address
+     * @return LockedBalance tuple with (amount, lock end)
+    */
+    function locked(address _addr) external view returns (uint128, uint256);
+
+    /**
      * @notice Get timestamp when `_addr`'s lock finishes
      * @param _addr wallet address
      * @return Epoch time of the lock end
@@ -106,7 +113,8 @@ contract FxsAllocatorV2 is BaseAllocator {
 
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
         uint256 balance = _tokens[0].balanceOf(address(this));
-        uint256 veBalance = veFXS.balanceOf(address(this));
+        (uint128 rawVeBalance,) = veFXS.locked(address(this));
+        uint256 veBalance = uint256(rawVeBalance);
 
         if (balance > 0 && veBalance == 0) {
             lockEnd = block.timestamp + MAX_TIME;
@@ -118,12 +126,13 @@ contract FxsAllocatorV2 is BaseAllocator {
                 veFXS.increase_amount(balance + amount);
                 if (_canExtendLock()) {
                     lockEnd = block.timestamp + MAX_TIME;
-                    veFXS.increase_unlock_time(block.timestamp + MAX_TIME);
+                    veFXS.increase_unlock_time(lockEnd);
                 }
             }
         }
 
-        veBalance = veFXS.balanceOf(address(this));
+        (rawVeBalance,) = veFXS.locked(address(this));
+        veBalance = uint256(rawVeBalance);
         uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
 
         if (veBalance > last) gain = uint128(veBalance - last);
@@ -154,7 +163,8 @@ contract FxsAllocatorV2 is BaseAllocator {
     }
 
     function amountAllocated(uint256 id) public view override returns (uint256) {
-        return veFXS.balanceOf(address(this));
+        (uint128 amount,) = veFXS.locked(address(this));
+        return uint256(amount);
     }
 
     function rewardTokens() public pure override returns (IERC20[] memory) {
@@ -163,10 +173,8 @@ contract FxsAllocatorV2 is BaseAllocator {
     }
 
     function utilityTokens() public view override returns (IERC20[] memory) {
-        IERC20[] memory utilTokens = new IERC20[](1);
-        utilTokens[0] = IERC20(address(veFXS));
-
-        return utilTokens;
+        IERC20[] memory empty = new IERC20[](0);
+        return empty;
     }
 
     function name() external pure override returns (string memory) {

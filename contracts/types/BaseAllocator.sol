@@ -294,8 +294,8 @@ abstract contract BaseAllocator is OlympusAccessControlledV2, IAllocator {
         // reads
         IERC20[] memory utilityTokensArray = utilityTokens();
         address newAllocator = extender.getAllocatorByID(extender.getTotalAllocatorCount() - 1);
-	uint256 idLength = _ids.length;
-	uint256 utilLength = utilityTokensArray.length;
+        uint256 idLength = _ids.length;
+        uint256 utilLength = utilityTokensArray.length;
 
         // interactions
         for (uint256 i; i < idLength; i++) {
