@@ -93,8 +93,6 @@ interface ITreasuryExtender {
         uint256 amount
     ) external;
 
-    function getTotalValueAllocated() external view returns (uint256);
-
     function getTotalAllocatorCount() external view returns (uint256);
 
     function getAllocatorByID(uint256 id) external view returns (address);
