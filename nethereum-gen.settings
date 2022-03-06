@@ -1,0 +1,7 @@
+{
+    "projectName": "OlympusContracts",
+    "namespace": "OlympusContracts.Contracts",
+    "lang": 0,
+    "autoCodeGen": true,
+    "projectPath": "../"
+}

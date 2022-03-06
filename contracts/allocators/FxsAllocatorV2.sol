@@ -149,7 +149,8 @@ contract FxsAllocatorV2 is BaseAllocator {
     }
 
     function _prepareMigration() internal override {
-        _deactivate(false);
+        uint256[] memory amounts = new uint256[](1);
+        deallocate(amounts);
     }
 
     function amountAllocated(uint256 id) public view override returns (uint256) {

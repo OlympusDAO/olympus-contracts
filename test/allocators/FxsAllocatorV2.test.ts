@@ -430,6 +430,7 @@ describe("FxsAllocatorV2", () => {
             await allocator.prepareMigration();
 
             expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("0");
+            expect(await fxs.balanceOf(allocator.address)).to.be.gt("0");
             expect(await allocator.status()).to.equal(2);
 
             await allocator.migrate();
@@ -439,7 +440,7 @@ describe("FxsAllocatorV2", () => {
             expect(await fxs.balanceOf(mAddress)).to.be.gte("0");
             expect(await fxs.balanceOf(allocator.address)).to.equal("0");
 
-            expect(await allocator.status()).to.equal("0");
+            expect(await allocator.status()).to.equal(0);
         });
     });
 });
