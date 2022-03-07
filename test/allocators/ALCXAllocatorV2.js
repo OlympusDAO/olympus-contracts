@@ -29,7 +29,7 @@ describe("Alchemix Allocator", async () => {
         TreasuryExtender,
         treasuryExtender,
         AlchemixAllocator,
-        alchemixAllocator
+        alchemixAllocator;
 
     beforeEach(async () => {
         await fork_network(14315090);
@@ -42,15 +42,11 @@ describe("Alchemix Allocator", async () => {
         );
 
         AlchemixAllocator = await ethers.getContractFactory("AlchemixAllocatorV2");
-        alchemixAllocator = await AlchemixAllocator.deploy(
-            TOKEMAK_T_ALCX,
-            ALCHEMIX_STAKING_POOL,
-            {
+        alchemixAllocator = await AlchemixAllocator.deploy(TOKEMAK_T_ALCX, ALCHEMIX_STAKING_POOL, {
             authority: OLYMPUS_AUTHORITY_ADDRESS,
             tokens: [ALCHEMIX],
-            extender: treasuryExtender.address
-            }
-        );
+            extender: treasuryExtender.address,
+        });
 
         treasury = await ethers.getContractAt("OlympusTreasury", TREASURY_ADDRESS);
 
@@ -68,47 +64,39 @@ describe("Alchemix Allocator", async () => {
         await impersonateAccount(TREASURY_MANAGER);
         const owner = await ethers.getSigner(TREASURY_MANAGER);
 
-        await treasury
-            .connect(owner)
-            .enable(3, treasuryExtender.address, treasuryExtender.address);
-        await treasury
-            .connect(owner)
-            .enable(0, treasuryExtender.address, treasuryExtender.address);
+        await treasury.connect(owner).enable(3, treasuryExtender.address, treasuryExtender.address);
+        await treasury.connect(owner).enable(0, treasuryExtender.address, treasuryExtender.address);
 
         await impersonateAccount(GUARDIAN_ADDRESS);
         guardian = await ethers.getSigner(GUARDIAN_ADDRESS);
-
-        
     });
 
     async function extenderSetup(amount) {
         await treasuryExtender.connect(guardian).registerDeposit(alchemixAllocator.address);
         await treasuryExtender.connect(guardian).setAllocatorLimits(1, {
-                allocated: bne(10, 23),
-                loss: bne(10, 19),
-            });
-        
+            allocated: bne(10, 23),
+            loss: bne(10, 19),
+        });
+
         await alchemixAllocator.connect(guardian).activate();
         await treasuryExtender.connect(guardian).requestFundsFromTreasury(1, amount);
     }
 
     it("Should fail if caller is not guardian address", async () => {
-        await expect(
-            alchemixAllocator.connect(user).update(1)
-        ).to.revertedWith("UNAUTHORIZED");
-    })
+        await expect(alchemixAllocator.connect(user).update(1)).to.revertedWith("UNAUTHORIZED");
+    });
 
     it("Should fail if allocator is not approved by extender", async () => {
-        await expect(
-            alchemixAllocator.connect(guardian).update(1)
-        ).to.revertedWith("BaseAllocator_AllocatorNotActivated()");
-    })
+        await expect(alchemixAllocator.connect(guardian).update(1)).to.revertedWith(
+            "BaseAllocator_AllocatorNotActivated()"
+        );
+    });
 
     it("Should successfully call update function", async () => {
         const treasuryBalanceBeforeTx = await alchemix_token.balanceOf(TREASURY_ADDRESS);
         const tAlcxBalanceBeforeTx = await alchemixAllocator.totaltAlcxDeposited();
 
-        await extenderSetup(bne(10, 20)); 
+        await extenderSetup(bne(10, 20));
         await alchemixAllocator.connect(guardian).update(1);
 
         const tAlcxBalanceAfterTx = await alchemixAllocator.totaltAlcxDeposited();
@@ -117,13 +105,13 @@ describe("Alchemix Allocator", async () => {
         assert.equal(tAlcxBalanceBeforeTx, 0);
         assert.equal(tAlcxBalanceAfterTx, Number(bne(10, 20)));
         assert.equal(
-            Number(treasuryBalanceBeforeTx).toString().slice(0, 5), 
+            Number(treasuryBalanceBeforeTx).toString().slice(0, 5),
             (Number(treasuryBalanceAfterTx) + Number(bne(10, 20))).toString().slice(0, 5)
         );
     });
 
     it("Should compound rewards", async () => {
-        await extenderSetup(bne(10, 20)); 
+        await extenderSetup(bne(10, 20));
         await alchemixAllocator.connect(guardian).update(1);
 
         const tAlcxBalance = await alchemixAllocator.totaltAlcxDeposited();
@@ -138,13 +126,13 @@ describe("Alchemix Allocator", async () => {
 
         expect(gainBeforeTx[0]).to.equal(0);
         expect(gainAfterTx[0]).to.be.above(0);
-       
+
         const tAlcxBalanceAfterTx = await alchemixAllocator.totaltAlcxDeposited();
         expect(tAlcxBalanceAfterTx).to.be.above(tAlcxBalance);
     });
 
     it("Should deactivate allocator", async () => {
-        await extenderSetup(bne(10, 20)); 
+        await extenderSetup(bne(10, 20));
         await alchemixAllocator.connect(guardian).update(1);
 
         const tAlcxBalance = await alchemixAllocator.totaltAlcxDeposited();
@@ -152,13 +140,15 @@ describe("Alchemix Allocator", async () => {
 
         const ALCXTreasuryBalanceBeforeTx = await alchemix_token.balanceOf(TREASURY_ADDRESS);
 
-        assert.equal(await alchemixAllocator.status(),1);
+        assert.equal(await alchemixAllocator.status(), 1);
         await alchemixAllocator.connect(guardian).deactivate(true);
 
         const ALCXTreasuryBalanceAfterTx = await alchemix_token.balanceOf(TREASURY_ADDRESS);
-        expect(ALCXTreasuryBalanceBeforeTx + ALCXTreasuryBalanceAfterTx).to.be.above(ALCXTreasuryBalanceBeforeTx);
+        expect(ALCXTreasuryBalanceBeforeTx + ALCXTreasuryBalanceAfterTx).to.be.above(
+            ALCXTreasuryBalanceBeforeTx
+        );
 
-        assert.equal(await alchemixAllocator.status(),0)
+        assert.equal(await alchemixAllocator.status(), 0);
         const tALCXTreasuryBalanceAfterTx = await t_alchemix.balanceOf(TREASURY_ADDRESS);
 
         assert.equal(Number(tALCXTreasuryBalanceAfterTx), Number(tAlcxBalance));
@@ -166,27 +156,31 @@ describe("Alchemix Allocator", async () => {
     });
 
     it("Should fail to deallocate allocator", async () => {
-        await extenderSetup(bne(10, 20)); 
+        await extenderSetup(bne(10, 20));
         await alchemixAllocator.connect(guardian).update(1);
 
         await alchemixAllocator.connect(guardian).deallocate([bne(10, 20)]);
-        await expect(
-            alchemixAllocator.connect(guardian).deallocate([bne(10, 20)])
-        ).to.revertedWith("requested withdraw cycle not reached yet");
+        await expect(alchemixAllocator.connect(guardian).deallocate([bne(10, 20)])).to.revertedWith(
+            "requested withdraw cycle not reached yet"
+        );
     });
 
     it("Should deallocate allocator", async () => {
-        await extenderSetup(bne(10, 20)); 
+        await extenderSetup(bne(10, 20));
         await alchemixAllocator.connect(guardian).update(1);
 
         const tAlcxBalance = await alchemixAllocator.totaltAlcxDeposited();
 
-        const ALCXRewardClaimedBeforeWithdraw = await alchemix_token.balanceOf(alchemixAllocator.address);
+        const ALCXRewardClaimedBeforeWithdraw = await alchemix_token.balanceOf(
+            alchemixAllocator.address
+        );
         assert.equal(Number(ALCXRewardClaimedBeforeWithdraw), 0);
 
         //should first request for withdrawal
         await alchemixAllocator.connect(guardian).deallocate([bne(10, 20)]);
-        const ALCXRewardClaimedAfterWithdraw = await alchemix_token.balanceOf(alchemixAllocator.address);
+        const ALCXRewardClaimedAfterWithdraw = await alchemix_token.balanceOf(
+            alchemixAllocator.address
+        );
 
         const tALCXBalanceAfterTx = await t_alchemix.balanceOf(alchemixAllocator.address);
         assert.equal(Number(tALCXBalanceAfterTx), Number(tAlcxBalance));
@@ -203,36 +197,43 @@ describe("Alchemix Allocator", async () => {
         await alchemixAllocator.connect(guardian).deallocate([bne(10, 20)]);
 
         const ALCXBalanceAfterTx = await alchemix_token.balanceOf(alchemixAllocator.address);
-        
-        assert.equal(Number(ALCXBalanceAfterTx), Number(tAlcxBalance) + Number(ALCXRewardClaimedAfterWithdraw));
+
+        assert.equal(
+            Number(ALCXBalanceAfterTx),
+            Number(tAlcxBalance) + Number(ALCXRewardClaimedAfterWithdraw)
+        );
     });
 
     it("Should fail to prepareMigration for allocator", async () => {
-        await extenderSetup(bne(10, 20)); 
+        await extenderSetup(bne(10, 20));
         await alchemixAllocator.connect(guardian).prepareMigration();
 
-        await expect(
-            alchemixAllocator.connect(guardian).prepareMigration()
-        ).to.revertedWith("BaseAllocator_Migrating()");
+        await expect(alchemixAllocator.connect(guardian).prepareMigration()).to.revertedWith(
+            "BaseAllocator_Migrating()"
+        );
     });
 
     it("Should prepareMigration for allocator", async () => {
-        await extenderSetup(bne(10, 20)); 
+        await extenderSetup(bne(10, 20));
         await alchemixAllocator.connect(guardian).update(1);
 
         const tAlcxBalance = await alchemixAllocator.totaltAlcxDeposited();
         const tALCXBalanceBeforeTx = await t_alchemix.balanceOf(alchemixAllocator.address);
 
-        const ALCXRewardClaimedBeforeWithdraw = await alchemix_token.balanceOf(alchemixAllocator.address);
+        const ALCXRewardClaimedBeforeWithdraw = await alchemix_token.balanceOf(
+            alchemixAllocator.address
+        );
         assert.equal(Number(ALCXRewardClaimedBeforeWithdraw), 0);
 
-        assert.equal(await alchemixAllocator.status(),1);
+        assert.equal(await alchemixAllocator.status(), 1);
         await alchemixAllocator.connect(guardian).prepareMigration();
 
-        const ALCXRewardClaimedAfterWithdraw = await alchemix_token.balanceOf(alchemixAllocator.address);
+        const ALCXRewardClaimedAfterWithdraw = await alchemix_token.balanceOf(
+            alchemixAllocator.address
+        );
         expect(ALCXRewardClaimedAfterWithdraw).to.be.above(0);
 
-        assert.equal(await alchemixAllocator.status(),2);
+        assert.equal(await alchemixAllocator.status(), 2);
         const tALCXBalanceAfterTx = await t_alchemix.balanceOf(alchemixAllocator.address);
 
         assert.equal(Number(tALCXBalanceAfterTx), Number(tAlcxBalance));
@@ -240,47 +241,46 @@ describe("Alchemix Allocator", async () => {
     });
 
     it("Should fail to migrate allocator", async () => {
-        await extenderSetup(bne(10, 20)); 
+        await extenderSetup(bne(10, 20));
 
-        await expect(
-            alchemixAllocator.connect(guardian).migrate()
-        ).to.revertedWith("BaseAllocator_NotMigrating()");
+        await expect(alchemixAllocator.connect(guardian).migrate()).to.revertedWith(
+            "BaseAllocator_NotMigrating()"
+        );
     });
 
-    
     it("Should migrate allocator", async () => {
-        await extenderSetup(bne(10, 20)); 
+        await extenderSetup(bne(10, 20));
         const AlchemixAllocator2 = await ethers.getContractFactory("AlchemixAllocatorV2");
 
         const alchemixAllocator2 = await AlchemixAllocator2.deploy(
             TOKEMAK_T_ALCX,
             ALCHEMIX_STAKING_POOL,
             {
-            authority: OLYMPUS_AUTHORITY_ADDRESS,
-            tokens: [ALCHEMIX],
-            extender: treasuryExtender.address
+                authority: OLYMPUS_AUTHORITY_ADDRESS,
+                tokens: [ALCHEMIX],
+                extender: treasuryExtender.address,
             }
         );
 
         await treasuryExtender.connect(guardian).registerDeposit(alchemixAllocator2.address);
         await treasuryExtender.connect(guardian).setAllocatorLimits(2, {
-                allocated: bne(10, 23),
-                loss: bne(10, 19),
-            });
-        
+            allocated: bne(10, 23),
+            loss: bne(10, 19),
+        });
+
         await alchemixAllocator2.connect(guardian).activate();
         await alchemixAllocator.connect(guardian).update(1);
 
         await alchemixAllocator.connect(guardian).prepareMigration();
         const migratingAllocatorTalcxBal = await t_alchemix.balanceOf(alchemixAllocator.address);
 
-        assert.equal(await alchemixAllocator.status(),2);
+        assert.equal(await alchemixAllocator.status(), 2);
         const migratingAllocatorAlcxBal = await alchemix_token.balanceOf(alchemixAllocator.address);
-        
-        await alchemixAllocator.connect(guardian).migrate()
-        assert.equal(await alchemixAllocator.status(),0);
 
-        const newAllocatorAddress = treasuryExtender.getAllocatorByID(2)
+        await alchemixAllocator.connect(guardian).migrate();
+        assert.equal(await alchemixAllocator.status(), 0);
+
+        const newAllocatorAddress = treasuryExtender.getAllocatorByID(2);
         const newAllocatorTalcxBal = await t_alchemix.balanceOf(newAllocatorAddress);
         const newAllocatorAlcxBal = await alchemix_token.balanceOf(newAllocatorAddress);
 
@@ -292,7 +292,7 @@ describe("Alchemix Allocator", async () => {
 
         assert.equal(Number(migratedAllocatorTalcxBal), 0);
         assert.equal(Number(migratedAllocatorAlcxBal), 0);
-     });
+    });
 });
 
 async function advance(count) {
