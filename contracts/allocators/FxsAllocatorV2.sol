@@ -35,7 +35,7 @@ interface IveFXS is IERC20 {
      * @notice Get FXS balance locked in the contract as well as it's unlock date
      * @param _addr wallet address
      * @return LockedBalance tuple with (amount, lock end)
-    */
+     */
     function locked(address _addr) external view returns (uint128, uint256);
 
     /**
@@ -118,7 +118,7 @@ contract FxsAllocatorV2 is BaseAllocator {
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
         // Get FXS balance and quantity locked in veFXS
         uint256 balance = _tokens[0].balanceOf(address(this));
-        (uint128 rawVeBalance,) = veFXS.locked(address(this));
+        (uint128 rawVeBalance, ) = veFXS.locked(address(this));
         uint256 veBalance = uint256(rawVeBalance);
 
         // If we have FXS and none locked, create a new lock
@@ -130,7 +130,7 @@ contract FxsAllocatorV2 is BaseAllocator {
             // This registers the deposit so we can claim yield in the future
             veFXSYieldDistributorV4.checkpointOtherUser(address(this));
 
-        // Otherwise get current yield, and increase lock
+            // Otherwise get current yield, and increase lock
         } else if (balance > 0 || veBalance > 0) {
             uint256 amount = veFXSYieldDistributorV4.getYield();
             if (balance + amount > 0) {
@@ -142,7 +142,7 @@ contract FxsAllocatorV2 is BaseAllocator {
             }
         }
 
-        (rawVeBalance,) = veFXS.locked(address(this));
+        (rawVeBalance, ) = veFXS.locked(address(this));
         veBalance = uint256(rawVeBalance);
         uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
 
@@ -174,13 +174,12 @@ contract FxsAllocatorV2 is BaseAllocator {
         deallocate(amounts);
     }
 
-
     /************************
      * View Functions
      ************************/
 
     function amountAllocated(uint256 id) public view override returns (uint256) {
-        (uint128 amount,) = veFXS.locked(address(this));
+        (uint128 amount, ) = veFXS.locked(address(this));
         return uint256(amount);
     }
 
@@ -204,7 +203,7 @@ contract FxsAllocatorV2 is BaseAllocator {
     /************************
      * Utility Functions
      ************************/
-    
+
     function _canExtendLock() internal view returns (bool) {
         return lockEnd < block.timestamp + MAX_TIME - 7 * 86400;
     }
