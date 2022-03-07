@@ -102,6 +102,8 @@ interface IManager {
     ///@return uint256 in block of cycle duration
     function getCycleDuration() external view returns (uint256);
 
+    function nextCycleStartTime() external view returns (uint256);
+
     ///@notice Gets cycle rollover status, true for rolling false for not
     ///@return Bool representing whether cycle is rolling over or not
     function getRolloverStatus() external view returns (bool);

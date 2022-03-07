@@ -55,6 +55,7 @@ contract AlchemixAllocatorV2 is BaseAllocator {
 
     address public immutable alchemix;
     address public immutable tokemakManager = 0xA86e412109f77c45a3BC1c5870b880492Fb86A14;
+    address public constant treasury = 0x9A315BdF513367C0377FB36545857d12e85813Ef;
 
     ITokemaktALCX public immutable tALCX; // Tokemak tALCX deposit contract
     IStakingPools public immutable pool; // Alchemix staking contract
@@ -80,6 +81,7 @@ contract AlchemixAllocatorV2 is BaseAllocator {
     }
 
     function deallocate(uint256[] memory _amounts) public override {
+        _onlyGuardian();
         if (requestedWithdraw) {
             (uint256 minCycle, ) = getRequestedWithdrawalInfo();
             uint256 currentCycle = ITokemakManager(tokemakManager).currentCycleIndex();
@@ -178,11 +180,13 @@ contract AlchemixAllocatorV2 is BaseAllocator {
         if (panic) {
             // If panic unstake everything
             requestWithdraw(0, true, true);
+            IERC20(address(tALCX)).transfer(treasury, IERC20(address(tALCX)).balanceOf(address(this)));
+            IERC20(alchemix).transfer(treasury, IERC20(alchemix).balanceOf(address(this)));
         }
     }
 
     function _prepareMigration() internal override {
-        if (alchemixToClaim() > 0) pool.claim(poolID);
+        //if (alchemixToClaim() > 0) pool.claim(poolID);
         requestWithdraw(0, true, true);
     }
 
