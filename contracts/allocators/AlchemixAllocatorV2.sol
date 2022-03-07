@@ -180,13 +180,12 @@ contract AlchemixAllocatorV2 is BaseAllocator {
         if (panic) {
             // If panic unstake everything
             requestWithdraw(0, true, true);
-            IERC20(address(tALCX)).transfer(treasury, IERC20(address(tALCX)).balanceOf(address(this)));
-            IERC20(alchemix).transfer(treasury, IERC20(alchemix).balanceOf(address(this)));
+            IERC20(address(tALCX)).safeTransfer(treasury, IERC20(address(tALCX)).balanceOf(address(this)));
+            IERC20(alchemix).safeTransfer(treasury, IERC20(alchemix).balanceOf(address(this)));
         }
     }
 
     function _prepareMigration() internal override {
-        //if (alchemixToClaim() > 0) pool.claim(poolID);
         requestWithdraw(0, true, true);
     }
 
