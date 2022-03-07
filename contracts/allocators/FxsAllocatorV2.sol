@@ -111,15 +111,26 @@ contract FxsAllocatorV2 is BaseAllocator {
         IERC20(data.tokens[0]).approve(address(veFXS), type(uint256).max);
     }
 
+    /*************************************
+     * Allocator Operational Functions
+     *************************************/
+
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
+        // Get FXS balance and quantity locked in veFXS
         uint256 balance = _tokens[0].balanceOf(address(this));
         (uint128 rawVeBalance,) = veFXS.locked(address(this));
         uint256 veBalance = uint256(rawVeBalance);
 
+        // If we have FXS and none locked, create a new lock
         if (balance > 0 && veBalance == 0) {
             lockEnd = block.timestamp + MAX_TIME;
+
             veFXS.create_lock(balance, lockEnd);
+
+            // This registers the deposit so we can claim yield in the future
             veFXSYieldDistributorV4.checkpointOtherUser(address(this));
+
+        // Otherwise get current yield, and increase lock
         } else if (balance > 0 || veBalance > 0) {
             uint256 amount = veFXSYieldDistributorV4.getYield();
             if (balance + amount > 0) {
@@ -143,6 +154,7 @@ contract FxsAllocatorV2 is BaseAllocator {
         _onlyGuardian();
         veFXSYieldDistributorV4.getYield();
 
+        // If lock is up, claim FXS out of veFXS
         if (block.timestamp >= veFXS.locked__end(address(this))) {
             veFXS.withdraw();
         }
@@ -162,26 +174,37 @@ contract FxsAllocatorV2 is BaseAllocator {
         deallocate(amounts);
     }
 
+
+    /************************
+     * View Functions
+     ************************/
+
     function amountAllocated(uint256 id) public view override returns (uint256) {
         (uint128 amount,) = veFXS.locked(address(this));
         return uint256(amount);
     }
 
-    function rewardTokens() public pure override returns (IERC20[] memory) {
-        IERC20[] memory empty = new IERC20[](0);
-        return empty;
+    function rewardTokens() public view override returns (IERC20[] memory) {
+        IERC20[] memory rewards = new IERC20[](1);
+        rewards[0] = _tokens[0];
+        return rewards;
     }
 
+    // Can't put veFXS in here as it's not transferable and thus would break
+    // BaseAllocator's migrate function
     function utilityTokens() public view override returns (IERC20[] memory) {
         IERC20[] memory empty = new IERC20[](0);
         return empty;
     }
 
-    function name() external pure override returns (string memory) {
+    function name() external view override returns (string memory) {
         return "FxsAllocatorV2";
     }
 
-    /* ======== VIEW FUNCTIONS ======== */
+    /************************
+     * Utility Functions
+     ************************/
+    
     function _canExtendLock() internal view returns (bool) {
         return lockEnd < block.timestamp + MAX_TIME - 7 * 86400;
     }
