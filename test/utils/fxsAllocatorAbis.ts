@@ -439,9 +439,7 @@ export const wlContractAbi = [
     },
     {
         anonymous: false,
-        inputs: [
-            { indexed: false, internalType: "address", name: "", type: "address" },
-        ],
+        inputs: [{ indexed: false, internalType: "address", name: "", type: "address" }],
         name: "ApproveWallet",
         type: "event",
     },
@@ -479,9 +477,7 @@ export const wlContractAbi = [
     },
     {
         anonymous: false,
-        inputs: [
-            { indexed: false, internalType: "address", name: "", type: "address" },
-        ],
+        inputs: [{ indexed: false, internalType: "address", name: "", type: "address" }],
         name: "RevokeWallet",
         type: "event",
     },

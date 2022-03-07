@@ -57,10 +57,7 @@ describe("FxsAllocatorV2", () => {
         fxs = await helpers.getCoin(coins.fxs);
         tokens = [fxs];
 
-        vefxs = await ethers.getContractAt(
-            vefxsAbi,
-            "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0"
-        );
+        vefxs = await ethers.getContractAt(vefxsAbi, "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0");
         utilTokens = [vefxs];
 
         treasury = (await ethers.getContractAt(
