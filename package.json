@@ -1,6 +1,6 @@
 {
   "name": "olympus-contracts",
-  "version": "1.0.0",
+  "version": "3.2.0",
   "description": "Smart Contracts for Olympus",
   "directories": {
     "test": "test"
@@ -23,6 +23,7 @@
     "@typescript-eslint/parser": "^4.32.0",
     "chai": "^4.2.0",
     "chai-ethers": "^0.0.1",
+    "convex-enjoyooor-pack": "1.2.2",
     "dotenv": "^10.0.0",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
@@ -31,6 +32,7 @@
     "hardhat": "^2.6.4",
     "hardhat-deploy": "^0.9.3",
     "hardhat-gas-reporter": "^1.0.4",
+    "hardhat-storage-layout": "0.1.6",
     "husky": "^7.0.4",
     "prettier": "^2.4.1",
     "prettier-plugin-solidity": "^1.0.0-beta.18",

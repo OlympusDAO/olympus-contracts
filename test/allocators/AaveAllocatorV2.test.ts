@@ -1,12 +1,10 @@
 // libraries, functionality...
-import { ethers, waffle, network, config } from "hardhat";
-import chai, { expect } from "chai";
-import { smock } from "@defi-wonderland/smock";
-import { BigNumber, BaseContract, ContractFactory, Contract } from "ethers";
+import { ethers, config } from "hardhat";
+import { expect } from "chai";
+import { BigNumber } from "ethers";
 
 // types
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { FakeContract, MockContract, MockContractFactory } from "@defi-wonderland/smock";
 import {
     OlympusTreasury,
     TreasuryExtender,
@@ -20,19 +18,9 @@ import {
 // data
 import { coins } from "../utils/coins";
 import { olympus } from "../utils/olympus";
-import {
-    impersonate,
-    snapshot,
-    revert,
-    getCoin,
-    bne,
-    bnn,
-    pinBlock,
-    addressZero,
-    setStorage,
-    addEth,
-    tmine,
-} from "../utils/scripts";
+import { helpers } from "../utils/helpers";
+
+const bne = helpers.bne;
 
 describe("AaveAllocatorV2", () => {
     // signers
@@ -64,21 +52,20 @@ describe("AaveAllocatorV2", () => {
 
     // variables
     let snapshotId: number = 0;
-    let localSnapId: number = 0;
 
     before(async () => {
-        await pinBlock(14026252, url);
+        await helpers.pinBlock(14026252, url);
 
-        frax = await getCoin(coins.frax);
-        usdc = await getCoin(coins.usdc);
-        dai = await getCoin(coins.dai);
-        usdt = await getCoin(coins.usdt);
-        weth = await getCoin(coins.weth);
+        frax = await helpers.getCoin(coins.frax);
+        usdc = await helpers.getCoin(coins.usdc);
+        dai = await helpers.getCoin(coins.dai);
+        usdt = await helpers.getCoin(coins.usdt);
+        weth = await helpers.getCoin(coins.weth);
         tokens = [frax, dai, weth];
 
-        adai = await getCoin(coins.adai);
-        afrax = await getCoin(coins.afrax);
-        aweth = await getCoin(coins.aweth);
+        adai = await helpers.getCoin(coins.adai);
+        afrax = await helpers.getCoin(coins.afrax);
+        aweth = await helpers.getCoin(coins.aweth);
         utilTokens = [afrax, adai, aweth];
 
         treasury = (await ethers.getContractAt(
@@ -99,15 +86,15 @@ describe("AaveAllocatorV2", () => {
 
         owner = (await ethers.getSigners())[0];
 
-        guardian = await impersonate(await authority.guardian());
-        governor = await impersonate(await authority.governor());
+        guardian = await helpers.impersonate(await authority.guardian());
+        governor = await helpers.impersonate(await authority.governor());
 
         extender = extender.connect(guardian);
 
         treasury = treasury.connect(governor);
 
-        treasury.enable(3, extender.address, addressZero);
-        treasury.enable(0, extender.address, addressZero);
+        treasury.enable(3, extender.address, helpers.constants.addressZero);
+        treasury.enable(0, extender.address, helpers.constants.addressZero);
 
         factory = (await ethers.getContractFactory("AaveAllocatorV2")) as AaveAllocatorV2__factory;
 
@@ -121,11 +108,11 @@ describe("AaveAllocatorV2", () => {
     });
 
     beforeEach(async () => {
-        snapshotId = await snapshot();
+        snapshotId = await helpers.snapshot();
     });
 
     afterEach(async () => {
-        await revert(snapshotId);
+        await helpers.revert(snapshotId);
     });
 
     describe("initialization", () => {
@@ -297,6 +284,10 @@ describe("AaveAllocatorV2", () => {
             await expect(allocator.connect(owner).update(3)).to.be.reverted;
         });
 
+        it("revert: should revert if not fourth token", async () => {
+            await expect(extender.registerDeposit(allocator.address)).to.be.reverted;
+        });
+
         it("passing: update should work for all coins", async () => {
             const amount: BigNumber = bne(10, 21);
 
@@ -381,7 +372,7 @@ describe("AaveAllocatorV2", () => {
                     ibalances.push(await utilTokens[i].balanceOf(allocator.address));
                 }
 
-                await tmine(24 * 60 * 60 * 10);
+                await helpers.tmine(24 * 60 * 60 * 10);
 
                 for (let i = 0; i < 3; i++) {
                     const bal: BigNumber = await utilTokens[i].balanceOf(allocator.address);
@@ -397,7 +388,7 @@ describe("AaveAllocatorV2", () => {
                     ibalances.push(await utilTokens[i].balanceOf(allocator.address));
                 }
 
-                await tmine(24 * 60 * 60 * 100);
+                await helpers.tmine(24 * 60 * 60 * 100);
 
                 const receipts: any = [];
 
@@ -413,13 +404,15 @@ describe("AaveAllocatorV2", () => {
 
             for (let i = 0; i < 3; i++) {
                 it(`passing: should cause panic return in case of loss above limit for token undex index ${i}`, async () => {
-                    await tmine(24 * 60 * 60 * 10);
+                    await helpers.tmine(24 * 60 * 60 * 10);
 
-                    const wallocator: SignerWithAddress = await impersonate(allocator.address);
+                    const wallocator: SignerWithAddress = await helpers.impersonate(
+                        allocator.address
+                    );
 
                     const tempcoin: MockERC20 = utilTokens[i].connect(wallocator);
 
-                    await addEth(allocator.address, bne(10, 23));
+                    await helpers.addEth(allocator.address, bne(10, 23));
 
                     await tempcoin.transfer(
                         owner.address,
@@ -624,7 +617,7 @@ describe("AaveAllocatorV2", () => {
         });
 
         it("passing: should succesfully migrate", async () => {
-            await tmine(24 * 3600 * 10);
+            await helpers.tmine(24 * 3600 * 10);
 
             const balances: BigNumber[] = [
                 await utilTokens[0].balanceOf(allocator.address),

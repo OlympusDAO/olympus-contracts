@@ -17,21 +17,11 @@ import {
 
 import { coins } from "../utils/coins";
 import { olympus } from "../utils/olympus";
-import {
-    impersonate,
-    snapshot,
-    revert,
-    getCoin,
-    bne,
-    bnn,
-    pinBlock,
-    addressZero,
-    setStorage,
-    addEth,
-    tmine,
-} from "../utils/scripts";
+import { helpers } from "../utils/helpers";
 import { ExecFileException } from "child_process";
 import { Sign } from "crypto";
+
+const bne = helpers.bne;
 
 describe("FxsAllocatorV2", () => {
     // signers
@@ -61,9 +51,9 @@ describe("FxsAllocatorV2", () => {
     let localSnapId: number = 0;
 
     before(async () => {
-        await pinBlock(14314860, url);
+        await helpers.pinBlock(14314860, url);
 
-        fxs = await getCoin(coins.fxs);
+        fxs = await helpers.getCoin(coins.fxs);
         tokens = [fxs];
 
         vefxs = (await ethers.getContractAt(
@@ -90,16 +80,16 @@ describe("FxsAllocatorV2", () => {
 
         owner = (await ethers.getSigners())[0];
 
-        guardian = await impersonate(await authority.guardian());
-        governor = await impersonate(await authority.governor());
-        wlOwner = await impersonate("0xb1748c79709f4ba2dd82834b8c82d4a505003f27");
+        guardian = await helpers.impersonate(await authority.guardian());
+        governor = await helpers.impersonate(await authority.governor());
+        wlOwner = await helpers.impersonate("0xb1748c79709f4ba2dd82834b8c82d4a505003f27");
 
         extender = extender.connect(guardian);
 
         treasury = treasury.connect(governor);
 
-        treasury.enable(3, extender.address, addressZero);
-        treasury.enable(0, extender.address, addressZero);
+        treasury.enable(3, extender.address, helpers.constants.addressZero);
+        treasury.enable(0, extender.address, helpers.constants.addressZero);
 
         factory = (await ethers.getContractFactory("FxsAllocatorV2")) as FxsAllocatorV2__factory;
 
@@ -118,11 +108,11 @@ describe("FxsAllocatorV2", () => {
     });
 
     beforeEach(async () => {
-        snapshotId = await snapshot();
+        snapshotId = await helpers.snapshot();
     });
 
     afterEach(async () => {
-        await revert(snapshotId);
+        await helpers.revert(snapshotId);
     });
 
     describe("initialization", () => {
@@ -259,7 +249,7 @@ describe("FxsAllocatorV2", () => {
             it("should gain over time", async () => {
                 const balance = (await utilTokens[0].locked(allocator.address))[0];
 
-                await tmine(1552000);
+                await helpers.tmine(1552000);
                 await allocator.update(1);
 
                 const balanceAfter = (await utilTokens[0].locked(allocator.address))[0];
@@ -269,7 +259,7 @@ describe("FxsAllocatorV2", () => {
             });
 
             it("should report gain on increase", async () => {
-                await tmine(1552000);
+                await helpers.tmine(1552000);
                 await allocator.update(1);
 
                 expect(
@@ -284,7 +274,7 @@ describe("FxsAllocatorV2", () => {
             // function does not belong in the allocator, so this is commented out
             /*
             it("should panic return in case of loss above limit", async () => {
-                await tmine(4 * 365 * 86400 + 2);
+                await helpers.tmine(4 * 365 * 86400 + 2);
 
                 const wallocator: SignerWithAddress = await impersonate(allocator.address);
 
@@ -374,7 +364,7 @@ describe("FxsAllocatorV2", () => {
         it("should withdraw veFXS if lock has ended", async () => {
             const amount: BigNumber = bne(10, 20);
 
-            await tmine(4 * 365 * 86400 + 2);
+            await helpers.tmine(4 * 365 * 86400 + 2);
 
             let input: BigNumber[] = new Array(1).fill(bne(10,20));
             await allocator.deallocate(input);
@@ -451,7 +441,7 @@ describe("FxsAllocatorV2", () => {
         });
 
         it("should successfully migrate when lock is up", async () => {
-            await tmine(4 * 365 * 86400 + 2);
+            await helpers.tmine(4 * 365 * 86400 + 2);
 
             await allocator.prepareMigration();
 
