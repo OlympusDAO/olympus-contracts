@@ -48,6 +48,11 @@ interface IveFXS is IERC20 {
     function withdraw() external;
 }
 
+/**
+ * Contract deploys FXS from the treasury and locks it in veFXS.
+ * Redeems yield rewards and redeposits them into veFXS to compound
+ * rewards.
+ */
 interface IveFXSYieldDistributorV4 {
     /**
      * @notice transfers FXS earned by locking veFXS
