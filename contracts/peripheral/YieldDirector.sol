@@ -463,12 +463,11 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         amountRedeemed = 0;
 
         uint256[] storage receiptIds = recipientIds[msg.sender];
-        uint256 idsLength = receiptIds.length;
 
         // We iterate through the array back to front so that we can delete
         // elements from the array without changing the locations of any
         // entries that have not been checked yet
-        for (uint256 index = idsLength; index > 0; index--) {
+        for (uint256 index = receiptIds.length; index > 0; index--) {
             uint256 currRedemption = _redeemYield(receiptIds[index - 1]);
             amountRedeemed += currRedemption;
 
