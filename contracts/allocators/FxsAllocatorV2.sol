@@ -125,8 +125,9 @@ contract FxsAllocatorV2 is BaseAllocator {
      ************************/
 
     function amountAllocated(uint256 id) public view override returns (uint256) {
-        (uint128 amount, ) = veFXS.locked(address(this));
-        return uint256(amount);
+        (uint256 amount, ) = veFXS.locked(address(this));
+        uint256 fxsBalance = _tokens[0].balanceOf(address(this));
+        return amount + fxsBalance;
     }
 
     function rewardTokens() public view override returns (IERC20[] memory) {
