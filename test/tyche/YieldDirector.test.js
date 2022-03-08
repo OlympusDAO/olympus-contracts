@@ -8,7 +8,7 @@ const { utils } = require("ethers");
 const e9 = "000000000";
 const e18 = "000000000000000000";
 
-describe("YieldDirectorV2", async () => {
+describe("YieldDirector", async () => {
     const LARGE_APPROVAL = "100000000000000000000000000000000";
     const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
     // Initial mint for Frax and DAI (10,000,000)

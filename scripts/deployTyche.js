@@ -13,7 +13,7 @@ async function main() {
     const stakingDeployment = "0x06984c3A9EB8e3A8df02A4C09770D5886185792D";
     const authorityDeployment = "0x4208befd8f546282ab43a30085774513227b656c";
 
-    const yieldDirectorFactory = await ethers.getContractFactory("YieldDirectorV2");
+    const yieldDirectorFactory = await ethers.getContractFactory("YieldDirector");
     //const yieldDirector = await yieldDirectorFactory.deploy(mockSOhm.address);
 
     const yieldDirector = await yieldDirectorFactory.deploy(

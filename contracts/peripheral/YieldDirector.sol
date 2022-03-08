@@ -10,7 +10,7 @@ import {YieldSplitter} from "../types/YieldSplitter.sol";
 import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 
 /**
-    @title  YieldDirectorV2 (codename Tyche) 
+    @title  YieldDirector (codename Tyche) 
     @notice This contract allows donors to deposit their gOHM and donate their rebases
             to any address. Donors will be able to withdraw the sOHM equivalent of their principal
             gOHM at any time. Donation recipients can also redeem accrued rebases at any time.
