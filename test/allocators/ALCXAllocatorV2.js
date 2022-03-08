@@ -42,11 +42,17 @@ describe("Alchemix Allocator", async () => {
         );
 
         AlchemixAllocator = await ethers.getContractFactory("AlchemixAllocatorV2");
-        alchemixAllocator = await AlchemixAllocator.deploy(TOKEMAK_T_ALCX, ALCHEMIX_STAKING_POOL, {
-            authority: OLYMPUS_AUTHORITY_ADDRESS,
-            tokens: [ALCHEMIX],
-            extender: treasuryExtender.address,
-        });
+        alchemixAllocator = await AlchemixAllocator.deploy(
+            TOKEMAK_T_ALCX,
+            ALCHEMIX_STAKING_POOL,
+            TREASURY_ADDRESS,
+            TOKEMAK_MANAGER,
+            {
+                authority: OLYMPUS_AUTHORITY_ADDRESS,
+                tokens: [ALCHEMIX],
+                extender: treasuryExtender.address,
+            }
+        );
 
         treasury = await ethers.getContractAt("OlympusTreasury", TREASURY_ADDRESS);
 
@@ -255,6 +261,8 @@ describe("Alchemix Allocator", async () => {
         const alchemixAllocator2 = await AlchemixAllocator2.deploy(
             TOKEMAK_T_ALCX,
             ALCHEMIX_STAKING_POOL,
+            TREASURY_ADDRESS,
+            TOKEMAK_MANAGER,
             {
                 authority: OLYMPUS_AUTHORITY_ADDRESS,
                 tokens: [ALCHEMIX],

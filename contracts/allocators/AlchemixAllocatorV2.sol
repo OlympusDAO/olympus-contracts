@@ -54,8 +54,8 @@ contract AlchemixAllocatorV2 is BaseAllocator {
     /* ======== STATE VARIABLES ======== */
 
     address public immutable alchemix;
-    address public immutable tokemakManager = 0xA86e412109f77c45a3BC1c5870b880492Fb86A14;
-    address public constant treasury = 0x9A315BdF513367C0377FB36545857d12e85813Ef;
+    address public immutable treasury;
+    address public immutable tokemakManager;
 
     ITokemaktALCX public immutable tALCX; // Tokemak tALCX deposit contract
     IStakingPools public immutable pool; // Alchemix staking contract
@@ -69,6 +69,8 @@ contract AlchemixAllocatorV2 is BaseAllocator {
     constructor(
         address _tALCX,
         address _pool,
+        address _treasury,
+        address _tokenmakManager,
         AllocatorInitData memory data
     ) BaseAllocator(data) {
         require(_tALCX != address(0));
@@ -78,6 +80,8 @@ contract AlchemixAllocatorV2 is BaseAllocator {
         pool = IStakingPools(_pool);
 
         alchemix = address(data.tokens[0]);
+        treasury = _treasury;
+        tokemakManager = _tokenmakManager;
     }
 
     function deallocate(uint256[] memory _amounts) public override {
@@ -92,38 +96,29 @@ contract AlchemixAllocatorV2 is BaseAllocator {
             requestedWithdraw = false;
             return;
         }
-        if (_amounts[0] > 0) requestWithdraw(_amounts[0], false, false);
+        bool all = false;
+        if (_amounts[0] == type(uint256).max) all = true;
+
+        if (_amounts[0] > 0) requestWithdraw(_amounts[0], false, all);
         requestedWithdraw = true;
     }
 
     /* ======== INTERNAL FUNCTIONS ======== */
 
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
-        uint256 alcxBalance = _tokens[0].balanceOf(address(this));
+        if (alchemixToClaim() > 0) pool.claim(poolID);
+
+        uint256 alcxBalance = IERC20(alchemix).balanceOf(address(this));
 
         if (alcxBalance > 0) {
             deposit(alcxBalance);
         }
 
-        if (alchemixToClaim() > 0) {
-            compoundReward();
+        uint128 total = uint128(totaltAlcxDeposited());
+        uint128 last = extender.getAllocatorPerformance(id).gain + uint128(extender.getAllocatorAllocated(id));
 
-            uint128 total = uint128(totaltAlcxDeposited());
-            uint128 last = extender.getAllocatorPerformance(id).gain + uint128(extender.getAllocatorAllocated(id));
-
-            if (total >= last) gain = total - last;
-            else loss = last - total;
-        }
-    }
-
-    /**
-     *  @notice compound reward by claiming pending rewards and
-     *      calling the deposit function
-     */
-    function compoundReward() internal {
-        pool.claim(poolID);
-        uint256 alchemixBalance = _tokens[0].balanceOf(address(this));
-        deposit(alchemixBalance);
+        if (total >= last) gain = total - last;
+        else loss = last - total;
     }
 
     /**
