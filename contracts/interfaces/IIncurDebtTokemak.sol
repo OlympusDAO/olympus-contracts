@@ -77,7 +77,7 @@ interface IIncurDebtTokemak {
     function setBorrowerDebtLimit(address _account, uint256 _debtLimit) external;
 
     /**
-     * @notice removes LP position, repays debt and returns tokens to owner
+     * @notice repays debt using collateral and returns remaining tokens to owner
      * - onlyOwner (or governance)
      * @param _account the address that will interact with contract
      * @param _to where to send remaining gOHM
@@ -85,5 +85,13 @@ interface IIncurDebtTokemak {
     function forceRepay(
         address _account,
         address _to
-    ) external returns (uint256);
+    ) external;
+
+    /**
+     * @notice seize and burn _accounts collateral and forgive debt
+     * - will burn all collateral, including excess of debt
+     * - onlyGovernance
+     * @param _account the account to seize
+     */
+    function seize(address _account) external;
 }
