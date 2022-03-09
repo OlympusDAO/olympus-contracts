@@ -11,7 +11,7 @@ import { coins } from "../../test/utils/coins";
 
 async function main() {
     const factory: AlchemixAllocatorV2__factory = (await ethers.getContractFactory(
-        "CurveConvexAllocator"
+        "AlchemixAllocatorV2"
     )) as AlchemixAllocatorV2__factory;
 
     const allocator: AlchemixAllocatorV2 = (await factory.deploy(

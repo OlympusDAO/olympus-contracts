@@ -9,7 +9,7 @@ import { olympus } from "../../test/utils/olympus";
 
 async function main() {
     const factory: AaveAllocatorV2__factory = (await ethers.getContractFactory(
-        "CurveConvexAllocator"
+        "AaveAllocatorV2"
     )) as AaveAllocatorV2__factory;
 
     const allocator: AaveAllocatorV2 = (await factory.deploy({
