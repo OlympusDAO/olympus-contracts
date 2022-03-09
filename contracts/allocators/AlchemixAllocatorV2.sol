@@ -62,8 +62,6 @@ contract AlchemixAllocatorV2 is BaseAllocator {
 
     uint256 public immutable poolID = 8; //pool id of tALCX on Alchemix staking pool
 
-    bool public requestedWithdraw;
-
     /* ======== CONSTRUCTOR ======== */
 
     constructor(
@@ -84,23 +82,23 @@ contract AlchemixAllocatorV2 is BaseAllocator {
         tokemakManager = _tokenmakManager;
     }
 
-    function deallocate(uint256[] memory _amounts) public override {
-        _onlyGuardian();
-        if (requestedWithdraw) {
+    /**
+     *  @notice There is two step process to withdrawing from this allocator, first a withdrawal is requested and secondly
+     * the tokens are actually withdrawn, but this takes time hence the request.
+     *
+     * @param _amounts Pass in _amounts[0] = 0 to claim, and _amounts[0] > 0 to request. All else is reverted. If _amounts[0]
+     * is equal to type(uint256).max, then a request to withdraw all is made.
+     */
+    function deallocate(uint256[] memory _amounts) public override onlyGuardian {
+        require(_amounts.length == 1, "invalid amounts length");
+
+        if (_amounts[0] == 0) {
             (uint256 minCycle, ) = getRequestedWithdrawalInfo();
             uint256 currentCycle = ITokemakManager(tokemakManager).currentCycleIndex();
 
             require(minCycle <= currentCycle, "requested withdraw cycle not reached yet");
             withdraw();
-
-            requestedWithdraw = false;
-            return;
-        }
-        bool all = false;
-        if (_amounts[0] == type(uint256).max) all = true;
-
-        if (_amounts[0] > 0) requestWithdraw(_amounts[0], false, all);
-        requestedWithdraw = true;
+        } else requestWithdraw(_amounts[0], false, _amounts[0] == type(uint256).max);
     }
 
     /* ======== INTERNAL FUNCTIONS ======== */
@@ -230,7 +228,7 @@ contract AlchemixAllocatorV2 is BaseAllocator {
         return utility;
     }
 
-    function name() external view override returns (string memory) {
+    function name() external pure override returns (string memory) {
         return "Alchemix Allocator";
     }
 }

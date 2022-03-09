@@ -24,6 +24,12 @@ const aweth = "0x030bA81f1c18d280636F32af80b9AAd02Cf0854e";
 const ausdc = "0xBcca60bB61934080951369a648Fb03DF4F96263C";
 const afrax = "0xd4937682df3C8aEF4FE912A96A74121C0829E664";
 
+// ALCHEMIX
+const alcx = "0xdbdb4d16eda451d0503b854cf79d55697f90c8df";
+
+// TOKEMAK
+const toke = "0x2e9d63788249371f1dfc918a52f8d799f4a38c94";
+
 export const coins = {
     ohm,
     gohm,
@@ -43,4 +49,6 @@ export const coins = {
     aweth,
     ausdc,
     afrax,
+    alcx,
+    toke,
 };
