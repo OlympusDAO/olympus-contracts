@@ -166,7 +166,7 @@ describe("Alchemix Allocator", async () => {
         await alchemixAllocator.connect(guardian).update(1);
 
         await alchemixAllocator.connect(guardian).deallocate([bne(10, 20)]);
-        await expect(alchemixAllocator.connect(guardian).deallocate([bne(10, 20)])).to.revertedWith(
+        await expect(alchemixAllocator.connect(guardian).deallocate([0])).to.revertedWith(
             "requested withdraw cycle not reached yet"
         );
     });
@@ -200,7 +200,7 @@ describe("Alchemix Allocator", async () => {
         await manager.connect(onlyRollover).completeRollover(fake_IpfsHash); // used to increase tokemak cycle
 
         //should be able to withdraw after withdraw cycle is reached
-        await alchemixAllocator.connect(guardian).deallocate([bne(10, 20)]);
+        await alchemixAllocator.connect(guardian).deallocate([0]);
 
         const ALCXBalanceAfterTx = await alchemix_token.balanceOf(alchemixAllocator.address);
 
