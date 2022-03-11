@@ -46,7 +46,7 @@ describe("BtrflyAllocator", () => {
     let snapshotId: number = 0;
 
     const triggerRebase = async () => {
-        await helpers.tmine(30000);
+        await helpers.tmine(28800);
         await allocator.callRebase();
     };
 
