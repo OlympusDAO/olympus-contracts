@@ -67,7 +67,7 @@ describe("BtrflyAllocator", () => {
             "OlympusTreasury",
             olympus.treasury
         )) as OlympusTreasury;
-
+        
         authority = (await ethers.getContractAt(
             "OlympusAuthority",
             olympus.authority
@@ -337,10 +337,6 @@ describe("BtrflyAllocator", () => {
                 allocator,
                 BigNumber.from(0).sub(amount)
             );
-
-            await triggerRebase();
-            await triggerRebase();
-            await triggerRebase();
         });
 
         it("should revert if sender is not guardian", async () => {
@@ -348,12 +344,17 @@ describe("BtrflyAllocator", () => {
         });
 
         it("should fully deallocate", async () => {
+            for (let i = 0; i < 1000; i++) {
+                await triggerRebase();
+            }
+
             const balance = await utilTokens[0].balanceOf(allocator.address);
             let input: BigNumber[] = [balance];
             await allocator.deallocate(input);
 
             expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("0");
             expect(await tokens[0].balanceOf(allocator.address)).to.equal(balance);
+            console.log(await tokens[0].balanceOf(allocator.address));
         });
 
         it("should partially deallocate", async () => {
