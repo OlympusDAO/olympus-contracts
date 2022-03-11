@@ -5,7 +5,6 @@ pragma solidity ^0.8.10;
 import "../types/BaseAllocator.sol";
 
 // interfaces
-
 interface IBtrflyStaking {
     function claim(address recipient_) external;
 

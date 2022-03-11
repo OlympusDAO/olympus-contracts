@@ -172,12 +172,12 @@ describe("BtrflyAllocator", () => {
 
             await extender.setAllocatorLimits(1, {
                 allocated: bne(10, 20),
-                loss: bne(3, 10),
+                loss: bne(10, 8),
             });
 
             await allocator.activate();
 
-            const amount: BigNumber = bne(5, 10);
+            const amount: BigNumber = bne(10, 9);
 
             await expect(() => extender.requestFundsFromTreasury(1, amount)).to.changeTokenBalance(
                 btrfly,
@@ -195,7 +195,7 @@ describe("BtrflyAllocator", () => {
         });
 
         it("should update", async () => {
-            const amount: BigNumber = bne(5, 10);
+            const amount: BigNumber = bne(10, 9);
 
             await expect(() => allocator.update(1)).to.changeTokenBalance(
                 tokens[0],
@@ -208,7 +208,7 @@ describe("BtrflyAllocator", () => {
         });
 
         it("should deposit more", async () => {
-            const amount: BigNumber = bne(5, 10);
+            const amount: BigNumber = bne(10, 9);
 
             await expect(() => allocator.update(1)).to.changeTokenBalance(
                 tokens[0],
@@ -238,7 +238,7 @@ describe("BtrflyAllocator", () => {
 
         context("with deposits", () => {
             beforeEach(async () => {
-                const amount: BigNumber = bne(5, 10);
+                const amount: BigNumber = bne(10, 9);
 
                 await allocator.update(1);
             });
@@ -247,17 +247,12 @@ describe("BtrflyAllocator", () => {
                 const bal = await btrfly.balanceOf(allocator.address);
 
                 const balance = await utilTokens[0].balanceOf(allocator.address);
-                console.log(balance);
-                console.log(await xBtrfly.index());
 
                 for (let i = 0; i < 1000; i++) {
                     await triggerRebase();
                 }
 
-                console.log(await xBtrfly.index());
-
                 const balanceAfter = await utilTokens[0].balanceOf(allocator.address);
-                console.log(balanceAfter);
 
                 expect(balanceAfter).to.be.gt(balance);
                 expect(await allocator.amountAllocated(1)).to.equal(balanceAfter);
@@ -285,7 +280,7 @@ describe("BtrflyAllocator", () => {
 
                 await tempcoin.transfer(
                     owner.address,
-                    (await tempcoin.balanceOf(allocator.address)).div("2")
+                    (await tempcoin.balanceOf(allocator.address)).mul("19").div("20")
                 );
 
                 await allocator.update(1);
@@ -316,12 +311,12 @@ describe("BtrflyAllocator", () => {
 
             await extender.setAllocatorLimits(1, {
                 allocated: bne(10, 20),
-                loss: bne(3, 10),
+                loss: bne(10, 8),
             });
 
             await allocator.activate();
 
-            const amount: BigNumber = bne(5, 10);
+            const amount: BigNumber = bne(10, 9);
 
             await expect(() => extender.requestFundsFromTreasury(1, amount)).to.changeTokenBalance(
                 btrfly,
@@ -351,7 +346,6 @@ describe("BtrflyAllocator", () => {
 
             expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("0");
             expect(await tokens[0].balanceOf(allocator.address)).to.equal(balance);
-            console.log(await tokens[0].balanceOf(allocator.address));
         });
 
         it("should partially deallocate", async () => {
@@ -359,9 +353,8 @@ describe("BtrflyAllocator", () => {
             const input: BigNumber[] = [balance.div("2")];
             await allocator.deallocate(input);
 
-            // Add one for precision error
             expect(await utilTokens[0].balanceOf(allocator.address)).to.equal(
-                balance.div("2").add("1")
+                balance.div("2")
             );
             expect(await tokens[0].balanceOf(allocator.address)).to.equal(balance.div("2"));
         });
@@ -385,12 +378,12 @@ describe("BtrflyAllocator", () => {
 
             await extender.setAllocatorLimits(1, {
                 allocated: bne(10, 20),
-                loss: bne(3, 10),
+                loss: bne(10, 8),
             });
 
             await allocator.activate();
 
-            const amount: BigNumber = bne(5, 10);
+            const amount: BigNumber = bne(10, 9);
 
             await expect(() => extender.requestFundsFromTreasury(1, amount)).to.changeTokenBalance(
                 btrfly,
@@ -419,8 +412,8 @@ describe("BtrflyAllocator", () => {
             await extender.registerDeposit(mAllocator.address);
 
             await extender.setAllocatorLimits(2, {
-                allocated: bne(5, 10),
-                loss: bne(3, 10),
+                allocated: bne(10, 20),
+                loss: bne(10, 8),
             });
 
             await mAllocator.activate();
