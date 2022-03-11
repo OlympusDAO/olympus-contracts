@@ -1,48 +1,62 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.10;
 
+import "hardhat/console.sol";
+
 // types
 import "../types/BaseAllocator.sol";
 
 // interfaces
-import "../interfaces/ITreasury.sol";
 
 interface IBtrflyStaking {
     function stake(uint256 amount_, address recipient_) external returns (bool);
 
+    function claim(address recipient_) external;
+
     function unstake(uint256 amount_, bool trigger_) external;
+
+    // just for testing
+    function rebase() external;
 }
 
 error BtrflyAllocator_InvalidAddress();
-error BtrflyAllocator_DeallocateZero();
 
 contract BtrflyAllocator is BaseAllocator {
-    ITreasury public treasury;
+    using SafeERC20 for IERC20;
 
-    IERC20 internal xBtrfly;
-    IBtrflyStaking internal staking;
+    address public treasury;
 
-    constructor(AllocatorInitData memory data, address treasury_, address xBtrfly_, address staking_) BaseAllocator(data) {
-        if (treasury_ == address(0) || xBtrfly_ == address(0) || staking_ == address(0)) revert BtrflyAllocator_InvalidAddress();
+    IERC20 public xBtrfly;
+    IBtrflyStaking public staking;
 
-        treasury = ITreasury(treasury_);
-        xBtrfly = IERC20(xBtrfly);
+    constructor(
+        AllocatorInitData memory data,
+        address treasury_,
+        address xBtrfly_,
+        address staking_
+    ) BaseAllocator(data) {
+        if (treasury_ == address(0) || xBtrfly_ == address(0) || staking_ == address(0))
+            revert BtrflyAllocator_InvalidAddress();
+
+        treasury = treasury_;
+        xBtrfly = IERC20(xBtrfly_);
         staking = IBtrflyStaking(staking_);
 
-        IERC20(data.tokens[0]).approve(staking_, type(uint256).max);
-        xBtrfly.approve(staking_, type(uint256).max);
+        IERC20(data.tokens[0]).safeApprove(staking_, type(uint256).max);
+        xBtrfly.safeApprove(staking_, type(uint256).max);
     }
 
     /*************************************
      * Allocator Operational Functions
      *************************************/
-    
+
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
         // Get BTRFLY balance
         uint256 balance = _tokens[0].balanceOf(address(this));
 
         if (balance > 0) {
             staking.stake(balance, address(this));
+            staking.claim(address(this));
         }
 
         uint256 xBalance = xBtrfly.balanceOf(address(this));
@@ -55,9 +69,10 @@ contract BtrflyAllocator is BaseAllocator {
     // Should only ever have a single element in amounts
     function deallocate(uint256[] memory amounts) public override {
         _onlyGuardian();
-        if (amounts[0] == 0) revert BtrflyAllocator_DeallocateZero();
 
-        staking.unstake(amounts[0], false);
+        if (amounts[0] > 0) {
+            staking.unstake(amounts[0], false);
+        }
     }
 
     function _deactivate(bool panic) internal override {
@@ -68,17 +83,11 @@ contract BtrflyAllocator is BaseAllocator {
         deallocate(amounts);
 
         if (panic) {
-            _tokens[0].transfer(address(treasury), _tokens[0].balanceOf(address(this)));
+            _tokens[0].transfer(treasury, _tokens[0].balanceOf(address(this)));
         }
     }
 
-    function _prepareMigration() internal override {
-        uint256 xBalance = xBtrfly.balanceOf(address(this));
-        uint256[] memory amounts = new uint256[](1);
-        amounts[0] = xBalance;
-
-        deallocate(amounts);
-    }
+    function _prepareMigration() internal override {}
 
     /************************
      * View Functions
@@ -105,5 +114,10 @@ contract BtrflyAllocator is BaseAllocator {
 
     function name() external pure override returns (string memory) {
         return "BtrflyAllocator";
+    }
+
+    // helper
+    function callRebase() public {
+        staking.rebase();
     }
 }
