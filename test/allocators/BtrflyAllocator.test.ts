@@ -41,10 +41,10 @@ describe("BtrflyAllocator", () => {
     let utilTokens: any[];
 
     // network
-    let url: string = config.networks.hardhat.forking!.url;
+    const url: string = config.networks.hardhat.forking!.url;
 
     // variables
-    let snapshotId: number = 0;
+    let snapshotId = 0;
 
     const triggerRebase = async () => {
         await helpers.tmine(28800);
@@ -57,17 +57,14 @@ describe("BtrflyAllocator", () => {
         btrfly = await helpers.getCoin(coins.btrfly);
         tokens = [btrfly];
 
-        xBtrfly = (await ethers.getContractAt(
-            xbtrflyAbi,
-            coins.xbtrfly
-        ));
+        xBtrfly = await ethers.getContractAt(xbtrflyAbi, coins.xbtrfly);
         utilTokens = [xBtrfly];
 
         treasury = (await ethers.getContractAt(
             "OlympusTreasury",
             olympus.treasury
         )) as OlympusTreasury;
-        
+
         authority = (await ethers.getContractAt(
             "OlympusAuthority",
             olympus.authority
@@ -349,7 +346,7 @@ describe("BtrflyAllocator", () => {
             }
 
             const balance = await utilTokens[0].balanceOf(allocator.address);
-            let input: BigNumber[] = [balance];
+            const input: BigNumber[] = [balance];
             await allocator.deallocate(input);
 
             expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("0");
@@ -359,7 +356,7 @@ describe("BtrflyAllocator", () => {
 
         it("should partially deallocate", async () => {
             const balance = await utilTokens[0].balanceOf(allocator.address);
-            let input: BigNumber[] = [balance.div("2")];
+            const input: BigNumber[] = [balance.div("2")];
             await allocator.deallocate(input);
 
             // Add one for precision error
