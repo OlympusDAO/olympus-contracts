@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.10;
 
-import "hardhat/console.sol";
-
 // types
 import "../types/BaseAllocator.sol";
 
 // interfaces
 
 interface IBtrflyStaking {
-    function stake(uint256 amount_, address recipient_) external returns (bool);
-
     function claim(address recipient_) external;
 
     function unstake(uint256 amount_, bool trigger_) external;
 
     // just for testing
     function rebase() external;
+}
+
+interface IBtrflyStakingHelper {
+    function stake(uint256 amount_) external;
 }
 
 error BtrflyAllocator_InvalidAddress();
@@ -28,21 +28,24 @@ contract BtrflyAllocator is BaseAllocator {
 
     IERC20 public xBtrfly;
     IBtrflyStaking public staking;
+    IBtrflyStakingHelper public stakingHelper;
 
     constructor(
         AllocatorInitData memory data,
         address treasury_,
         address xBtrfly_,
-        address staking_
+        address staking_,
+        address stakingHelper_
     ) BaseAllocator(data) {
-        if (treasury_ == address(0) || xBtrfly_ == address(0) || staking_ == address(0))
+        if (treasury_ == address(0) || xBtrfly_ == address(0) || staking_ == address(0) || stakingHelper_ == address(0))
             revert BtrflyAllocator_InvalidAddress();
 
         treasury = treasury_;
         xBtrfly = IERC20(xBtrfly_);
         staking = IBtrflyStaking(staking_);
+        stakingHelper = IBtrflyStakingHelper(stakingHelper_);
 
-        IERC20(data.tokens[0]).safeApprove(staking_, type(uint256).max);
+        IERC20(data.tokens[0]).safeApprove(stakingHelper_, type(uint256).max);
         xBtrfly.safeApprove(staking_, type(uint256).max);
     }
 
@@ -55,8 +58,7 @@ contract BtrflyAllocator is BaseAllocator {
         uint256 balance = _tokens[0].balanceOf(address(this));
 
         if (balance > 0) {
-            staking.stake(balance, address(this));
-            staking.claim(address(this));
+            stakingHelper.stake(balance);
         }
 
         uint256 xBalance = xBtrfly.balanceOf(address(this));

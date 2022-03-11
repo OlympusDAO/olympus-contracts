@@ -13,6 +13,7 @@ import {
     BtrflyAllocator__factory,
 } from "../../types";
 
+import { xbtrflyAbi } from "../utils/abi";
 import { coins } from "../utils/coins";
 import { olympus } from "../utils/olympus";
 import { helpers } from "../utils/helpers";
@@ -34,10 +35,10 @@ describe("BtrflyAllocator", () => {
 
     // tokens
     let btrfly: MockERC20;
-    let xBtrfly: MockERC20;
+    let xBtrfly: any;
 
     let tokens: MockERC20[];
-    let utilTokens: MockERC20[];
+    let utilTokens: any[];
 
     // network
     let url: string = config.networks.hardhat.forking!.url;
@@ -56,7 +57,10 @@ describe("BtrflyAllocator", () => {
         btrfly = await helpers.getCoin(coins.btrfly);
         tokens = [btrfly];
 
-        xBtrfly = await helpers.getCoin(coins.xbtrfly);
+        xBtrfly = (await ethers.getContractAt(
+            xbtrflyAbi,
+            coins.xbtrfly
+        ));
         utilTokens = [xBtrfly];
 
         treasury = (await ethers.getContractAt(
@@ -98,7 +102,8 @@ describe("BtrflyAllocator", () => {
             },
             treasury.address,
             xBtrfly.address,
-            "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487"
+            "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487",
+            "0xC0840Ec5527d3e70d66AE6575642916F3Fd18aDf"
         );
     });
 
@@ -120,13 +125,17 @@ describe("BtrflyAllocator", () => {
                 },
                 treasury.address,
                 xBtrfly.address,
-                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487"
+                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487",
+                "0xC0840Ec5527d3e70d66AE6575642916F3Fd18aDf"
             );
 
             expect(await allocator.treasury()).to.equal(olympus.treasury);
             expect(await allocator.xBtrfly()).to.equal(xBtrfly.address);
             expect(await allocator.staking()).to.equal(
                 "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487"
+            );
+            expect(await allocator.stakingHelper()).to.equal(
+                "0xC0840Ec5527d3e70d66AE6575642916F3Fd18aDf"
             );
             expect((await allocator.tokens())[0]).to.equal(btrfly.address);
         });
@@ -140,7 +149,8 @@ describe("BtrflyAllocator", () => {
                 },
                 treasury.address,
                 xBtrfly.address,
-                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487"
+                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487",
+                "0xC0840Ec5527d3e70d66AE6575642916F3Fd18aDf"
             );
 
             await expect(extender.registerDeposit(allocator.address)).to.not.be.reverted;
@@ -157,7 +167,8 @@ describe("BtrflyAllocator", () => {
                 },
                 treasury.address,
                 xBtrfly.address,
-                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487"
+                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487",
+                "0xC0840Ec5527d3e70d66AE6575642916F3Fd18aDf"
             );
 
             await extender.registerDeposit(allocator.address);
@@ -239,12 +250,17 @@ describe("BtrflyAllocator", () => {
                 const bal = await btrfly.balanceOf(allocator.address);
 
                 const balance = await utilTokens[0].balanceOf(allocator.address);
+                console.log(balance);
+                console.log(await xBtrfly.index());
 
-                await triggerRebase();
-                await triggerRebase();
-                await triggerRebase();
+                for (let i = 0; i < 1000; i++) {
+                    await triggerRebase();
+                }
+
+                console.log(await xBtrfly.index());
 
                 const balanceAfter = await utilTokens[0].balanceOf(allocator.address);
+                console.log(balanceAfter);
 
                 expect(balanceAfter).to.be.gt(balance);
                 expect(await allocator.amountAllocated(1)).to.equal(balanceAfter);
@@ -295,7 +311,8 @@ describe("BtrflyAllocator", () => {
                 },
                 treasury.address,
                 xBtrfly.address,
-                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487"
+                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487",
+                "0xC0840Ec5527d3e70d66AE6575642916F3Fd18aDf"
             );
 
             await extender.registerDeposit(allocator.address);
@@ -362,7 +379,8 @@ describe("BtrflyAllocator", () => {
                 },
                 treasury.address,
                 xBtrfly.address,
-                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487"
+                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487",
+                "0xC0840Ec5527d3e70d66AE6575642916F3Fd18aDf"
             );
 
             await extender.registerDeposit(allocator.address);
@@ -396,7 +414,8 @@ describe("BtrflyAllocator", () => {
                 },
                 treasury.address,
                 xBtrfly.address,
-                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487"
+                "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487",
+                "0xC0840Ec5527d3e70d66AE6575642916F3Fd18aDf"
             );
 
             await extender.registerDeposit(mAllocator.address);
