@@ -353,9 +353,7 @@ describe("BtrflyAllocator", () => {
             const input: BigNumber[] = [balance.div("2")];
             await allocator.deallocate(input);
 
-            expect(await utilTokens[0].balanceOf(allocator.address)).to.equal(
-                balance.div("2")
-            );
+            expect(await utilTokens[0].balanceOf(allocator.address)).to.equal(balance.div("2"));
             expect(await tokens[0].balanceOf(allocator.address)).to.equal(balance.div("2"));
         });
     });
