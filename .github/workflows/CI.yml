@@ -5,7 +5,7 @@ name: Smart Contract CI
 
 on:
     push:
-        branches: [Version-1.1, Version-2]
+        branches: ["*"]
     pull_request:
         branches: ["*"]
 
