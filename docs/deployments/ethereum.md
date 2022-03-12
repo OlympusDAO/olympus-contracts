@@ -1,7 +1,7 @@
 # 📜 Ethereum Addresses
 
 ## Core
----
+
 | Contract | Address |
 | --- | --- |
 OHM V2 | `0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5`
@@ -15,8 +15,15 @@ BondDepositoryV2 | `0x9025046c6fb25Fb39e720d97a8FD881ED69a1Ef6`
 Authority | `0x1c21F8EA7e39E2BA00BC12d2968D63F4acb38b7A`
 
 ## Multisigs
----
+
 | Contract | Address |
 | --- | --- |
 DAO | `0x245cc372C84B3645Bf0Ffe6538620B04a217988B`
 Policy | `0x0cf30dc0d48604A301dF8010cdc028C055336b2E`
+
+## Allocators
+
+| Contract | Address |
+| --- | --- |
+AaveAllocatorV2 | `0xb0eFf5E57A142E17A0ab35ccA94B99227Edb4E7c`
+AlchemixAllocatorV2 | `0x877cAf628ea1f799b742909Cf767C971e2a4d700`
