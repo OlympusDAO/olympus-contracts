@@ -1,4 +1,4 @@
-# Ω Olympus Smart Contracts
+# Ω Olympus Smart Contracts.
 
 ## 🔧 Setting up local development
 
