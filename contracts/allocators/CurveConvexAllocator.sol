@@ -34,7 +34,7 @@ struct NewDepositData {
 contract CurveConvexAllocator is BaseAllocator {
     // constants and globals
     uint128 public constant LOSS_BELOW_THRESHOLD = 1;
-    address public constant treasury = 0x9A315BdF513367C0377FB36545857d12e85813Ef;
+    address public immutable treasury;
 
     uint256 public slippage;
     uint256 public lossThreshold;
@@ -54,7 +54,8 @@ contract CurveConvexAllocator is BaseAllocator {
 
     AllocatorTargetData[] internal _targets;
 
-    constructor(AllocatorInitData memory data) BaseAllocator(data) {
+    constructor(address treasuryAddress, AllocatorInitData memory data) BaseAllocator(data) {
+        treasury = treasuryAddress;
         slippage = 9e17;
         lossThreshold = 1e19;
     }

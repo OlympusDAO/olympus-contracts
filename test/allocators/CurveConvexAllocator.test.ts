@@ -198,11 +198,14 @@ describe("CurveConvexAllocator", () => {
 
     describe("setup: contains tests on multiple simple functions", () => {
         beforeEach(async () => {
-            allocator = await factory.deploy({
-                authority: authority.address,
-                tokens: [],
-                extender: extender.address,
-            });
+            allocator = await factory.deploy(
+                treasury.address,
+                {
+                    authority: authority.address,
+                    tokens: [],
+                    extender: extender.address,
+                },
+            );
         });
 
         it("passing: should confirm all vars are set correctly", async () => {
@@ -272,11 +275,14 @@ describe("CurveConvexAllocator", () => {
 
     describe("_update()", () => {
         beforeEach(async () => {
-            allocator = await factory.deploy({
-                authority: authority.address,
-                tokens: [],
-                extender: extender.address,
-            });
+            allocator = await factory.deploy(
+                treasury.address,
+                {
+                    authority: authority.address,
+                    tokens: [],
+                    extender: extender.address,
+                },
+            );
 
             for (let i = 0; i < deposits.length; i++) {
                 await allocator.addDeposit(deposits[i]);

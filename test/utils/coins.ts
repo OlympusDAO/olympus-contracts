@@ -27,6 +27,13 @@ const afrax = "0xd4937682df3C8aEF4FE912A96A74121C0829E664";
 // FXS
 const fxs = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0";
 
+// ALCHEMIX
+const alcx = "0xdbdb4d16eda451d0503b854cf79d55697f90c8df";
+
+// TOKEMAK
+const toke = "0x2e9d63788249371f1dfc918a52f8d799f4a38c94";
+
+
 export const coins = {
     ohm,
     gohm,
@@ -47,4 +54,6 @@ export const coins = {
     ausdc,
     afrax,
     fxs,
+    alcx,
+    toke,
 };
