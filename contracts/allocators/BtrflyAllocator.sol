@@ -44,6 +44,7 @@ contract BtrflyAllocator is BaseAllocator {
         staking = IBtrflyStaking(staking_);
         stakingHelper = IBtrflyStakingHelper(stakingHelper_);
 
+        // Tokens[0] is BTRFLY token
         IERC20(data.tokens[0]).safeApprove(stakingHelper_, type(uint256).max);
         xBtrfly.safeApprove(staking_, type(uint256).max);
     }
