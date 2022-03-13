@@ -366,7 +366,7 @@ contract TreasuryExtender is OlympusAccessControlledV2, ITreasuryExtender {
      * @return total number of allocators ever registered
      */
     function getTotalAllocatorCount() external view returns (uint256) {
-        return allocators.length - 1;
+        return allocators.length;
     }
 
     /**
