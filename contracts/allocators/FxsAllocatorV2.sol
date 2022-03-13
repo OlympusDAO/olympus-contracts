@@ -29,6 +29,12 @@ interface IveFXSYieldDistributorV4 {
     function earned(address _address) external view returns (uint256);
 
     function checkpointOtherUser(address _address) external;
+
+    function notifyRewardAmount(uint256 amount) external;
+
+    function toggleRewardNotifier(address notifier_addr) external;
+
+    function yieldDuration() external returns (uint256);
 }
 
 error FxsAllocator_InvalidAddress();
