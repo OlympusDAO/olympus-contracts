@@ -37,6 +37,10 @@ const alcx = "0xdbdb4d16eda451d0503b854cf79d55697f90c8df";
 // TOKEMAK
 const toke = "0x2e9d63788249371f1dfc918a52f8d799f4a38c94";
 
+// LOBI
+const lobi = "0xDEc41Db0c33F3F6f3cb615449C311ba22D418A8d";
+const slobi = "0x8Ab17e2cd4F894F8641A31f99F673a5762F53c8e";
+
 export const coins = {
     ohm,
     gohm,
@@ -61,4 +65,6 @@ export const coins = {
     xbtrfly,
     alcx,
     toke,
+    lobi,
+    slobi,
 };
