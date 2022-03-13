@@ -16,15 +16,16 @@ async function main() {
     const staking = "0xBdE4Dfb0dbb0Dd8833eFb6C5BD0Ce048C852C487";
     const stakingHelper = "0xC0840Ec5527d3e70d66AE6575642916F3Fd18aDf";
 
-    const allocator: BtrflyAllocator = (await factory.deploy({
+    const allocator: BtrflyAllocator = (await factory.deploy(
+        {
             authority: olympus.authority,
             tokens: [coins.btrfly],
-            extender: olympus.extender
+            extender: olympus.extender,
         },
         olympus.treasury,
         coins.xbtrfly,
         staking,
-        stakingHelper,
+        stakingHelper
     )) as BtrflyAllocator;
 
     console.log("BtrflyAllocator deployed at:", allocator.address);

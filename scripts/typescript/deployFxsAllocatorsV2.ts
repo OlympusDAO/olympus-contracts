@@ -17,11 +17,12 @@ async function main() {
     const veFxs = "0xc8418aF6358FFddA74e09Ca9CC3Fe03Ca6aDC5b0";
     const veFxsYieldDistributor = "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872";
 
-    const allocator: FxsAllocatorV2 = (await factory.deploy({
-        authority: olympus.authority,
-        tokens: [coins.fxs],
-        extender: olympus.extender
-    },
+    const allocator: FxsAllocatorV2 = (await factory.deploy(
+        {
+            authority: olympus.authority,
+            tokens: [coins.fxs],
+            extender: olympus.extender,
+        },
         olympus.treasury,
         veFxs,
         veFxsYieldDistributor
