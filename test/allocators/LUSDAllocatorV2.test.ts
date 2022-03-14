@@ -15,7 +15,6 @@ import {
     LUSDAllocatorV2__factory,
     IStabilityPool,
     ILQTYStaking,
-    ISwapRouter,
 } from "../../types";
 
 // data
@@ -41,7 +40,6 @@ describe("LUSDAllocatorV2", () => {
     let factory: LUSDAllocatorV2__factory;
     let stabilityPool: IStabilityPool;
     let lqtyStaking: ILQTYStaking;
-    let swapRouter: ISwapRouter;
 
     // tokens
     let weth: MockERC20;
@@ -85,11 +83,6 @@ describe("LUSDAllocatorV2", () => {
             "ILQTYStaking",
             "0x4f9Fbb3f1E99B56e0Fe2892e623Ed36A76Fc605d"
         )) as ILQTYStaking;
-
-        swapRouter = (await ethers.getContractAt(
-            "ISwapRouter",
-            "0xE592427A0AEce92De3Edee1F18E0157C05861564"
-        )) as ISwapRouter;
 
         const extenderFactory: TreasuryExtender__factory = (await ethers.getContractFactory(
             "TreasuryExtender"
