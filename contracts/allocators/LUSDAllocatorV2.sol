@@ -232,14 +232,8 @@ contract LUSDAllocatorV2 is BaseAllocator {
 
     /* ======== VIEW FUNCTIONS ======== */
 
-    /**
-     * @notice This returns the amount of LUSD allocated to the pool. Does not return how much LUSD deposited since that number is increasing and compounding.
-     */
     function amountAllocated(uint256 id) public view override returns (uint256) {
-        if (tokenIds[id] == 0) {
-            return lusdStabilityPool.getTotalLUSDDeposits();
-        }
-        return 0;
+        return lusdStabilityPool.getCompoundedLUSDDeposit(address(this));
     }
 
     function rewardTokens() public view override returns (IERC20[] memory) {
