@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import {IERC20} from "../interfaces/IERC20.sol";
 import {IgOHM} from "../interfaces/IgOHM.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
+import {OlympusAccessControlledV2, IOlympusAuthority} from "../types/OlympusAccessControlledV2.sol";
 
 /**
     @title IOHMIndexWrapper
@@ -25,7 +26,7 @@ error YieldSplitter_NotYourDeposit();
             emergency controls, sending and recieving gOHM is up to the implementation of
             this abstract contract to handle.
  */
-abstract contract YieldSplitter {
+abstract contract YieldSplitter is OlympusAccessControlledV2 {
     using SafeERC20 for IERC20;
 
     IOHMIndexWrapper public immutable indexWrapper;
@@ -40,13 +41,14 @@ abstract contract YieldSplitter {
     uint256 public idCount;
     mapping(uint256 => DepositInfo) public depositInfo; // depositId -> DepositInfo
     mapping(address => uint256[]) public depositorIds; // address -> Array of the deposit id's deposited by user
+    mapping(address => bool) public hasPermissionToRedeem; // keep track of which contracts can redeem deposits on behalf of users
 
     /**
         @notice Constructor
         @param indexWrapper_ Address of contract that will return the sOHM to gOHM index. 
                              On mainnet this will be sOHM but on other chains can be an oracle wrapper.
     */
-    constructor(address indexWrapper_) {
+    constructor(address indexWrapper_, address authority_) OlympusAccessControlledV2(IOlympusAuthority(authority_)) {
         indexWrapper = IOHMIndexWrapper(indexWrapper_);
     }
 
@@ -157,6 +159,36 @@ abstract contract YieldSplitter {
         }
 
         delete depositInfo[id_];
+    }
+
+    /**
+        @notice Redeems yield from a deposit and sends it to the recipient
+        @param id_ Id of the deposit.
+    */
+    function redeemDepositOnBehalfOf(uint256 id_) external virtual {}
+
+    /**
+        @notice Redeems all yield tied to a recipient and sends it to the recipient
+        @param recipient_ recipient address.
+    */
+    function redeemAllDepositOnBehalfOf(address recipient_) external virtual {}
+
+    /**
+        @notice Gives a contract permission to redeem yield on behalf of users
+        @param address_ Id of the deposit.
+    */
+    function givePermissionToRedeem(address address_) external {
+        _onlyGuardian();
+        hasPermissionToRedeem[address_] = true;
+    }
+
+    /**
+        @notice Revokes a contract permission to redeem yield on behalf of users
+        @param address_ Id of the deposit.
+    */
+    function revokePermissionToRedeem(address address_) external {
+        _onlyGuardian();
+        hasPermissionToRedeem[address_] = false;
     }
 
     /**
