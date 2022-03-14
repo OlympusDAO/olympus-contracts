@@ -5,7 +5,6 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IgOHM} from "../interfaces/IgOHM.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
 import {IYieldStreamer} from "../interfaces/IYieldStreamer.sol";
-import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 import {IUniswapV2Router} from "../interfaces/IUniswapV2Router.sol";
 import {IStaking} from "../interfaces/IStaking.sol";
 import {YieldSplitter} from "../types/YieldSplitter.sol";
@@ -22,10 +21,8 @@ error YieldStreamer_InvalidAmount();
     @notice This contract allows users to deposit their gOhm and have their yield
             converted into a streamToken(normally DAI) and sent to their address every interval.
  */
-contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled {
+contract YieldStreamer is IYieldStreamer, YieldSplitter {
     using SafeERC20 for IERC20;
-
-    uint256 private constant MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     address public immutable OHM;
     address public immutable gOHM;
@@ -85,7 +82,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         uint128 maxSwapSlippagePercent_,
         uint128 feeToDaoPercent_,
         uint256 minimumTokenThreshold_
-    ) YieldSplitter(sOHM_) OlympusAccessControlled(IOlympusAuthority(authority_)) {
+    ) YieldSplitter(sOHM_, authority_) {
         gOHM = gOHM_;
         OHM = OHM_;
         streamToken = streamToken_;
@@ -97,8 +94,8 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         feeToDaoPercent = feeToDaoPercent_;
         minimumTokenThreshold = minimumTokenThreshold_;
 
-        IERC20(gOHM).approve(address(staking), MAX_INT);
-        IERC20(OHM).approve(address(sushiRouter), MAX_INT);
+        IERC20(gOHM).approve(address(staking), type(uint256).max);
+        IERC20(OHM).approve(address(sushiRouter), type(uint256).max);
     }
 
     /**
@@ -246,6 +243,36 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
     }
 
     /**
+        @notice Redeems yield from a deposit and sends it to the recipient
+        @param id_ Id of the deposit.
+    */
+    function redeemYieldOnBehalfOf(uint256 id_) external override returns (uint256 amount_) {
+        if (withdrawDisabled) revert YieldStreamer_WithdrawDisabled();
+        if (!hasPermissionToRedeem[msg.sender]) revert YieldStreamer_UnauthorisedAction();
+
+        amount_ = _redeemYield(id_);
+
+        IERC20(gOHM).safeTransfer(recipientInfo[id_].recipientAddress, amount_);
+    }
+
+    /**
+        @notice Redeems all yield tied to a recipient and sends it to the recipient
+        @param recipient_ recipient address.
+    */
+    function redeemAllYieldOnBehalfOf(address recipient_) external override returns (uint256 amount_) {
+        if (withdrawDisabled) revert YieldStreamer_WithdrawDisabled();
+        if (!hasPermissionToRedeem[msg.sender]) revert YieldStreamer_UnauthorisedAction();
+
+        uint256[] memory receiptIds = recipientIds[recipient_];
+
+        for (uint256 i = 0; i < receiptIds.length; i++) {
+            amount_ += _redeemYield(receiptIds[i]);
+        }
+
+        IERC20(gOHM).safeTransfer(recipient_, amount_);
+    }
+
+    /**
         @notice User updates the minimum amount of streamTokens threshold before upkeep sends streamTokens to recipients wallet
         @param id_ Id of the deposit
         @param threshold_ amount of streamTokens
@@ -284,7 +311,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
             uint256 currentId = activeDepositIds[i];
 
             if (_isUpkeepEligible(currentId)) {
-                totalGOHM += getOutstandingYield(currentId);
+                totalGOHM += redeemableBalance(currentId);
             }
         }
 
@@ -334,9 +361,9 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
                 Does not include harvestable stream tokens which is found in recipientInfo.
         @param recipient_ Address of recipient.
     */
-    function getTotalHarvestableYieldGOHM(address recipient_) external view returns (uint256 totalGOHM) {
+    function totalRedeemableBalance(address recipient_) public view override returns (uint256 totalGOHM) {
         for (uint256 i = 0; i < recipientIds[recipient_].length; i++) {
-            totalGOHM += getOutstandingYield(recipientIds[recipient_][i]);
+            totalGOHM += redeemableBalance(recipientIds[recipient_][i]);
         }
     }
 
@@ -350,7 +377,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         for (uint256 i = 0; i < activeDepositIds.length; i++) {
             if (_isUpkeepEligible(activeDepositIds[i])) {
                 numberOfDepositsEligible++;
-                amountOfYieldToSwap += getOutstandingYield(activeDepositIds[i]);
+                amountOfYieldToSwap += redeemableBalance(activeDepositIds[i]);
             }
         }
     }
@@ -359,7 +386,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         @notice Returns the outstanding yield of a deposit.
         @param id_ Id of the deposit.
      */
-    function getOutstandingYield(uint256 id_) public view returns (uint256) {
+    function redeemableBalance(uint256 id_) public view override returns (uint256) {
         return _getOutstandingYield(depositInfo[id_].principalAmount, depositInfo[id_].agnosticAmount);
     }
 
@@ -386,14 +413,6 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
      */
     function getRecipientIds(address recipient_) external view returns (uint256[] memory) {
         return recipientIds[recipient_];
-    }
-
-    /**
-        @notice Returns the array of deposit id's belonging to the depositor
-        @return uint256[] array of depositor Id's
-     */
-    function getDepositorIds(address donor_) external view returns (uint256[] memory) {
-        return depositorIds[donor_];
     }
 
     /************************
