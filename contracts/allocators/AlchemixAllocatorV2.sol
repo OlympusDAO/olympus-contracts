@@ -182,6 +182,16 @@ contract AlchemixAllocatorV2 is BaseAllocator {
     }
 
     /**
+     * @notice Set the address of one of the dependencies (external contracts) this contract uses.
+     * @param contractNumber 0 for `treasury`, 1 for `manager` and all else is for `rewards`
+     */
+    function setExternalContract(address newAddress, uint256 contractNumber) external onlyGuardian {
+        if (contractNumber == 0) treasury = newAddress;
+        else if (contractNumber == 1) manager = newAddress;
+        else rewards = newAddress;
+    }
+
+    /**
      *  @notice query all pending rewards
      *  @return uint
      */

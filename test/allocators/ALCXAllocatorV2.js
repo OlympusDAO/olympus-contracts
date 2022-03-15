@@ -59,7 +59,7 @@ describe("Alchemix Allocator", async () => {
             {
                 authority: olympus.authority,
                 tokens: [coins.alcx],
-                extender: treasuryExtender.address, 
+                extender: treasuryExtender.address,
             }
         );
 
@@ -87,16 +87,12 @@ describe("Alchemix Allocator", async () => {
     });
 
     async function extenderSetup(amount) {
-;
         await treasuryExtender.connect(guardian).registerDeposit(alchemixAllocator.address);
-;
         await treasuryExtender.connect(guardian).setAllocatorLimits(1, {
             allocated: bne(10, 23),
             loss: bne(10, 19),
         });
-;
         await alchemixAllocator.connect(guardian).activate();
-;
         await treasuryExtender.connect(guardian).requestFundsFromTreasury(1, amount);
     }
 
@@ -280,7 +276,7 @@ describe("Alchemix Allocator", async () => {
             {
                 authority: olympus.authority,
                 tokens: [coins.alcx],
-                extender: treasuryExtender.address, 
+                extender: treasuryExtender.address,
             }
         );
 
