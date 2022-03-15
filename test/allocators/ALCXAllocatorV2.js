@@ -231,9 +231,7 @@ describe("Alchemix Allocator", async () => {
         await alchemixAllocator.connect(guardian).update(1);
 
         const tAlcxBalance = await alchemixAllocator.totaltAlcxDeposited();
-        const ALCXBalanceBeforeWithdraw = await alchemix_token.balanceOf(
-            alchemixAllocator.address
-        );
+        const ALCXBalanceBeforeWithdraw = await alchemix_token.balanceOf(alchemixAllocator.address);
 
         assert.equal(Number(ALCXBalanceBeforeWithdraw), 0);
         assert.equal(await alchemixAllocator.status(), 1);
@@ -242,9 +240,7 @@ describe("Alchemix Allocator", async () => {
         await increaseCycle();
 
         await alchemixAllocator.connect(guardian).prepareMigration();
-        const ALCXBalanceAfterWithdraw = await alchemix_token.balanceOf(
-            alchemixAllocator.address
-        );
+        const ALCXBalanceAfterWithdraw = await alchemix_token.balanceOf(alchemixAllocator.address);
 
         expect(Number(ALCXBalanceAfterWithdraw)).to.be.above(Number(tAlcxBalance));
         assert.equal(await alchemixAllocator.status(), 2);
