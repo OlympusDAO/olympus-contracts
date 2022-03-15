@@ -249,3 +249,10 @@ interface FusePoolLens {
             CTokenOwnership[] memory
         );
 }
+
+// TRIBE rewards
+interface RewardsDistributorDelegate {
+    function claimRewards(address holder) external;
+
+    function compAccrued(address) external returns (uint256);
+}
