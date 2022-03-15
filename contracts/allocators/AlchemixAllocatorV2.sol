@@ -217,7 +217,6 @@ contract AlchemixAllocatorV2 is BaseAllocator {
      *  @return uint
      */
     function totaltAlcxDeposited() public view returns (uint256) {
-        //check if it turns to zero
         return pool.getStakeTotalDeposited(address(this), poolID);
     }
 
