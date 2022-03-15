@@ -15,10 +15,12 @@ struct fData {
 struct fDataExpanded {
     fData f;
     IERC20 base;
+    IERC20 rT;
 }
 
 struct SpecificData {
     address treasury;
+    address rewards;
 }
 
 struct FuseAllocatorInitData {
@@ -27,12 +29,17 @@ struct FuseAllocatorInitData {
 }
 
 contract RariFuseAllocator is BaseAllocator {
-    fData[] internal _fData;
-    RariTroller[] internal _trollers;
-
     address public treasury;
 
+    RewardsDistributorDelegate internal _rewards;
+
+    fData[] internal _fData;
+    IERC20[] internal _rewardTokens;
+
+    RariTroller[] internal _trollers;
+
     constructor(FuseAllocatorInitData memory fuseData) BaseAllocator(fuseData.base) {
+        _rewards = RewardsDistributorDelegate(fuseData.spec.rewards);
         treasury = fuseData.spec.treasury;
     }
 
@@ -40,11 +47,13 @@ contract RariFuseAllocator is BaseAllocator {
         // reads
         uint256 index = tokenIds[id];
         fToken f = _fData[index].token;
-        // i am hate
         IERC20Metadata b = IERC20Metadata(address(_tokens[index]));
+        RewardsDistributorDelegate rewards = _rewards;
         uint256 balance = b.balanceOf(address(this));
 
         // interactions
+        if (rewards.compAccrued(address(this)) > 0) rewards.claimRewards(address(this));
+
         if (balance > 0) {
             b.approve(address(f), balance);
             f.mint(balance);
@@ -73,17 +82,29 @@ contract RariFuseAllocator is BaseAllocator {
         _deallocateAll();
 
         if (panic) {
-            for (uint256 i; i < 0; i++) {
+            uint256 length = _fData.length;
+
+            for (uint256 i; i < length; i++) {
                 fToken f = _fData[i].token;
                 IERC20 u = _tokens[i];
 
                 f.redeem(f.balanceOf(address(this)));
                 u.transfer(treasury, u.balanceOf(address(this)));
             }
+
+            length = _rewardTokens.length;
+
+            for (uint256 i; i < length; i++) {
+                IERC20 rT = _rewardTokens[i];
+                rT.transfer(treasury, rT.balanceOf(address(this)));
+            }
         }
     }
 
-    function _prepareMigration() internal override {}
+    function _prepareMigration() internal override {
+        RewardsDistributorDelegate rewards = _rewards;
+        if (rewards.compAccrued(address(this)) > 0) rewards.claimRewards(address(this));
+    }
 
     function amountAllocated(uint256 id) public view override returns (uint256) {
         uint256 index = tokenIds[id];
@@ -91,8 +112,8 @@ contract RariFuseAllocator is BaseAllocator {
         return _worth(_fData[index].token, b) + b.balanceOf(address(this));
     }
 
-    function rewardTokens() public pure override returns (IERC20[] memory) {
-        return new IERC20[](0);
+    function rewardTokens() public view override returns (IERC20[] memory) {
+        return _rewardTokens;
     }
 
     function utilityTokens() public view override returns (IERC20[] memory) {
@@ -105,11 +126,17 @@ contract RariFuseAllocator is BaseAllocator {
         return "RariFuseAllocator";
     }
 
-    function fuseAdd(address troller) external onlyGuardian {
+    /// @notice Add a fuse pool by adding the troller.
+    /// @dev The troller is a comptroller, which has all data and allows entering markets in regards to a fuse pool.
+    /// @param troller the trollers' address
+    function fusePoolAdd(address troller) external onlyGuardian {
         _trollers.push(RariTroller(troller));
     }
 
-    function fTokenAdd(fDataExpanded memory data) external onlyGuardian {
+    /// @notice Add data for depositing an underlying token in a fuse pool.
+    /// @dev The data fields are described above in the struct `fDataExpanded` specific for this contract.
+    /// @param data the data necessary for another token to be allocated, check the struct in code
+    function fDataAdd(fDataExpanded calldata data) external onlyGuardian {
         // reads
         address[] memory fInput = new address[](1);
         fInput[0] = address(data.f.token);
@@ -117,9 +144,15 @@ contract RariFuseAllocator is BaseAllocator {
         // interaction
         _trollers[data.f.idTroller].enterMarkets(fInput);
 
+        data.base.approve(address(extender), type(uint256).max);
+        data.f.token.approve(address(extender), type(uint256).max);
+        data.rT.approve(address(extender), type(uint256).max);
+
         // effect
         _fData.push(data.f);
         _tokens.push(data.base);
+
+        if (data.rT != IERC20(address(0))) _rewardTokens.push(data.rT);
     }
 
     function _worth(fToken f, IERC20Metadata b) internal view returns (uint256) {
