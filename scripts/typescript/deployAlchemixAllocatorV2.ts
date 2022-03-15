@@ -15,10 +15,12 @@ async function main() {
     )) as AlchemixAllocatorV2__factory;
 
     const allocator: AlchemixAllocatorV2 = (await factory.deploy(
-        protocols.tokemak.talcx,
+        protocols.tokemak.reactors.talcx,
         protocols.alchemix.talcx_staking,
         olympus.treasury,
-        protocols.tokemak.manager,
+        coins.toke,
+        protocols.tokemak.core.rewards,
+        protocols.tokemak.core.manager,
         {
             authority: olympus.authority,
             tokens: [coins.alcx],
