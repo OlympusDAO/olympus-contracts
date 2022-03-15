@@ -6,6 +6,7 @@ import "../interfaces/IERC20.sol";
 import "../types/BaseAllocator.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IAllocator.sol";
+import "../interfaces/ITokemakRewards.sol";
 
 interface ITokemakManager {
     function currentCycleIndex() external view returns (uint256);
@@ -35,8 +36,6 @@ interface IStakingPools {
     function withdraw(uint256 _poolId, uint256 _withdrawAmount) external;
 }
 
-error ALCXAllocator_TreasuryAddressZero();
-
 /**
  *  Contract deploys Alchemix from treasury into the Tokemak tALCX pool,
  *  tALCX contract gives tALCX token in ratio 1:1 of Alchemix token deposited,
@@ -55,6 +54,8 @@ contract AlchemixAllocatorV2 is BaseAllocator {
 
     address public immutable alchemix;
     address public immutable treasury;
+    address public immutable tokemakToken;
+    address public immutable tokemakReward;
     address public immutable tokemakManager;
 
     ITokemaktALCX public immutable tALCX; // Tokemak tALCX deposit contract
@@ -68,6 +69,8 @@ contract AlchemixAllocatorV2 is BaseAllocator {
         address _tALCX,
         address _pool,
         address _treasury,
+        address _tokemakToken,
+        address _tokemakReward,
         address _tokenmakManager,
         AllocatorInitData memory data
     ) BaseAllocator(data) {
@@ -79,6 +82,8 @@ contract AlchemixAllocatorV2 is BaseAllocator {
 
         alchemix = address(data.tokens[0]);
         treasury = _treasury;
+        tokemakToken = _tokemakToken;
+        tokemakReward = _tokemakReward;
         tokemakManager = _tokenmakManager;
     }
 
@@ -99,6 +104,18 @@ contract AlchemixAllocatorV2 is BaseAllocator {
             require(minCycle <= currentCycle, "requested withdraw cycle not reached yet");
             withdraw();
         } else requestWithdraw(_amounts[0], false, _amounts[0] == type(uint256).max);
+    }
+
+    function claimTokemak(
+        ITokemakRewards.Recipient calldata recipient,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external onlyGuardian {
+        ITokemakRewards(tokemakReward).claim(recipient, v, r, s);
+        require(IERC20(tokemakToken).balanceOf(address(this)) > 0, "balance low");
+
+        IERC20(tokemakToken).safeTransfer(treasury, IERC20(tokemakToken).balanceOf(address(this)));
     }
 
     /* ======== INTERNAL FUNCTIONS ======== */
@@ -179,7 +196,10 @@ contract AlchemixAllocatorV2 is BaseAllocator {
     }
 
     function _prepareMigration() internal override {
-        requestWithdraw(0, true, true);
+        uint256[] memory amount = new uint256[](1);
+        require(totaltAlcxDeposited() == 0, "Active deposited funds");
+        amount[0] = 0;
+        deallocate(amount);
     }
 
     /* ======== VIEW FUNCTIONS ======== */
@@ -197,6 +217,7 @@ contract AlchemixAllocatorV2 is BaseAllocator {
      *  @return uint
      */
     function totaltAlcxDeposited() public view returns (uint256) {
+        //check if it turns to zero
         return pool.getStakeTotalDeposited(address(this), poolID);
     }
 
