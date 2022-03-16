@@ -62,6 +62,7 @@ contract LUSDAllocatorV2 is BaseAllocator {
         data.tokens[0].safeApprove(address(lusdStabilityPool), type(uint256).max);
         data.tokens[0].safeApprove(treasuryAddress, type(uint256).max);
         IERC20(lqtyTokenAddress).safeApprove(treasuryAddress, type(uint256).max);
+        IERC20(lqtyTokenAddress).safeApprove(address(extender), type(uint256).max);
     }
 
     /**
