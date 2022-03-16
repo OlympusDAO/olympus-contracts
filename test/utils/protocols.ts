@@ -1,4 +1,8 @@
+// our imports
 import { coins } from "./coins";
+
+// external, unused for now but will try when i have time
+import Fuse from "@rari-capital/fuse-sdk";
 
 // alchemix
 const alchemix = {
@@ -41,5 +45,13 @@ const tokemak = {
     },
 };
 
+// rari
+const rari = {
+    fuse: {
+        directory: "0x835482FE0532f169024d5E9410199369aAD5C77E",
+        primaryLens: "0x6Dc585Ad66A10214Ef0502492B0CC02F0e836eec",
+    },
+};
+
 // export
-export const protocols = { alchemix, tokemak };
+export const protocols = { alchemix, tokemak, rari };
