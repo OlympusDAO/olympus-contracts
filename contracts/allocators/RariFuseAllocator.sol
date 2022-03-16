@@ -7,25 +7,27 @@ import "./interfaces/RariInterfaces.sol";
 // types
 import {BaseAllocator, AllocatorInitData} from "../types/BaseAllocator.sol";
 
+/// @dev stored in storage
 struct fData {
     uint96 idTroller;
     fToken token;
 }
 
+/// @dev function argument
 struct fDataExpanded {
     fData f;
     IERC20 base;
     IERC20 rT;
 }
 
-struct SpecificData {
+struct ProtocolSpecificData {
     address treasury;
     address rewards;
 }
 
 struct FuseAllocatorInitData {
     AllocatorInitData base;
-    SpecificData spec;
+    ProtocolSpecificData spec;
 }
 
 contract RariFuseAllocator is BaseAllocator {
@@ -126,8 +128,18 @@ contract RariFuseAllocator is BaseAllocator {
         return "RariFuseAllocator";
     }
 
+    //// start of functions specific for allocator
+
+    function setTreasury(address newTreasury) external onlyGuardian {
+        treasury = newTreasury;
+    }
+
+    function setRewards(address newRewards) external onlyGuardian {
+        _rewards = RewardsDistributorDelegate(newRewards);
+    }
+
     /// @notice Add a fuse pool by adding the troller.
-    /// @dev The troller is a comptroller, which has all data and allows entering markets in regards to a fuse pool.
+    /// @dev The troller is a comptroller, which is a contract that has all the data and allows entering markets in regards to a fuse pool.
     /// @param troller the trollers' address
     function fusePoolAdd(address troller) external onlyGuardian {
         _trollers.push(RariTroller(troller));
@@ -146,15 +158,18 @@ contract RariFuseAllocator is BaseAllocator {
 
         data.base.approve(address(extender), type(uint256).max);
         data.f.token.approve(address(extender), type(uint256).max);
-        data.rT.approve(address(extender), type(uint256).max);
 
         // effect
         _fData.push(data.f);
         _tokens.push(data.base);
 
-        if (data.rT != IERC20(address(0))) _rewardTokens.push(data.rT);
+        if (data.rT != IERC20(address(0))) {
+            _rewardTokens.push(data.rT);
+            data.rT.approve(address(extender), type(uint256).max);
+        }
     }
 
+    /// @dev logic is directly from fuse docs
     function _worth(fToken f, IERC20Metadata b) internal view returns (uint256) {
         return (f.exchangeRate() * f.balanceOf(address(this))) / (10**(18 + uint256(b.decimals() - f.decimals())));
     }
