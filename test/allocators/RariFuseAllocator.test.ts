@@ -64,7 +64,7 @@ interface FuseAllocatorInitData {
 /////////////////// DESCRIBE BLOCK
 
 describe(ALLOCATORN, () => {
-    //// PRESET
+    /////////////////// PRESET
 
     /// SIGNERS
     let owner: SignerWithAddress; // this is simply 1st signer
@@ -88,7 +88,7 @@ describe(ALLOCATORN, () => {
     let utility: MockERC20[];
     let reward: MockERC20[];
 
-    //// CUSTOM
+    /////////////////// CUSTOM
 
     /// VARS
     const tetrasLockerId: number = 6;
@@ -146,6 +146,11 @@ describe(ALLOCATORN, () => {
     /// TESTS
     // If a test is preset then don't change the logic or only add to the logic, otherwise
     // fill out the logic for the test. All fields are obligatory for safety purposes.
+    //
+    // IF A TEST DOESN'T WORK BECAUSE OF THE PROTOCOL, then don't delete but SKIP the test.
+    // As in :
+    // `describe.skip`, `it.skip` etc.
+    //
     // PRESET and CUSTOM will be tagged.
 
     describe("initialization procedure", () => {
@@ -164,68 +169,184 @@ describe(ALLOCATORN, () => {
 
     async function initialize(): Promise<void> {}
 
+    // Return out all deposit ids of the allocator in `TreasuryExtender`
+
+    async function depositIds(): Promise<BigNumber[]> {}
+
+    // And all other preparatory if they are necessary.
+
+    async function beforeEachUtilityAndRewardsTest(): Promise<void> {}
+
+    async function beforeEachUpdateTest(): Promise<void> {}
+
+    // set errors ( as in, when withdrawing some then the error is define as:
+    //
+    // input to deallocate == expected out , someError == expectedOut - real out / 100
+    //
+    // same thing for all, but since the type(uint256).max flag is passed (uint256Max from helpers.constants)
+    // then input to deallocate != expected out
+    // This is obviously assuming input = expected out, which all allocators should try to implement,
+    // if impossible, skip
+
+    const deallocateSomeError: BigNumber = 3; // example: 3%
+    const deallocateAllError: BigNumber = 3; // example: 3%
+
+    // Return out input for deallocate *some*
+
+    async function beforeEachDeallocateTest(): Promise<BigNumber[]> {}
+
+    async function beforeEachExtenderWithdrawalTest(): Promise<void> {}
+
+    async function beforeEachPrepareMigrationTest(): Promise<void> {}
+
+    async function beforeEachMigrateTest(): Promise<void> {}
+
     // Now start all other tests.
 
     context("with initialization", () => {
         ///// TEST ISOLATION /////
         beforeEach(async () => {
-            //// PRESET
+            /////////////////// PRESET
             snapshotId = await helpers.snapshot();
 
-            //// CUSTOM
+            /////////////////// CUSTOM
 
-            //// PRESET
+            /////////////////// PRESET
             await initialize();
 
-            //// CUSTOM
+            /////////////////// CUSTOM
         });
 
         afterEach(async () => {
-            //// CUSTOM
+            /////////////////// CUSTOM
 
-            //// PRESET
+            /////////////////// PRESET
             await helpers.revert(snapshotId);
         });
 
         describe("utility + rewards", () => {
             beforeEach(async () => {
-                //// CUSTOM
+                await beforeEachUtilityAndRewardsTest();
             });
 
             for (let i = 0; i < utility.length; i++) {
-                it(`revert: a foreign address should not be able to withdraw some of utility token under index ${i}`, async () => {});
+                it(`revert: a foreign address should not be able to withdraw some of utility token under index ${i}`, async () => {
+                    // connected to owner
+                    const uToken: MockERC20 = underlying[i];
+                    const balance: BigNumber = await uToken.balanceOf(allocator.address);
 
-                it(`passing: extender should be able to withdraw some of utility token under index ${i}`, async () => {});
+                    await expect(
+                        uToken.transferFrom(allocator.address, owner.address, balance.div(2))
+                    ).to.be.reverted;
+                });
 
-                it(`passing: extender should be able to withdraw all of utility token under index ${i}`, async () => {});
+                it(`passing: extender should be able to withdraw some of utility token under index ${i}`, async () => {
+                    const uToken: MockERC20 = underlying[i];
+                    const balance: BigNumber = await uToken.balanceOf(allocator.address);
+                    const amount: BigNumber = balance.div(2);
+
+                    await expect(() =>
+                        extender.returnRewardsToTreasury(allocator.address, uToken.address, amount)
+                    ).to.changeTokenBalance(uToken, extender, amount);
+                });
+
+                it(`passing: extender should be able to withdraw all of utility token under index ${i}`, async () => {
+                    const uToken: MockERC20 = underlying[i];
+                    const balance: BigNumber = await uToken.balanceOf(allocator.address);
+
+                    await expect(() =>
+                        extender.returnRewardsToTreasury(allocator.address, uToken.address, balance)
+                    ).to.changeTokenBalance(uToken, extender, balance);
+                });
             }
 
             for (let i = 0; i < rewards.length; i++) {
-                it(`revert: a foreign address should not be able to withdraw some of reward token under index ${i}`, async () => {});
+                it(`revert: a foreign address should not be able to withdraw some of reward token under index ${i}`, async () => {
+                    // connected to owner
+                    const rToken: MockERC20 = rewards[i];
+                    const balance: BigNumber = await uToken.balanceOf(allocator.address);
 
-                it(`passing: extender should be able to withdraw some of reward token under index ${i}`, async () => {});
+                    await expect(
+                        rToken.transferFrom(allocator.address, owner.address, balance.div(2))
+                    ).to.be.reverted;
+                });
 
-                it(`passing: extender should be able to withdraw all of reward token under index ${i}`, async () => {});
+                it(`passing: extender should be able to withdraw some of reward token under index ${i}`, async () => {
+                    const rToken: MockERC20 = rewards[i];
+                    const balance: BigNumber = await uToken.balanceOf(allocator.address);
+                    const amount: BigNumber = balance.div(2);
+
+                    await expect(() =>
+                        extender.returnRewardsToTreasury(allocator.address, rToken.address, amount)
+                    ).to.changeTokenBalance(rToken, extender, amount);
+                });
+
+                it(`passing: extender should be able to withdraw all of reward token under index ${i}`, async () => {
+                    const rToken: MockERC20 = rewards[i];
+                    const balance: BigNumber = await uToken.balanceOf(allocator.address);
+
+                    await expect(() =>
+                        extender.returnRewardsToTreasury(allocator.address, rToken.address, balance)
+                    ).to.changeTokenBalance(rToken, extender, balance);
+                });
             }
         });
 
         describe("update()", () => {
             beforeEach(async () => {
-                //// CUSTOM
+                await beforeEachUpdateTest();
             });
         });
 
+        const deallocateSomeInput: BigNumber[];
+
         describe("deallocate()", () => {
             beforeEach(async () => {
-                //// CUSTOM
+                deallocateSomeInput = await beforeEachDeallocateTest();
             });
 
-            for (let i = 0; i < underlying.length; i++) {
-                it(`passing: should be able to deallocate some of token under index ${i}`, async () => {});
-            }
+            it(`passing: should be able to deallocate some of each token`, async () => {
+                let expected: BigNumber[] = [];
+
+                for (let i = 0; i < underlying.length; i++) {
+                    expected[i] = deallocateSomeInput[i].sub(
+                        deallocateSomeInput[i].mul(deallocateSomeError).div(100)
+                    );
+                }
+
+                await allocator.deallocate(deallocateSomeInput);
+
+                for (let i = 0; i < underlying.length; i++) {
+                    expect(await underlying[i].balanceOf(allocator.address)).to.be.gte(expected[i]);
+                }
+            });
+
+            it(`passing: should be able to deallocate all of each token`, async () => {
+                const deallocateAllInput: BigNumber[] = new Array(deallocateSomeInput.length).fill(
+                    helpers.constants.uint256Max
+                );
+                const depositIds: BigNumber[] = await depositIds();
+
+                let expected: BigNumber[] = [];
+
+                for (let i = 0; i < underlying.length; i++) {
+                    expected[i] = (await extender.getAllocatorAllocated(depositIds[i])).add(
+                        (await extender.getAllocatorPerformance(depositIds[i]))[1] // this is loss, loss + allocated = initial allocated
+                    );
+                    expected[i] = expected[i].sub(expected[i].mul(deallocateAllError).div(100));
+                }
+
+                await allocator.deallocate(deallocateAllInput);
+
+                for (let i = 0; i < underlying.length; i++) {
+                    expect(await underlying[i].balanceOf(allocator.address)).to.be.gte(expected[i]);
+                }
+            });
 
             context("with deallocated tokens", () => {
-                beforeEach(async () => {});
+                beforeEach(async () => {
+                    await beforeEachExtenderWithdrawalTest();
+                });
 
                 for (let i = 0; i < underlying.length; i++) {
                     it(`revert: a foreign address should not be able to withdraw some of token under index ${i}`, async () => {});
@@ -239,13 +360,13 @@ describe(ALLOCATORN, () => {
 
         describe("prepareMigration()", () => {
             beforeEach(async () => {
-                //// CUSTOM
+                await beforeEachPrepareMigrationTest();
             });
         });
 
         describe("migrate()", () => {
             beforeEach(async () => {
-                //// CUSTOM
+                await beforeEachMigrateTest();
             });
         });
     });
