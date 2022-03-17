@@ -97,11 +97,16 @@ contract OnsenAllocator is BaseAllocator {
         }
     }
 
+    /**
+        Asuming the index of the amounts [] can be use as parameter for the mapping tokenIds
+        Example:
+        amounts => [20,50,150]
+        So the values that will be used to retrieve the id used in onsen will be 0, 1 , 2
+    */
     function deallocate(uint256[] memory amounts) public override onlyGuardian {
         for (uint256 i; i < amounts.length; i++) {
             uint256 amount = amounts[i];
             if (amount > 0) {
-                IERC20 token = _tokens[i];
                 IMasterChef(masterChef).withdraw(tokenIds[i], amount); // withdraw from Onsen
             }
         }
