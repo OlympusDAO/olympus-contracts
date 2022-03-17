@@ -32,7 +32,7 @@ interface ISushiBar {
  *  Contract deploys liquidity from treasury into the Onsen program,
  *  earning $SUSHI that can be staked and/or deposited into the treasury.
  */
-contract OnsenAllocator is BaseAllocator {
+contract OnsenAllocatorV2 is BaseAllocator {
     using SafeERC20 for IERC20;
 
     /* ========== STATE VARIABLES ========== */
