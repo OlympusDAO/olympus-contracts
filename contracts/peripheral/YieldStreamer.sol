@@ -302,24 +302,6 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
     }
 
     /**
-        @notice harvest all your unclaimed stream tokens on behalf of a recipient
-        @param recipient_ address of recipient
-    */
-    function harvestStreamTokensOnBehalfOf(address recipient_) external returns (uint256 amount_) {
-        if (withdrawDisabled) revert YieldStreamer_WithdrawDisabled();
-        if (!hasPermissionToRedeem[msg.sender]) revert YieldStreamer_UnauthorisedAction();
-
-        uint256[] memory receiptIds = recipientIds[msg.sender];
-
-        for (uint256 i = 0; i < receiptIds.length; i++) {
-            amount_ += recipientInfo[receiptIds[i]].unclaimedStreamTokens;
-            recipientInfo[receiptIds[i]].unclaimedStreamTokens = 0;
-        }
-
-        if (amount_ > 0) IERC20(streamToken).safeTransfer(recipient_, amount_);
-    }
-
-    /**
         @notice User updates the minimum amount of streamTokens threshold before upkeep sends streamTokens to recipients wallet
         @param id_ Id of the deposit
         @param threshold_ amount of streamTokens
