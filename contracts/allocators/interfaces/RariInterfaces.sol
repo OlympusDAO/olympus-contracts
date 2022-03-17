@@ -52,6 +52,10 @@ interface fToken is IERC20Metadata {
 interface RariTroller {
     function enterMarkets(address[] calldata fTokens) external returns (uint256[] memory);
 
+    function allMarkets(uint256) external view returns (address);
+
+    function getAllMarkets() external view returns (address[] memory);
+
     function exitMarket(address fToken) external returns (uint256);
 
     function getAssetsIn(address account) external view returns (address[] memory);
@@ -93,6 +97,7 @@ interface FusePoolDirectory {
         view
         returns (
             string memory name,
+            address creator,
             address comptroller,
             uint256 blockPosted,
             uint256 timestampPosted

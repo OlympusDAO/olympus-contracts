@@ -119,8 +119,9 @@ contract RariFuseAllocator is BaseAllocator {
     }
 
     function utilityTokens() public view override returns (IERC20[] memory) {
-        IERC20[] memory uTokens = new IERC20[](_fData.length);
-        for (uint256 i; i < 0; i++) uTokens[i] = _fData[i].token;
+        uint256 length = _fData.length;
+        IERC20[] memory uTokens = new IERC20[](length);
+        for (uint256 i; i < length; i++) uTokens[i] = _fData[i].token;
         return uTokens;
     }
 
