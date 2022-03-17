@@ -5,6 +5,11 @@ import "../libraries/Address.sol";
 // types
 import "../types/BaseAllocator.sol";
 
+ struct UserInfo {
+        uint256 amount; // How many LP tokens the user has provided.
+        uint256 rewardDebt; 
+ }
+
 interface IMasterChef {
     function pendingSushi(uint256 _pid, address _user) external view returns (uint256);
 
@@ -13,6 +18,8 @@ interface IMasterChef {
     function withdraw(uint256 _pid, uint256 _amount) external;
 
     function emergencyWithdraw(uint256 _pid) external;
+
+    function userInfo(uint256 _pid, address _user) external returns (UserInfo memory);
 }
 
 interface ISushiBar {
@@ -78,12 +85,15 @@ contract OnsenAllocator is BaseAllocator {
         }
 
         //Calculate gains/loss
+        // Retrieve current balance for pool and address
+        UserInfo memory currentUserInfo = IMasterChef(masterChef).userInfo(id, address(this));
+
         uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
 
-        if (balance >= last) {
-            gain = uint128(balance - last);
+        if (currentUserInfo.amount >= last) {
+            gain = uint128(currentUserInfo.amount - last);
         } else {
-            loss = uint128(last - balance);
+            loss = uint128(last - currentUserInfo.amount);
         }
     }
 
