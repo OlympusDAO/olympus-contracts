@@ -165,13 +165,25 @@ abstract contract YieldSplitter is OlympusAccessControlledV2 {
         @notice Redeems yield from a deposit and sends it to the recipient
         @param id_ Id of the deposit.
     */
-    function redeemDepositOnBehalfOf(uint256 id_) external virtual {}
+    function redeemDepositOnBehalfOf(uint256 id_) external virtual returns (uint256) {}
 
     /**
         @notice Redeems all yield tied to a recipient and sends it to the recipient
         @param recipient_ recipient address.
     */
-    function redeemAllDepositOnBehalfOf(address recipient_) external virtual {}
+    function redeemAllDepositsOnBehalfOf(address recipient_) external virtual returns (uint256) {}
+
+    /**
+        @notice Get redeemable gOHM balance of a specific deposit
+        @param depositId_ Deposit ID for this donation
+    */
+    function redeemableBalance(uint256 depositId_) public view virtual returns (uint256) {}
+
+    /**
+        @notice Get redeemable gOHM balance of a recipient address
+        @param recipient_ Address of user receiving donated yield
+     */
+    function totalRedeemableBalance(address recipient_) public view virtual returns (uint256) {}
 
     /**
         @notice Gives a contract permission to redeem yield on behalf of users

@@ -206,7 +206,7 @@ describe("YieldStreamer", async () => {
         await triggerRebase();
 
         const expectedYield = await gOhm.balanceTo(toOhm(0.1)); // yield is 0.1sOhm convert this to gOhm
-        const actualYield = await yieldStreamer.getOutstandingYield(0);
+        const actualYield = await yieldStreamer.redeemableBalance(0);
         await expect(actualYield).is.closeTo(expectedYield, 1); // 1 digit off due to precision issues of converting gOhm to sOhm and back to gOhm.
 
         const amountOfDai = toOhm(0.2).mul(100).mul(1000000000).mul(999).div(1000); // Mock the amount of Dai coming out of swap.
@@ -231,7 +231,7 @@ describe("YieldStreamer", async () => {
         await expect((await yieldStreamer.depositInfo(0)).agnosticAmount).is.equal(toDecimals(10)); // agnostic should be 20 gOhm or 200.2 sOhm.
 
         const expectedYield = await gOhm.balanceTo(toOhm(0.05)); // yield is 0.05sOhm convert this to gOhm
-        const actualYield = await yieldStreamer.getOutstandingYield(0);
+        const actualYield = await yieldStreamer.redeemableBalance(0);
         await expect(actualYield).is.closeTo(expectedYield, 1); // 1 digit off due to precision issues of converting gOhm to sOhm and back to gOhm.
 
         await yieldStreamer.connect(alice).withdrawYield(0);
@@ -252,11 +252,45 @@ describe("YieldStreamer", async () => {
         await triggerRebase();
         await expect(await gOhm.balanceOf(alice.address)).is.equal("0");
 
-        let expectedYield = await yieldStreamer.getOutstandingYield(0);
+        let expectedYield = await yieldStreamer.redeemableBalance(0);
 
         await yieldStreamer.connect(alice).withdrawAllYield();
-        await expect(await yieldStreamer.getOutstandingYield(0)).is.equal(0);
-        await expect(await yieldStreamer.getOutstandingYield(1)).is.equal(0);
+        await expect(await yieldStreamer.redeemableBalance(0)).is.equal(0);
+        await expect(await yieldStreamer.redeemableBalance(1)).is.equal(0);
+        await expect(await gOhm.balanceOf(alice.address)).is.equal(expectedYield.mul(2));
+    });
+
+    it("withdrawing yield on behalf of others", async () => {
+        await yieldStreamer.connect(alice).deposit(toDecimals(10), alice.address, 1, toDecimals(5));
+        await triggerRebase();
+        await expect(await gOhm.balanceOf(alice.address)).is.equal("0");
+        let expectedYield = await yieldStreamer.redeemableBalance(0);
+
+        await yieldStreamer.connect(deployer).givePermissionToRedeem(bob.address);
+
+        await yieldStreamer.connect(bob).redeemDepositOnBehalfOf(0);
+        await expect(await yieldStreamer.redeemableBalance(0)).is.equal(0);
+        await expect(await gOhm.balanceOf(alice.address)).is.equal(expectedYield);
+
+        await triggerRebase();
+        await yieldStreamer.connect(deployer).revokePermissionToRedeem(bob.address);
+        await expect(yieldStreamer.connect(bob).redeemDepositOnBehalfOf(0)).to.be.reverted;
+    });
+
+    it("withdrawing all yield on behalf of others", async () => {
+        await yieldStreamer
+            .connect(deployer)
+            .deposit(toDecimals(10), alice.address, 1, toDecimals(5));
+        await yieldStreamer.connect(alice).deposit(toDecimals(10), alice.address, 1, toDecimals(5));
+        await triggerRebase();
+        await expect(await gOhm.balanceOf(alice.address)).is.equal("0");
+        let expectedYield = await yieldStreamer.redeemableBalance(0);
+
+        await yieldStreamer.connect(deployer).givePermissionToRedeem(bob.address);
+        await yieldStreamer.connect(bob).redeemAllDepositsOnBehalfOf(alice.address);
+
+        await expect(await yieldStreamer.redeemableBalance(0)).is.equal(0);
+        await expect(await yieldStreamer.redeemableBalance(1)).is.equal(0);
         await expect(await gOhm.balanceOf(alice.address)).is.equal(expectedYield.mul(2));
     });
 
@@ -353,7 +387,7 @@ describe("YieldStreamer", async () => {
 
         await triggerRebase();
 
-        let yieldPerDeposit = await yieldStreamer.getOutstandingYield(0);
+        let yieldPerDeposit = await yieldStreamer.redeemableBalance(0);
         let upkeepEligibility = await yieldStreamer.upkeepEligibility();
         await expect(upkeepEligibility[0]).is.equals("2");
         await expect(upkeepEligibility[1]).is.equals(yieldPerDeposit.mul(2));
@@ -367,8 +401,8 @@ describe("YieldStreamer", async () => {
 
         await triggerRebase();
 
-        let yieldPerDeposit = await yieldStreamer.getOutstandingYield(0);
-        await expect(await yieldStreamer.getTotalHarvestableYieldGOHM(bob.address)).is.equals(
+        let yieldPerDeposit = await yieldStreamer.redeemableBalance(0);
+        await expect(await yieldStreamer.totalRedeemableBalance(bob.address)).is.equals(
             yieldPerDeposit.mul(2)
         );
     });

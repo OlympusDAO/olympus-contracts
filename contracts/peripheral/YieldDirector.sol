@@ -7,7 +7,6 @@ import {IStaking} from "../interfaces/IStaking.sol";
 import {IYieldDirector} from "../interfaces/IYieldDirector.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
 import {YieldSplitter} from "../types/YieldSplitter.sol";
-import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 
 /**
     @title  YieldDirector (codename Tyche) 
@@ -19,7 +18,7 @@ import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccess
             withdraw or redeem functions) will take the ID of the deposit. All functions that return
             aggregated data grouped by user will take an address (iterates across all relevant IDs).
  */
-contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled {
+contract YieldDirector is IYieldDirector, YieldSplitter {
     using SafeERC20 for IERC20;
 
     error YieldDirector_InvalidAddress();
@@ -54,7 +53,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         address gOhm_,
         address staking_,
         address authority_
-    ) OlympusAccessControlled(IOlympusAuthority(authority_)) YieldSplitter(sOhm_) {
+    ) YieldSplitter(sOhm_, authority_) {
         if (sOhm_ == address(0) || gOhm_ == address(0) || staking_ == address(0) || authority_ == address(0))
             revert YieldDirector_InvalidAddress();
 
@@ -338,7 +337,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @param depositId_ Deposit ID for this donation
     */
     function redeemYield(uint256 depositId_) external override {
-        uint256 amountRedeemed = _redeem(depositId_);
+        uint256 amountRedeemed = _redeem(depositId_, msg.sender);
 
         IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
     }
@@ -348,7 +347,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @param depositId_ Deposit id for this donation
     */
     function redeemYieldAsSohm(uint256 depositId_) external override {
-        uint256 amountRedeemed = _redeem(depositId_);
+        uint256 amountRedeemed = _redeem(depositId_, msg.sender);
 
         staking.unwrap(msg.sender, amountRedeemed);
     }
@@ -357,7 +356,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @notice Redeem recipient's full donated amount of sOHM at current index as gOHM
     */
     function redeemAllYield() external override {
-        uint256 amountRedeemed = _redeemAll();
+        uint256 amountRedeemed = _redeemAll(msg.sender);
 
         IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
     }
@@ -366,9 +365,33 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @notice Redeem recipient's full donated amount of sOHM at current index as gOHM
     */
     function redeemAllYieldAsSohm() external override {
-        uint256 amountRedeemed = _redeemAll();
+        uint256 amountRedeemed = _redeemAll(msg.sender);
 
         staking.unwrap(msg.sender, amountRedeemed);
+    }
+
+    /**
+        @notice Redeems yield from a deposit and sends it to the recipient
+        @param id_ Id of the deposit.
+    */
+    function redeemDepositOnBehalfOf(uint256 id_) external override returns (uint256 amount_) {
+        if (!hasPermissionToRedeem[msg.sender]) revert YieldDirector_NotYourYield();
+
+        amount_ = _redeem(id_, recipientLookup[id_]);
+
+        IERC20(gOHM).safeTransfer(recipientLookup[id_], amount_);
+    }
+
+    /**
+        @notice Redeems all yield tied to a recipient and sends it to the recipient
+        @param recipient_ recipient address.
+    */
+    function redeemAllDepositsOnBehalfOf(address recipient_) external override returns (uint256 amount_) {
+        if (!hasPermissionToRedeem[msg.sender]) revert YieldDirector_NotYourYield();
+
+        amount_ = _redeemAll(recipient_);
+
+        IERC20(gOHM).safeTransfer(recipient_, amount_);
     }
 
     /************************
@@ -425,17 +448,18 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
     /**
         @notice Redeem available gOHM yield from a specific deposit
         @param depositId_ Deposit ID to withdraw gOHM yield from
+        @param recipient_ address of recipient
     */
-    function _redeem(uint256 depositId_) internal returns (uint256 amountRedeemed) {
+    function _redeem(uint256 depositId_, address recipient_) internal returns (uint256 amountRedeemed) {
         if (redeemDisabled) revert YieldDirector_RedeemsDisabled();
-        if (recipientLookup[depositId_] != msg.sender) revert YieldDirector_NotYourYield();
+        if (recipientLookup[depositId_] != recipient_) revert YieldDirector_NotYourYield();
 
         amountRedeemed = _redeemYield(depositId_);
 
         if (depositInfo[depositId_].principalAmount == 0) {
             _closeDeposit(depositId_, depositInfo[depositId_].depositor);
 
-            uint256[] storage receiptIds = recipientIds[msg.sender];
+            uint256[] storage receiptIds = recipientIds[recipient_];
             uint256 idsLength = receiptIds.length;
 
             for (uint256 i = 0; i < idsLength; ++i) {
@@ -450,19 +474,20 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
             delete recipientLookup[depositId_];
         }
 
-        emit Redeemed(msg.sender, amountRedeemed);
-        emit Donated(depositInfo[depositId_].depositor, msg.sender, amountRedeemed);
+        emit Redeemed(recipient_, amountRedeemed);
+        emit Donated(depositInfo[depositId_].depositor, recipient_, amountRedeemed);
     }
 
     /**
         @notice Redeem all available gOHM yield from the vault
+        @param recipient_ address of recipient
     */
-    function _redeemAll() internal returns (uint256 amountRedeemed) {
+    function _redeemAll(address recipient_) internal returns (uint256 amountRedeemed) {
         if (redeemDisabled) revert YieldDirector_RedeemsDisabled();
 
         amountRedeemed = 0;
 
-        uint256[] storage receiptIds = recipientIds[msg.sender];
+        uint256[] storage receiptIds = recipientIds[recipient_];
 
         // We iterate through the array back to front so that we can delete
         // elements from the array without changing the locations of any
@@ -471,7 +496,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
             uint256 currRedemption = _redeemYield(receiptIds[index - 1]);
             amountRedeemed += currRedemption;
 
-            emit Donated(depositInfo[receiptIds[index - 1]].depositor, msg.sender, currRedemption);
+            emit Donated(depositInfo[receiptIds[index - 1]].depositor, recipient_, currRedemption);
 
             if (depositInfo[receiptIds[index - 1]].principalAmount == 0) {
                 _closeDeposit(receiptIds[index - 1], depositInfo[receiptIds[index - 1]].depositor);
@@ -484,7 +509,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
             }
         }
 
-        emit Redeemed(msg.sender, amountRedeemed);
+        emit Redeemed(recipient_, amountRedeemed);
     }
 
     /************************

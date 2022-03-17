@@ -99,7 +99,10 @@ describe("YieldSplitter", async () => {
             staking.address,
             auth.address
         )) as Distributor;
-        yieldSplitter = (await yieldSplitterFactory.deploy(sOhm.address)) as YieldSplitterImpl;
+        yieldSplitter = (await yieldSplitterFactory.deploy(
+            sOhm.address,
+            await auth.authority()
+        )) as YieldSplitterImpl;
 
         // Setup for each component
 
@@ -256,6 +259,46 @@ describe("YieldSplitter", async () => {
             ).agnosticAmount
         );
         await expect(yieldAfter).to.equal(0);
+    });
+
+    it("can redeem someone elses yield if authorised", async () => {
+        await yieldSplitter.deposit(deployer.address, toDecimals(10));
+        await triggerRebase();
+        await yieldSplitter.givePermissionToRedeem(alice.address);
+
+        const yieldBefore = await yieldSplitter.getOutstandingYield(
+            (
+                await yieldSplitter.depositInfo(0)
+            ).principalAmount,
+            (
+                await yieldSplitter.depositInfo(0)
+            ).agnosticAmount
+        );
+        await expect(yieldBefore).to.equal("9990009990009991");
+
+        await yieldSplitter.connect(alice).redeemDepositOnBehalfOf(0);
+
+        const yieldAfter = await yieldSplitter.getOutstandingYield(
+            (
+                await yieldSplitter.depositInfo(0)
+            ).principalAmount,
+            (
+                await yieldSplitter.depositInfo(0)
+            ).agnosticAmount
+        );
+        await expect(yieldAfter).to.equal(0);
+    });
+
+    it("can revoke permission to redeem on behalf of", async () => {
+        await yieldSplitter.deposit(deployer.address, toDecimals(10));
+        await triggerRebase();
+
+        await yieldSplitter.givePermissionToRedeem(alice.address);
+        await yieldSplitter.connect(alice).redeemDepositOnBehalfOf(0);
+        await triggerRebase();
+
+        await yieldSplitter.connect(deployer).revokePermissionToRedeem(alice.address);
+        await expect(yieldSplitter.connect(alice).redeemDepositOnBehalfOf(0)).to.be.reverted;
     });
 
     it("precision issue with gOHM conversion should not allow users to withdraw more than they have", async () => {

@@ -477,6 +477,24 @@ describe("YieldDirector", async () => {
         await expect(bobBalance).is.equal(donatedAmount.add("1"));
     });
 
+    it("should redeem tokens on behalf of others", async () => {
+        // Deposit 1 gOHM into Tyche and donate to Bob
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+
+        await triggerRebase();
+
+        await tyche.givePermissionToRedeem(alice.address);
+        await tyche.connect(alice).redeemDepositOnBehalfOf("0");
+
+        const donatedAmount = await gOhm.balanceTo("10000000");
+        const bobBalance = await gOhm.balanceOf(bob.address);
+        await expect(bobBalance).is.equal(donatedAmount.add("1"));
+
+        await tyche.revokePermissionToRedeem(alice.address);
+        await expect(tyche.connect(alice).redeemYield("0")).to.be.reverted;
+    });
+
     it("should redeem tokens as sOHM", async () => {
         const principal = `1${e18}`;
         await tyche.deposit(principal, bob.address);
@@ -499,6 +517,21 @@ describe("YieldDirector", async () => {
         await triggerRebase();
 
         await tyche.connect(bob).redeemAllYield();
+
+        const donatedAmount = await gOhm.balanceTo("20000000");
+        const bobBalance = await gOhm.balanceOf(bob.address);
+        await expect(bobBalance).is.equal(donatedAmount.add("2"));
+    });
+
+    it("should redeem all tokens on bahalf of others", async () => {
+        const principal = `1${e18}`;
+        await tyche.deposit(principal, bob.address);
+        await tyche.connect(alice).deposit(principal, bob.address);
+
+        await triggerRebase();
+
+        await tyche.givePermissionToRedeem(alice.address);
+        await tyche.connect(alice).redeemAllDepositsOnBehalfOf(bob.address);
 
         const donatedAmount = await gOhm.balanceTo("20000000");
         const bobBalance = await gOhm.balanceOf(bob.address);

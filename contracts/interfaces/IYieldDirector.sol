@@ -36,9 +36,5 @@ interface IYieldDirector {
 
     function redeemAllYieldAsSohm() external;
 
-    function redeemableBalance(uint256 depositId_) external view returns (uint256);
-
-    function totalRedeemableBalance(address recipient_) external view returns (uint256);
-
     function getRecipientIds(address recipient_) external view returns (uint256[] memory);
 }
