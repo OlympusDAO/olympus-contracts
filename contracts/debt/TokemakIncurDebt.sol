@@ -96,8 +96,8 @@ contract TokemakIncurDebt is OlympusAccessControlledV2 {
     }
 
     /**
-     * @notice deposits gOHM to use as collateral
-     * - msg.sender must be whitelisted
+     * @notice deposits gOHM/sOHM to use as collateral
+     * - msg.sender must be a borrower
      * - this contract must have been approved _amount
      * @dev will unwrap and hold as sOHM in this contract
      * @param _amount amount of gOHM
@@ -121,7 +121,7 @@ contract TokemakIncurDebt is OlympusAccessControlledV2 {
 
     /**
      * @notice allow borrowers to borrow OHM
-     * - msg.sender must be borrower
+     * - msg.sender must be a borrower
      * - _ohmAmount must be <= availableDebt
      * @param _ohmAmount amount of OHM to borrow
      */
@@ -140,12 +140,13 @@ contract TokemakIncurDebt is OlympusAccessControlledV2 {
     }
 
     /**
-     * @notice withdraws gOHM  to _to address
-     * - msg.sender must be whitelisted
+     * @notice withdraws gOHM/sOHM  to _to address
+     * - msg.sender must be a borrower
      * - _amount (in OHM) must be less than or equal to depositedOhm - debt
      * @dev should approve the staking contract to spend users sOHM
-     * @param _amount amount of gOHM to withdraw
-     * @param _to address to send gOHM
+     * @param _amount amount of gOHM/sOHM to withdraw
+     * @param _to address to send gOHM/sOHM
+     * @param _token token to send _amount
      */
     function withdraw(
         uint256 _amount,
@@ -153,6 +154,8 @@ contract TokemakIncurDebt is OlympusAccessControlledV2 {
         address _token
     ) external {
         require(_amount > 0, "invalid number");
+        require(borrower[msg.sender].isBorrower, "not a borrower");
+
         updateCollateralInSOHM(msg.sender);
 
         if (_token == gOHM) {
@@ -180,8 +183,8 @@ contract TokemakIncurDebt is OlympusAccessControlledV2 {
     }
 
     /**
-     * @notice deposits gOHM to use as collateral
-     * - msg.sender must be whitelisted
+     * @notice repay debt with collateral
+     * - msg.sender must be a borrower
      * - msg.sender's OHM allowance must be >= _ohmAmount
      */
     function repayDebtWithCollateral() external {
@@ -195,8 +198,8 @@ contract TokemakIncurDebt is OlympusAccessControlledV2 {
     }
 
     /**
-     * @notice deposits gOHM to use as collateral
-     * - msg.sender must be whitelisted
+     * @notice repay debt with collateral and withdraw the leftover
+     * - msg.sender must be a borrower
      * - msg.sender's OHM allowance must be >= _ohmAmount
      */
     function repayDebtWithCollateralAndWithdrawTheRest(address _tokenToReceiveExcess) external {
@@ -216,19 +219,9 @@ contract TokemakIncurDebt is OlympusAccessControlledV2 {
         borrower[msg.sender].collateralInGOHM = 0;
     }
 
-    function _repay() internal {
-        require(borrower[msg.sender].isBorrower, "not a borrower");
-        require(borrower[msg.sender].debt > 0, "does not have outstanding debt");
-
-        updateCollateralInSOHM(msg.sender);
-
-        IStaking(staking).unstake(address(this), borrower[msg.sender].debt, false, true);
-        ITreasury(treasury).repayDebtWithOHM(borrower[msg.sender].debt);
-    }
-
     /**
-     * @notice deposits gOHM to use as collateral
-     * - msg.sender must be whitelisted
+     * @notice deposits OHM to pay debt
+     * - msg.sender must be a borrower
      * - msg.sender's OHM allowance must be >= _ohmAmount
      * @param _ohmAmount amount of OHM to borrow
      */
@@ -245,6 +238,7 @@ contract TokemakIncurDebt is OlympusAccessControlledV2 {
     /**
      * @notice repays debt using collateral and returns remaining tokens to owner
      * - onlyOwner (or governance)
+     * - sends remaining tokens to owner in sOHM
      * @param _account the address that will interact with contract
      * @param _to where to send remaining gOHM
      */
@@ -281,6 +275,10 @@ contract TokemakIncurDebt is OlympusAccessControlledV2 {
         borrower[_account].collateralInGOHM = 0;
     }
 
+    /**
+     * @notice updates borrowers sOHM collateral to current index
+     * @param _account borrowers address
+     */
     function updateCollateralInSOHM(address _account) public {
         uint256 sBalance = IgOHM(gOHM).balanceFrom(borrower[_account].collateralInGOHM);
         borrower[_account].collateralInSOHM = sBalance;
@@ -293,5 +291,15 @@ contract TokemakIncurDebt is OlympusAccessControlledV2 {
     function getAvailableToBorrow() internal view returns (uint256) {
         uint256 sBalance = IgOHM(gOHM).balanceFrom(borrower[msg.sender].collateralInGOHM);
         return sBalance - borrower[msg.sender].debt;
+    }
+
+    function _repay() internal {
+        require(borrower[msg.sender].isBorrower, "not a borrower");
+        require(borrower[msg.sender].debt > 0, "does not have outstanding debt");
+
+        updateCollateralInSOHM(msg.sender);
+
+        IStaking(staking).unstake(address(this), borrower[msg.sender].debt, false, true);
+        ITreasury(treasury).repayDebtWithOHM(borrower[msg.sender].debt);
     }
 }
