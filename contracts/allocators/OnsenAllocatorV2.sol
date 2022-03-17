@@ -19,7 +19,7 @@ interface IMasterChef {
 
     function emergencyWithdraw(uint256 _pid) external;
 
-    function userInfo(uint256 _pid, address _user) external returns (UserInfo memory);
+    function userInfo(uint256 _pid, address _user) external view returns (UserInfo memory);
 }
 
 interface ISushiBar {
@@ -59,6 +59,11 @@ contract OnsenAllocator is BaseAllocator {
         sushi = _sushi;
         require(_xSushi != address(0));
         xSushi = _xSushi;
+
+        // approve for safety, yes toke is being instantly sent to treasury and that is fine
+        // but to be absolutely safe this one approve won't hurt
+        IERC20(sushi).approve(address(extender), type(uint256).max);
+        IERC20(xSushi).approve(address(extender), type(uint256).max);
     }
 
     /**
@@ -112,21 +117,13 @@ contract OnsenAllocator is BaseAllocator {
         }
     }
 
-    function _deactivate(bool panic) internal override {
-        _deallocateAll();
-
-        if (panic) {
-            for (uint256 i; i < _tokens.length; i++) {
-                IERC20 token = _tokens[i];
-                token.transfer(treasury, token.balanceOf(address(this)));
-            }
-        }
-    }
+    function _deactivate(bool panic) internal override {}
 
     function _prepareMigration() internal override {}
 
     function amountAllocated(uint256 id) public view override returns (uint256) {
-        return _tokens[tokenIds[id]].balanceOf(address(this));
+        UserInfo memory currentUserInfo = IMasterChef(masterChef).userInfo(id, address(this));
+        return currentUserInfo.amount;
     }
 
     function rewardTokens() public view override returns (IERC20[] memory) {
@@ -147,18 +144,6 @@ contract OnsenAllocator is BaseAllocator {
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
-
-    function _deallocateAll() internal {
-        // reads
-        uint256[] memory amounts = new uint256[](_tokens.length);
-
-        // interactions
-        for (uint256 i; i < _tokens.length; i++) {
-            amounts[i] = _tokens[i].balanceOf(address(this));
-        }
-
-        deallocate(amounts);
-    }
 
     /**
      * @notice stake sushi rewards if enter is true else return funds to treasury.
