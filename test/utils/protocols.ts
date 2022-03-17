@@ -1,9 +1,6 @@
 // our imports
 import { coins } from "./coins";
 
-// external, unused for now but will try when i have time
-import Fuse from "@rari-capital/fuse-sdk";
-
 // alchemix
 const alchemix = {
     alcx: coins.alcx,
@@ -50,6 +47,7 @@ const rari = {
     fuse: {
         directory: "0x835482FE0532f169024d5E9410199369aAD5C77E",
         primaryLens: "0x6Dc585Ad66A10214Ef0502492B0CC02F0e836eec",
+        tribeRewards: "0x73F16f0c0Cd1A078A54894974C5C054D8dC1A3d7",
     },
 };
 

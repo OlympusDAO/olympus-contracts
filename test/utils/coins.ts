@@ -27,7 +27,7 @@ const btrfly = "0xC0d4Ceb216B3BA9C3701B291766fDCbA977ceC3A";
 const xbtrfly = "0xCC94Faf235cC5D3Bf4bEd3a30db5984306c86aBC";
 const alcx = "0xdbdb4d16eda451d0503b854cf79d55697f90c8df";
 const toke = "0x2e9d63788249371f1dfc918a52f8d799f4a38c94";
-const tribe = "0xc7283b66Eb1EB5FB86327f08e1B5816b0720212";
+const tribe = "0xc7283b66Eb1EB5FB86327f08e1B5816b0720212B";
 
 // AAVE
 const adai = "0x028171bCA77440897B824Ca71D1c56caC55b68A3";
@@ -56,6 +56,7 @@ export const coins = {
     xbtrfly,
     alcx,
     toke,
+    tribe,
     adai,
     aweth,
     ausdc,
