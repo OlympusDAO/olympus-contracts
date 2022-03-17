@@ -13,7 +13,7 @@ interface IClaim {
     struct Term {
         uint256 percent; // 4 decimals ( 5000 = 0.5% )
         uint256 claimed; // static number
-        uint256 gClaimed; // rebase-tracking number
+        uint256 wClaimed; // rebase-tracking number
         uint256 max; // maximum nominal OHM amount can claim
     }
 
@@ -56,7 +56,7 @@ contract GenesisClaim is Ownable {
     // tracks rebase-agnostic balance
     IgOHM internal immutable gOHM = IgOHM(0x0ab87046fBb341D058F17CBC4c1133F25a20a52f);
     // previous deployment of contract (to migrate terms)
-    IClaim internal immutable previous = IClaim(0x5b2303Cc2fdE10fc8dE92d6728D0391b5dbaD9e4);
+    IClaim internal immutable previous = IClaim(0xEaAA9d97Be33a764031eDdEbA1cB6Cb385350Ca3);
 
     // track 1/10 as static. governance can disable if desired.
     bool public useStatic;
@@ -135,7 +135,7 @@ contract GenesisClaim is Ownable {
      */
     function pullWalletChange(address _oldAddress) external {
         require(walletChange[_oldAddress] == msg.sender, "Old wallet did not push");
-        require(terms[msg.sender].percent == 0, "Wallet already exists");
+        require(terms[msg.sender].percent != 0, "Wallet already exists");
 
         walletChange[_oldAddress] = address(0);
         terms[msg.sender] = terms[_oldAddress];
@@ -191,7 +191,7 @@ contract GenesisClaim is Ownable {
     function migrate(address[] memory _addresses) external onlyOwner {
         for (uint256 i = 0; i < _addresses.length; i++) {
             IClaim.Term memory term = previous.terms(_addresses[i]);
-            setTerms(_addresses[i], term.percent, term.claimed, term.gClaimed, term.max);
+            setTerms(_addresses[i], term.percent, term.claimed, term.wClaimed, term.max);
         }
     }
 

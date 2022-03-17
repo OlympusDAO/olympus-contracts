@@ -156,8 +156,8 @@ contract BalancerLiquidityMigrator is OlympusAccessControlled {
         balancerVault.joinPool(balancerPoolID, address(this), address(treasury), poolRequest);
 
         // Send any leftover OHM back to guardian and WETH and DAI to treasury
-        IERC20(OHM).safeTransfer(authority.guardian(), IERC20(OHM).balanceOf(address(this)));
-        IERC20(WETH).safeTransfer(address(treasury), IERC20(WETH).balanceOf(address(this)));
-        IERC20(DAI).safeTransfer(address(treasury), IERC20(DAI).balanceOf(address(this)));
+        IERC20(OHM).safeTransfer(authority.guardian(), amountOHM);
+        IERC20(WETH).safeTransfer(address(treasury), amountETH);
+        IERC20(DAI).safeTransfer(address(treasury), amountDAI);
     }
 }
