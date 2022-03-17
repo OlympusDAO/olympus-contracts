@@ -14,19 +14,19 @@ interface IOHMIndexWrapper {
     function index() external view returns (uint256 index);
 }
 
+error YieldSplitter_NotYourDeposit();
+
 /**
     @title YieldSplitter
     @notice Abstract contract that allows users to create deposits for their gOHM and have
             their yield claimable by the specified recipient party. This contract's functions
             are designed to be as generic as possible. This contract's responsibility is
-            the accounting of the yield splitting. All other logic such as error handling,
+            the accounting of the yield splitting and some error handling. All other logic such as
             emergency controls, sending and recieving gOHM is up to the implementation of
             this abstract contract to handle.
  */
 abstract contract YieldSplitter {
     using SafeERC20 for IERC20;
-
-    error YieldSplitter_NotYourDeposit();
 
     IOHMIndexWrapper public immutable indexWrapper;
 
@@ -74,7 +74,13 @@ abstract contract YieldSplitter {
         @param id_ Id of the deposit.
         @param amount_ Amount of gOhm to add. 18 decimals.
     */
-    function _addToDeposit(uint256 id_, uint256 amount_) internal {
+    function _addToDeposit(
+        uint256 id_,
+        uint256 amount_,
+        address depositorAddress
+    ) internal {
+        if (depositInfo[id_].depositor != depositorAddress) revert YieldSplitter_NotYourDeposit();
+
         DepositInfo storage userDeposit = depositInfo[id_];
         userDeposit.principalAmount += _fromAgnostic(amount_);
         userDeposit.agnosticAmount += amount_;
@@ -85,8 +91,12 @@ abstract contract YieldSplitter {
         @param id_ Id of the deposit.
         @param amount_ Amount of gOHM to withdraw.
     */
-    function _withdrawPrincipal(uint256 id_, uint256 amount_) internal {
-        if (depositInfo[id_].depositor != msg.sender) revert YieldSplitter_NotYourDeposit();
+    function _withdrawPrincipal(
+        uint256 id_,
+        uint256 amount_,
+        address depositorAddress
+    ) internal {
+        if (depositInfo[id_].depositor != depositorAddress) revert YieldSplitter_NotYourDeposit();
 
         DepositInfo storage userDeposit = depositInfo[id_];
         userDeposit.principalAmount -= _fromAgnostic(amount_); // Reverts if amount > principal due to underflow
@@ -98,8 +108,8 @@ abstract contract YieldSplitter {
         @param id_ Id of the deposit.
         @return amountWithdrawn : amount of gOHM withdrawn. 18 decimals.
     */
-    function _withdrawAllPrincipal(uint256 id_) internal returns (uint256 amountWithdrawn) {
-        if (depositInfo[id_].depositor != msg.sender) revert YieldSplitter_NotYourDeposit();
+    function _withdrawAllPrincipal(uint256 id_, address depositorAddress) internal returns (uint256 amountWithdrawn) {
+        if (depositInfo[id_].depositor != depositorAddress) revert YieldSplitter_NotYourDeposit();
 
         DepositInfo storage userDeposit = depositInfo[id_];
         amountWithdrawn = _toAgnostic(userDeposit.principalAmount);
@@ -127,7 +137,12 @@ abstract contract YieldSplitter {
         @return principal : amount of principal that was deleted. in gOHM. 18 decimals.
         @return agnosticAmount : total amount of gOHM deleted. Principal + Yield. 18 decimals.
     */
-    function _closeDeposit(uint256 id_) internal returns (uint256 principal, uint256 agnosticAmount) {
+    function _closeDeposit(uint256 id_, address depositorAddress)
+        internal
+        returns (uint256 principal, uint256 agnosticAmount)
+    {
+        if (depositInfo[id_].depositor != depositorAddress) revert YieldSplitter_NotYourDeposit();
+
         principal = _toAgnostic(depositInfo[id_].principalAmount);
         agnosticAmount = depositInfo[id_].agnosticAmount;
 

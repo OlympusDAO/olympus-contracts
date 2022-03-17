@@ -68,6 +68,8 @@ make run
 ## 📖 Guides
 
 ### Contracts
+- [Allocator Contribution Guidelines](https://hackmd.io/@3_ZONBhqRBukBJN302eDdQ/rk4qUyOlq)
+- [Allocator Interaction Instructions](https://hackmd.io/@OxbBIYzRTlqgmpSwc1bwWA/SJflVXcWq)
 - [Allocator version 1 guide (1.0.0)](./docs/guides/allocator_v1_guide.md).
 - [System Architecture (image)](./docs/guides/system_architecture.md)
 ### Testing
