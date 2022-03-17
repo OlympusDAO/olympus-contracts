@@ -25,10 +25,6 @@ describe("YieldDirector", async () => {
         await ethers.provider.send("evm_mine", []);
     };
 
-    // Calculate index after some number of epochs. Takes principal and rebase rate.
-    // TODO verify this works
-    const calcIndex = (principal, rate, epochs) => principal * (1 + rate) ** epochs;
-
     // TODO needs cleanup. use Bignumber.
     // Mine block and rebase. Returns the new index.
     const triggerRebase = async () => {
@@ -63,10 +59,6 @@ describe("YieldDirector", async () => {
     before(async () => {
         [deployer, alice, bob, carol] = await ethers.getSigners();
 
-        //owner = await ethers.getSigner("0x763a641383007870ae96067818f1649e5586f6de")
-
-        //erc20Factory = await ethers.getContractFactory('MockERC20');
-        // TODO use dai as erc20 for now
         authFactory = await ethers.getContractFactory("OlympusAuthority");
         erc20Factory = await ethers.getContractFactory("DAI");
 

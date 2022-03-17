@@ -485,8 +485,6 @@ contract YieldDirector is IYieldDirector, YieldSplitter {
     function _redeemAll(address recipient_) internal returns (uint256 amountRedeemed) {
         if (redeemDisabled) revert YieldDirector_RedeemsDisabled();
 
-        amountRedeemed = 0;
-
         uint256[] storage receiptIds = recipientIds[recipient_];
 
         // We iterate through the array back to front so that we can delete
