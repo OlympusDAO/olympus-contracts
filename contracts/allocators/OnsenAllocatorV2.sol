@@ -5,10 +5,10 @@ import "../libraries/Address.sol";
 // types
 import "../types/BaseAllocator.sol";
 
- struct UserInfo {
-        uint256 amount; // How many LP tokens the user has provided.
-        uint256 rewardDebt; 
- }
+struct UserInfo {
+    uint256 amount; // How many LP tokens the user has provided.
+    uint256 rewardDebt;
+}
 
 interface IMasterChef {
     function pendingSushi(uint256 _pid, address _user) external view returns (uint256);
