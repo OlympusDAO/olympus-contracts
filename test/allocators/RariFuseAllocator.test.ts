@@ -33,6 +33,7 @@ import {
     RariFuseAllocator__factory,
     FusePoolDirectory,
     RariTroller,
+    FToken,
 } from "../../types";
 
 /// SET TYPES HERE, VARIABLES ARE PRESET
@@ -41,13 +42,9 @@ type ALLOCATORT = RariFuseAllocator;
 type FACTORYT = RariFuseAllocator__factory;
 
 /// INTERFACES
-interface fData {
-    idTroller: BigNumber;
-    token: string;
-}
-
 interface fDataExpanded {
-    f: fData;
+    f: string;
+    idTroller: BigNumber;
     base: string;
     rT: string;
 }
@@ -114,7 +111,6 @@ describe(ALLOCATORN, () => {
     let AID: AllocatorInitData;
     let FAID: FuseAllocatorInitData;
     let PSD: ProtocolSpecificData;
-    let FD: fData;
     let FDEA: fDataExpanded[] = [];
     let tribeWhale: SignerWithAddress;
 
@@ -126,7 +122,7 @@ describe(ALLOCATORN, () => {
     // it will be used below.
 
     async function setupTestingEnvironment(): Promise<void> {
-        underlying = await helpers.getCoins([coins.dai, coins.lusd, coins.frax, coins.weth]);
+        underlying = await helpers.getCoins([coins.dai, coins.lusd, coins.frax]);
 
         fpd = (await ethers.getContractAt(
             "FusePoolDirectory",
@@ -139,17 +135,15 @@ describe(ALLOCATORN, () => {
 
         const markets: string[] = await troller.getAllMarkets();
 
+        utility = await helpers.getCoins([coins.dai, coins.dai, coins.dai]);
+
         for (let i = 0; i < markets.length; i++) {
             const fTok: ERC20 = await helpers.getCoin(markets[i]);
             const ticker: string = await fTok.symbol();
 
-            if (
-                "fDAI-6" == ticker ||
-                "fLUSD-6" == ticker ||
-                "f6-FRAX" == ticker ||
-                "f6-ETH" == ticker
-            )
-                utility.push(fTok);
+            if ("fDAI-6" == ticker) utility[0] = fTok;
+            if ("fLUSD-6" == ticker) utility[1] = fTok;
+            if ("f6-FRAX" == ticker) utility[2] = fTok;
         }
 
         reward.push(await helpers.getCoin(helpers.checksum(coins.tribe)));
@@ -170,14 +164,12 @@ describe(ALLOCATORN, () => {
             spec: PSD,
         };
 
-        for (let i = 0; i < utility.length; i++) {
-            FD = {
-                idTroller: bnn(0), // only one
-                token: utility[i].address,
-            };
+        const lossThresholds: BigNumber[] = [bne(10, 17), bne(10, 17), bne(10, 17)];
 
+        for (let i = 0; i < utility.length; i++) {
             FDEA.push({
-                f: FD,
+                f: utility[i].address,
+                idTroller: bnn(0),
                 base: underlying[i].address,
                 rT: i == 0 ? reward[0].address : helpers.constants.addressZero,
             });
@@ -194,6 +186,7 @@ describe(ALLOCATORN, () => {
     // in these tests should be allocator.activate()
 
     async function beforeEachInitializationProcedureTest(): Promise<void> {
+        snapshotId = await helpers.snapshot();
         allocator = await factory.connect(owner).deploy(FAID);
     }
 
@@ -263,11 +256,13 @@ describe(ALLOCATORN, () => {
                         allocated: bne(10, 22),
                         loss: bne(10, 19),
                     });
+
                 const limits: any = await extender.getAllocatorLimits(
                     totalAllocatorCountBefore.add(i + 1)
                 );
 
                 expect(limits.allocated).to.equal(bne(10, 22));
+
                 expect(limits.loss).to.equal(bne(10, 19));
             }
 
@@ -278,7 +273,7 @@ describe(ALLOCATORN, () => {
     }
 
     async function afterEachInitializationProcedureTest(): Promise<void> {
-        return Promise.resolve(undefined);
+        await helpers.revert(snapshotId);
     }
 
     // Now define a basic version so it can be repeatedly called.
@@ -286,7 +281,6 @@ describe(ALLOCATORN, () => {
     async function initialize(): Promise<void> {
         allocator = await factory.connect(owner).deploy(FAID);
         await allocator.connect(guardian).fusePoolAdd(troller.address);
-
         for (let i = 0; i < FDEA.length; i++) {
             await allocator.connect(guardian).fDataAdd(FDEA[i]);
             await extender.connect(guardian).registerDeposit(allocator.address);
@@ -294,19 +288,19 @@ describe(ALLOCATORN, () => {
                 .connect(guardian)
                 .setAllocatorLimits(totalAllocatorCountBefore.add(i + 1), {
                     allocated: bne(10, 23),
-                    loss: bne(10, 19),
+                    loss: bne(10, 20),
                 });
         }
 
         await allocator.connect(guardian).activate();
 
         function amount(i: number): BigNumber {
-            return i == 4 ? bnn(10) : bne(10, 21).mul(5);
+            return i == 4 ? bne(10, 17).mul(2) : bne(10, 21).mul(5);
         }
 
-        for (let i = 1; i < 5; i++) {
+        for (let i = 1; i < 4; i++) {
             await expect(() =>
-                extender.requestFundsFromTreasury(1, amount(i))
+                extender.connect(guardian).requestFundsFromTreasury(i, amount(i))
             ).to.changeTokenBalance(underlying[i - 1], allocator, amount(i));
         }
     }
@@ -317,32 +311,135 @@ describe(ALLOCATORN, () => {
 
     async function getDepositIds(): Promise<BigNumber[]> {
         // sample return to fix compile
-        let output: BigNumber[] = [bnn(1), bnn(2), bnn(3), bnn(4)];
+        let output: BigNumber[] = [bnn(1), bnn(2), bnn(3)];
         return output;
     }
 
     // And all other preparatory if they are necessary.
 
     async function beforeEachUtilityAndRewardsTest(): Promise<void> {
-        for (let i = 1; i < 5; i++) {
-            await allocator.update(i);
+        for (let i = 1; i < 4; i++) {
+            await allocator.connect(guardian).update(i);
         }
     }
 
     // UPDATE TESTS
 
-    async function beforeEachUpdateTest(): Promise<void> {
-        return Promise.resolve(undefined);
-    }
+    async function beforeEachUpdateTest(): Promise<void> {}
 
     // throw it blocks inside and use the naming optimally, it consists of
     // "passing:" and "revert:" and then specifiers after it
 
-    function updateRevertingTests(depositId: number): void {}
+    function updateRevertingTests(): void {
+        it("revert: should revert if non-guardian calls function", async () => {
+            await expect(allocator.connect(owner).update(1)).to.be.reverted;
+        });
+    }
 
-    function updateGainTests(depositId: number): void {}
+    function updateGainTests(): void {
+        it("passing: should be able to harvest properly with gain", async () => {
+            let perf: any[] = [];
 
-    function updateLossTests(depositId: number): void {}
+            for (let i = 1; i < 4; i++) {
+                await allocator.connect(guardian).update(i);
+                perf.push(await extender.getAllocatorPerformance(i));
+            }
+
+            await helpers.tmine(24 * 3600 * 100);
+
+            for (let i = 1; i < 4; i++) {
+                await allocator.connect(guardian).update(i);
+                expect((await extender.getAllocatorPerformance(i))[1]).to.be.gte(perf[i - 1][1]);
+                perf[i - 1] = await extender.getAllocatorPerformance(i);
+            }
+
+            await helpers.tmine(24 * 3600 * 100);
+
+            for (let i = 1; i < 4; i++) {
+                await allocator.connect(guardian).update(i);
+                expect((await extender.getAllocatorPerformance(i))[1]).to.be.gte(perf[i - 1][1]);
+            }
+        });
+    }
+
+    function updateLossTests(): void {
+        it("passing: should be able to harvest properly with loss", async () => {
+            let perf: any[] = [];
+            const as: SignerWithAddress = await helpers.impersonate(allocator.address);
+            await helpers.addEth(allocator.address, bne(10, 22));
+
+            for (let i = 0; i < 3; i++) {
+                await utility[i]
+                    .connect(as)
+                    .transfer(
+                        helpers.constants.addressZero,
+                        (await utility[i].balanceOf(allocator.address)).div(200)
+                    );
+            }
+
+            for (let i = 1; i < 4; i++) {
+                await allocator.connect(guardian).update(i);
+                perf.push(await extender.getAllocatorPerformance(i));
+            }
+
+            await helpers.tmine(24 * 3600 * 100);
+
+            for (let i = 0; i < 3; i++) {
+                await utility[i]
+                    .connect(as)
+                    .transfer(
+                        helpers.constants.addressZero,
+                        (await utility[i].balanceOf(allocator.address)).div(200)
+                    );
+            }
+
+            for (let i = 1; i < 4; i++) {
+                await allocator.connect(guardian).update(i);
+                expect((await extender.getAllocatorPerformance(i))[0]).to.be.gte(perf[i - 1][0]);
+                perf[i - 1] = await extender.getAllocatorPerformance(i);
+            }
+
+            await helpers.tmine(24 * 3600 * 100);
+
+            for (let i = 0; i < 3; i++) {
+                await utility[i]
+                    .connect(as)
+                    .transfer(
+                        helpers.constants.addressZero,
+                        (await utility[i].balanceOf(allocator.address)).div(200)
+                    );
+            }
+
+            for (let i = 1; i < 4; i++) {
+                await allocator.connect(guardian).update(i);
+                expect((await extender.getAllocatorPerformance(i))[0]).to.be.gte(perf[i - 1][0]);
+            }
+        });
+
+        it("passing: should be able to also break allocator if loss too large", async () => {
+            const as: SignerWithAddress = await helpers.impersonate(allocator.address);
+            await helpers.addEth(allocator.address, bne(10, 22));
+
+            for (let i = 1; i < 4; i++) {
+                await allocator.connect(guardian).update(i);
+            }
+
+            for (let i = 0; i < 3; i++) {
+                await utility[i]
+                    .connect(as)
+                    .transfer(
+                        helpers.constants.addressZero,
+                        (await utility[i].balanceOf(allocator.address)).div(2)
+                    );
+            }
+
+            await allocator.connect(guardian).update(1);
+
+            for (let i = 1; i < 4; i++) {
+                await expect(allocator.connect(guardian).update(i)).to.be.reverted;
+            }
+        });
+    }
 
     // DEALLOCATE
 
@@ -361,7 +458,15 @@ describe(ALLOCATORN, () => {
     // Return out input for deallocate *some*
 
     async function beforeEachDeallocateTest(): Promise<BigNumber[]> {
-        return [BigNumber.from(0)];
+        for (let i = 1; i < 4; i++) {
+            await allocator.connect(guardian).update(i);
+        }
+
+        await helpers.tmine(24 * 3600 * 43);
+
+        const amnt: BigNumber = bne(10, 21).mul(5).div(2);
+
+        return [amnt, amnt, amnt];
     }
 
     // extender withdrawal, you need to deallocate before it
@@ -373,29 +478,52 @@ describe(ALLOCATORN, () => {
     // prepareMigration
 
     async function beforeEachPrepareMigrationTest(): Promise<void> {
-        return Promise.resolve(undefined);
+        for (let i = 1; i < 4; i++) {
+            await allocator.connect(guardian).update(i);
+        }
+
+        await helpers.tmine(24 * 3600 * 43);
     }
 
     async function prepareMigrationRevertingTests(): Promise<void> {
-        return Promise.resolve(undefined);
+	it("revert: should fail with wrong access ", async () => {
+		await expect(allocator.connect(owner).prepareMigration()).to.be.reverted
+	})
     }
 
     async function prepareMigrationPassingTests(): Promise<void> {
-        return Promise.resolve(undefined);
+	it("passing: should prepare migration", async () => {
+	        const bal1: BigNumber = await reward[0].balanceOf(allocator.address)
+		await allocator.connect(guardian).prepareMigration()
+	        const bal2: BigNumber = await reward[0].balanceOf(allocator.address)
+		expect(bal2).to.be.gte(bal1)
+	})
     }
 
     // migrate
 
     async function beforeEachMigrateTest(): Promise<void> {
-        return Promise.resolve(undefined);
+		await allocator.connect(guardian).prepareMigration()
+        let fallocator = await factory.connect(owner).deploy(FAID);
+        await fallocator.connect(guardian).fusePoolAdd(troller.address);
+            await fallocator.connect(guardian).fDataAdd(FDEA[0]);
+
+
+            await extender.connect(guardian).registerDeposit(fallocator.address);
+
+        await fallocator.connect(guardian).activate();
     }
 
     async function migrateRevertingTests(): Promise<void> {
-        return Promise.resolve(undefined);
+	it("revert: should fail with wrong access ", async () => {
+		await expect(allocator.connect(owner).migrate()).to.be.reverted
+	})
     }
 
     async function migratePassingTests(): Promise<void> {
-        return Promise.resolve(undefined);
+	it("passing: should migrate", async () => {
+		await allocator.connect(guardian).migrate()
+	})
     }
 
     /// TESTS
@@ -486,11 +614,11 @@ describe(ALLOCATORN, () => {
             const allTokens: string[] = await allocator.tokens();
 
             for (let i = 0; i < allTokens.length; i++) {
-                expect(allTokens[i]).to.equal(underlying[i]);
+                expect(allTokens[i]).to.equal(underlying[i].address);
             }
         });
 
-        describe.only("utility + rewards", () => {
+        describe("utility + rewards", () => {
             beforeEach(async () => {
                 await beforeEachUtilityAndRewardsTest();
             });
@@ -500,11 +628,11 @@ describe(ALLOCATORN, () => {
                 const rTokens: string[] = await allocator.rewardTokens();
 
                 for (let i = 0; i < utility.length; i++) {
-                    expect(uTokens[i]).to.equal(utility[i]);
+                    expect(uTokens[i]).to.equal(utility[i].address);
                 }
 
                 for (let i = 0; i < reward.length; i++) {
-                    expect(rTokens[i]).to.equal(reward[i]);
+                    expect(rTokens[i]).to.equal(reward[i].address);
                 }
             });
 
@@ -525,11 +653,13 @@ describe(ALLOCATORN, () => {
                     const amount: BigNumber = balance.div(2);
 
                     await expect(() =>
-                        extender["returnRewardsToTreasury(address,address,uint256)"](
-                            allocator.address,
-                            uToken.address,
-                            amount
-                        )
+                        extender
+                            .connect(guardian)
+                            ["returnRewardsToTreasury(address,address,uint256)"](
+                                allocator.address,
+                                uToken.address,
+                                amount
+                            )
                     ).to.changeTokenBalance(uToken, extender, amount);
                 });
 
@@ -538,11 +668,13 @@ describe(ALLOCATORN, () => {
                     const balance: BigNumber = await uToken.balanceOf(allocator.address);
 
                     await expect(() =>
-                        extender["returnRewardsToTreasury(address,address,uint256)"](
-                            allocator.address,
-                            uToken.address,
-                            balance
-                        )
+                        extender
+                            .connect(guardian)
+                            ["returnRewardsToTreasury(address,address,uint256)"](
+                                allocator.address,
+                                uToken.address,
+                                balance
+                            )
                     ).to.changeTokenBalance(uToken, extender, balance);
                 });
             }
@@ -564,11 +696,13 @@ describe(ALLOCATORN, () => {
                     const amount: BigNumber = balance.div(2);
 
                     await expect(() =>
-                        extender["returnRewardsToTreasury(address,address,uint256)"](
-                            allocator.address,
-                            rToken.address,
-                            amount
-                        )
+                        extender
+                            .connect(guardian)
+                            ["returnRewardsToTreasury(address,address,uint256)"](
+                                allocator.address,
+                                rToken.address,
+                                amount
+                            )
                     ).to.changeTokenBalance(rToken, extender, amount);
                 });
 
@@ -577,11 +711,13 @@ describe(ALLOCATORN, () => {
                     const balance: BigNumber = await rToken.balanceOf(allocator.address);
 
                     await expect(() =>
-                        extender["returnRewardsToTreasury(address,address,uint256)"](
-                            allocator.address,
-                            rToken.address,
-                            balance
-                        )
+                        extender
+                            .connect(guardian)
+                            ["returnRewardsToTreasury(address,address,uint256)"](
+                                allocator.address,
+                                rToken.address,
+                                balance
+                            )
                     ).to.changeTokenBalance(rToken, extender, balance);
                 });
             }
@@ -591,15 +727,12 @@ describe(ALLOCATORN, () => {
             beforeEach(async () => {
                 await beforeEachUpdateTest();
             });
-
-            for (let i = 0; i < depositIds.length; i++) {
-                updateRevertingTests(i);
-                updateGainTests(i);
-                updateLossTests(i);
-            }
+            updateRevertingTests();
+            updateGainTests();
+            updateLossTests();
         });
 
-        let deallocateSomeInput: BigNumber[];
+        let deallocateSomeInput: BigNumber[] = [];
 
         describe("deallocate()", () => {
             beforeEach(async () => {
@@ -617,7 +750,7 @@ describe(ALLOCATORN, () => {
                     );
                 }
 
-                await allocator.deallocate(deallocateSomeInput);
+                await allocator.connect(guardian).deallocate(deallocateSomeInput);
 
                 for (let i = 0; i < underlying.length; i++) {
                     expect(await underlying[i].balanceOf(allocator.address)).to.be.gte(expected[i]);
@@ -639,7 +772,7 @@ describe(ALLOCATORN, () => {
                     expected[i] = expected[i].sub(expected[i].mul(deallocateAllError).div(100));
                 }
 
-                await allocator.deallocate(deallocateAllInput);
+                await allocator.connect(guardian).deallocate(deallocateAllInput);
 
                 for (let i = 0; i < underlying.length; i++) {
                     expect(await underlying[i].balanceOf(allocator.address)).to.be.gte(expected[i]);
@@ -668,7 +801,7 @@ describe(ALLOCATORN, () => {
                         const amount: BigNumber = balance.div(2);
 
                         await expect(() =>
-                            extender.returnFundsToTreasury(depositIds[i], amount)
+                            extender.connect(guardian).returnFundsToTreasury(depositIds[i], amount)
                         ).to.changeTokenBalance(unToken, treasury, amount);
                     });
 
@@ -677,7 +810,7 @@ describe(ALLOCATORN, () => {
                         const balance: BigNumber = await unToken.balanceOf(allocator.address);
 
                         await expect(() =>
-                            extender.returnFundsToTreasury(depositIds[i], balance)
+                            extender.connect(guardian).returnFundsToTreasury(depositIds[i], balance)
                         ).to.changeTokenBalance(unToken, treasury, balance);
                     });
                 }

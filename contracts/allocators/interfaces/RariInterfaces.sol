@@ -6,7 +6,7 @@ import "../../interfaces/IERC20Metadata.sol";
 // if you don't call the function the compiler won't bloat code
 // so just take the entire interface so people don't have to add later
 interface fToken is IERC20Metadata {
-    function mint(uint256 mintAmount) external returns (uint256);
+    function mint(uint256 mintAmount) external;
 
     function mint() external payable; // ether
 
@@ -30,7 +30,9 @@ interface fToken is IERC20Metadata {
         address collateral
     ) external returns (uint256);
 
-    function exchangeRate() external view returns (uint256);
+    function exchangeRateCurrent() external returns (uint256);
+
+    function exchangeRateStored() external view returns (uint256);
 
     function getCash() external view returns (uint256);
 

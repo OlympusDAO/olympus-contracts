@@ -7,15 +7,10 @@ import "./interfaces/RariInterfaces.sol";
 // types
 import {BaseAllocator, AllocatorInitData} from "../types/BaseAllocator.sol";
 
-/// @dev stored in storage
-struct fData {
-    uint96 idTroller;
-    fToken token;
-}
-
 /// @dev function argument
 struct fDataExpanded {
-    fData f;
+    fToken f;
+    uint96 idTroller;
     IERC20 base;
     IERC20 rT;
 }
@@ -35,7 +30,7 @@ contract RariFuseAllocator is BaseAllocator {
 
     RewardsDistributorDelegate internal _rewards;
 
-    fData[] internal _fData;
+    fToken[] internal _fTokens;
     IERC20[] internal _rewardTokens;
 
     RariTroller[] internal _trollers;
@@ -48,7 +43,7 @@ contract RariFuseAllocator is BaseAllocator {
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
         // reads
         uint256 index = tokenIds[id];
-        fToken f = _fData[index].token;
+        fToken f = _fTokens[index];
         IERC20Metadata b = IERC20Metadata(address(_tokens[index]));
         RewardsDistributorDelegate rewards = _rewards;
         uint256 balance = b.balanceOf(address(this));
@@ -66,17 +61,22 @@ contract RariFuseAllocator is BaseAllocator {
         uint256 current = _worth(f, b);
 
         if (current >= former) gain = uint128(current - former);
-        else loss = uint128(former - current);
+        else 
+            loss = uint128(former - current);
     }
 
     function deallocate(uint256[] memory amounts) public override onlyGuardian {
         uint256 length = amounts.length;
 
         for (uint256 i; i < length; i++) {
-            fToken f = _fData[i].token;
+            fToken f = _fTokens[i];
 
-            if (amounts[i] == type(uint256).max) f.redeem(f.balanceOf(address(this)));
-            else f.redeemUnderlying(amounts[i]);
+            uint256 balance = f.balanceOf(address(this));
+
+            if (balance > 0) {
+                if (amounts[i] == type(uint256).max) f.redeem(f.balanceOf(address(this)));
+                else f.redeemUnderlying(amounts[i]);
+            }
         }
     }
 
@@ -84,21 +84,27 @@ contract RariFuseAllocator is BaseAllocator {
         _deallocateAll();
 
         if (panic) {
-            uint256 length = _fData.length;
+            uint256 length = _fTokens.length;
 
             for (uint256 i; i < length; i++) {
-                fToken f = _fData[i].token;
+                fToken f = _fTokens[i];
                 IERC20 u = _tokens[i];
+                uint256 balance = f.balanceOf(address(this));
 
-                f.redeem(f.balanceOf(address(this)));
-                u.transfer(treasury, u.balanceOf(address(this)));
+                if (balance > 0) {
+                    f.redeem(balance);
+                    u.transfer(treasury, u.balanceOf(address(this)));
+                }
             }
 
             length = _rewardTokens.length;
 
             for (uint256 i; i < length; i++) {
                 IERC20 rT = _rewardTokens[i];
-                rT.transfer(treasury, rT.balanceOf(address(this)));
+                uint256 balance = rT.balanceOf(address(this));
+                if (balance > 0) {
+                    rT.transfer(treasury, balance);
+                }
             }
         }
     }
@@ -111,7 +117,8 @@ contract RariFuseAllocator is BaseAllocator {
     function amountAllocated(uint256 id) public view override returns (uint256) {
         uint256 index = tokenIds[id];
         IERC20Metadata b = IERC20Metadata(address(_tokens[index]));
-        return _worth(_fData[index].token, b) + b.balanceOf(address(this));
+        fToken f = _fTokens[index];
+        return _worth(f.exchangeRateStored(), f.balanceOf(address(this)), b) + b.balanceOf(address(this));
     }
 
     function rewardTokens() public view override returns (IERC20[] memory) {
@@ -119,9 +126,9 @@ contract RariFuseAllocator is BaseAllocator {
     }
 
     function utilityTokens() public view override returns (IERC20[] memory) {
-        uint256 length = _fData.length;
+        uint256 length = _fTokens.length;
         IERC20[] memory uTokens = new IERC20[](length);
-        for (uint256 i; i < length; i++) uTokens[i] = _fData[i].token;
+        for (uint256 i; i < length; i++) uTokens[i] = _fTokens[i];
         return uTokens;
     }
 
@@ -152,16 +159,16 @@ contract RariFuseAllocator is BaseAllocator {
     function fDataAdd(fDataExpanded calldata data) external onlyGuardian {
         // reads
         address[] memory fInput = new address[](1);
-        fInput[0] = address(data.f.token);
+        fInput[0] = address(data.f);
 
         // interaction
-        _trollers[data.f.idTroller].enterMarkets(fInput);
+        _trollers[data.idTroller].enterMarkets(fInput);
 
         data.base.approve(address(extender), type(uint256).max);
-        data.f.token.approve(address(extender), type(uint256).max);
+        data.f.approve(address(extender), type(uint256).max);
 
         // effect
-        _fData.push(data.f);
+        _fTokens.push(data.f);
         _tokens.push(data.base);
 
         if (data.rT != IERC20(address(0))) {
@@ -171,12 +178,20 @@ contract RariFuseAllocator is BaseAllocator {
     }
 
     /// @dev logic is directly from fuse docs
-    function _worth(fToken f, IERC20Metadata b) internal view returns (uint256) {
-        return (f.exchangeRate() * f.balanceOf(address(this))) / (10**(18 + uint256(b.decimals() - f.decimals())));
+    function _worth(fToken f, IERC20Metadata b) internal returns (uint256) {
+        return (f.exchangeRateCurrent() * f.balanceOf(address(this))) / (10**uint256(b.decimals()));
+    }
+
+    function _worth(
+        uint256 exchangeRate,
+        uint256 fBalance,
+        IERC20Metadata b
+    ) internal view returns (uint256) {
+        return (exchangeRate * fBalance) / (10**uint256(b.decimals()));
     }
 
     function _deallocateAll() internal {
-        uint256[] memory input = new uint256[](_fData.length);
+        uint256[] memory input = new uint256[](_fTokens.length);
         for (uint256 i; i < input.length; i++) input[i] = type(uint256).max;
         deallocate(input);
     }
