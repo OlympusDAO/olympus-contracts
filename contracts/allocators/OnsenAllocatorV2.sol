@@ -63,7 +63,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
 
         /// Deposit LP token into onsen, if deposit succesfull this address should have in return sushi tokens
         if (balance > 0) {
-            IERC20(LPtoken).approve(masterChef, balance);
+            LPtoken.approve(masterChef, balance);
             IMasterChef(masterChef).deposit(id, balance);
         }
 
