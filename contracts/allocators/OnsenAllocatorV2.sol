@@ -68,9 +68,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
         }
 
         /// Stake the sushi tokens
-        if (IERC20(sushi).balanceOf(address(this)) > 0) {
-            _stakeSushi();
-        }
+        _stakeSushi();
 
         ///Calculate gains/loss
         /// Retrieve current balance for pool and address
