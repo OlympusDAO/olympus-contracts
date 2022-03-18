@@ -2,21 +2,21 @@
 pragma solidity ^0.8.10;
 import "../libraries/Address.sol";
 
-// types
+///  ========== TYPES ==========
 import "../types/BaseAllocator.sol";
 
-// interfaces
+///  ========== INTERFACES ==========
 import "../interfaces/IMasterChef.sol";
 import "../interfaces/ISushiBar.sol";
 
 /**
- *  Contract deploys liquidity from treasury into the Onsen program,
+ *  @notice Contract deploys liquidity from treasury into the Onsen program,
  *  earning $SUSHI that can be staked and/or deposited into the treasury.
  */
 contract OnsenAllocatorV2 is BaseAllocator {
     using SafeERC20 for IERC20;
 
-    /* ========== STATE VARIABLES ========== */
+    /// ========== STATE VARIABLES ==========
 
     address immutable sushi; // $SUSHI token
     address immutable xSushi; // $xSUSHI token
@@ -24,7 +24,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
 
     address immutable treasury; // Olympus Treasury
 
-    /* ========== CONSTRUCTOR ========== */
+    /// ========== CONSTRUCTOR ==========
 
     constructor(
         address _chef,
@@ -42,37 +42,38 @@ contract OnsenAllocatorV2 is BaseAllocator {
         require(_treasury != address(0));
         treasury = _treasury;
 
-        // approve for safety, sushi is being staked and xsushi is being instantly sent to treasury and that is fine
-        // but to be absolutely safe this one approve won't hurt
+        /**  @dev approve for safety, sushi is being staked and xsushi is being instantly sent to treasury and that is fine
+         *   but to be absolutely safe this one approve won't hurt
+         */
         IERC20(sushi).approve(address(extender), type(uint256).max);
         IERC20(xSushi).approve(address(extender), type(uint256).max);
     }
 
     /**
-     1- Deposit LP token into onsen, if deposit is succesfull we should get in return sushi tokens
-     2- Stake the Sushi rewards tokens returned from deposit LP tokens and as rewards form onsen LP stake, we should get in return xSushi tokens
-     3- Calculate gains/loss
+     * @notice Figure out which LP tokens to be deposited into onsen, then deposit it into onsen pool and stake the sushi tokens that are returned.
+     * 1- Deposit LP token into onsen, if deposit is succesfull we should get in return sushi tokens
+     * 2- Stake the Sushi rewards tokens returned from deposit LP tokens and as rewards form onsen LP stake, we should get in return xSushi tokens
+     * 3- Return the xSushi tokens to treasury
+     * 4- Calculate gains/loss
      */
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
-        // reads
         uint256 index = tokenIds[id];
         IERC20 LPtoken = _tokens[index];
         uint256 balance = LPtoken.balanceOf(address(this));
 
-        // interactions
-        //Deposit LP token into onsen, if deposit succesfull this address should have in return sushi tokens
+        /// Deposit LP token into onsen, if deposit succesfull this address should have in return sushi tokens
         if (balance > 0) {
             IERC20(LPtoken).approve(masterChef, balance);
-            IMasterChef(masterChef).deposit(id, balance); // deposit into Onsen
+            IMasterChef(masterChef).deposit(id, balance);
         }
 
-        // Stake the sushi tokens
+        /// Stake the sushi tokens
         if (IERC20(sushi).balanceOf(address(this)) > 0) {
-            _stakeSushi(); // stake sushi rewards
+            _stakeSushi();
         }
 
-        //Calculate gains/loss
-        // Retrieve current balance for pool and address
+        ///Calculate gains/loss
+        /// Retrieve current balance for pool and address
         UserInfo memory currentUserInfo = IMasterChef(masterChef).userInfo(id, address(this));
 
         uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
@@ -84,12 +85,11 @@ contract OnsenAllocatorV2 is BaseAllocator {
         }
     }
 
-    /**
-        Asuming the index of the amounts [] can be use as parameter for the mapping tokenIds
-        Example:
-        amounts => [20,50,150]
-        So the values that will be used to retrieve the id used in onsen will be 0, 1 , 2
-    */
+    /** @notice Asuming the index of the amounts [] can be use as parameter for the mapping tokenIds
+     *   Example:
+     *   amounts => [20,50,150]
+     *   So the values that will be used to retrieve the id used in onsen will be 0, 1 , 2
+     */
     function deallocate(uint256[] memory amounts) public override onlyGuardian {
         for (uint256 i; i < amounts.length; i++) {
             uint256 amount = amounts[i];
@@ -125,7 +125,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
         return "OnsenAllocator";
     }
 
-    /* ========== INTERNAL FUNCTIONS ========== */
+    /// ========== INTERNAL FUNCTIONS ==========
 
     /**
      * @notice stake sushi rewards
