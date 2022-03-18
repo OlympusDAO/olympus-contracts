@@ -5,28 +5,9 @@ import "../libraries/Address.sol";
 // types
 import "../types/BaseAllocator.sol";
 
-struct UserInfo {
-    uint256 amount; // How many LP tokens the user has provided.
-    uint256 rewardDebt;
-}
-
-interface IMasterChef {
-    function pendingSushi(uint256 _pid, address _user) external view returns (uint256);
-
-    function deposit(uint256 _pid, uint256 _amount) external;
-
-    function withdraw(uint256 _pid, uint256 _amount) external;
-
-    function emergencyWithdraw(uint256 _pid) external;
-
-    function userInfo(uint256 _pid, address _user) external view returns (UserInfo memory);
-}
-
-interface ISushiBar {
-    function enter(uint256 _amount) external;
-
-    function leave(uint256 _share) external;
-}
+// interfaces
+import "../interfaces/IMasterChef.sol";
+import "../interfaces/ISushiBar.sol";
 
 /**
  *  Contract deploys liquidity from treasury into the Onsen program,
