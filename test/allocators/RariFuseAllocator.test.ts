@@ -501,13 +501,26 @@ describe(ALLOCATORN, () => {
     }
 
     // migrate
+    
+    let fallocator: RariFuseAllocator;
 
     async function beforeEachMigrateTest(): Promise<void> {
+        for (let i = 1; i < 4; i++) {
+            await allocator.connect(guardian).update(i);
+        }
+
+        await helpers.tmine(24 * 3600 * 43);
+
+        for (let i = 1; i < 4; i++) {
+            await allocator.connect(guardian).update(i);
+        }
+
         await allocator.connect(guardian).prepareMigration();
 
-        let fallocator = await factory.connect(owner).deploy(FAID);
+        fallocator = (await factory.connect(owner).deploy(FAID)) as RariFuseAllocator;
 
         await fallocator.connect(guardian).fusePoolAdd(troller.address);
+
         await fallocator.connect(guardian).fDataAdd(FDA[0]);
 
         await extender.connect(guardian).registerDeposit(fallocator.address);
@@ -518,12 +531,25 @@ describe(ALLOCATORN, () => {
     async function migrateRevertingTests(): Promise<void> {
         it("revert: should fail with wrong access ", async () => {
             await expect(allocator.connect(owner).migrate()).to.be.reverted;
+            for (let i = 1; i < 4; i++) {
+                 await expect(allocator.connect(guardian).update(i)).to.be.reverted;
+            }
         });
     }
 
     async function migratePassingTests(): Promise<void> {
         it("passing: should migrate", async () => {
-            await allocator.connect(guardian).migrate();
+	    let balances: BigNumber[] = [];
+
+	    for ( let i = 0; i < 3; i++) {
+		   balances.push(await utility[i].balanceOf(fallocator.address));
+	    }
+
+              await allocator.connect(guardian).migrate()
+
+	    for ( let i = 0; i < 3; i++) {
+		   expect(await utility[i].balanceOf(fallocator.address)).to.be.above(balances[i]);
+	    }
         });
     }
 
