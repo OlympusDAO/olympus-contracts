@@ -8,7 +8,7 @@ import "./interfaces/RariInterfaces.sol";
 import {BaseAllocator, AllocatorInitData} from "../types/BaseAllocator.sol";
 
 /// @dev function argument
-struct fDataExpanded {
+struct fData {
     fToken f;
     uint96 idTroller;
     IERC20 base;
@@ -153,9 +153,9 @@ contract RariFuseAllocator is BaseAllocator {
     }
 
     /// @notice Add data for depositing an underlying token in a fuse pool.
-    /// @dev The data fields are described above in the struct `fDataExpanded` specific for this contract.
+    /// @dev The data fields are described above in the struct `fData` specific for this contract.
     /// @param data the data necessary for another token to be allocated, check the struct in code
-    function fDataAdd(fDataExpanded calldata data) external onlyGuardian {
+    function fDataAdd(fData calldata data) external onlyGuardian {
         // reads
         address[] memory fInput = new address[](1);
         fInput[0] = address(data.f);

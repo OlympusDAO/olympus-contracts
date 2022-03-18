@@ -42,7 +42,7 @@ type ALLOCATORT = RariFuseAllocator;
 type FACTORYT = RariFuseAllocator__factory;
 
 /// INTERFACES
-interface fDataExpanded {
+interface fData {
     f: string;
     idTroller: BigNumber;
     base: string;
@@ -111,7 +111,7 @@ describe(ALLOCATORN, () => {
     let AID: AllocatorInitData;
     let FAID: FuseAllocatorInitData;
     let PSD: ProtocolSpecificData;
-    let FDEA: fDataExpanded[] = [];
+    let FDA: fData[] = [];
     let tribeWhale: SignerWithAddress;
 
     //////// FUNCTIONS
@@ -167,7 +167,7 @@ describe(ALLOCATORN, () => {
         const lossThresholds: BigNumber[] = [bne(10, 17), bne(10, 17), bne(10, 17)];
 
         for (let i = 0; i < utility.length; i++) {
-            FDEA.push({
+            FDA.push({
                 f: utility[i].address,
                 idTroller: bnn(0),
                 base: underlying[i].address,
@@ -214,8 +214,8 @@ describe(ALLOCATORN, () => {
             const max: BigNumber = helpers.constants.uint256Max;
 
             // if this reverts above if false
-            for (let i = 0; i < FDEA.length; i++) {
-                await allocator.connect(guardian).fDataAdd(FDEA[i]);
+            for (let i = 0; i < FDA.length; i++) {
+                await allocator.connect(guardian).fDataAdd(FDA[i]);
 
                 expect(await underlying[i].allowance(allocator.address, extender.address)).to.equal(
                     max
@@ -244,12 +244,12 @@ describe(ALLOCATORN, () => {
         it("passing: registerDeposit() setAllocatorLimits() activate()", async () => {
             await allocator.connect(guardian).fusePoolAdd(troller.address);
 
-            for (let i = 0; i < FDEA.length; i++) {
-                await allocator.connect(guardian).fDataAdd(FDEA[i]);
+            for (let i = 0; i < FDA.length; i++) {
+                await allocator.connect(guardian).fDataAdd(FDA[i]);
                 await extender.connect(guardian).registerDeposit(allocator.address);
             }
 
-            for (let i = 0; i < FDEA.length; i++) {
+            for (let i = 0; i < FDA.length; i++) {
                 await extender
                     .connect(guardian)
                     .setAllocatorLimits(totalAllocatorCountBefore.add(i + 1), {
@@ -281,8 +281,8 @@ describe(ALLOCATORN, () => {
     async function initialize(): Promise<void> {
         allocator = await factory.connect(owner).deploy(FAID);
         await allocator.connect(guardian).fusePoolAdd(troller.address);
-        for (let i = 0; i < FDEA.length; i++) {
-            await allocator.connect(guardian).fDataAdd(FDEA[i]);
+        for (let i = 0; i < FDA.length; i++) {
+            await allocator.connect(guardian).fDataAdd(FDA[i]);
             await extender.connect(guardian).registerDeposit(allocator.address);
             await extender
                 .connect(guardian)
@@ -506,7 +506,7 @@ describe(ALLOCATORN, () => {
         await allocator.connect(guardian).prepareMigration();
         let fallocator = await factory.connect(owner).deploy(FAID);
         await fallocator.connect(guardian).fusePoolAdd(troller.address);
-        await fallocator.connect(guardian).fDataAdd(FDEA[0]);
+        await fallocator.connect(guardian).fDataAdd(FDA[0]);
 
         await extender.connect(guardian).registerDeposit(fallocator.address);
 
