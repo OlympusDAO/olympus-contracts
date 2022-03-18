@@ -68,7 +68,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
 
         // Stake the sushi tokens
         if (IERC20(sushi).balanceOf(address(this)) > 0) {
-            enterSushiBar(true); // manage rewards
+            stakeSushi(); // stake sushi rewards
         }
 
         //Calculate gains/loss
@@ -128,21 +128,16 @@ contract OnsenAllocatorV2 is BaseAllocator {
     /* ========== INTERNAL FUNCTIONS ========== */
 
     /**
-     * @notice stake sushi rewards if enter is true else return funds to treasury.
-     * @param _stake bool
+     * @notice stake sushi rewards
      */
-    function enterSushiBar(bool _stake) internal {
+    function stakeSushi() internal {
         uint256 balance = IERC20(sushi).balanceOf(address(this));
         if (balance > 0) {
-            if (!_stake) {
-                IERC20(sushi).safeTransfer(treasury, balance); // transfer sushi to treasury
-            } else {
-                IERC20(sushi).approve(xSushi, balance);
-                ISushiBar(xSushi).enter(balance); // stake sushi
+            IERC20(sushi).approve(xSushi, balance);
+            ISushiBar(xSushi).enter(balance); // stake sushi
 
-                uint256 xBalance = IERC20(xSushi).balanceOf(address(this));
-                IERC20(xSushi).safeTransfer(treasury, xBalance); // transfer xSushi to treasury
-            }
+            uint256 xBalance = IERC20(xSushi).balanceOf(address(this));
+            IERC20(xSushi).safeTransfer(treasury, xBalance); // transfer xSushi to treasury
         }
     }
 
