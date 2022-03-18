@@ -71,10 +71,18 @@ describe("test recent investment process", () => {
     });
 
     it("request funds", async () => {
-        await extender.requestFundsFromTreasury(1, bne(10, 20));
+        await expect(() => extender.requestFundsFromTreasury(1, bne(10, 20))).to.changeTokenBalance(
+            await helpers.getCoin(coins.lusd),
+            allocator,
+            bne(10, 20)
+        );
     });
 
     it("update", async () => {
-        await allocator.update(1);
+        await expect(() => allocator.update(1)).to.changeTokenBalance(
+            await helpers.getCoin(coins.lusd),
+            allocator,
+            bnn(0).sub(bne(10, 20))
+        );
     });
 });
