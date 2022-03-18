@@ -42,7 +42,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
         require(_treasury != address(0));
         treasury = _treasury;
 
-        // approve for safety, yes toke is being instantly sent to treasury and that is fine
+        // approve for safety, sushi is being staked and xsushi is being instantly sent to treasury and that is fine
         // but to be absolutely safe this one approve won't hurt
         IERC20(sushi).approve(address(extender), type(uint256).max);
         IERC20(xSushi).approve(address(extender), type(uint256).max);
