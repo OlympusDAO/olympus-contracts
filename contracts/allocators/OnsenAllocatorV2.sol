@@ -68,7 +68,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
 
         // Stake the sushi tokens
         if (IERC20(sushi).balanceOf(address(this)) > 0) {
-            stakeSushi(); // stake sushi rewards
+            _stakeSushi(); // stake sushi rewards
         }
 
         //Calculate gains/loss
@@ -130,7 +130,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
     /**
      * @notice stake sushi rewards
      */
-    function stakeSushi() internal {
+    function _stakeSushi() internal {
         uint256 balance = IERC20(sushi).balanceOf(address(this));
         if (balance > 0) {
             IERC20(sushi).approve(xSushi, balance);
