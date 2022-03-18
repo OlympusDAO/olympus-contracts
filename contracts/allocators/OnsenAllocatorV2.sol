@@ -20,11 +20,9 @@ contract OnsenAllocatorV2 is BaseAllocator {
 
     address immutable sushi; // $SUSHI token
     address immutable xSushi; // $xSUSHI token
-
     address immutable masterChef; // Onsen contract
 
-    // address immutable treasury;
-    address public constant treasury = 0x9A315BdF513367C0377FB36545857d12e85813Ef; // Olympus Treasury
+    address immutable treasury; // Olympus Treasury
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -32,6 +30,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
         address _chef,
         address _sushi,
         address _xSushi,
+        address _treasury,
         AllocatorInitData memory data
     ) BaseAllocator(data) {
         require(_chef != address(0));
@@ -40,6 +39,8 @@ contract OnsenAllocatorV2 is BaseAllocator {
         sushi = _sushi;
         require(_xSushi != address(0));
         xSushi = _xSushi;
+        require(_treasury != address(0));
+        treasury = _treasury;
 
         // approve for safety, yes toke is being instantly sent to treasury and that is fine
         // but to be absolutely safe this one approve won't hurt
