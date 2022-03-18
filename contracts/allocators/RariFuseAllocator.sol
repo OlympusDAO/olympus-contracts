@@ -61,8 +61,7 @@ contract RariFuseAllocator is BaseAllocator {
         uint256 current = _worth(f, b);
 
         if (current >= former) gain = uint128(current - former);
-        else 
-            loss = uint128(former - current);
+        else loss = uint128(former - current);
     }
 
     function deallocate(uint256[] memory amounts) public override onlyGuardian {

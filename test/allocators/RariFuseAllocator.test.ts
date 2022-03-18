@@ -486,44 +486,43 @@ describe(ALLOCATORN, () => {
     }
 
     async function prepareMigrationRevertingTests(): Promise<void> {
-	it("revert: should fail with wrong access ", async () => {
-		await expect(allocator.connect(owner).prepareMigration()).to.be.reverted
-	})
+        it("revert: should fail with wrong access ", async () => {
+            await expect(allocator.connect(owner).prepareMigration()).to.be.reverted;
+        });
     }
 
     async function prepareMigrationPassingTests(): Promise<void> {
-	it("passing: should prepare migration", async () => {
-	        const bal1: BigNumber = await reward[0].balanceOf(allocator.address)
-		await allocator.connect(guardian).prepareMigration()
-	        const bal2: BigNumber = await reward[0].balanceOf(allocator.address)
-		expect(bal2).to.be.gte(bal1)
-	})
+        it("passing: should prepare migration", async () => {
+            const bal1: BigNumber = await reward[0].balanceOf(allocator.address);
+            await allocator.connect(guardian).prepareMigration();
+            const bal2: BigNumber = await reward[0].balanceOf(allocator.address);
+            expect(bal2).to.be.gte(bal1);
+        });
     }
 
     // migrate
 
     async function beforeEachMigrateTest(): Promise<void> {
-		await allocator.connect(guardian).prepareMigration()
+        await allocator.connect(guardian).prepareMigration();
         let fallocator = await factory.connect(owner).deploy(FAID);
         await fallocator.connect(guardian).fusePoolAdd(troller.address);
-            await fallocator.connect(guardian).fDataAdd(FDEA[0]);
+        await fallocator.connect(guardian).fDataAdd(FDEA[0]);
 
-
-            await extender.connect(guardian).registerDeposit(fallocator.address);
+        await extender.connect(guardian).registerDeposit(fallocator.address);
 
         await fallocator.connect(guardian).activate();
     }
 
     async function migrateRevertingTests(): Promise<void> {
-	it("revert: should fail with wrong access ", async () => {
-		await expect(allocator.connect(owner).migrate()).to.be.reverted
-	})
+        it("revert: should fail with wrong access ", async () => {
+            await expect(allocator.connect(owner).migrate()).to.be.reverted;
+        });
     }
 
     async function migratePassingTests(): Promise<void> {
-	it("passing: should migrate", async () => {
-		await allocator.connect(guardian).migrate()
-	})
+        it("passing: should migrate", async () => {
+            await allocator.connect(guardian).migrate();
+        });
     }
 
     /// TESTS
