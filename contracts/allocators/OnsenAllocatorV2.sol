@@ -145,7 +145,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
      *  @notice pending $SUSHI rewards
      *  @return uint
      */
-    function pendingSushi(uint256 pid) internal view returns (uint256) {
+    function _pendingSushi(uint256 pid) internal view returns (uint256) {
         return IMasterChef(masterChef).pendingSushi(pid, address(this));
     }
 }
