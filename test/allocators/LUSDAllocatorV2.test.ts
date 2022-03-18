@@ -10,7 +10,7 @@ import {
     TreasuryExtender,
     TreasuryExtender__factory,
     OlympusAuthority,
-    MockERC20,
+    ERC20,
     LUSDAllocatorV2,
     LUSDAllocatorV2__factory,
     IStabilityPool,
@@ -42,11 +42,11 @@ describe("LUSDAllocatorV2", () => {
     let lqtyStaking: ILQTYStaking;
 
     // tokens
-    let weth: MockERC20;
-    let lusd: MockERC20;
-    let lqty: MockERC20;
-    let tokens: MockERC20[];
-    let utilTokens: MockERC20[];
+    let weth: ERC20;
+    let lusd: ERC20;
+    let lqty: ERC20;
+    let tokens: ERC20[];
+    let utilTokens: ERC20[];
 
     // network
     let url: string = config.networks.hardhat.forking!.url;

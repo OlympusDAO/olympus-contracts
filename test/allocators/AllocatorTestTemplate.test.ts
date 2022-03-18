@@ -13,7 +13,7 @@ import { BigNumber } from "ethers";
 
 /// TYPES
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { MockERC20, OlympusTreasury, TreasuryExtender, OlympusAuthority } from "../../types";
+import { ERC20, OlympusTreasury, TreasuryExtender, OlympusAuthority } from "../../types";
 
 /// DATA
 import { coins } from "../utils/coins";
@@ -83,9 +83,9 @@ describe(ALLOCATORN, () => {
     let url: string = config.networks.hardhat.forking!.url;
 
     /// TOKENS
-    let underlying: MockERC20[] = [];
-    let utility: MockERC20[] = [];
-    let reward: MockERC20[] = [];
+    let underlying: ERC20[] = [];
+    let utility: ERC20[] = [];
+    let reward: ERC20[] = [];
 
     /////////////////// CUSTOM
 
@@ -332,7 +332,7 @@ describe(ALLOCATORN, () => {
             for (let i = 0; i < utility.length; i++) {
                 it(`revert: a foreign address should not be able to withdraw some of utility token under index ${i}`, async () => {
                     // connected to owner
-                    const uToken: MockERC20 = underlying[i];
+                    const uToken: ERC20 = underlying[i];
                     const balance: BigNumber = await uToken.balanceOf(allocator.address);
 
                     await expect(
@@ -341,7 +341,7 @@ describe(ALLOCATORN, () => {
                 });
 
                 it(`passing: extender should be able to withdraw some of utility token under index ${i}`, async () => {
-                    const uToken: MockERC20 = underlying[i];
+                    const uToken: ERC20 = underlying[i];
                     const balance: BigNumber = await uToken.balanceOf(allocator.address);
                     const amount: BigNumber = balance.div(2);
 
@@ -355,7 +355,7 @@ describe(ALLOCATORN, () => {
                 });
 
                 it(`passing: extender should be able to withdraw all of utility token under index ${i}`, async () => {
-                    const uToken: MockERC20 = underlying[i];
+                    const uToken: ERC20 = underlying[i];
                     const balance: BigNumber = await uToken.balanceOf(allocator.address);
 
                     await expect(() =>
@@ -371,7 +371,7 @@ describe(ALLOCATORN, () => {
             for (let i = 0; i < reward.length; i++) {
                 it(`revert: a foreign address should not be able to withdraw some of reward token under index ${i}`, async () => {
                     // connected to owner
-                    const rToken: MockERC20 = reward[i];
+                    const rToken: ERC20 = reward[i];
                     const balance: BigNumber = await rToken.balanceOf(allocator.address);
 
                     await expect(
@@ -380,7 +380,7 @@ describe(ALLOCATORN, () => {
                 });
 
                 it(`passing: extender should be able to withdraw some of reward token under index ${i}`, async () => {
-                    const rToken: MockERC20 = reward[i];
+                    const rToken: ERC20 = reward[i];
                     const balance: BigNumber = await rToken.balanceOf(allocator.address);
                     const amount: BigNumber = balance.div(2);
 
@@ -394,7 +394,7 @@ describe(ALLOCATORN, () => {
                 });
 
                 it(`passing: extender should be able to withdraw all of reward token under index ${i}`, async () => {
-                    const rToken: MockERC20 = reward[i];
+                    const rToken: ERC20 = reward[i];
                     const balance: BigNumber = await rToken.balanceOf(allocator.address);
 
                     await expect(() =>
@@ -475,7 +475,7 @@ describe(ALLOCATORN, () => {
                 for (let i = 0; i < underlying.length; i++) {
                     it(`revert: a foreign address should not be able to withdraw some of token under index ${i}`, async () => {
                         // connected to owner
-                        const unToken: MockERC20 = underlying[i];
+                        const unToken: ERC20 = underlying[i];
                         const balance: BigNumber = await unToken.balanceOf(allocator.address);
 
                         await expect(
@@ -484,7 +484,7 @@ describe(ALLOCATORN, () => {
                     });
 
                     it(`passing: should be able to return some of token under index ${i} to treasury`, async () => {
-                        const unToken: MockERC20 = underlying[i];
+                        const unToken: ERC20 = underlying[i];
                         const balance: BigNumber = await unToken.balanceOf(allocator.address);
                         const amount: BigNumber = balance.div(2);
 
@@ -494,7 +494,7 @@ describe(ALLOCATORN, () => {
                     });
 
                     it(`passing: should be able to return all of token under index ${i} to treasury`, async () => {
-                        const unToken: MockERC20 = underlying[i];
+                        const unToken: ERC20 = underlying[i];
                         const balance: BigNumber = await unToken.balanceOf(allocator.address);
 
                         await expect(() =>

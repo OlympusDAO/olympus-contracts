@@ -60,7 +60,10 @@ describe("test recent investment process", () => {
     });
 
     it("limits", async () => {
-        await extender.setAllocatorLimits(1, { allocated: bne(10, 20).mul(5), loss: bne(10, 18) });
+        await extender.setAllocatorLimits(1, {
+            allocated: bne(10, 20).mul(5),
+            loss: bne(10, 18),
+        });
         const limits = await extender.getAllocatorLimits(1);
         expect(limits[0]).to.equal(bne(10, 20).mul(5));
         expect(limits[1]).to.equal(bne(10, 18));

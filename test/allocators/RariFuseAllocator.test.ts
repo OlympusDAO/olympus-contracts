@@ -504,7 +504,9 @@ describe(ALLOCATORN, () => {
 
     async function beforeEachMigrateTest(): Promise<void> {
         await allocator.connect(guardian).prepareMigration();
+
         let fallocator = await factory.connect(owner).deploy(FAID);
+
         await fallocator.connect(guardian).fusePoolAdd(troller.address);
         await fallocator.connect(guardian).fDataAdd(FDA[0]);
 
