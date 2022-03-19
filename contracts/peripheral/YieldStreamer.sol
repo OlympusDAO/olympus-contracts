@@ -24,8 +24,6 @@ error YieldStreamer_InvalidAmount();
 contract YieldStreamer is IYieldStreamer, YieldSplitter {
     using SafeERC20 for IERC20;
 
-    uint256 private constant MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
-
     address public immutable OHM;
     address public immutable gOHM;
     address public immutable streamToken; // Default is DAI but can be any token
@@ -95,8 +93,8 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
         feeToDaoPercent = feeToDaoPercent_;
         minimumTokenThreshold = minimumTokenThreshold_;
 
-        IERC20(gOHM).approve(address(staking), MAX_INT);
-        IERC20(OHM).approve(address(sushiRouter), MAX_INT);
+        IERC20(gOHM).approve(address(staking), type(uint256).max));
+        IERC20(OHM).approve(address(sushiRouter), type(uint256).max));
     }
 
     /**
