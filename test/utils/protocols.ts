@@ -51,5 +51,12 @@ const rari = {
     },
 };
 
+// convex
+const convex = {
+    cvxLocker: "0x72a19342e8F1838460eBFCCEf09F6585e32db86E",
+    crvDeposi: "0x8014595F2AB54cD7c604B00E9fb932176fDc86Ae",
+    ccStaking: "0x3Fe65692bfCD0e6CF84cB1E7d24108E434A7587e",
+}
+
 // export
-export const protocols = { alchemix, tokemak, rari };
+export const protocols = { alchemix, tokemak, rari, convex };
