@@ -93,8 +93,8 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
         feeToDaoPercent = feeToDaoPercent_;
         minimumTokenThreshold = minimumTokenThreshold_;
 
-        IERC20(gOHM).approve(address(staking), type(uint256).max));
-        IERC20(OHM).approve(address(sushiRouter), type(uint256).max));
+        IERC20(gOHM).approve(address(staking), type(uint256).max);
+        IERC20(OHM).approve(address(sushiRouter), type(uint256).max);
     }
 
     /**
