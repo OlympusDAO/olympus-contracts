@@ -42,19 +42,19 @@ type ALLOCATORT = RariFuseAllocator;
 type FACTORYT = RariFuseAllocator__factory;
 
 /// INTERFACES
-interface fData {
+export interface fData {
     f: string;
     idTroller: BigNumber;
     base: string;
     rT: string;
 }
 
-interface ProtocolSpecificData {
+export interface ProtocolSpecificData {
     treasury: string;
     rewards: string;
 }
 
-interface FuseAllocatorInitData {
+export interface FuseAllocatorInitData {
     base: AllocatorInitData;
     spec: ProtocolSpecificData;
 }
@@ -501,7 +501,7 @@ describe(ALLOCATORN, () => {
     }
 
     // migrate
-    
+
     let fallocator: RariFuseAllocator;
 
     async function beforeEachMigrateTest(): Promise<void> {
@@ -532,24 +532,24 @@ describe(ALLOCATORN, () => {
         it("revert: should fail with wrong access ", async () => {
             await expect(allocator.connect(owner).migrate()).to.be.reverted;
             for (let i = 1; i < 4; i++) {
-                 await expect(allocator.connect(guardian).update(i)).to.be.reverted;
+                await expect(allocator.connect(guardian).update(i)).to.be.reverted;
             }
         });
     }
 
     async function migratePassingTests(): Promise<void> {
         it("passing: should migrate", async () => {
-	    let balances: BigNumber[] = [];
+            let balances: BigNumber[] = [];
 
-	    for ( let i = 0; i < 3; i++) {
-		   balances.push(await utility[i].balanceOf(fallocator.address));
-	    }
+            for (let i = 0; i < 3; i++) {
+                balances.push(await utility[i].balanceOf(fallocator.address));
+            }
 
-              await allocator.connect(guardian).migrate()
+            await allocator.connect(guardian).migrate();
 
-	    for ( let i = 0; i < 3; i++) {
-		   expect(await utility[i].balanceOf(fallocator.address)).to.be.above(balances[i]);
-	    }
+            for (let i = 0; i < 3; i++) {
+                expect(await utility[i].balanceOf(fallocator.address)).to.be.above(balances[i]);
+            }
         });
     }
 
