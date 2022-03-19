@@ -772,6 +772,8 @@ describe(ALLOCATORN, () => {
                 let expected: BigNumber[] = [];
 
                 for (let i = 0; i < underlying.length; i++) {
+                    expect(await underlying[i].balanceOf(allocator.address)).to.be.equal(0);
+
                     expected[i] = deallocateSomeInput[i].sub(
                         deallocateSomeInput[i].mul(deallocateSomeError).div(100)
                     );
@@ -792,6 +794,8 @@ describe(ALLOCATORN, () => {
                 let expected: BigNumber[] = [];
 
                 for (let i = 0; i < underlying.length; i++) {
+                    expect(await underlying[i].balanceOf(allocator.address)).to.be.equal(0);
+
                     expected[i] = (await extender.getAllocatorAllocated(depositIds[i])).add(
                         (await extender.getAllocatorPerformance(depositIds[i]))[1] // this is loss, loss + allocated = initial allocated
                     );

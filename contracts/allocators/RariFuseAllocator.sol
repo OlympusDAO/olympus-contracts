@@ -73,7 +73,7 @@ contract RariFuseAllocator is BaseAllocator {
             uint256 balance = f.balanceOf(address(this));
 
             if (balance > 0) {
-                if (amounts[i] == type(uint256).max) f.redeem(f.balanceOf(address(this)));
+                if (amounts[i] == type(uint256).max) f.redeem(balance);
                 else f.redeemUnderlying(amounts[i]);
             }
         }
@@ -101,6 +101,7 @@ contract RariFuseAllocator is BaseAllocator {
             for (uint256 i; i < length; i++) {
                 IERC20 rT = _rewardTokens[i];
                 uint256 balance = rT.balanceOf(address(this));
+
                 if (balance > 0) {
                     rT.transfer(treasury, balance);
                 }
