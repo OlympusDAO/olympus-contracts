@@ -17,7 +17,7 @@ const frax = "0x853d955aCEf822Db058eb8505911ED77F175b99e";
 const lusd = "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0";
 const agEUR = "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8";
 
-// GOV TOKENS
+// ANY TOKENS
 const cvx = "0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B";
 const crv = "0xD533a949740bb3306d119CC777fa900bA034cd52";
 const angle = "0x31429d1856ad1377a8a0079410b297e1a9e214c2";
@@ -28,6 +28,7 @@ const xbtrfly = "0xCC94Faf235cC5D3Bf4bEd3a30db5984306c86aBC";
 const alcx = "0xdbdb4d16eda451d0503b854cf79d55697f90c8df";
 const toke = "0x2e9d63788249371f1dfc918a52f8d799f4a38c94";
 const tribe = "0xc7283b66Eb1EB5FB86327f08e1B5816b0720212B";
+const cvxcrv = "0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7";
 
 // AAVE
 const adai = "0x028171bCA77440897B824Ca71D1c56caC55b68A3";
@@ -57,6 +58,7 @@ export const coins = {
     alcx,
     toke,
     tribe,
+    cvxcrv,
     adai,
     aweth,
     ausdc,
