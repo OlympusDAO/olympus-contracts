@@ -14,6 +14,9 @@ import { config as dotenvConfig } from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig } from "hardhat/types";
 
+// TASKS
+import "./tasks/all";
+
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 
 const chainIds = {

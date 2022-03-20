@@ -16,4 +16,5 @@ export const allocators = {
     LUSDAllocatorV2: "0x97b3Ef4C558Ec456D59Cb95c65BFB79046E31fCA",
     BTRFLYAllocatorV2: "0xC8431fEb345B46c30A4576c1b5faF080fdc54e2f",
     FXSAllocatorV2: "0x0f953D861347414698F34B75dbFd6e7dF1A73493",
+    RariFuseAllocator: "0x061c8610a784b8a1599de5b1157631e35180d818",
 };
