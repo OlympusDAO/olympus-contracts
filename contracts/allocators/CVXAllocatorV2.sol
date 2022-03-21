@@ -8,14 +8,14 @@ import "./interfaces/IRewardStaking.sol";
 
 struct OperationData {
     ILockedCvx cvxLocker;
-    uint96 spendRatio;
-    ICrvDepositor crvDeposit;
+    uint88 spendRatio;
     bool relock;
+    ICrvDepositor crvDeposit;
     IRewardStaking ccStaking; // cvxcrv
 }
 
 contract CVXAllocatorV2 is BaseAllocator {
-    OperationData opData;
+    OperationData public opData;
 
     constructor(OperationData memory opDataArg, AllocatorInitData memory aData) BaseAllocator(aData) {
         opData = opDataArg;
@@ -37,7 +37,7 @@ contract CVXAllocatorV2 is BaseAllocator {
         IRewardStaking ccStaking = operation.ccStaking;
 
         // interactions
-        if (locker.balanceOf(address(this)) > 0) locker.processExpiredLocks(operation.relock);
+        if (_unlockable() > 0) locker.processExpiredLocks(operation.relock);
         if (_checkClaimableRewards(locker)) locker.getReward(address(this), true);
         if (ccStaking.earned(address(this)) > 0) ccStaking.getReward(address(this), true);
 
@@ -86,7 +86,7 @@ contract CVXAllocatorV2 is BaseAllocator {
             ILockedCvx cvxLocker = operation.cvxLocker;
             IRewardStaking ccStaking = operation.ccStaking;
 
-            if (cvxLocker.balanceOf(address(this)) > 0) amounts[0] = 1;
+            if (_unlockable() > 0) amounts[0] = 1;
             if (ccStaking.balanceOf(address(this)) > 0) amounts[2] = type(uint256).max;
 
             deallocate(amounts);
@@ -118,20 +118,24 @@ contract CVXAllocatorV2 is BaseAllocator {
         return "CVXAllocatorV2";
     }
 
-    /// @notice Returns amounts allocted. NOTE: returns 0 for crv because it's being swapped into cvxcrv.
-    /// Thus, crv loss limit should be type(uint256).max;
-    function amountAllocated(uint256 id) public view override returns (uint256) {
-        uint256 index = tokenIds[id];
-        OperationData memory operation = opData;
-        return _amountAllocated(operation, index);
+    function setOperationData(OperationData calldata newData) external onlyGuardian {
+        opData = newData;
+    }
+
+    function setSpendRatio(uint88 ratio) external onlyGuardian {
+        opData.spendRatio = ratio;
     }
 
     function setRelock(bool relock) external onlyGuardian {
         opData.relock = relock;
     }
 
-    function setOperationData(OperationData calldata newData) external onlyGuardian {
-        opData = newData;
+    /// @notice Returns amounts allocted. NOTE: returns 0 for crv because it's being swapped into cvxcrv.
+    /// Thus, crv loss limit should be type(uint256).max;
+    function amountAllocated(uint256 id) public view override returns (uint256) {
+        uint256 index = tokenIds[id];
+        OperationData memory operation = opData;
+        return _amountAllocated(operation, index);
     }
 
     function _checkClaimableRewards(ILockedCvx locker) internal returns (bool) {
@@ -148,5 +152,10 @@ contract CVXAllocatorV2 is BaseAllocator {
         if (index == 2) return operation.ccStaking.balanceOf(address(this));
         else if (index == 1) return 0;
         return operation.cvxLocker.lockedBalanceOf(address(this));
+    }
+
+    function _unlockable() internal view returns (uint256) {
+        (, uint256 unlockable, , ) = opData.cvxLocker.lockedBalances(address(this));
+        return unlockable;
     }
 }

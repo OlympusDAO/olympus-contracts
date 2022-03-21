@@ -349,7 +349,7 @@ describe(ALLOCATORN, () => {
 
             for (let i = 1; i < 4; i++) {
                 await allocator.connect(guardian).update(i);
-                expect((await extender.getAllocatorPerformance(i))[1]).to.be.gte(perf[i - 1][1]);
+                expect((await extender.getAllocatorPerformance(i))[0]).to.be.gte(perf[i - 1][0]);
                 perf[i - 1] = await extender.getAllocatorPerformance(i);
             }
 
@@ -357,7 +357,7 @@ describe(ALLOCATORN, () => {
 
             for (let i = 1; i < 4; i++) {
                 await allocator.connect(guardian).update(i);
-                expect((await extender.getAllocatorPerformance(i))[1]).to.be.gte(perf[i - 1][1]);
+                expect((await extender.getAllocatorPerformance(i))[0]).to.be.gte(perf[i - 1][0]);
             }
         });
     }
@@ -395,7 +395,7 @@ describe(ALLOCATORN, () => {
 
             for (let i = 1; i < 4; i++) {
                 await allocator.connect(guardian).update(i);
-                expect((await extender.getAllocatorPerformance(i))[0]).to.be.gte(perf[i - 1][0]);
+                expect((await extender.getAllocatorPerformance(i))[1]).to.be.gte(perf[i - 1][1]);
                 perf[i - 1] = await extender.getAllocatorPerformance(i);
             }
 
@@ -412,7 +412,7 @@ describe(ALLOCATORN, () => {
 
             for (let i = 1; i < 4; i++) {
                 await allocator.connect(guardian).update(i);
-                expect((await extender.getAllocatorPerformance(i))[0]).to.be.gte(perf[i - 1][0]);
+                expect((await extender.getAllocatorPerformance(i))[1]).to.be.gte(perf[i - 1][1]);
             }
         });
 
