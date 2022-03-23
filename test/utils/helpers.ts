@@ -74,9 +74,9 @@ async function addEth(address: string, value: BigNumber): Promise<void> {
 
 //// accounts + contracts
 
-async function spawn<T extends BaseContract>(name: string, args: any): Promise<T> {
+async function spawn<T extends BaseContract>(name: string, ...args: any[]): Promise<T> {
     const factory: any = await ethers.getContractFactory(name);
-    return (await factory.deploy(args)) as T;
+    return (await factory.deploy(...args)) as T;
 }
 
 async function summon<T extends BaseContract>(name: string, address: string): Promise<T> {
