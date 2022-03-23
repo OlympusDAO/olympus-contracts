@@ -27,7 +27,7 @@ interface IIncurDebtTokemak {
     /**
      * @notice deposits gOHM to use as collateral
      * - msg.sender must be whitelisted
-     * - msg.sender's OHM allowance must be >= _ohmAmount 
+     * - msg.sender's OHM allowance must be >= _ohmAmount
      * @param _ohmAmount amount of OHM to borrow
      */
     function repay(uint256 _ohmAmount) external;
@@ -37,10 +37,10 @@ interface IIncurDebtTokemak {
      * @param _account account to inspect
      * @return amount OHM available to borrow
      */
-    function getAvailableToBorrow(address _account) external returns(uint256);
+    function getAvailableToBorrow(address _account) external returns (uint256);
 
     /* ========== MANAGEMENT FUNCTIONS ========== */
-    
+
     /**
      * @notice sets the maximum debt limit for the system
      * - onlyOwner (or governance)
@@ -48,7 +48,7 @@ interface IIncurDebtTokemak {
      * @param _limit in OHM
      */
     function setGlobalDebtLimit(uint256 _limit) external;
-    
+
     /**
      * @notice sets the maximum debt limit for the system
      * - onlyOwner (or governance)
@@ -82,10 +82,7 @@ interface IIncurDebtTokemak {
      * @param _account the address that will interact with contract
      * @param _to where to send remaining gOHM
      */
-    function forceRepay(
-        address _account,
-        address _to
-    ) external;
+    function forceRepay(address _account, address _to) external;
 
     /**
      * @notice seize and burn _accounts collateral and forgive debt

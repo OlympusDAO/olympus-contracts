@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.10;
 
 import "../interfaces/IOHM.sol";
 import "../interfaces/IsOHM.sol";
@@ -8,13 +8,25 @@ import "../interfaces/IERC20.sol";
 import "../interfaces/IStaking.sol";
 import "./interfaces/ITreasury.sol";
 import "../libraries/SafeERC20.sol";
-import "../interfaces/IIncurDebt.sol";
 import "../types/OlympusAccessControlledV2.sol";
+
+error IncurDebtV1_NotBorrower(address _borrower);
+error IncurDebtV1_InvaildNumber(uint256 _amount);
+error IncurDebtV1_AlreadyBorrower(address _borrower);
+error IncurDebtV1_AboveGlobalDebtLimit(uint256 _limit);
+error IncurDebtV1_AboveBorrowersDebtLimit(uint256 _limit);
+error IncurDebtV1_LimitBelowOutstandingDebt(uint256 _limit);
+error IncurDebtV1_AmountAboveBorrowerBalance(uint256 _amount);
+error IncurDebtV1_AmountMoreThanBorrowersLimit(uint256 _borrower);
+error IncurDebtV1_OHMAmountMoreThanAvailableLoan(uint256 _amount);
+error IncurDebtV1_BorrowerHasNoOutstandingDebet(address _borrower);
+error IncurDebtV1_BorrowerStillHasOutstandingDebet(address _borrower);
 
 contract IncurDebtV1 is OlympusAccessControlledV2 {
     using SafeERC20 for IERC20;
-    uint256 totalOutstandingDebt;
+
     uint256 public globalDebtLimit;
+    uint256 public totalOutstandingDebt;
 
     address public immutable OHM;
     address public immutable gOHM;
@@ -23,15 +35,14 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
     address public immutable treasury;
 
     struct Borrower {
-        uint256 debt;
-        uint256 limit;
-        uint256 collateralInSOHM;
+        uint128 debt;
+        uint128 limit;
+        uint128 collateralInSOHM;
         uint256 collateralInGOHM;
-        bool isBorrower;
+        bool isAllowed;
     }
 
-    mapping(address => bool) isStrategy;
-    mapping(address => Borrower) borrower;
+    mapping(address => Borrower) public borrowers;
 
     constructor(
         address _OHM,
@@ -48,8 +59,8 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
         treasury = _treasury;
     }
 
-    modifier isBorrower(address _account) {
-        require(borrower[_account].isBorrower, "not a borrower");
+    modifier isBorrower(address _borrower) {
+        if (!borrowers[_borrower].isAllowed) revert IncurDebtV1_NotBorrower(_borrower);
         _;
     }
 
@@ -60,44 +71,46 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _limit in OHM
      */
     function setGlobalDebtLimit(uint256 _limit) external onlyGovernor {
-        require(_limit >= totalOutstandingDebt, "new limit below total outstanding debt");
+        if (_limit < totalOutstandingDebt) revert IncurDebtV1_LimitBelowOutstandingDebt(_limit);
         globalDebtLimit = _limit;
+    }
+
+    /**
+     * @notice lets a user become a borrower
+     * - onlyOwner (or governance)
+     * - user must not be borrower
+     * @param _borrower the address that will interact with contract
+     */
+    function allowBorrower(address _borrower) external onlyGovernor {
+        if (borrowers[_borrower].isAllowed) revert IncurDebtV1_AlreadyBorrower(_borrower);
+        borrowers[_borrower].isAllowed = true;
     }
 
     /**
      * @notice sets the maximum debt limit for a borrower
      * - onlyOwner (or governance)
-     * - borrower must not already be allowed
-     * @param _account the address that will interact with contract
-     */
-    function allowBorrower(address _account) external onlyGovernor {
-        require(!borrower[_account].isBorrower, "already borrower");
-        borrower[_account].isBorrower = true;
-    }
-
-    /**
-     * @notice sets the maximum debt limit for the system
-     * - onlyOwner (or governance)
      * - limit must be greater than or equal to borrower's outstanding debt
-     * @param _account the address that will interact with contract
+     * - limit must be less than or equal to the global debt limit
+     * @param _borrower the address that will interact with contract
      * @param _limit borrower's debt limit in OHM
      */
-    function setBorrowerDebtLimit(address _account, uint256 _limit) external onlyGovernor isBorrower(_account) {
-        require(_limit >= borrower[_account].debt);
-        require(_limit < globalDebtLimit, "_limit above global debt limit");
+    function setBorrowerDebtLimit(address _borrower, uint256 _limit) external onlyGovernor isBorrower(_borrower) {
+        if (_limit < borrowers[_borrower].debt) revert IncurDebtV1_AboveBorrowersDebtLimit(_limit);
+        if (_limit > globalDebtLimit) revert IncurDebtV1_AboveGlobalDebtLimit(_limit);
 
-        borrower[_account].limit = _limit;
+        borrowers[_borrower].limit = uint128(_limit);
     }
 
     /**
-     * @notice sets the maximum debt limit for the system
+     * @notice revoke user right to borrow
      * - onlyOwner (or governance)
+     * - user must be borrower
      * - borrower must not have outstanding debt
-     * @param _account the address that will interact with contract
+     * @param _borrower the address that will interact with contract
      */
-    function revokeBorrower(address _account) external onlyGovernor isBorrower(_account) {
-        require(borrower[_account].debt == 0, "_account still has outstanding debt");
-        borrower[_account].isBorrower = false;
+    function revokeBorrower(address _borrower) external onlyGovernor isBorrower(_borrower) {
+        if (borrowers[_borrower].debt != 0) revert IncurDebtV1_BorrowerStillHasOutstandingDebet(_borrower);
+        borrowers[_borrower].isAllowed = false;
     }
 
     /**
@@ -105,38 +118,40 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * - msg.sender must be a borrower
      * - this contract must have been approved _amount
      * @dev will unwrap and hold as sOHM in this contract
-     * @param _amount amount of gOHM
+     * @param _amount amount of gOHM/sOHM
+     * @param _token token(gOHM/sOHM) to deposit with
      */
     function deposit(uint256 _amount, address _token) external isBorrower(msg.sender) {
+        Borrower storage borrower = borrowers[msg.sender];
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         if (_token == gOHM) {
             uint256 sbalance = IStaking(staking).unwrap(address(this), _amount);
 
-            borrower[msg.sender].collateralInSOHM += sbalance;
-            borrower[msg.sender].collateralInGOHM += _amount;
+            borrower.collateralInSOHM += uint128(sbalance);
+            borrower.collateralInGOHM += _amount;
         } else if (_token == sOHM) {
             uint256 gbalance = IgOHM(gOHM).balanceTo(_amount);
 
-            borrower[msg.sender].collateralInSOHM += _amount;
-            borrower[msg.sender].collateralInGOHM += gbalance;
+            borrower.collateralInSOHM += uint128(_amount);
+            borrower.collateralInGOHM += gbalance;
         }
     }
 
     /**
      * @notice allow borrowers to borrow OHM
      * - msg.sender must be a borrower
-     * - _ohmAmount must be <= availableDebt
+     * - _ohmAmount must be less than or equal to borrowers debt limit
+     * - _ohmAmount must be less than or equal to borrowers available loan limit
      * @param _ohmAmount amount of OHM to borrow
      */
     function borrow(uint256 _ohmAmount) external isBorrower(msg.sender) {
-        require(
-            _ohmAmount <= borrower[msg.sender].limit - borrower[msg.sender].debt,
-            "_ohmAmount more than borrower limit"
-        );
-        require(_ohmAmount <= getAvailableToBorrow(), "_ohmAmount more than available loan");
+        if (_ohmAmount > borrowers[msg.sender].limit - borrowers[msg.sender].debt)
+            revert IncurDebtV1_AmountMoreThanBorrowersLimit(_ohmAmount);
 
-        borrower[msg.sender].debt += _ohmAmount;
+        if (_ohmAmount > getAvailableToBorrow()) revert IncurDebtV1_OHMAmountMoreThanAvailableLoan(_ohmAmount);
+
+        borrowers[msg.sender].debt += uint128(_ohmAmount);
         totalOutstandingDebt += _ohmAmount;
 
         ITreasury(treasury).incurDebt(_ohmAmount, OHM);
@@ -147,9 +162,8 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @notice withdraws gOHM/sOHM  to _to address
      * - msg.sender must be a borrower
      * - _amount (in OHM) must be less than or equal to depositedOhm - debt
-     * @dev should approve the staking contract to spend users sOHM
      * @param _amount amount of gOHM/sOHM to withdraw
-     * @param _to address to send gOHM/sOHM
+     * @param _to address to send _amount
      * @param _token token to send _amount
      */
     function withdraw(
@@ -157,29 +171,26 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
         address _to,
         address _token
     ) external isBorrower(msg.sender) {
-        require(_amount > 0, "invalid number");
+        if (_amount == 0) revert IncurDebtV1_InvaildNumber(_amount);
+        Borrower storage borrower = borrowers[msg.sender];
 
         updateCollateralInSOHM(msg.sender);
 
         if (_token == gOHM) {
             uint256 _sAmount = IgOHM(gOHM).balanceFrom(_amount);
 
-            require(
-                _sAmount <= borrower[msg.sender].collateralInSOHM - borrower[msg.sender].debt,
-                "_amount above available gOHM"
-            );
-            borrower[msg.sender].collateralInSOHM -= _sAmount;
-            borrower[msg.sender].collateralInGOHM -= _amount;
+            if (_sAmount > getAvailableToBorrow()) revert IncurDebtV1_AmountAboveBorrowerBalance(_sAmount);
 
+            borrower.collateralInSOHM -= uint128(_sAmount);
+            borrower.collateralInGOHM -= _amount;
+
+            IERC20(sOHM).approve(staking, _sAmount);
             IStaking(staking).wrap(_to, _sAmount);
         } else if (_token == sOHM) {
-            require(
-                _amount <= borrower[msg.sender].collateralInSOHM - borrower[msg.sender].debt,
-                "_amount above available sOHM"
-            );
+            if (_amount > getAvailableToBorrow()) revert IncurDebtV1_AmountAboveBorrowerBalance(_amount);
 
-            borrower[msg.sender].collateralInSOHM -= _amount;
-            borrower[msg.sender].collateralInGOHM -= IgOHM(gOHM).balanceTo(_amount);
+            borrower.collateralInSOHM -= uint128(_amount);
+            borrower.collateralInGOHM -= IgOHM(gOHM).balanceTo(_amount);
 
             IERC20(sOHM).safeTransfer(_to, _amount);
         }
@@ -188,81 +199,81 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
     /**
      * @notice repay debt with collateral
      * - msg.sender must be a borrower
-     * - msg.sender's OHM allowance must be >= _ohmAmount
+     * - borrower must have outstanding debt
      */
     function repayDebtWithCollateral() external {
+        Borrower storage borrower = borrowers[msg.sender];
         uint256 depositedCollateralAfterRepay = _repay(msg.sender);
-        totalOutstandingDebt -= borrower[msg.sender].debt;
 
-        borrower[msg.sender].collateralInSOHM = depositedCollateralAfterRepay;
-        borrower[msg.sender].collateralInGOHM = IgOHM(gOHM).balanceTo(depositedCollateralAfterRepay);
-
-        borrower[msg.sender].debt = 0;
+        borrower.debt = 0;
+        borrower.collateralInSOHM = uint128(depositedCollateralAfterRepay);
+        borrower.collateralInGOHM = IgOHM(gOHM).balanceTo(depositedCollateralAfterRepay);
     }
 
     /**
-     * @notice repay debt with collateral and withdraw the leftover
+     * @notice repay debt with collateral and withdraw the accrued earnings to sOHM/gOHM
      * - msg.sender must be a borrower
-     * - msg.sender's OHM allowance must be >= _ohmAmount
+     * - borrower must have outstanding debt
+     * @param _tokenToReceiveExcess amount of OHM to borrow
      */
     function repayDebtWithCollateralAndWithdrawTheRest(address _tokenToReceiveExcess) external {
         uint256 depositedCollateralAfterRepay = _repay(msg.sender);
+        assignBorrowerInfoToZero(msg.sender);
 
         if (depositedCollateralAfterRepay > 0) {
             if (_tokenToReceiveExcess == sOHM) {
                 IERC20(sOHM).safeTransfer(msg.sender, depositedCollateralAfterRepay);
             } else if (_tokenToReceiveExcess == gOHM) {
+                IERC20(sOHM).approve(staking, depositedCollateralAfterRepay);
                 IStaking(staking).wrap(msg.sender, depositedCollateralAfterRepay);
             }
         }
-
-        totalOutstandingDebt -= borrower[msg.sender].debt;
-        updateBorrowerStats(msg.sender);
     }
 
     /**
      * @notice deposits OHM to pay debt
      * - msg.sender must be a borrower
      * - msg.sender's OHM allowance must be >= _ohmAmount
+     * - borrower must have outstanding debt
      * @param _ohmAmount amount of OHM to borrow
      */
     function repayDebtWithOHM(uint256 _ohmAmount) external isBorrower(msg.sender) {
-        require(borrower[msg.sender].debt > 0, "does not have outstanding debt");
+        if (borrowers[msg.sender].debt == 0) revert IncurDebtV1_BorrowerHasNoOutstandingDebet(msg.sender);
+        IERC20(OHM).safeTransferFrom(msg.sender, address(this), _ohmAmount);
 
         totalOutstandingDebt -= _ohmAmount;
-        borrower[msg.sender].debt = borrower[msg.sender].debt - _ohmAmount;
+        borrowers[msg.sender].debt = uint128(borrowers[msg.sender].debt - _ohmAmount);
 
-        IERC20(OHM).safeTransferFrom(msg.sender, address(this), _ohmAmount);
+        IERC20(OHM).approve(treasury, _ohmAmount);
         ITreasury(treasury).repayDebtWithOHM(_ohmAmount);
     }
 
     /**
-     * @notice repays debt using collateral and returns remaining tokens to owner
+     * @notice repays debt using collateral and returns remaining tokens to borrower
      * - onlyOwner (or governance)
      * - sends remaining tokens to owner in sOHM
-     * @param _account the address that will interact with contract
-     * @param _to where to send remaining gOHM
+     * @param _borrower the address that will interact with contract
+     * @param _to where to send remaining sOHM
      */
-    function forceRepay(address _account, address _to) external onlyGovernor {
-        uint256 collateralAfterDebtPayment = _repay(_account);
-        totalOutstandingDebt -= borrower[_account].debt;
+    function forceRepay(address _borrower, address _to) external onlyGovernor {
+        uint256 collateralAfterDebtPayment = _repay(_borrower);
 
-        updateBorrowerStats(_account);
+        assignBorrowerInfoToZero(_borrower);
         if (collateralAfterDebtPayment > 0) IERC20(sOHM).safeTransfer(_to, collateralAfterDebtPayment);
     }
 
     /**
-     * @notice seize and burn _accounts collateral and forgive debt
+     * @notice seize and burn _borrowers collateral and forgive debt
      * - will burn all collateral, including excess of debt
      * - onlyGovernance
-     * @param _account the account to seize
+     * @param _borrower the account to seize
      */
-    function seize(address _account) external onlyGovernor isBorrower(_account) {
-        updateCollateralInSOHM(_account);
-        uint256 seizedCollateral = borrower[_account].collateralInSOHM;
+    function seize(address _borrower) external onlyGovernor isBorrower(_borrower) {
+        _repayDebtWithCollateralByGovernor(_borrower);
+        uint256 seizedCollateral = borrowers[_borrower].collateralInSOHM;
 
-        totalOutstandingDebt -= borrower[_account].debt;
-        updateBorrowerStats(_account);
+        assignBorrowerInfoToZero(_borrower);
+        IERC20(sOHM).approve(staking, seizedCollateral);
 
         IStaking(staking).unstake(address(this), seizedCollateral, false, true);
         IOHM(OHM).burn(seizedCollateral);
@@ -270,36 +281,52 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
 
     /**
      * @notice updates borrowers sOHM collateral to current index
-     * @param _account borrowers address
+     * @param _borrower borrowers address
      */
-    function updateCollateralInSOHM(address _account) public {
-        uint256 sBalance = IgOHM(gOHM).balanceFrom(borrower[_account].collateralInGOHM);
-        borrower[_account].collateralInSOHM = sBalance;
+    function updateCollateralInSOHM(address _borrower) public {
+        uint256 sBalance = IgOHM(gOHM).balanceFrom(borrowers[_borrower].collateralInGOHM);
+        borrowers[_borrower].collateralInSOHM = uint128(sBalance);
     }
 
     /**
      * @notice gets available OHM to borrow for account
      * @return amount OHM available to borrow
      */
-    function getAvailableToBorrow() internal view returns (uint256) {
-        uint256 sBalance = IgOHM(gOHM).balanceFrom(borrower[msg.sender].collateralInGOHM);
-        return sBalance - borrower[msg.sender].debt;
+    function getAvailableToBorrow() public view returns (uint256) {
+        uint256 sBalance = IgOHM(gOHM).balanceFrom(borrowers[msg.sender].collateralInGOHM);
+        return sBalance - borrowers[msg.sender].debt;
     }
 
-    function _repay(address _addr) internal isBorrower(_addr) returns (uint256) {
-        require(borrower[_addr].debt > 0, "does not have outstanding debt");
+    function _repay(address _borrower) internal isBorrower(_borrower) returns (uint256) {
+        Borrower storage borrower = borrowers[_borrower];
+        if (borrower.debt == 0) revert IncurDebtV1_BorrowerHasNoOutstandingDebet(_borrower);
 
-        updateCollateralInSOHM(_addr);
+        updateCollateralInSOHM(_borrower);
+        IERC20(sOHM).approve(staking, borrower.debt);
 
-        IStaking(staking).unstake(address(this), borrower[_addr].debt, false, true);
-        ITreasury(treasury).repayDebtWithOHM(borrower[_addr].debt);
+        IStaking(staking).unstake(address(this), borrower.debt, false, true);
+        IERC20(OHM).approve(treasury, borrower.debt);
 
-        return borrower[_addr].collateralInSOHM - borrower[_addr].debt;
+        ITreasury(treasury).repayDebtWithOHM(borrower.debt);
+        totalOutstandingDebt -= borrower.debt;
+
+        return borrower.collateralInSOHM - borrower.debt;
     }
 
-    function updateBorrowerStats(address _addr) internal {
-        borrower[_addr].debt = 0;
-        borrower[_addr].collateralInSOHM = 0;
-        borrower[_addr].collateralInGOHM = 0;
+    function _repayDebtWithCollateralByGovernor(address _borrower) private {
+        Borrower storage borrower = borrowers[_borrower];
+        uint256 depositedCollateralAfterRepay = _repay(_borrower);
+
+        borrower.debt = 0;
+        borrower.collateralInSOHM = uint128(depositedCollateralAfterRepay);
+        borrower.collateralInGOHM = IgOHM(gOHM).balanceTo(depositedCollateralAfterRepay);
+    }
+
+    function assignBorrowerInfoToZero(address _borrower) internal {
+        Borrower storage borrower = borrowers[_borrower];
+        borrower.debt = 0;
+
+        borrower.collateralInSOHM = 0;
+        borrower.collateralInGOHM = 0;
     }
 }
