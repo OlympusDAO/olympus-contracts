@@ -96,7 +96,7 @@ contract CVXAllocatorV2 is BaseAllocator {
     function _prepareMigration() internal override {
         uint256[] memory amounts = new uint256[](3);
         amounts[0] = 1;
-        amounts[1] = type(uint256).max;
+        amounts[2] = type(uint256).max;
         deallocate(amounts);
     }
 
@@ -130,7 +130,7 @@ contract CVXAllocatorV2 is BaseAllocator {
         opData.relock = relock;
     }
 
-    /// @notice Returns amounts allocted. NOTE: returns 0 for crv because it's being swapped into cvxcrv.
+    /// @notice Returns amounts allocated. NOTE: returns 0 for crv because it's being swapped into cvxcrv.
     /// Thus, crv loss limit should be type(uint256).max;
     function amountAllocated(uint256 id) public view override returns (uint256) {
         uint256 index = tokenIds[id];

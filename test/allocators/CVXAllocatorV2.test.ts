@@ -28,7 +28,7 @@ const bnn = helpers.bnn;
 /////////////////// CUSTOM
 
 /// TYPES - IMPORT HERE
-import { CVXAllocatorV2, CVXAllocatorV2__factory } from "../../types";
+import { CVXAllocatorV2, CVXAllocatorV2__factory, ILockedCvx } from "../../types";
 
 /// SET TYPES HERE, VARIABLES ARE PRESET
 const ALLOCATORN: string = "CVXAllocatorV2";
@@ -79,8 +79,10 @@ describe(ALLOCATORN, () => {
 
     ////// DEFINE YOUR CUSTOM OBJECTS ONLY FOR USE IN FUNCTIONS HERE
     /// SIGNERS
+    let notifier: SignerWithAddress;
 
     /// CONTRACTS
+    let LOCKER: ILockedCvx;
 
     /// NETWORK
     // OBLIGATORY
@@ -101,6 +103,10 @@ describe(ALLOCATORN, () => {
     // it will be used below.
 
     async function setupTestingEnvironment(): Promise<void> {
+        let cvxc = (await helpers.getCoin(coins.cvx)).connect(
+            await helpers.impersonate("0x4e3fbd56cd56c3e72c1403e103b45db9da5b5d2b")
+        );
+
         AID = {
             authority: olympus.authority,
             extender: olympus.extender,
@@ -120,6 +126,23 @@ describe(ALLOCATORN, () => {
         reward = await helpers.getCoins([coins.crv, coins.cvxcrv]);
 
         nrBef = (await extender.getTotalAllocatorCount()).toNumber();
+
+        LOCKER = await helpers.summon<ILockedCvx>("ILockedCvx", protocols.convex.cvxLocker);
+
+        notifier = await helpers.impersonate((await LOCKER.owner()) as string);
+
+        await helpers.addEth(notifier.address, bne(10, 18));
+        await helpers.addEth("0x4e3fbd56cd56c3e72c1403e103b45db9da5b5d2b", bne(10, 18));
+
+        const bal = await cvxc.balanceOf(notifier.address);
+
+        await cvxc.transfer(notifier.address, bal);
+
+        cvxc = cvxc.connect(notifier);
+
+        await cvxc.approve(LOCKER.address, bal);
+
+        LOCKER = LOCKER.connect(notifier);
     }
 
     // These should test the initialization procedure. This means setting up parameters and adding
@@ -287,18 +310,28 @@ describe(ALLOCATORN, () => {
 
             await allocator.update(nrBef);
             perf = await extender.getAllocatorPerformance(nrBef);
+            let ccGain = await allocator.amountAllocated(nrBef + 2);
 
-            await helpers.tmine(24 * 3600 * 24);
+            await helpers.tmine(24 * 3600 * 100);
             await allocator.update(nrBef);
-            await helpers.tmine(24 * 3600 * 24);
+
+            await LOCKER.checkpointEpoch();
+
+            await helpers.tmine(24 * 3600 * 40);
             await allocator.update(nrBef);
-            await helpers.tmine(24 * 3600 * 24);
+
+            await LOCKER.checkpointEpoch();
+
+            await helpers.tmine(24 * 3600 * 200);
             await allocator.update(nrBef);
 
             expect((await extender.getAllocatorPerformance(nrBef))[0]).to.be.gte(perf[0]);
             perf = await extender.getAllocatorPerformance(nrBef);
 
+            expect(ccGain).to.be.lt(await allocator.amountAllocated(nrBef + 2));
+
             await helpers.tmine(24 * 3600 * 100);
+            await LOCKER.checkpointEpoch();
             await allocator.update(nrBef);
             await helpers.tmine(24 * 3600 * 24);
             await allocator.update(nrBef);
@@ -410,7 +443,7 @@ describe(ALLOCATORN, () => {
             const bal3: BigNumber = await underlying[0].balanceOf(allocator.address);
             const bal4: BigNumber = await underlying[2].balanceOf(allocator.address);
 
-            expect(bal3).to.be.gte(bal1);
+            expect(bal3).to.be.gt(bal1);
             expect(bal4).to.be.gte(bal2);
         });
     }
@@ -419,10 +452,13 @@ describe(ALLOCATORN, () => {
 
     async function beforeEachMigrateTest(): Promise<void> {
         await allocator.update(nrBef);
+
+        await helpers.tmine(24 * 3600 * 200);
+        await allocator.update(nrBef);
+
         await helpers.tmine(24 * 3600 * 24);
         await allocator.update(nrBef);
-        await helpers.tmine(24 * 3600 * 24);
-        await allocator.update(nrBef);
+
         await helpers.tmine(24 * 3600 * 104);
 
         let fallocator: ALLOCATORT = await factory.deploy(OD, AID);
