@@ -1,7 +1,7 @@
 import { ethers, network } from "hardhat";
 import { BigNumber, BaseContract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { MockERC20 } from "../../types";
+import { ERC20 } from "../../types";
 
 // CONSTANTS
 
@@ -17,6 +17,10 @@ const constants = { addressZero, uint256Max };
 
 function trim(slot: BigNumber): string {
     return slot.eq(0) ? "0x0" : "0x" + slot._hex.slice(2).replace(/^0+/, "");
+}
+
+function strim(addr: string): string {
+    return "0x" + addr.slice(2).replace(/^0+/, "");
 }
 
 function checksum(address: string): string {
@@ -52,12 +56,12 @@ async function impersonate(address: string): Promise<SignerWithAddress> {
     return await ethers.getSigner(address);
 }
 
-async function getCoin(address: string): Promise<MockERC20> {
-    return (await ethers.getContractAt("MockERC20", address)) as MockERC20;
+async function getCoin(address: string): Promise<ERC20> {
+    return (await ethers.getContractAt("contracts/types/ERC20.sol:ERC20", address)) as ERC20;
 }
 
-async function getCoins(addresses: string[]): Promise<MockERC20[]> {
-    const result: MockERC20[] = [];
+async function getCoins(addresses: string[]): Promise<ERC20[]> {
+    const result: ERC20[] = [];
 
     for (const address of addresses) {
         result.push(await getCoin(address));
@@ -114,6 +118,7 @@ async function tmine(elapsed: number): Promise<void> {
 
 export const helpers = {
     trim,
+    strim,
     checksum,
     addressify,
     bnn,

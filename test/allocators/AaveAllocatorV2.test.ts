@@ -10,7 +10,7 @@ import {
     TreasuryExtender,
     TreasuryExtender__factory,
     OlympusAuthority,
-    MockERC20,
+    ERC20,
     AaveAllocatorV2,
     AaveAllocatorV2__factory,
 } from "../../types";
@@ -36,16 +36,16 @@ describe("AaveAllocatorV2", () => {
     let factory: AaveAllocatorV2__factory;
 
     // tokens
-    let frax: MockERC20;
-    let dai: MockERC20;
-    let weth: MockERC20;
-    let afrax: MockERC20;
-    let adai: MockERC20;
-    let aweth: MockERC20;
-    let usdc: MockERC20;
-    let usdt: MockERC20;
-    let tokens: MockERC20[];
-    let utilTokens: MockERC20[];
+    let frax: ERC20;
+    let dai: ERC20;
+    let weth: ERC20;
+    let afrax: ERC20;
+    let adai: ERC20;
+    let aweth: ERC20;
+    let usdc: ERC20;
+    let usdt: ERC20;
+    let tokens: ERC20[];
+    let utilTokens: ERC20[];
 
     // network
     let url: string = config.networks.hardhat.forking!.url;
@@ -410,7 +410,7 @@ describe("AaveAllocatorV2", () => {
                         allocator.address
                     );
 
-                    const tempcoin: MockERC20 = utilTokens[i].connect(wallocator);
+                    const tempcoin: ERC20 = utilTokens[i].connect(wallocator);
 
                     await helpers.addEth(allocator.address, bne(10, 23));
 

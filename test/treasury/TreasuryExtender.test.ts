@@ -13,7 +13,7 @@ import {
     TreasuryExtender__factory,
     BaseAllocator,
     OlympusAuthority,
-    MockERC20,
+    ERC20,
 } from "../../types";
 
 // data
@@ -41,12 +41,12 @@ describe("TreasuryExtender", () => {
     let fakeAllocator: FakeContract<BaseAllocator>;
 
     // tokens
-    let frax: MockERC20;
-    let usdc: MockERC20;
-    let dai: MockERC20;
-    let usdt: MockERC20;
-    let weth: MockERC20;
-    let tokens: MockERC20[];
+    let frax: ERC20;
+    let usdc: ERC20;
+    let dai: ERC20;
+    let usdt: ERC20;
+    let weth: ERC20;
+    let tokens: ERC20[];
 
     // network
     let url: string = config.networks.hardhat.forking!.url;

@@ -155,4 +155,9 @@ interface ILQTYStaking {
     function getPendingETHGain(address _user) external view returns (uint256);
 
     function getPendingLUSDGain(address _user) external view returns (uint256);
+<<<<<<< HEAD
+=======
+
+    function stakes(address _user) external view returns (uint256);
+>>>>>>> ff680c4f1bea32ac51aa89050ad62b90bfe2633c
 }

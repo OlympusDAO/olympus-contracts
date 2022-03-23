@@ -8,7 +8,7 @@ import {
     TreasuryExtender,
     TreasuryExtender__factory,
     OlympusAuthority,
-    MockERC20,
+    ERC20,
     BtrflyAllocator,
     BtrflyAllocator__factory,
 } from "../../types";
@@ -34,10 +34,10 @@ describe("BtrflyAllocator", () => {
     let factory: BtrflyAllocator__factory;
 
     // tokens
-    let btrfly: MockERC20;
+    let btrfly: ERC20;
     let xBtrfly: any;
 
-    let tokens: MockERC20[];
+    let tokens: ERC20[];
     let utilTokens: any[];
 
     // network
@@ -275,7 +275,7 @@ describe("BtrflyAllocator", () => {
 
                 const wallocator: SignerWithAddress = await helpers.impersonate(allocator.address);
 
-                const tempcoin: MockERC20 = utilTokens[0].connect(wallocator);
+                const tempcoin: ERC20 = utilTokens[0].connect(wallocator);
                 await helpers.addEth(allocator.address, bne(10, 23));
 
                 await tempcoin.transfer(

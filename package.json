@@ -13,6 +13,10 @@
     "@openzeppelin/contracts": "^4.4.2",
     "@openzeppelin/contracts-upgradeable": "^3.4.2",
     "@openzeppelin/hardhat-upgrades": "^1.12.0",
+<<<<<<< HEAD
+=======
+    "@rari-capital/fuse-sdk": "^1.1.0",
+>>>>>>> ff680c4f1bea32ac51aa89050ad62b90bfe2633c
     "@rari-capital/solmate": "^6.2.0",
     "@typechain/ethers-v5": "^7.1.2",
     "@typechain/hardhat": "^2.3.0",
@@ -58,10 +62,10 @@
     "coverage": "HARDHAT_DEPLOY_FIXTURE=true hardhat coverage",
     "typechain": "TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
     "fork": "hardhat node",
-    "deploy:mainnet": "hardhat --network mainnet deploy",
-    "deploy:rinkeby": "hardhat --network rinkeby deploy",
-    "deploy:ropsten": "hardhat --network ropsten deploy",
-    "deploy:hardhat": "hardhat --network hardhat deploy",
+    "deploy:mainnet": "./tasks/runTask.sh mainnet deploy",
+    "deploy:rinkeby": "./tasks/runTask.sh rinkeby deploy",
+    "deploy:ropsten": "./tasks/runTask.sh ropsten deploy",
+    "deploy:hardhat": "./tasks/runTask.sh deploy",
     "sourcify:mainnet": "hardhat --network mainnet sourcify",
     "sourcify:rinkeby": "hardhat --network rinkeby sourcify",
     "etherscan:mainnet": "hardhat --network mainnet etherscan-verify",
