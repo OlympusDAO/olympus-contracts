@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.10;
 
-import "../libraries/SafeERC20.sol";
+import "../../libraries/SafeERC20.sol";
 
-import "../interfaces/IERC20.sol";
-import "../interfaces/ITreasury.sol";
+import "../../interfaces/IERC20.sol";
+import "../../interfaces/ITreasury.sol";
 
-import "../types/OlympusAccessControlled.sol";
+import "../../types/OlympusAccessControlled.sol";
 
 interface IStaking {
     function stake(uint256 _amount, address _recipient) external returns (bool);

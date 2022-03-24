@@ -1,5 +1,5 @@
 // libraries, functionality...
-import { ethers, waffle, network, config } from "hardhat";
+import { ethers, network, config } from "hardhat";
 import chai, { expect } from "chai";
 import { smock } from "@defi-wonderland/smock";
 import { BigNumber } from "ethers";
@@ -13,21 +13,15 @@ import {
     TreasuryExtender__factory,
     BaseAllocator,
     OlympusAuthority,
-    MockERC20,
+    ERC20,
 } from "../../types";
 
 // data
 import { coins } from "../utils/coins";
 import { olympus } from "../utils/olympus";
-import {
-    impersonate,
-    snapshot,
-    revert,
-    getCoin,
-    bne,
-    pinBlock,
-    addressZero,
-} from "../utils/scripts";
+import { helpers } from "../utils/helpers";
+
+const bne = helpers.bne;
 
 chai.should();
 chai.use(smock.matchers);
@@ -47,12 +41,12 @@ describe("TreasuryExtender", () => {
     let fakeAllocator: FakeContract<BaseAllocator>;
 
     // tokens
-    let frax: MockERC20;
-    let usdc: MockERC20;
-    let dai: MockERC20;
-    let usdt: MockERC20;
-    let weth: MockERC20;
-    let tokens: MockERC20[];
+    let frax: ERC20;
+    let usdc: ERC20;
+    let dai: ERC20;
+    let usdt: ERC20;
+    let weth: ERC20;
+    let tokens: ERC20[];
 
     // network
     let url: string = config.networks.hardhat.forking!.url;
@@ -61,13 +55,13 @@ describe("TreasuryExtender", () => {
     let start: number = 0;
 
     before(async () => {
-        await pinBlock(14026252, url);
+        await helpers.pinBlock(14026252, url);
 
-        frax = await getCoin(coins.frax);
-        usdc = await getCoin(coins.usdc);
-        dai = await getCoin(coins.dai);
-        usdt = await getCoin(coins.usdt);
-        weth = await getCoin(coins.weth);
+        frax = await helpers.getCoin(coins.frax);
+        usdc = await helpers.getCoin(coins.usdc);
+        dai = await helpers.getCoin(coins.dai);
+        usdt = await helpers.getCoin(coins.usdt);
+        weth = await helpers.getCoin(coins.weth);
         tokens = [frax, usdc, dai, usdt, weth];
 
         fakeAllocator = await smock.fake<BaseAllocator>("BaseAllocator");
@@ -99,20 +93,20 @@ describe("TreasuryExtender", () => {
 
         owner = (await ethers.getSigners())[0];
 
-        guardian = await impersonate(await authority.guardian());
-        governor = await impersonate(await authority.governor());
+        guardian = await helpers.impersonate(await authority.guardian());
+        governor = await helpers.impersonate(await authority.governor());
 
         extender = extender.connect(guardian);
 
         treasury = treasury.connect(governor);
 
-        treasury.enable(3, extender.address, addressZero);
-        treasury.enable(0, extender.address, addressZero);
+        treasury.enable(3, extender.address, helpers.constants.addressZero);
+        treasury.enable(0, extender.address, helpers.constants.addressZero);
     });
 
     describe("registerDeposit", () => {
         before(async () => {
-            start = await snapshot();
+            start = await helpers.snapshot();
         });
 
         it("pre: should check if setup ok", async () => {
@@ -120,7 +114,7 @@ describe("TreasuryExtender", () => {
         });
 
         it("initial: is initialized to zero", async () => {
-            expect(await extender.getAllocatorByID(0)).to.equal(addressZero);
+            expect(await extender.getAllocatorByID(0)).to.equal(helpers.constants.addressZero);
         });
 
         it("revert: should revert if sender is not guardian", async () => {
@@ -159,13 +153,13 @@ describe("TreasuryExtender", () => {
         });
 
         after(async () => {
-            await revert(start);
+            await helpers.revert(start);
         });
     });
 
     describe("setAllocatorLimits", () => {
         before(async () => {
-            start = await snapshot();
+            start = await helpers.snapshot();
             await extender.registerDeposit(fakeAllocator.address);
             fakeAllocator.ids.returns([1]);
         });
@@ -218,7 +212,7 @@ describe("TreasuryExtender", () => {
         });
 
         after(async () => {
-            await revert(start);
+            await helpers.revert(start);
             fakeAllocator.ids.returns([0]);
         });
     });
@@ -228,7 +222,7 @@ describe("TreasuryExtender", () => {
 
     describe("returnRewardsToTreasury", async () => {
         before(async () => {
-            start = await snapshot();
+            start = await helpers.snapshot();
 
             rewardAllocator = await smock.fake<BaseAllocator>("BaseAllocator");
 
@@ -254,7 +248,7 @@ describe("TreasuryExtender", () => {
         });
 
         it("pre: should set up balance", async () => {
-            daiWhale = await impersonate("0x1dDb61FD4E70426eDb59e7ECDDf0f049d9cF3906");
+            daiWhale = await helpers.impersonate("0x1dDb61FD4E70426eDb59e7ECDDf0f049d9cF3906");
 
             await network.provider.send("hardhat_setBalance", [
                 rewardAllocator.address,
@@ -311,7 +305,7 @@ describe("TreasuryExtender", () => {
         });
 
         after(async () => {
-            await revert(start);
+            await helpers.revert(start);
             rewardAllocator.ids.returns([0]);
             rewardAllocator.status.returns(0);
         });
@@ -321,7 +315,7 @@ describe("TreasuryExtender", () => {
 
     describe("requestFundsFromTreasury", async () => {
         before(async () => {
-            start = await snapshot();
+            start = await helpers.snapshot();
 
             await extender.registerDeposit(fakeAllocator.address);
 
@@ -561,7 +555,7 @@ describe("TreasuryExtender", () => {
             const performancef: any = await extender.getAllocatorPerformance(1);
             const performancev: any = await extender.getAllocatorPerformance(2);
 
-            const fraxWhale: SignerWithAddress = await impersonate(
+            const fraxWhale: SignerWithAddress = await helpers.impersonate(
                 "0x0e274455110A233Bb7577c73Aa58d75a0939F56E"
             );
 
@@ -610,7 +604,7 @@ describe("TreasuryExtender", () => {
         });
 
         it("passing: if 0 withdrawn, everything stays them", async () => {
-            const internalSnap: number = await snapshot();
+            const internalSnap: number = await helpers.snapshot();
 
             let balf: BigNumber = await extender.getAllocatorAllocated(1);
             let balv: BigNumber = await extender.getAllocatorAllocated(2);
@@ -651,11 +645,11 @@ describe("TreasuryExtender", () => {
                 expect(res[i]).to.equal(rese[i]);
             }
 
-            await revert(internalSnap);
+            await helpers.revert(internalSnap);
         });
 
         it("passing: withdraw allocated partially", async () => {
-            const internalSnap: number = await snapshot();
+            const internalSnap: number = await helpers.snapshot();
 
             let balf: BigNumber = await extender.getAllocatorAllocated(1);
             let balv: BigNumber = await extender.getAllocatorAllocated(2);
@@ -692,11 +686,11 @@ describe("TreasuryExtender", () => {
             expect(pv[0]).to.equal(pve[0]);
             expect(pv[1]).to.equal(pve[1]);
 
-            await revert(internalSnap);
+            await helpers.revert(internalSnap);
         });
 
         it("passing: if withdrawing only allocated, gain stays in tact", async () => {
-            const internalSnap: number = await snapshot();
+            const internalSnap: number = await helpers.snapshot();
 
             let balf: BigNumber = await extender.getAllocatorAllocated(1);
             let balv: BigNumber = await extender.getAllocatorAllocated(2);
@@ -730,11 +724,11 @@ describe("TreasuryExtender", () => {
             expect(pv[0]).to.equal(pve[0]);
             expect(pv[1]).to.equal(pve[1]);
 
-            await revert(internalSnap);
+            await helpers.revert(internalSnap);
         });
 
         it("passing: if withdrawing gain, it properly decrements together with allocated", async () => {
-            const internalSnap: number = await snapshot();
+            const internalSnap: number = await helpers.snapshot();
 
             let balf: BigNumber = await extender.getAllocatorAllocated(1);
             let balv: BigNumber = await extender.getAllocatorAllocated(2);
@@ -772,11 +766,11 @@ describe("TreasuryExtender", () => {
             expect(pv[1]).to.equal(pve[1]);
             expect(pf[1]).to.equal(pfe[1]);
 
-            await revert(internalSnap);
+            await helpers.revert(internalSnap);
         });
 
         it("passing: withdrawing everything", async () => {
-            const internalSnap: number = await snapshot();
+            const internalSnap: number = await helpers.snapshot();
 
             let balf: BigNumber = await extender.getAllocatorAllocated(1);
             let balv: BigNumber = await extender.getAllocatorAllocated(2);
@@ -814,7 +808,7 @@ describe("TreasuryExtender", () => {
             expect(pv[1]).to.equal(pve[1]);
             expect(pf[1]).to.equal(pfe[1]);
 
-            await revert(internalSnap);
+            await helpers.revert(internalSnap);
         });
     });
 });

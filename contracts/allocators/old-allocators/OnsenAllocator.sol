@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
-import "../libraries/Address.sol";
-import "../libraries/SafeMath.sol";
-import "../libraries/SafeERC20.sol";
+import "../../libraries/Address.sol";
+import "../../libraries/SafeMath.sol";
+import "../../libraries/SafeERC20.sol";
 
-import "../interfaces/IERC20.sol";
-import "../interfaces/ITreasury.sol";
+import "../../interfaces/IERC20.sol";
+import "../../interfaces/ITreasury.sol";
 
-import "../types/Ownable.sol";
+import "../../types/Ownable.sol";
 
 interface IMasterChef {
     function pendingSushi(uint256 _pid, address _user) external view returns (uint256);
