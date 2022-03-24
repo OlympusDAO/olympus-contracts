@@ -165,6 +165,22 @@ describe("IncurDebtV1", async () => {
             );
         });
 
+        it("Should fail if _token is not sOHM or gOHM", async () => {
+            await incurDebtV1.connect(governor).setGlobalDebtLimit(amount);
+            await incurDebtV1.connect(governor).allowBorrower(gOhmHolder.address);
+
+            const gOHMAmount = "10000000000000000000";
+            await incurDebtV1
+                .connect(governor)
+                .setBorrowerDebtLimit(gOhmHolder.address, "100000000000");
+
+            await gohm_token.connect(gOhmHolder).approve(incurDebtV1.address, gOHMAmount);
+
+            await expect(incurDebtV1.connect(gOhmHolder).deposit(amount, olympus.authority)).to.revertedWith(
+                `IncurDebtV1_WrongTokenAddress("${olympus.authority}")`
+            );
+        });
+
         it("Should deposit gohm", async () => {
             await incurDebtV1.connect(governor).setGlobalDebtLimit(amount);
             await incurDebtV1.connect(governor).allowBorrower(gOhmHolder.address);
@@ -434,7 +450,6 @@ describe("IncurDebtV1", async () => {
             assert.equal(borrowerInfo.collateralInSOHM, 0);
 
             assert.equal(Number(borrowerInfo.collateralInGOHM), 0);
-            console.log((2 ^ (128 - 1)).toString());
         });
 
         it("Should withdraw borrowers gOHM available balance ", async () => {

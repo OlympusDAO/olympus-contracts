@@ -12,6 +12,7 @@ import "../types/OlympusAccessControlledV2.sol";
 
 error IncurDebtV1_NotBorrower(address _borrower);
 error IncurDebtV1_InvaildNumber(uint256 _amount);
+error IncurDebtV1_WrongTokenAddress(address _token);
 error IncurDebtV1_AlreadyBorrower(address _borrower);
 error IncurDebtV1_AboveGlobalDebtLimit(uint256 _limit);
 error IncurDebtV1_AboveBorrowersDebtLimit(uint256 _limit);
@@ -38,7 +39,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
         uint128 debt;
         uint128 limit;
         uint128 collateralInSOHM;
-        uint256 collateralInGOHM;
+        uint128 collateralInGOHM;
         bool isAllowed;
     }
 
@@ -122,6 +123,8 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _token token(gOHM/sOHM) to deposit with
      */
     function deposit(uint256 _amount, address _token) external isBorrower(msg.sender) {
+        if (_token != gOHM && _token != sOHM) revert IncurDebtV1_WrongTokenAddress(_token);
+
         Borrower storage borrower = borrowers[msg.sender];
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -129,12 +132,12 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
             uint256 sbalance = IStaking(staking).unwrap(address(this), _amount);
 
             borrower.collateralInSOHM += uint128(sbalance);
-            borrower.collateralInGOHM += _amount;
+            borrower.collateralInGOHM += uint128(_amount);
         } else if (_token == sOHM) {
             uint256 gbalance = IgOHM(gOHM).balanceTo(_amount);
 
             borrower.collateralInSOHM += uint128(_amount);
-            borrower.collateralInGOHM += gbalance;
+            borrower.collateralInGOHM += uint128(gbalance);
         }
     }
 
@@ -182,7 +185,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
             if (_sAmount > getAvailableToBorrow()) revert IncurDebtV1_AmountAboveBorrowerBalance(_sAmount);
 
             borrower.collateralInSOHM -= uint128(_sAmount);
-            borrower.collateralInGOHM -= _amount;
+            borrower.collateralInGOHM -= uint128(_amount);
 
             IERC20(sOHM).approve(staking, _sAmount);
             IStaking(staking).wrap(_to, _sAmount);
@@ -190,7 +193,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
             if (_amount > getAvailableToBorrow()) revert IncurDebtV1_AmountAboveBorrowerBalance(_amount);
 
             borrower.collateralInSOHM -= uint128(_amount);
-            borrower.collateralInGOHM -= IgOHM(gOHM).balanceTo(_amount);
+            borrower.collateralInGOHM -= uint128(IgOHM(gOHM).balanceTo(_amount));
 
             IERC20(sOHM).safeTransfer(_to, _amount);
         }
@@ -207,7 +210,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
 
         borrower.debt = 0;
         borrower.collateralInSOHM = uint128(depositedCollateralAfterRepay);
-        borrower.collateralInGOHM = IgOHM(gOHM).balanceTo(depositedCollateralAfterRepay);
+        borrower.collateralInGOHM = uint128(IgOHM(gOHM).balanceTo(depositedCollateralAfterRepay));
     }
 
     /**
@@ -319,7 +322,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
 
         borrower.debt = 0;
         borrower.collateralInSOHM = uint128(depositedCollateralAfterRepay);
-        borrower.collateralInGOHM = IgOHM(gOHM).balanceTo(depositedCollateralAfterRepay);
+        borrower.collateralInGOHM = uint128(IgOHM(gOHM).balanceTo(depositedCollateralAfterRepay));
     }
 
     function assignBorrowerInfoToZero(address _borrower) internal {
