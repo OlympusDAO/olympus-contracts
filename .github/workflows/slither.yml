@@ -15,9 +15,6 @@ jobs:
               continue-on-error: true
               with:
                   sarif: results.sarif
-            - run: |
-                  echo ${{ steps.slither.outputs.sarif }}
-                  echo ${{ steps.slither.outputs }}
             - name: Upload SARIF file
               uses: github/codeql-action/upload-sarif@v1
               with:
