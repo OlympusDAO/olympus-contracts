@@ -147,6 +147,7 @@ const config: HardhatUserConfig = {
     },
     mocha: {
         timeout: 1000000,
+        ignore: "./test/templates/*",
     },
 };
 
