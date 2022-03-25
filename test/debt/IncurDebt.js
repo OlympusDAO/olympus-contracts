@@ -73,7 +73,8 @@ describe("IncurDebtV1", async () => {
         });
 
         it("Should set global debt limit address", async () => {
-            await incurDebtV1.connect(governor).setGlobalDebtLimit(amount);
+            await expect(incurDebtV1.connect(governor).setGlobalDebtLimit(amount)).to.emit(incurDebtV1, 'GlobalLimit')
+                .withArgs(amount);
             assert.equal(await incurDebtV1.globalDebtLimit(), amount);
         });
     });
@@ -89,7 +90,8 @@ describe("IncurDebtV1", async () => {
             const borrowerInfoBeforerTx = await incurDebtV1.borrowers(gOhmHolder.address);
             assert.equal(borrowerInfoBeforerTx.isAllowed, false);
 
-            await incurDebtV1.connect(governor).allowBorrower(gOhmHolder.address);
+            await expect(incurDebtV1.connect(governor).allowBorrower(gOhmHolder.address)).to.emit(incurDebtV1, 'BorrowerAllowed')
+                .withArgs(gOhmHolder.address);
 
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(gOhmHolder.address);
             assert.equal(borrowerInfoAfterTx.isAllowed, true);
@@ -125,7 +127,8 @@ describe("IncurDebtV1", async () => {
             const borrowerInfoBeforeTx = await incurDebtV1.borrowers(gOhmHolder.address);
 
             assert.equal(borrowerInfoBeforeTx.limit, 0);
-            await incurDebtV1.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, _amount);
+            await expect(incurDebtV1.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, _amount)).to.emit(incurDebtV1, 'BorrowerDebtLimitSet')
+                .withArgs(gOhmHolder.address, _amount);
 
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(gOhmHolder.address);
             assert.equal(borrowerInfoAfterTx.limit, _amount);
@@ -150,7 +153,8 @@ describe("IncurDebtV1", async () => {
             const borrowerInfoBeforeTx = await incurDebtV1.borrowers(gOhmHolder.address);
 
             assert.equal(borrowerInfoBeforeTx.isAllowed, true);
-            await incurDebtV1.connect(governor).revokeBorrower(gOhmHolder.address);
+            await expect(incurDebtV1.connect(governor).revokeBorrower(gOhmHolder.address)).to.emit(incurDebtV1, 'BorrowerRevoked')
+                .withArgs(gOhmHolder.address);
 
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(gOhmHolder.address);
             assert.equal(borrowerInfoAfterTx.isAllowed, false);
@@ -194,7 +198,8 @@ describe("IncurDebtV1", async () => {
             const borrowerInfoBeforeTx = await incurDebtV1.borrowers(gOhmHolder.address);
 
             assert.equal(borrowerInfoBeforeTx.collateralInGOHM, 0);
-            await incurDebtV1.connect(gOhmHolder).deposit(gOHMAmount, olympus.gohm);
+            await expect(incurDebtV1.connect(gOhmHolder).deposit(gOHMAmount, olympus.gohm)).to.emit(incurDebtV1, 'BorrowerDeposit')
+                .withArgs(gOhmHolder.address, gOHMAmount, olympus.gohm);
 
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(gOhmHolder.address);
             assert.equal(borrowerInfoAfterTx.collateralInGOHM, gOHMAmount);
@@ -213,7 +218,8 @@ describe("IncurDebtV1", async () => {
             const borrowerInfoBeforeTx = await incurDebtV1.borrowers(gOhmHolder.address);
 
             assert.equal(borrowerInfoBeforeTx.collateralInSOHM, 0);
-            await incurDebtV1.connect(sOhmHolder).deposit(sOHMAmount, olympus.sohm);
+            await expect(incurDebtV1.connect(sOhmHolder).deposit(sOHMAmount, olympus.sohm)).to.emit(incurDebtV1, 'BorrowerDeposit')
+                .withArgs(sOhmHolder.address, sOHMAmount, olympus.sohm);
 
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(sOhmHolder.address);
             assert.equal(borrowerInfoAfterTx.collateralInSOHM.toString(), sOHMAmount);
@@ -254,20 +260,21 @@ describe("IncurDebtV1", async () => {
             const borrowerInfoBeforeTx = await incurDebtV1.borrowers(gOhmHolder.address);
             assert.equal(borrowerInfoBeforeTx.debt, 0);
 
-            const outstandingDebtBeforeTx = await incurDebtV1.totalOutstandingDebt();
+            const outstandingDebtBeforeTx = await incurDebtV1.totalOutstandingGlobalDebt();
             assert.equal(outstandingDebtBeforeTx, 0);
 
             const ohmBalanceBeforeTx = await ohm_token.balanceOf(gOhmHolder.address);
             assert.equal(ohmBalanceBeforeTx, 0);
 
-            await incurDebtV1.connect(gOhmHolder).borrow(limit);
+            await expect(incurDebtV1.connect(gOhmHolder).borrow(limit)).to.emit(incurDebtV1, 'Borrowed')
+                .withArgs(gOhmHolder.address, limit, Number(limit) + Number(borrowerInfoBeforeTx.debt), Number(outstandingDebtBeforeTx) + Number(limit));
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(gOhmHolder.address);
 
             const ohmBalanceAfterTx = await ohm_token.balanceOf(gOhmHolder.address);
             assert.equal(ohmBalanceAfterTx, limit);
 
             assert.equal(borrowerInfoAfterTx.debt, limit);
-            const outstandingDebtAfterTx = await incurDebtV1.totalOutstandingDebt();
+            const outstandingDebtAfterTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(outstandingDebtAfterTx, limit);
         });
@@ -281,7 +288,7 @@ describe("IncurDebtV1", async () => {
             await expect(
                 incurDebtV1.connect(governor).revokeBorrower(gOhmHolder.address)
             ).to.revertedWith(
-                `IncurDebtV1_BorrowerStillHasOutstandingDebet("${gOhmHolder.address}")`
+                `IncurDebtV1_BorrowerStillHasOutstandingDebt("${gOhmHolder.address}")`
             );
         });
 
@@ -367,9 +374,10 @@ describe("IncurDebtV1", async () => {
             const availableToBorrow = await incurDebtV1.connect(sOhmHolder).getAvailableToBorrow();
             const sOhmBanlanceBeforeTx = await sohm_token.balanceOf(sOhmHolder.address);
 
-            await incurDebtV1
+            await expect(incurDebtV1
                 .connect(sOhmHolder)
-                .withdraw(availableToBorrow, sOhmHolder.address, olympus.sohm);
+                .withdraw(availableToBorrow, sOhmHolder.address, olympus.sohm)).to.emit(incurDebtV1, 'Withdrawal')
+                .withArgs(sOhmHolder.address, availableToBorrow, olympus.sohm, sOhmHolder.address, Number(borrowerInfobeforeTx.collateralInSOHM) - 500000000000);
             const sOhmBanlanceAfterTx = await sohm_token.balanceOf(sOhmHolder.address);
 
             assert.equal(
@@ -396,13 +404,17 @@ describe("IncurDebtV1", async () => {
             await increase(28800); //8 hours;
             await staking.connect(gOhmHolder).rebase();
 
+            await incurDebtV1.connect(sOhmHolder).updateCollateralInSOHM(sOhmHolder.address);
+            const borrowerInfobeforeTx = await incurDebtV1.borrowers(sOhmHolder.address);
+
             const availableToBorrowAfterTx = await incurDebtV1
                 .connect(sOhmHolder)
                 .getAvailableToBorrow();
             expect(availableToBorrowAfterTx).to.be.above(availableToBorrowBeforeTx);
 
             const sOhmBanlanceBeforeTx = await sohm_token.balanceOf(sOhmHolder.address);
-            await incurDebtV1.connect(sOhmHolder).withdraw(limit, sOhmHolder.address, olympus.sohm);
+            await expect(incurDebtV1.connect(sOhmHolder).withdraw(limit, sOhmHolder.address, olympus.sohm)).to.emit(incurDebtV1, 'Withdrawal')
+                .withArgs(sOhmHolder.address, limit, olympus.sohm, sOhmHolder.address, Number(borrowerInfobeforeTx.collateralInSOHM) - limit);
 
             const sOhmBanlanceAfterTx = await sohm_token.balanceOf(sOhmHolder.address);
             assert.equal(Number(sOhmBanlanceBeforeTx) + Number(limit), Number(sOhmBanlanceAfterTx));
@@ -430,15 +442,19 @@ describe("IncurDebtV1", async () => {
             await increase(28800); //8 hours;
             await staking.connect(gOhmHolder).rebase();
 
+            await incurDebtV1.connect(gOhmHolder).updateCollateralInSOHM(gOhmHolder.address);
+            const borrowerInfobeforeTx = await incurDebtV1.borrowers(gOhmHolder.address);
+
             const availableToBorrowAfterTx = await incurDebtV1
                 .connect(gOhmHolder)
                 .getAvailableToBorrow();
             expect(availableToBorrowAfterTx).to.be.above(availableToBorrowBeforeTx);
 
             const gOhmBanlanceBeforeTx = await gohm_token.balanceOf(gOhmHolder.address);
-            await incurDebtV1
+            await expect(incurDebtV1
                 .connect(gOhmHolder)
-                .withdraw(amountInGOHM, gOhmHolder.address, olympus.gohm);
+                .withdraw(amountInGOHM, gOhmHolder.address, olympus.gohm)).to.emit(incurDebtV1, 'Withdrawal')
+                .withArgs(gOhmHolder.address, amountInGOHM, olympus.gohm, gOhmHolder.address, Number(borrowerInfobeforeTx.collateralInSOHM) - await gohm_token.balanceFrom(amountInGOHM));
 
             const gOhmBanlanceAfterTx = await gohm_token.balanceOf(gOhmHolder.address);
             assert.equal(
@@ -465,16 +481,17 @@ describe("IncurDebtV1", async () => {
             );
             assert.equal(Number(borrowerInfobeforeTx.collateralInGOHM), Number(amountInGOHM));
 
-            const sOhmBanlanceBeforeTx = await gohm_token.balanceOf(gOhmHolder.address);
-            await incurDebtV1
+            const gOhmBanlanceBeforeTx = await gohm_token.balanceOf(gOhmHolder.address);
+            await expect(incurDebtV1
                 .connect(gOhmHolder)
-                .withdraw("4854973534619731000", gOhmHolder.address, olympus.gohm);
+                .withdraw("4854973534619731000", gOhmHolder.address, olympus.gohm)).to.emit(incurDebtV1, 'Withdrawal')
+                .withArgs(gOhmHolder.address, '4854973534619731000', olympus.gohm, gOhmHolder.address, Number(borrowerInfobeforeTx.collateralInSOHM) - await gohm_token.balanceFrom('4854973534619731000'));
 
-            const sOhmBanlanceAfterTx = await gohm_token.balanceOf(gOhmHolder.address);
+            const gOhmBanlanceAfterTx = await gohm_token.balanceOf(gOhmHolder.address);
 
             assert.equal(
-                Number(sOhmBanlanceBeforeTx) + 4854973534619731000,
-                Number(sOhmBanlanceAfterTx)
+                Number(gOhmBanlanceBeforeTx) + 4854973534619731000,
+                Number(gOhmBanlanceAfterTx)
             );
 
             const borrowerInfo = await incurDebtV1.borrowers(gOhmHolder.address);
@@ -504,7 +521,7 @@ describe("IncurDebtV1", async () => {
         it("Should fail if _borrower has no debt", async () => {
             await incurDebtV1.connect(governor).allowBorrower(gOhmHolder.address);
             await expect(incurDebtV1.connect(gOhmHolder).repayDebtWithCollateral()).to.revertedWith(
-                `IncurDebtV1_BorrowerHasNoOutstandingDebet("${gOhmHolder.address}")`
+                `IncurDebtV1_BorrowerHasNoOutstandingDebt("${gOhmHolder.address}")`
             );
         });
 
@@ -513,7 +530,7 @@ describe("IncurDebtV1", async () => {
             await treasury.connect(governor).setDebtLimit(incurDebtV1.address, amount);
 
             await incurDebtV1.connect(gOhmHolder).borrow("500000000000");
-            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingDebt();
+            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtBeforeTx), 500000000000);
             const borrowerInfoBeforeTx = await incurDebtV1.borrowers(gOhmHolder.address);
@@ -524,8 +541,9 @@ describe("IncurDebtV1", async () => {
                 Number(await gohm_token.balanceTo(1000000000000))
             );
 
-            await incurDebtV1.connect(gOhmHolder).repayDebtWithCollateral();
-            const totalDebtAfterTx = await incurDebtV1.totalOutstandingDebt();
+            await expect(incurDebtV1.connect(gOhmHolder).repayDebtWithCollateral()).to.emit(incurDebtV1, 'DebtPaidWithCollateral')
+                .withArgs(gOhmHolder.address, '500000000000', Number(borrowerInfoBeforeTx.collateralInSOHM) - 500000000000, Number(borrowerInfoBeforeTx.debt) - 500000000000, Number(totalDebtBeforeTx) - 500000000000);
+            const totalDebtAfterTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtAfterTx), 0);
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(gOhmHolder.address);
@@ -552,15 +570,15 @@ describe("IncurDebtV1", async () => {
                 incurDebtV1
                     .connect(gOhmHolder)
                     .repayDebtWithCollateralAndWithdrawTheRest(gOhmHolder.address)
-            ).to.revertedWith(`IncurDebtV1_BorrowerHasNoOutstandingDebet("${gOhmHolder.address}")`);
+            ).to.revertedWith(`IncurDebtV1_BorrowerHasNoOutstandingDebt("${gOhmHolder.address}")`);
         });
 
-        it("Should allow borrower pay debt with collateral withdraw the rest", async () => {
+        it("Should allow borrower pay debt with collateral withdraw the rest to gOHM", async () => {
             await setUp(amountInGOHM, gOhmHolder.address, olympus.gohm, gOhmHolder, gohm_token);
             await treasury.connect(governor).setDebtLimit(incurDebtV1.address, amount);
 
             await incurDebtV1.connect(gOhmHolder).borrow("500000000000");
-            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingDebt();
+            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtBeforeTx), 500000000000);
             const borrowerInfoBeforeTx = await incurDebtV1.borrowers(gOhmHolder.address);
@@ -571,10 +589,12 @@ describe("IncurDebtV1", async () => {
                 Number(await gohm_token.balanceTo(1000000000000))
             );
 
-            await incurDebtV1
+            await expect(incurDebtV1
                 .connect(gOhmHolder)
-                .repayDebtWithCollateralAndWithdrawTheRest(gOhmHolder.address);
-            const totalDebtAfterTx = await incurDebtV1.totalOutstandingDebt();
+                .repayDebtWithCollateralAndWithdrawTheRest(gOhmHolder.address)).to.emit(incurDebtV1, 'DebtPaidWithCollateralAndWithdrawTheRest')
+                .withArgs(gOhmHolder.address, '500000000000', Number(borrowerInfoBeforeTx.collateralInSOHM) - 1000000000000, Number(borrowerInfoBeforeTx.debt) - 500000000000, Number(totalDebtBeforeTx) - 500000000000, Number(borrowerInfoBeforeTx.collateralInSOHM) - 500000000000);
+
+            const totalDebtAfterTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtAfterTx), 0);
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(gOhmHolder.address);
@@ -589,7 +609,7 @@ describe("IncurDebtV1", async () => {
             await treasury.connect(governor).setDebtLimit(incurDebtV1.address, amount);
 
             await incurDebtV1.connect(sOhmHolder).borrow("500000000000");
-            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingDebt();
+            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtBeforeTx), 500000000000);
             const borrowerInfoBeforeTx = await incurDebtV1.borrowers(sOhmHolder.address);
@@ -600,10 +620,12 @@ describe("IncurDebtV1", async () => {
                 Number(await gohm_token.balanceTo(1000000000000))
             );
 
-            await incurDebtV1
+            await expect(incurDebtV1
                 .connect(sOhmHolder)
-                .repayDebtWithCollateralAndWithdrawTheRest(sOhmHolder.address);
-            const totalDebtAfterTx = await incurDebtV1.totalOutstandingDebt();
+                .repayDebtWithCollateralAndWithdrawTheRest(sOhmHolder.address)).to.emit(incurDebtV1, 'DebtPaidWithCollateralAndWithdrawTheRest')
+                .withArgs(sOhmHolder.address, '500000000000', Number(borrowerInfoBeforeTx.collateralInSOHM) - 1000000000000, Number(borrowerInfoBeforeTx.debt) - 500000000000, Number(totalDebtBeforeTx) - 500000000000, Number(borrowerInfoBeforeTx.collateralInSOHM) - 500000000001);
+
+            const totalDebtAfterTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtAfterTx), 0);
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(sOhmHolder.address);
@@ -627,7 +649,7 @@ describe("IncurDebtV1", async () => {
                 incurDebtV1
                     .connect(gOhmHolder)
                     .repayDebtWithCollateralAndWithdrawTheRest(gOhmHolder.address)
-            ).to.revertedWith(`IncurDebtV1_BorrowerHasNoOutstandingDebet("${gOhmHolder.address}")`);
+            ).to.revertedWith(`IncurDebtV1_BorrowerHasNoOutstandingDebt("${gOhmHolder.address}")`);
         });
 
         it("Should allow borrower pay debt with OHM", async () => {
@@ -638,7 +660,7 @@ describe("IncurDebtV1", async () => {
             const borrowerInfoBeforeTx = await incurDebtV1.borrowers(gOhmHolder.address);
 
             assert.equal(Number(borrowerInfoBeforeTx.debt), 500000000000);
-            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingDebt();
+            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtBeforeTx), 500000000000);
 
@@ -646,13 +668,14 @@ describe("IncurDebtV1", async () => {
             assert.equal(Number(userOhmBalanceBeforeTx), 500000000000);
 
             await ohm_token.connect(gOhmHolder).approve(incurDebtV1.address, amount);
-            await incurDebtV1.connect(gOhmHolder).repayDebtWithOHM(500000000000);
+            await expect(incurDebtV1.connect(gOhmHolder).repayDebtWithOHM(500000000000)).to.emit(incurDebtV1, 'DebtPaidWithOHM')
+                .withArgs(gOhmHolder.address, '500000000000', Number(borrowerInfoBeforeTx.debt) - 500000000000, Number(totalDebtBeforeTx) - 500000000000);
 
             const userOhmBalanceAfterTx = await ohm_token.balanceOf(gOhmHolder.address);
             assert.equal(Number(userOhmBalanceAfterTx), 0);
 
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(gOhmHolder.address);
-            const totalDebtAfterTx = await incurDebtV1.totalOutstandingDebt();
+            const totalDebtAfterTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtAfterTx), 0);
             assert.equal(Number(borrowerInfoAfterTx.debt), 0);
@@ -676,7 +699,7 @@ describe("IncurDebtV1", async () => {
             await incurDebtV1.connect(governor).allowBorrower(gOhmHolder.address);
             await expect(
                 incurDebtV1.connect(governor).forceRepay(gOhmHolder.address, gOhmHolder.address)
-            ).to.revertedWith(`IncurDebtV1_BorrowerHasNoOutstandingDebet("${gOhmHolder.address}")`);
+            ).to.revertedWith(`IncurDebtV1_BorrowerHasNoOutstandingDebt("${gOhmHolder.address}")`);
         });
 
         it("Should allow gov force payment", async () => {
@@ -693,19 +716,20 @@ describe("IncurDebtV1", async () => {
                 Number(borrowerInfoBeforeTx.collateralInGOHM),
                 Number(await gohm_token.balanceTo(limit))
             );
-            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingDebt();
+            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtBeforeTx), 500000000000);
             const userSohmBalanceBeforeTx = await sohm_token.balanceOf(gOhmHolder.address);
 
             assert.equal(Number(userSohmBalanceBeforeTx), 0);
-            await incurDebtV1.connect(governor).forceRepay(gOhmHolder.address, gOhmHolder.address);
+            await expect(incurDebtV1.connect(governor).forceRepay(gOhmHolder.address, gOhmHolder.address)).to.emit(incurDebtV1, 'ForceDebtPayWithCollateralAndWithdrawTheRest')
+                .withArgs(gOhmHolder.address, '500000000000', Number(borrowerInfoBeforeTx.collateralInSOHM) - 1000000000000, Number(borrowerInfoBeforeTx.debt) - 500000000000, Number(totalDebtBeforeTx) - 500000000000, Number(borrowerInfoBeforeTx.collateralInSOHM) - 500000000000);
 
             const userSohmBalanceAfterTx = await sohm_token.balanceOf(gOhmHolder.address);
             assert.equal(Number(userSohmBalanceAfterTx), 500000000000);
 
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(gOhmHolder.address);
-            const totalDebtAfterTx = await incurDebtV1.totalOutstandingDebt();
+            const totalDebtAfterTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtAfterTx), 0);
             assert.equal(Number(borrowerInfoAfterTx.debt), 0);
@@ -731,7 +755,7 @@ describe("IncurDebtV1", async () => {
         it("Should fail if _borrower has no debt", async () => {
             await incurDebtV1.connect(governor).allowBorrower(gOhmHolder.address);
             await expect(incurDebtV1.connect(governor).seize(gOhmHolder.address)).to.revertedWith(
-                `IncurDebtV1_BorrowerHasNoOutstandingDebet("${gOhmHolder.address}")`
+                `IncurDebtV1_BorrowerHasNoOutstandingDebt("${gOhmHolder.address}")`
             );
         });
 
@@ -749,19 +773,20 @@ describe("IncurDebtV1", async () => {
                 Number(borrowerInfoBeforeTx.collateralInGOHM),
                 Number(await gohm_token.balanceTo(1000000000000))
             );
-            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingDebt();
+            const totalDebtBeforeTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtBeforeTx), 500000000000);
             const userSohmBalanceBeforeTx = await sohm_token.balanceOf(gOhmHolder.address);
 
             assert.equal(Number(userSohmBalanceBeforeTx), 0);
-            await incurDebtV1.connect(governor).seize(gOhmHolder.address);
+            await expect(incurDebtV1.connect(governor).seize(gOhmHolder.address)).to.emit(incurDebtV1, 'DebtPaidWithCollateralAndBurnTheRest')
+                .withArgs(gOhmHolder.address, '500000000000', Number(borrowerInfoBeforeTx.collateralInSOHM) - 1000000000000, Number(borrowerInfoBeforeTx.debt) - 500000000000, Number(totalDebtBeforeTx) - 500000000000, Number(borrowerInfoBeforeTx.collateralInSOHM) - 500000000000);
 
             const userSohmBalanceAfterTx = await sohm_token.balanceOf(gOhmHolder.address);
             assert.equal(Number(userSohmBalanceAfterTx), 0);
 
             const borrowerInfoAfterTx = await incurDebtV1.borrowers(gOhmHolder.address);
-            const totalDebtAfterTx = await incurDebtV1.totalOutstandingDebt();
+            const totalDebtAfterTx = await incurDebtV1.totalOutstandingGlobalDebt();
 
             assert.equal(Number(totalDebtAfterTx), 0);
             assert.equal(Number(borrowerInfoAfterTx.debt), 0);

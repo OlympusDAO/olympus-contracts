@@ -20,14 +20,75 @@ error IncurDebtV1_LimitBelowOutstandingDebt(uint256 _limit);
 error IncurDebtV1_AmountAboveBorrowerBalance(uint256 _amount);
 error IncurDebtV1_AmountMoreThanBorrowersLimit(uint256 _borrower);
 error IncurDebtV1_OHMAmountMoreThanAvailableLoan(uint256 _amount);
-error IncurDebtV1_BorrowerHasNoOutstandingDebet(address _borrower);
-error IncurDebtV1_BorrowerStillHasOutstandingDebet(address _borrower);
+error IncurDebtV1_BorrowerHasNoOutstandingDebt(address _borrower);
+error IncurDebtV1_BorrowerStillHasOutstandingDebt(address _borrower);
 
 contract IncurDebtV1 is OlympusAccessControlledV2 {
     using SafeERC20 for IERC20;
 
+    event GlobalLimit(uint256 indexed _limit);
+    event BorrowerAllowed(address indexed _borrower);
+    event BorrowerRevoked(address indexed _borrower);
+    event BorrowerDebtLimitSet(address indexed _borrower, uint256 indexed _limit);
+    event CollateralInSOHMIncreased(address indexed _borrower, uint256 indexed _currentCollateralInSOHM);
+    event BorrowerDeposit(
+        address indexed _borrower,
+        uint256 indexed _amountToDeposit,
+        address indexed _tokenToDepositFundsWith
+    );
+    event Borrowed(
+        address indexed _borrower,
+        uint256 _amountToBorrow,
+        uint256 indexed _borrowersDebt,
+        uint256 indexed _totalOutstandingGlobalDebt
+    );
+    event DebtPaidWithOHM(
+        address indexed _borrower,
+        uint256 _paidDebt,
+        uint256 indexed _currentDebt,
+        uint256 indexed _totalOutstandingGlobalDebt
+    );
+    event Withdrawal(
+        address indexed _borrower,
+        uint256 _amountToWithdraw,
+        address _tokenToWithdrawFundsWith,
+        address indexed _receiver,
+        uint256 indexed _collateralInSOHMLeft
+    );
+    event DebtPaidWithCollateral(
+        address indexed _borrower,
+        uint256 indexed _paidDebt,
+        uint256 _currentCollateralInSOHM,
+        uint256 indexed _currentDebt,
+        uint256 _totalOutstandingGlobalDebt
+    );
+    event DebtPaidWithCollateralAndBurnTheRest(
+        address indexed _borrower,
+        uint256 indexed _paidDebt,
+        uint256 _currentCollateralInSOHM,
+        uint256 _currentDebt,
+        uint256 _totalOutstandingGlobalDebt,
+        uint256 indexed _collateralLeftToBurn
+    );
+    event DebtPaidWithCollateralAndWithdrawTheRest(
+        address indexed _borrower,
+        uint256 indexed _paidDebt,
+        uint256 _currentCollateralInSOHM,
+        uint256 _currentDebt,
+        uint256 _totalOutstandingGlobalDebt,
+        uint256 indexed _collateralLeftForWithdraw
+    );
+    event ForceDebtPayWithCollateralAndWithdrawTheRest(
+        address indexed _borrower,
+        uint256 indexed _paidDebt,
+        uint256 _currentCollateralInSOHM,
+        uint256 _currentDebt,
+        uint256 _totalOutstandingGlobalDebt,
+        uint256 indexed _collateralLeftForWithdraw
+    );
+
     uint256 public globalDebtLimit;
-    uint256 public totalOutstandingDebt;
+    uint256 public totalOutstandingGlobalDebt;
 
     address public immutable OHM;
     address public immutable gOHM;
@@ -72,8 +133,9 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _limit in OHM
      */
     function setGlobalDebtLimit(uint256 _limit) external onlyGovernor {
-        if (_limit < totalOutstandingDebt) revert IncurDebtV1_LimitBelowOutstandingDebt(_limit);
+        if (_limit < totalOutstandingGlobalDebt) revert IncurDebtV1_LimitBelowOutstandingDebt(_limit);
         globalDebtLimit = _limit;
+        emit GlobalLimit(_limit);
     }
 
     /**
@@ -85,6 +147,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
     function allowBorrower(address _borrower) external onlyGovernor {
         if (borrowers[_borrower].isAllowed) revert IncurDebtV1_AlreadyBorrower(_borrower);
         borrowers[_borrower].isAllowed = true;
+        emit BorrowerAllowed(_borrower);
     }
 
     /**
@@ -100,6 +163,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
         if (_limit > globalDebtLimit) revert IncurDebtV1_AboveGlobalDebtLimit(_limit);
 
         borrowers[_borrower].limit = uint128(_limit);
+        emit BorrowerDebtLimitSet(_borrower, _limit);
     }
 
     /**
@@ -110,8 +174,9 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _borrower the address that will interact with contract
      */
     function revokeBorrower(address _borrower) external onlyGovernor isBorrower(_borrower) {
-        if (borrowers[_borrower].debt != 0) revert IncurDebtV1_BorrowerStillHasOutstandingDebet(_borrower);
+        if (borrowers[_borrower].debt != 0) revert IncurDebtV1_BorrowerStillHasOutstandingDebt(_borrower);
         borrowers[_borrower].isAllowed = false;
+        emit BorrowerRevoked(_borrower);
     }
 
     /**
@@ -139,6 +204,8 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
             borrower.collateralInSOHM += uint128(_amount);
             borrower.collateralInGOHM += uint128(gbalance);
         }
+
+        emit BorrowerDeposit(msg.sender, _amount, _token);
     }
 
     /**
@@ -149,16 +216,19 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _ohmAmount amount of OHM to borrow
      */
     function borrow(uint256 _ohmAmount) external isBorrower(msg.sender) {
-        if (_ohmAmount > borrowers[msg.sender].limit - borrowers[msg.sender].debt)
-            revert IncurDebtV1_AmountMoreThanBorrowersLimit(_ohmAmount);
+        Borrower storage borrower = borrowers[msg.sender];
+
+        if (_ohmAmount > borrower.limit - borrower.debt) revert IncurDebtV1_AmountMoreThanBorrowersLimit(_ohmAmount);
 
         if (_ohmAmount > getAvailableToBorrow()) revert IncurDebtV1_OHMAmountMoreThanAvailableLoan(_ohmAmount);
 
-        borrowers[msg.sender].debt += uint128(_ohmAmount);
-        totalOutstandingDebt += _ohmAmount;
+        borrower.debt += uint128(_ohmAmount);
+        totalOutstandingGlobalDebt += _ohmAmount;
 
         ITreasury(treasury).incurDebt(_ohmAmount, OHM);
         IERC20(OHM).safeTransfer(msg.sender, _ohmAmount);
+
+        emit Borrowed(msg.sender, _ohmAmount, borrower.debt, totalOutstandingGlobalDebt);
     }
 
     /**
@@ -197,6 +267,8 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
 
             IERC20(sOHM).safeTransfer(_to, _amount);
         }
+
+        emit Withdrawal(msg.sender, _amount, _token, _to, borrower.collateralInSOHM);
     }
 
     /**
@@ -206,11 +278,19 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      */
     function repayDebtWithCollateral() external {
         Borrower storage borrower = borrowers[msg.sender];
-        uint256 depositedCollateralAfterRepay = _repay(msg.sender);
+        (uint256 depositedCollateralAfterRepay, uint256 paidDebt) = _repay(msg.sender);
 
         borrower.debt = 0;
         borrower.collateralInSOHM = uint128(depositedCollateralAfterRepay);
+
         borrower.collateralInGOHM = uint128(IgOHM(gOHM).balanceTo(depositedCollateralAfterRepay));
+        emit DebtPaidWithCollateral(
+            msg.sender,
+            paidDebt,
+            depositedCollateralAfterRepay,
+            borrower.debt,
+            totalOutstandingGlobalDebt
+        );
     }
 
     /**
@@ -220,7 +300,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _tokenToReceiveExcess amount of OHM to borrow
      */
     function repayDebtWithCollateralAndWithdrawTheRest(address _tokenToReceiveExcess) external {
-        uint256 depositedCollateralAfterRepay = _repay(msg.sender);
+        (uint256 depositedCollateralAfterRepay, uint256 paidDebt) = _repay(msg.sender);
         assignBorrowerInfoToZero(msg.sender);
 
         if (depositedCollateralAfterRepay > 0) {
@@ -231,6 +311,15 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
                 IStaking(staking).wrap(msg.sender, depositedCollateralAfterRepay);
             }
         }
+
+        emit DebtPaidWithCollateralAndWithdrawTheRest(
+            msg.sender,
+            paidDebt,
+            borrowers[msg.sender].collateralInSOHM,
+            borrowers[msg.sender].debt,
+            totalOutstandingGlobalDebt,
+            depositedCollateralAfterRepay
+        );
     }
 
     /**
@@ -241,14 +330,18 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _ohmAmount amount of OHM to borrow
      */
     function repayDebtWithOHM(uint256 _ohmAmount) external isBorrower(msg.sender) {
-        if (borrowers[msg.sender].debt == 0) revert IncurDebtV1_BorrowerHasNoOutstandingDebet(msg.sender);
+        Borrower storage borrower = borrowers[msg.sender];
+
+        if (borrower.debt == 0) revert IncurDebtV1_BorrowerHasNoOutstandingDebt(msg.sender);
         IERC20(OHM).safeTransferFrom(msg.sender, address(this), _ohmAmount);
 
-        totalOutstandingDebt -= _ohmAmount;
-        borrowers[msg.sender].debt = uint128(borrowers[msg.sender].debt - _ohmAmount);
+        totalOutstandingGlobalDebt -= _ohmAmount;
+        borrower.debt = uint128(borrower.debt - _ohmAmount);
 
         IERC20(OHM).approve(treasury, _ohmAmount);
         ITreasury(treasury).repayDebtWithOHM(_ohmAmount);
+
+        emit DebtPaidWithOHM(msg.sender, _ohmAmount, borrower.debt, totalOutstandingGlobalDebt);
     }
 
     /**
@@ -259,10 +352,19 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _to where to send remaining sOHM
      */
     function forceRepay(address _borrower, address _to) external onlyGovernor {
-        uint256 collateralAfterDebtPayment = _repay(_borrower);
+        (uint256 collateralAfterDebtPayment, uint256 paidDebt) = _repay(_borrower);
 
         assignBorrowerInfoToZero(_borrower);
         if (collateralAfterDebtPayment > 0) IERC20(sOHM).safeTransfer(_to, collateralAfterDebtPayment);
+
+        emit ForceDebtPayWithCollateralAndWithdrawTheRest(
+            _borrower,
+            paidDebt,
+            borrowers[msg.sender].collateralInSOHM,
+            borrowers[msg.sender].debt,
+            totalOutstandingGlobalDebt,
+            collateralAfterDebtPayment
+        );
     }
 
     /**
@@ -272,7 +374,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _borrower the account to seize
      */
     function seize(address _borrower) external onlyGovernor isBorrower(_borrower) {
-        _repayDebtWithCollateralByGovernor(_borrower);
+        uint256 paidDebt = _repayDebtWithCollateralByGovernor(_borrower);
         uint256 seizedCollateral = borrowers[_borrower].collateralInSOHM;
 
         assignBorrowerInfoToZero(_borrower);
@@ -280,6 +382,15 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
 
         IStaking(staking).unstake(address(this), seizedCollateral, false, true);
         IOHM(OHM).burn(seizedCollateral);
+
+        emit DebtPaidWithCollateralAndBurnTheRest(
+            _borrower,
+            paidDebt,
+            borrowers[msg.sender].collateralInSOHM,
+            borrowers[msg.sender].debt,
+            totalOutstandingGlobalDebt,
+            seizedCollateral
+        );
     }
 
     /**
@@ -289,6 +400,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
     function updateCollateralInSOHM(address _borrower) public {
         uint256 sBalance = IgOHM(gOHM).balanceFrom(borrowers[_borrower].collateralInGOHM);
         borrowers[_borrower].collateralInSOHM = uint128(sBalance);
+        emit CollateralInSOHMIncreased(_borrower, borrowers[_borrower].collateralInSOHM);
     }
 
     /**
@@ -300,9 +412,13 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
         return sBalance - borrowers[msg.sender].debt;
     }
 
-    function _repay(address _borrower) internal isBorrower(_borrower) returns (uint256) {
+    function _repay(address _borrower)
+        internal
+        isBorrower(_borrower)
+        returns (uint256 currentcollateralInSOHM, uint256 debt)
+    {
         Borrower storage borrower = borrowers[_borrower];
-        if (borrower.debt == 0) revert IncurDebtV1_BorrowerHasNoOutstandingDebet(_borrower);
+        if (borrower.debt == 0) revert IncurDebtV1_BorrowerHasNoOutstandingDebt(_borrower);
 
         updateCollateralInSOHM(_borrower);
         IERC20(sOHM).approve(staking, borrower.debt);
@@ -311,14 +427,16 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
         IERC20(OHM).approve(treasury, borrower.debt);
 
         ITreasury(treasury).repayDebtWithOHM(borrower.debt);
-        totalOutstandingDebt -= borrower.debt;
+        totalOutstandingGlobalDebt -= borrower.debt;
 
-        return borrower.collateralInSOHM - borrower.debt;
+        currentcollateralInSOHM = borrower.collateralInSOHM - borrower.debt;
+        debt = borrower.debt;
     }
 
-    function _repayDebtWithCollateralByGovernor(address _borrower) private {
+    function _repayDebtWithCollateralByGovernor(address _borrower) private returns (uint256 paidDebt) {
         Borrower storage borrower = borrowers[_borrower];
-        uint256 depositedCollateralAfterRepay = _repay(_borrower);
+        uint256 depositedCollateralAfterRepay;
+        (depositedCollateralAfterRepay, paidDebt) = _repay(_borrower);
 
         borrower.debt = 0;
         borrower.collateralInSOHM = uint128(depositedCollateralAfterRepay);
