@@ -19,7 +19,6 @@ error IncurDebtV1_AboveGlobalDebtLimit(uint256 _limit);
 error IncurDebtV1_AboveBorrowersDebtLimit(uint256 _limit);
 error IncurDebtV1_LimitBelowOutstandingDebt(uint256 _limit);
 error IncurDebtV1_AmountAboveBorrowerBalance(uint256 _amount);
-error IncurDebtV1_AmountMoreThanBorrowersLimit(uint256 _borrower);
 error IncurDebtV1_OHMAmountMoreThanAvailableLoan(uint256 _amount);
 error IncurDebtV1_BorrowerHasNoOutstandingDebt(address _borrower);
 error IncurDebtV1_BorrowerStillHasOutstandingDebt(address _borrower);
