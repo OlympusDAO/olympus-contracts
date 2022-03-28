@@ -74,7 +74,7 @@ describe("IncurDebtV1", async () => {
 
         it("Should set global debt limit address", async () => {
             await expect(incurDebtV1.connect(governor).setGlobalDebtLimit(amount))
-                .to.emit(incurDebtV1, "GlobalLimit")
+                .to.emit(incurDebtV1, "GlobalLimitChanged")
                 .withArgs(amount);
             assert.equal(await incurDebtV1.globalDebtLimit(), amount);
         });
@@ -247,7 +247,7 @@ describe("IncurDebtV1", async () => {
 
             await incurDebtV1.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, limit);
             await expect(incurDebtV1.connect(gOhmHolder).borrow("3000000000000")).to.revertedWith(
-                `IncurDebtV1_AmountMoreThanBorrowersLimit(3000000000000)`
+                `IncurDebtV1_AboveBorrowersDebtLimit(3000000000000)`
             );
         });
 
