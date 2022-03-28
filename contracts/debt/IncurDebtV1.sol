@@ -8,6 +8,7 @@ import "../interfaces/IERC20.sol";
 import "../interfaces/IStaking.sol";
 import "./interfaces/ITreasury.sol";
 import "../libraries/SafeERC20.sol";
+import "../interfaces/IIncurDebtV1.sol";
 import "../types/OlympusAccessControlledV2.sol";
 
 error IncurDebtV1_NotBorrower(address _borrower);
@@ -23,10 +24,10 @@ error IncurDebtV1_OHMAmountMoreThanAvailableLoan(uint256 _amount);
 error IncurDebtV1_BorrowerHasNoOutstandingDebt(address _borrower);
 error IncurDebtV1_BorrowerStillHasOutstandingDebt(address _borrower);
 
-contract IncurDebtV1 is OlympusAccessControlledV2 {
+contract IncurDebtV1 is OlympusAccessControlledV2, IIncurDebtV1 {
     using SafeERC20 for IERC20;
 
-    event GlobalLimit(uint256 indexed _limit);
+    event GlobalLimitChanged(uint256 indexed _limit);
     event BorrowerAllowed(address indexed _borrower);
     event BorrowerRevoked(address indexed _borrower);
     event BorrowerDebtLimitSet(address indexed _borrower, uint256 indexed _limit);
@@ -132,10 +133,10 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * - must be greater than or equal to existing debt
      * @param _limit in OHM
      */
-    function setGlobalDebtLimit(uint256 _limit) external onlyGovernor {
+    function setGlobalDebtLimit(uint256 _limit) external override onlyGovernor {
         if (_limit < totalOutstandingGlobalDebt) revert IncurDebtV1_LimitBelowOutstandingDebt(_limit);
         globalDebtLimit = _limit;
-        emit GlobalLimit(_limit);
+        emit GlobalLimitChanged(_limit);
     }
 
     /**
@@ -144,7 +145,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * - user must not be borrower
      * @param _borrower the address that will interact with contract
      */
-    function allowBorrower(address _borrower) external onlyGovernor {
+    function allowBorrower(address _borrower) external override onlyGovernor {
         if (borrowers[_borrower].isAllowed) revert IncurDebtV1_AlreadyBorrower(_borrower);
         borrowers[_borrower].isAllowed = true;
         emit BorrowerAllowed(_borrower);
@@ -158,7 +159,12 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _borrower the address that will interact with contract
      * @param _limit borrower's debt limit in OHM
      */
-    function setBorrowerDebtLimit(address _borrower, uint256 _limit) external onlyGovernor isBorrower(_borrower) {
+    function setBorrowerDebtLimit(address _borrower, uint256 _limit)
+        external
+        override
+        onlyGovernor
+        isBorrower(_borrower)
+    {
         if (_limit < borrowers[_borrower].debt) revert IncurDebtV1_AboveBorrowersDebtLimit(_limit);
         if (_limit > globalDebtLimit) revert IncurDebtV1_AboveGlobalDebtLimit(_limit);
 
@@ -173,7 +179,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * - borrower must not have outstanding debt
      * @param _borrower the address that will interact with contract
      */
-    function revokeBorrower(address _borrower) external onlyGovernor isBorrower(_borrower) {
+    function revokeBorrower(address _borrower) external override onlyGovernor isBorrower(_borrower) {
         if (borrowers[_borrower].debt != 0) revert IncurDebtV1_BorrowerStillHasOutstandingDebt(_borrower);
         borrowers[_borrower].isAllowed = false;
         emit BorrowerRevoked(_borrower);
@@ -187,7 +193,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _amount amount of gOHM/sOHM
      * @param _token token(gOHM/sOHM) to deposit with
      */
-    function deposit(uint256 _amount, address _token) external isBorrower(msg.sender) {
+    function deposit(uint256 _amount, address _token) external override isBorrower(msg.sender) {
         if (_token != gOHM && _token != sOHM) revert IncurDebtV1_WrongTokenAddress(_token);
 
         Borrower storage borrower = borrowers[msg.sender];
@@ -215,10 +221,10 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * - _ohmAmount must be less than or equal to borrowers available loan limit
      * @param _ohmAmount amount of OHM to borrow
      */
-    function borrow(uint256 _ohmAmount) external isBorrower(msg.sender) {
+    function borrow(uint256 _ohmAmount) external override isBorrower(msg.sender) {
         Borrower storage borrower = borrowers[msg.sender];
 
-        if (_ohmAmount > borrower.limit - borrower.debt) revert IncurDebtV1_AmountMoreThanBorrowersLimit(_ohmAmount);
+        if (_ohmAmount > borrower.limit - borrower.debt) revert IncurDebtV1_AboveBorrowersDebtLimit(_ohmAmount);
 
         if (_ohmAmount > getAvailableToBorrow()) revert IncurDebtV1_OHMAmountMoreThanAvailableLoan(_ohmAmount);
 
@@ -243,7 +249,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
         uint256 _amount,
         address _to,
         address _token
-    ) external isBorrower(msg.sender) {
+    ) external override isBorrower(msg.sender) {
         if (_amount == 0) revert IncurDebtV1_InvaildNumber(_amount);
         Borrower storage borrower = borrowers[msg.sender];
 
@@ -276,7 +282,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * - msg.sender must be a borrower
      * - borrower must have outstanding debt
      */
-    function repayDebtWithCollateral() external {
+    function repayDebtWithCollateral() external override {
         Borrower storage borrower = borrowers[msg.sender];
         (uint256 depositedCollateralAfterRepay, uint256 paidDebt) = _repay(msg.sender);
 
@@ -299,7 +305,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * - borrower must have outstanding debt
      * @param _tokenToReceiveExcess amount of OHM to borrow
      */
-    function repayDebtWithCollateralAndWithdrawTheRest(address _tokenToReceiveExcess) external {
+    function repayDebtWithCollateralAndWithdrawTheRest(address _tokenToReceiveExcess) external override {
         (uint256 depositedCollateralAfterRepay, uint256 paidDebt) = _repay(msg.sender);
         assignBorrowerInfoToZero(msg.sender);
 
@@ -329,7 +335,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * - borrower must have outstanding debt
      * @param _ohmAmount amount of OHM to borrow
      */
-    function repayDebtWithOHM(uint256 _ohmAmount) external isBorrower(msg.sender) {
+    function repayDebtWithOHM(uint256 _ohmAmount) external override isBorrower(msg.sender) {
         Borrower storage borrower = borrowers[msg.sender];
 
         if (borrower.debt == 0) revert IncurDebtV1_BorrowerHasNoOutstandingDebt(msg.sender);
@@ -351,7 +357,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @param _borrower the address that will interact with contract
      * @param _to where to send remaining sOHM
      */
-    function forceRepay(address _borrower, address _to) external onlyGovernor {
+    function forceRepay(address _borrower, address _to) external override onlyGovernor {
         (uint256 collateralAfterDebtPayment, uint256 paidDebt) = _repay(_borrower);
 
         assignBorrowerInfoToZero(_borrower);
@@ -373,7 +379,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * - onlyGovernance
      * @param _borrower the account to seize
      */
-    function seize(address _borrower) external onlyGovernor isBorrower(_borrower) {
+    function seize(address _borrower) external override onlyGovernor isBorrower(_borrower) {
         uint256 paidDebt = _repayDebtWithCollateralByGovernor(_borrower);
         uint256 seizedCollateral = borrowers[_borrower].collateralInSOHM;
 
@@ -397,7 +403,7 @@ contract IncurDebtV1 is OlympusAccessControlledV2 {
      * @notice updates borrowers sOHM collateral to current index
      * @param _borrower borrowers address
      */
-    function updateCollateralInSOHM(address _borrower) public {
+    function updateCollateralInSOHM(address _borrower) public override {
         uint256 sBalance = IgOHM(gOHM).balanceFrom(borrowers[_borrower].collateralInGOHM);
         borrowers[_borrower].collateralInSOHM = uint128(sBalance);
         emit CollateralInSOHMIncreased(_borrower, borrowers[_borrower].collateralInSOHM);
