@@ -17,6 +17,7 @@ struct PoolData {
 /**
  *  @notice Contract deploys liquidity from treasury into the Onsen program,
  *  earning $SUSHI that can be staked and/or deposited into the treasury.
+ *  Set the Onsen Pool Id for the LP tokens that will be processed ahead of time by calling setLPTokenOnsenPoolId
  */
 contract OnsenAllocatorV2 is BaseAllocator {
     using SafeERC20 for IERC20;
@@ -188,6 +189,34 @@ contract OnsenAllocatorV2 is BaseAllocator {
         masterChef = masterChefAddress;
     }
 
+    /**
+     * @notice Set Onsen Pool Id for LP token
+     * @param lpToken address of the LP token
+     * @param onsenPoolId Pool id from onsen sushi
+     */
+    function setLPTokenOnsenPoolId(address lpToken, uint256 onsenPoolId) external onlyGuardian {
+        PoolData memory pd = _lpToOnsenId[lpToken];
+        pd.poolActive = true;
+        pd.id = onsenPoolId;
+    }
+
+    /**
+     * @notice Get the stored Onsen Pool id based on the LP token address
+     * @param lpToken address of the LP token
+     * @return first value will show if the value is stored , second value show the Onsen Pool Id stored locally.
+     */
+    function getLPTokenOnsenPoolId(address lpToken) external view returns (bool, uint256) {
+        /// Check if the id is already stored in the local variable
+        PoolData memory pd = _lpToOnsenId[lpToken];
+
+        /// If the pool is active return the id else search for the pool id
+        if (pd.poolActive) {
+            return (pd.poolActive, pd.id);
+        } else {
+            return (false, 0);
+        }
+    }
+
     /// ========== INTERNAL FUNCTIONS ==========
 
     /**
@@ -213,7 +242,8 @@ contract OnsenAllocatorV2 is BaseAllocator {
 
     /**
      * @notice Find out pool Id from Onsen based on the LP token
-     * according to Onsen documentation there shouldn't be more than pool by LPToken, so we are going to use the first ocurrence of the LPToken in the Onsen pools
+     * according to Onsen documentation there shouldn't be more than pool by LPToken, so we are going
+     * to use the first ocurrence of the LPToken in the Onsen pools
      * @return [bool, uint256], first value shows if value was found, second value the id for the pool
      */
     function _findPoolByLP(address LPToken) internal view returns (bool, uint256) {
