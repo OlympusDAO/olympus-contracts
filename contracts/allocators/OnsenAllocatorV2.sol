@@ -70,34 +70,37 @@ contract OnsenAllocatorV2 is BaseAllocator {
         IERC20 LPtoken = _tokens[index];
         uint256 balance = LPtoken.balanceOf(address(this));
 
+        /// Find out if there is a Onsen Pool for the LPToken
+        (bool onsenLPFound, uint256 onsenPoolId) = _findPoolByLP(address(LPtoken));
+
         /// Deposit LP token into onsen, if deposit succesfull this address should have in return sushi tokens
         if (balance > 0) {
-            /// Find out if there is a Onsen Pool for the LPToken
-            (bool onsenLPFound, uint256 onsenPoolId) = _findPoolByLP(address(LPtoken));
-
             if (onsenLPFound) {
                 /// Approve and deposit balance into onsen Pool
                 LPtoken.approve(masterChef, balance);
                 IMasterChef(masterChef).deposit(onsenPoolId, balance, address(this));
-
-                /// Stake the sushi tokens
-                _stakeSushi();
-
-                ///Calculate gains/loss
-                /// Retrieve current balance for pool and address
-                UserInfo memory currentUserInfo = IMasterChef(masterChef).userInfo(onsenPoolId, address(this));
-
-                uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
-
-                if (currentUserInfo.amount >= last) {
-                    gain = uint128(currentUserInfo.amount - last);
-                } else {
-                    loss = uint128(last - currentUserInfo.amount);
-                }
             } else {
                 /// If no Onsen pool was found for the LP token then return LP token to the treasury.
                 LPtoken.safeTransfer(treasury, balance);
             }
+        } else {
+            /// If LP token balance is 0, then harvest any pending Sushi rewards for it to be stake.
+            IMasterChef(masterChef).harvest(onsenPoolId, address(this));
+        }
+
+        /// Stake the sushi tokens
+        _stakeSushi();
+
+        ///Calculate gains/loss
+        /// Retrieve current balance for pool and address
+        UserInfo memory currentUserInfo = IMasterChef(masterChef).userInfo(onsenPoolId, address(this));
+
+        uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
+
+        if (currentUserInfo.amount >= last) {
+            gain = uint128(currentUserInfo.amount - last);
+        } else {
+            loss = uint128(last - currentUserInfo.amount);
         }
     }
 

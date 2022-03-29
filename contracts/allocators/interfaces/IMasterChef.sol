@@ -34,4 +34,6 @@ interface IMasterChef {
     function poolLength() external view returns (uint256);
 
     function lpToken(uint256) external view returns (address);
+
+    function harvest(uint256 pid, address to) external;
 }
