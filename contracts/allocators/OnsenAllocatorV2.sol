@@ -276,18 +276,16 @@ contract OnsenAllocatorV2 is BaseAllocator {
     }
 
     function _deallocateAll() internal {
-        uint256[] memory amounts = new uint256[](_tokens.length);
-
-        // interactions
+        /// Find the Onsen Pools Id for each token and withdraw and harvest each pool.
         for (uint256 i; i < _tokens.length; i++) {
             (bool onsenLPFound, uint256 onsenPoolId) = _findPoolByLP(address(_tokens[i]));
             if (onsenLPFound) {
                 /// Retrieve current balance for pool and address
                 UserInfo memory currentUserInfo = IMasterChef(masterChef).userInfo(onsenPoolId, address(this));
-                amounts[i] = currentUserInfo.amount;
+                if (currentUserInfo.amount > 0) {
+                    IMasterChef(masterChef).withdrawAndHarvest(onsenPoolId, currentUserInfo.amount, address(this));
+                }
             }
         }
-
-        deallocate(amounts);
     }
 }
