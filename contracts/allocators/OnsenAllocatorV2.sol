@@ -246,7 +246,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
      * to use the first ocurrence of the LPToken in the Onsen pools
      * @return [bool, uint256], first value shows if value was found, second value the id for the pool
      */
-    function _findPoolByLP(address LPToken) internal view returns (bool, uint256) {
+    function _findPoolByLP(address LPToken) internal returns (bool, uint256) {
         /// Check if the id is already stored in the local variable
         PoolData memory pd = _lpToOnsenId[LPToken];
 
