@@ -212,14 +212,6 @@ contract OnsenAllocatorV2 is BaseAllocator {
     }
 
     /**
-     *  @notice pending $SUSHI rewards
-     *  @return uint
-     */
-    function _pendingSushi(uint256 pid) internal view returns (uint256) {
-        return IMasterChef(masterChef).pendingSushi(pid, address(this));
-    }
-
-    /**
      * @notice Find out pool Id from Onsen based on the LP token
      * according to Onsen documentation there shouldn't be more than pool by LPToken, so we are going to use the first ocurrence of the LPToken in the Onsen pools
      * @return [bool, uint256], first value shows if value was found, second value the id for the pool
