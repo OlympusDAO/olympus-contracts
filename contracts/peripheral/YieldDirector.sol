@@ -69,15 +69,15 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
      * Modifiers
      ************************/
     function isInvalidDeposit(uint256 amount_, address recipient_) internal view returns (bool) {
-        return depositDisabled || amount_ <= 0 || recipient_ == address(0);
+        return depositDisabled || amount_ == 0 || recipient_ == address(0);
     }
 
     function isInvalidUpdate(uint256 depositId_, uint256 amount_) internal view returns (bool) {
-        return depositDisabled || amount_ <= 0 || depositInfo[depositId_].depositor == address(0);
+        return depositDisabled || amount_ == 0 || depositInfo[depositId_].depositor == address(0);
     }
 
     function isInvalidWithdrawal(uint256 amount_) internal view returns (bool) {
-        return withdrawDisabled || amount_ <= 0;
+        return withdrawDisabled || amount_ == 0;
     }
 
     /************************
@@ -195,15 +195,16 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
     function depositsTo(address donor_, address recipient_) external view override returns (uint256) {
         uint256[] memory depositIds = depositorIds[donor_];
 
+        uint256 totalPrincipalDeposits;
         for (uint256 index = 0; index < depositIds.length; ++index) {
             uint256 id = depositIds[index];
 
             if (recipientLookup[id] == recipient_) {
-                return _toAgnostic(depositInfo[id].principalAmount);
+                totalPrincipalDeposits += depositInfo[id].principalAmount;
             }
         }
 
-        return 0;
+        return _toAgnostic(totalPrincipalDeposits);
     }
 
     /**
@@ -256,13 +257,14 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
     function donatedTo(address donor_, address recipient_) external view override returns (uint256) {
         uint256[] memory depositIds = depositorIds[donor_];
 
+        uint256 totalRedeemable;
         for (uint256 index = 0; index < depositIds.length; ++index) {
             if (recipientLookup[depositIds[index]] == recipient_) {
-                return redeemableBalance(depositIds[index]);
+                totalRedeemable += redeemableBalance(depositIds[index]);
             }
         }
 
-        return 0;
+        return totalRedeemable;
     }
 
     /**
@@ -312,7 +314,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @notice Get redeemable gOHM balance of a recipient address
         @param recipient_ Address of user receiving donated yield
      */
-    function totalRedeemableBalance(address recipient_) public view override returns (uint256) {
+    function totalRedeemableBalance(address recipient_) external view override returns (uint256) {
         uint256[] memory receiptIds = recipientIds[recipient_];
 
         uint256 agnosticRedeemable = 0;
@@ -401,7 +403,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
 
         _addToDeposit(depositId_, amount_, msg.sender);
 
-        emit Deposited(depositInfo[depositId_].depositor, recipientLookup[depositId_], amount_);
+        emit Deposited(msg.sender, recipientLookup[depositId_], amount_);
     }
 
     /**
@@ -412,11 +414,11 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
     function _withdraw(uint256 depositId_, uint256 amount_) internal returns (uint256 amountWithdrawn) {
         if (isInvalidWithdrawal(amount_)) revert YieldDirector_InvalidWithdrawal();
 
-        if (amount_ >= _toAgnostic(depositInfo[depositId_].principalAmount)) {
-            amountWithdrawn = _withdrawAllPrincipal(depositId_, msg.sender);
-        } else {
+        if (amount_ < _toAgnostic(depositInfo[depositId_].principalAmount)) {
             _withdrawPrincipal(depositId_, amount_, msg.sender);
             amountWithdrawn = amount_;
+        } else {
+            amountWithdrawn = _withdrawAllPrincipal(depositId_, msg.sender);
         }
 
         emit Withdrawn(msg.sender, recipientLookup[depositId_], amountWithdrawn);
@@ -468,18 +470,22 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         // elements from the array without changing the locations of any
         // entries that have not been checked yet
         for (uint256 index = receiptIds.length; index > 0; index--) {
-            uint256 currRedemption = _redeemYield(receiptIds[index - 1]);
+            uint256 currIndex = index - 1;
+
+            address currDepositor = depositInfo[receiptIds[currIndex]].depositor;
+            uint256 currRedemption = _redeemYield(receiptIds[currIndex]);
             amountRedeemed += currRedemption;
 
-            emit Donated(depositInfo[receiptIds[index - 1]].depositor, msg.sender, currRedemption);
+            emit Donated(currDepositor, msg.sender, currRedemption);
 
-            if (depositInfo[receiptIds[index - 1]].principalAmount == 0) {
-                _closeDeposit(receiptIds[index - 1], depositInfo[receiptIds[index - 1]].depositor);
+            if (depositInfo[receiptIds[currIndex]].principalAmount == 0) {
+                _closeDeposit(receiptIds[currIndex], currDepositor);
 
-                if (index - 1 != receiptIds.length - 1) {
-                    receiptIds[index - 1] = receiptIds[receiptIds.length - 1]; // Delete integer from array by swapping with last element and calling pop()
+                if (currIndex != receiptIds.length - 1) {
+                    receiptIds[currIndex] = receiptIds[receiptIds.length - 1]; // Delete integer from array by swapping with last element and calling pop()
                 }
 
+                delete recipientLookup[receiptIds[currIndex]];
                 receiptIds.pop();
             }
         }
