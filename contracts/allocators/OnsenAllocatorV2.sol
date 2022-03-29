@@ -125,7 +125,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
     function _deactivate(bool panic) internal override {
         /// Get amounts by LP to unstake and then deallocate (unstake) each token.
         _deallocateAll();
-        _unStakeSushi();
+        _unstakeSushi();
 
         /// If Panic transfer LP tokens to the treasury
         if (panic) {
@@ -142,7 +142,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
     function _prepareMigration() internal override {
         /// Get amounts by LP to unstake and then deallocate (unstake) each token.
         _deallocateAll();
-        _unStakeSushi();
+        _unstakeSushi();
     }
 
     function amountAllocated(uint256 id) public view override returns (uint256) {
@@ -236,7 +236,7 @@ contract OnsenAllocatorV2 is BaseAllocator {
     /**
      * @notice unStake sushi rewards
      */
-    function _unStakeSushi() internal {
+    function _unstakeSushi() internal {
         uint256 balance = IERC20(xSushi).balanceOf(address(this));
         if (balance > 0) {
             ISushiBar(xSushi).leave(balance); // unstake $xSUSHI
