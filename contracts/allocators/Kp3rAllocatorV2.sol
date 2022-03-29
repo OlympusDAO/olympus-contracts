@@ -24,6 +24,8 @@ interface IGauge {
 }
 
 interface IClaim {
+    function approve(address spender_, uint amount_) external returns (bool);
+
     function claim() external returns (uint256);
 
     function redeem(uint256 id_) external;
@@ -44,12 +46,12 @@ error Kp3rAllocatorV2_InvalidAddress();
 contract Kp3rAllocatorV2 is BaseAllocator {
     uint256 private constant MAX_TIME = 4 * 365 * 86400 + 1;
 
-    ITreasury internal treasury;
+    ITreasury public treasury;
 
-    IKp3rVault internal kp3rVault;
-    IGauge internal gauge;
-    IClaim internal distributor;
-    IClaim internal rKp3r;
+    IKp3rVault public kp3rVault;
+    IGauge public gauge;
+    IClaim public distributor;
+    IClaim public rKp3r;
 
     uint256 lockEnd;
 
@@ -75,11 +77,22 @@ contract Kp3rAllocatorV2 is BaseAllocator {
         gauge = IGauge(gauge_);
         distributor = IClaim(distributor_);
         rKp3r = IClaim(rKp3r_);
+
+        // approve veKP3R
+        _tokens[0].approve(address(kp3rVault), type(uint256).max);
+
+        // approve extender
+        _tokens[0].approve(address(treasury), type(uint256).max);
+        _tokens[1].approve(address(treasury), type(uint256).max);
+        rKp3r.approve(address(treasury), type(uint256).max);
     }
 
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
         uint256 balance = _tokens[0].balanceOf(address(this));
         (uint256 lockedBalance, ) = kp3rVault.locked(address(this));
+
+        // declare here so the var exists
+        uint256 paymentToRedeem;
 
         if (balance > 0 && lockedBalance == 0) {
             lockEnd = block.timestamp + MAX_TIME;
@@ -87,7 +100,7 @@ contract Kp3rAllocatorV2 is BaseAllocator {
             kp3rVault.create_lock(balance, lockEnd);
         } else if (balance > 0 || lockedBalance > 0) {
             // claim rKP3R and exercise option
-            _claimAndExercise();
+            paymentToRedeem = _claimAndExercise();
 
             balance = _tokens[0].balanceOf(address(this));
 
@@ -104,8 +117,9 @@ contract Kp3rAllocatorV2 is BaseAllocator {
         (lockedBalance, ) = kp3rVault.locked(address(this));
         uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
 
-        if (lockedBalance >= last) gain = uint128(lockedBalance - last);
-        else loss = uint128(last - lockedBalance);
+        // Since redeeming tokens requires us to call in external USDC we subtract that from the gains
+        if (lockedBalance >= last) gain = uint128(lockedBalance - paymentToRedeem - last);
+        else loss = uint128(last - paymentToRedeem - lockedBalance);
     }
 
     function deallocate(uint256[] memory amounts) public override {
@@ -169,7 +183,7 @@ contract Kp3rAllocatorV2 is BaseAllocator {
      * Utility Functions
      ************************/
 
-    function _claimAndExercise() internal {
+    function _claimAndExercise() internal returns (uint256) {
         // claim rKP3R and exercise option
         distributor.claim();
         uint256 okp3rId = rKp3r.claim();
@@ -183,6 +197,8 @@ contract Kp3rAllocatorV2 is BaseAllocator {
         rKp3r.redeem(okp3rId);
 
         // there should never be any USDC left over after this so shouldn't need a returnFundsToTreasury call
+
+        return amount;
     }
 
     function _canExtendLock() internal view returns (bool) {
@@ -194,5 +210,12 @@ contract Kp3rAllocatorV2 is BaseAllocator {
       _onlyGuardian();
 
       gauge.vote(tokenVote_, weights_);
+    }
+
+    /************************
+     * IERC721 Receiver
+     ************************/
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data) external returns(bytes4) {
+        return this.onERC721Received.selector;
     }
 }

@@ -58,5 +58,19 @@ const convex = {
     ccStaking: "0x3Fe65692bfCD0e6CF84cB1E7d24108E434A7587e",
 };
 
+// kp34
+const keep3r = {
+    admin: "0x2d407ddb06311396fe14d4b49da5f0471447d45c",
+    kp3rVault: "0x2FC52C61fB0C03489649311989CE2689D93dC1a2",
+    rkp3rDistributor: "0xd4260B2781e2460f49dB746112BB592ba3fb6382",
+    rkp3r: "0xEdB67Ee1B171c4eC66E6c10EC43EDBbA20FaE8e9",
+    gauge: "0x81a8CAb6bb568fC94bCa70C9AdbFCF05592dEd7b",
+};
+
+const frax = {
+    contractWhitelist: "0x53c13BA8834a1567474b19822aAD85c6F90D9f9F",
+    whitelistAdmin: "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+}
+
 // export
-export const protocols = { alchemix, tokemak, rari, convex };
+export const protocols = { alchemix, tokemak, rari, convex, keep3r, frax };
