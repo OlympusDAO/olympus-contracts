@@ -123,12 +123,12 @@ contract OnsenAllocatorV2 is BaseAllocator {
     }
 
     function _deactivate(bool panic) internal override {
-        /// Get amounts by LP to unstake and then deallocate (unstake) each token.
-        _deallocateAll();
-        _unstakeSushi();
-
         /// If Panic transfer LP tokens to the treasury
         if (panic) {
+            /// Get amounts by LP to unstake and then deallocate (unstake) each token.
+            _deallocateAll();
+            _unstakeSushi();
+
             for (uint256 i; i < _tokens.length; i++) {
                 IERC20 token = _tokens[i];
                 token.safeTransfer(treasury, token.balanceOf(address(this)));
