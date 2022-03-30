@@ -107,6 +107,7 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
 
     mapping(address => Borrower) public borrowers;
     mapping(address => bool) public strategies;
+    mapping(address => mapping(address => uint256)) public lpTokenOwnership; // lp token -> user -> amount
 
     constructor(
         address _OHM,
@@ -225,31 +226,35 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
      * @param _strategy the address of the AMM strategy to use
      * @param _strategyParams strategy-specific params
      * @param _pairDesiredAmount the address of the AMM strategy to use
-     * @param _pairAddress the contract address of the pair token
      * @return liquidity of LP tokens created
      */
     function createLP(
         uint256 _ohmAmount,
         uint256 _pairDesiredAmount,
-        address _pairAddress,
+        // address _pairAddress,
         address _strategy,
         bytes calldata _strategyParams
-    ) external isBorrower(msg.sender) isStrategy(msg.sender) returns (uint256 liquidity) {
+    ) external isBorrower(msg.sender) isStrategy(msg.sender) returns (uint256) {
         Borrower storage borrower = borrowers[msg.sender];
 
         if (_ohmAmount > borrower.limit - borrower.debt) revert IncurDebtV1_AmountMoreThanBorrowersLimit(_ohmAmount);
         if (_ohmAmount > getAvailableToBorrow()) revert IncurDebtV1_OHMAmountMoreThanAvailableLoan(_ohmAmount);
 
-        borrower.debt += uint128(_ohmAmount);
-        totalOutstandingGlobalDebt += _ohmAmount;
-
-        IERC20(_pairAddress).safeTransferFrom(msg.sender, address(this), _pairDesiredAmount);
-        ITreasury(treasury).incurDebt(_ohmAmount, OHM);
-
         IERC20(OHM).approve(_strategy, _ohmAmount);
-        IERC20(_pairAddress).approve(_strategy, _pairDesiredAmount);
 
-        liquidity = IStrategy(_strategy).addLiquidity(_strategyParams);
+        (uint256 liquidity, uint256 ohmUnused, address lpTokenAddress) = IStrategy(_strategy).addLiquidity(_strategyParams, _ohmAmount, _pairDesiredAmount);
+
+        // Mapping edit user owns x liquidity
+        lpTokenOwnership[lpTokenAddress][msg.sender] += liquidity;
+
+        borrower.debt += uint128(_ohmAmount - ohmUnused);
+        totalOutstandingGlobalDebt += (_ohmAmount - ohmUnused);
+
+        if (ohmUnused > 0) {
+            ITreasury(treasury).repayDebtWithOHM(ohmUnused);
+        }
+
+        return liquidity;
     }
 
     /**
