@@ -71,7 +71,7 @@ const keep3r = {
 const frax = {
     contractWhitelist: "0x53c13BA8834a1567474b19822aAD85c6F90D9f9F",
     whitelistAdmin: "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
-}
+};
 
 // export
 export const protocols = { alchemix, tokemak, rari, convex, keep3r, frax };

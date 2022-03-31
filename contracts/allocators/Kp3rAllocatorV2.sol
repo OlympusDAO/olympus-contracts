@@ -24,7 +24,7 @@ interface IGauge {
 }
 
 interface IClaim {
-    function approve(address spender_, uint amount_) external returns (bool);
+    function approve(address spender_, uint256 amount_) external returns (bool);
 
     function claim() external returns (uint256);
 
@@ -209,15 +209,20 @@ contract Kp3rAllocatorV2 is BaseAllocator {
 
     // allows us to continue to vote in Fixed Forex Gauge despite allocating
     function vote(address[] calldata tokenVote_, uint256[] calldata weights_) external {
-      _onlyGuardian();
+        _onlyGuardian();
 
-      gauge.vote(tokenVote_, weights_);
+        gauge.vote(tokenVote_, weights_);
     }
 
     /************************
      * IERC721 Receiver
      ************************/
-    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data) external returns(bytes4) {
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) external returns (bytes4) {
         return this.onERC721Received.selector;
     }
 }
