@@ -71,11 +71,17 @@ describe("SushiMigrator", async () => {
         const lpBalAfterTx = await uniswapLpContract.balanceOf(treasury.address);
 
         if (tx.uniPoolToken0ReturnedToTreasury > 0) {
-            assert.equal(Number(ohmBalAfterTx), Number(ohmBalBeforeTx) + Number(tx.uniPoolToken0ReturnedToTreasury));
+            assert.equal(
+                Number(ohmBalAfterTx),
+                Number(ohmBalBeforeTx) + Number(tx.uniPoolToken0ReturnedToTreasury)
+            );
         }
 
         if (tx.uniPoolToken1ReturnedToTreasury > 0) {
-            assert.equal(Number(daiBalAfterTx), Number(daiBalBeforeTx) + Number(tx.uniPoolToken1ReturnedToTreasury));
+            assert.equal(
+                Number(daiBalAfterTx),
+                Number(daiBalBeforeTx) + Number(tx.uniPoolToken1ReturnedToTreasury)
+            );
         }
 
         assert.equal(Number(lpBalBeforeTx) + Number(tx.uniPoolLpReceived), Number(lpBalAfterTx));
@@ -154,11 +160,17 @@ describe("SushiMigrator", async () => {
         const tx = await sushiMigrator.amountsByMigrationId(0);
 
         if (tx.uniPoolToken0ReturnedToTreasury > 0) {
-            assert.equal(Number(ohmBalAfterTx), Number(ohmBalBeforeTx) + Number(tx.uniPoolToken0ReturnedToTreasury));
+            assert.equal(
+                Number(ohmBalAfterTx),
+                Number(ohmBalBeforeTx) + Number(tx.uniPoolToken0ReturnedToTreasury)
+            );
         }
 
         if (tx.uniPoolToken1ReturnedToTreasury > 0) {
-            assert.equal(Number(wethBalAfterTx), Number(wethBalBeforeTx) + Number(tx.uniPoolToken1ReturnedToTreasury));
+            assert.equal(
+                Number(wethBalAfterTx),
+                Number(wethBalBeforeTx) + Number(tx.uniPoolToken1ReturnedToTreasury)
+            );
         }
 
         assert.equal(Number(lpBalBeforeTx) + Number(tx.uniPoolLpReceived), Number(lpBalAfterTx));
