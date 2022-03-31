@@ -13,13 +13,13 @@ contract SushiMigrator is OlympusAccessControlledV2 {
     using SafeERC20 for IERC20;
 
     struct Amounts {
-        uint256 sushiLpBeforeMigration;
-        uint256 leftoverSushiLpAfterMigration;
-        uint256 uniPoolToken0AddedToPool;
-        uint256 uniPoolToken1AddedToPool;
-        uint256 uniPoolLpReceived;
-        uint256 uniPoolToken0ReturnedToTreasury;
-        uint256 uniPoolToken1ReturnedToTreasury;
+        uint128 sushiLpBeforeMigration;
+        uint128 leftoverSushiLpAfterMigration;
+        uint128 uniPoolToken0AddedToPool;
+        uint128 uniPoolToken1AddedToPool;
+        uint128 uniPoolLpReceived;
+        uint128 uniPoolToken0ReturnedToTreasury;
+        uint128 uniPoolToken1ReturnedToTreasury;
     }
 
     uint256 public txCount;
@@ -70,13 +70,13 @@ contract SushiMigrator is OlympusAccessControlledV2 {
         );
 
         amountsByMigrationId[txCount] = Amounts({
-            sushiLpBeforeMigration: amount,
-            leftoverSushiLpAfterMigration: amountAfterTx,
-            uniPoolToken0AddedToPool: amountOHM,
-            uniPoolToken1AddedToPool: amountToken,
-            uniPoolLpReceived: liquidity,
-            uniPoolToken0ReturnedToTreasury: amountA,
-            uniPoolToken1ReturnedToTreasury: amountB
+            sushiLpBeforeMigration: uint128(amount),
+            leftoverSushiLpAfterMigration: uint128(amountAfterTx),
+            uniPoolToken0AddedToPool: uint128(amountOHM),
+            uniPoolToken1AddedToPool: uint128(amountToken),
+            uniPoolLpReceived: uint128(liquidity),
+            uniPoolToken0ReturnedToTreasury: uint128(amountA),
+            uniPoolToken1ReturnedToTreasury: uint128(amountB)
         });
 
         txCount++;
