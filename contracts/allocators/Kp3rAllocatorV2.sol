@@ -3,9 +3,12 @@ pragma solidity ^0.8.10;
 
 // types
 import "../types/BaseAllocator.sol";
+import "hardhat/console.sol";
 
 // interfaces
 interface IKp3rVault {
+    function checkpoint() external;
+
     function create_lock(uint256 value_, uint256 unlockTime_) external;
 
     function increase_amount(uint256 value_) external;
@@ -42,6 +45,7 @@ interface IClaim {
 
 // errors
 error Kp3rAllocatorV2_InvalidAddress();
+error Kp3rAllocatorV2_LowUSDCLimits();
 
 contract Kp3rAllocatorV2 is BaseAllocator {
     uint256 private constant MAX_TIME = 4 * 365 * 86400 + 1;
@@ -54,6 +58,7 @@ contract Kp3rAllocatorV2 is BaseAllocator {
     IClaim public rKp3r;
 
     uint256 lockEnd;
+    uint128 usdcUsed;
 
     constructor(
         AllocatorInitData memory data,
@@ -80,6 +85,7 @@ contract Kp3rAllocatorV2 is BaseAllocator {
 
         // approve veKP3R
         _tokens[0].approve(address(kp3rVault), type(uint256).max);
+        _tokens[1].approve(address(rKp3r), type(uint256).max);
 
         // approve extender
         _tokens[0].approve(address(treasury), type(uint256).max);
@@ -87,39 +93,44 @@ contract Kp3rAllocatorV2 is BaseAllocator {
         rKp3r.approve(address(treasury), type(uint256).max);
     }
 
+    function _activate() internal override {
+        if (extender.getAllocatorLimits(2).loss < 50000000000) revert Kp3rAllocatorV2_LowUSDCLimits();
+    }
+
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
-        uint256 balance = _tokens[0].balanceOf(address(this));
-        (uint256 lockedBalance, ) = kp3rVault.locked(address(this));
+        if (id == 2) {
+            loss = usdcUsed;
+        } else {
+            uint256 balance = _tokens[0].balanceOf(address(this));
+            (uint256 lockedBalance, ) = kp3rVault.locked(address(this));
 
-        // declare here so the var exists
-        uint256 paymentToRedeem;
+            if (balance > 0 && lockedBalance == 0) {
+                lockEnd = block.timestamp + MAX_TIME;
 
-        if (balance > 0 && lockedBalance == 0) {
-            lockEnd = block.timestamp + MAX_TIME;
+                kp3rVault.create_lock(balance, lockEnd);
+                kp3rVault.checkpoint();
+            } else if (balance > 0 || lockedBalance > 0) {
+                // claim rKP3R and exercise option
+                _claimAndExercise();
 
-            kp3rVault.create_lock(balance, lockEnd);
-        } else if (balance > 0 || lockedBalance > 0) {
-            // claim rKP3R and exercise option
-            paymentToRedeem = _claimAndExercise();
+                balance = _tokens[0].balanceOf(address(this));
 
-            balance = _tokens[0].balanceOf(address(this));
+                if (balance > 0) {
+                    kp3rVault.increase_amount(balance);
 
-            if (balance > 0) {
-                kp3rVault.increase_amount(balance);
-
-                if (_canExtendLock()) {
-                    lockEnd = block.timestamp + MAX_TIME;
-                    kp3rVault.increase_unlock_time(lockEnd);
+                    if (_canExtendLock()) {
+                        lockEnd = block.timestamp + MAX_TIME;
+                        kp3rVault.increase_unlock_time(lockEnd);
+                    }
                 }
             }
+
+            (lockedBalance, ) = kp3rVault.locked(address(this));
+            uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
+
+            if (lockedBalance >= last) gain = uint128(lockedBalance - last);
+            else loss = uint128(last - lockedBalance);
         }
-
-        (lockedBalance, ) = kp3rVault.locked(address(this));
-        uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
-
-        // Since redeeming tokens requires us to call in external USDC we subtract that from the gains
-        if (lockedBalance >= last) gain = uint128(lockedBalance - paymentToRedeem - last);
-        else loss = uint128(last - paymentToRedeem - lockedBalance);
     }
 
     function deallocate(uint256[] memory amounts) public override {
@@ -130,6 +141,7 @@ contract Kp3rAllocatorV2 is BaseAllocator {
 
         // If lock is up, claim KP3R out of  veKP3R
         if (block.timestamp >= kp3rVault.locked__end(address(this))) {
+            console.log("withdrawing");
             kp3rVault.withdraw();
         }
     }
@@ -183,7 +195,7 @@ contract Kp3rAllocatorV2 is BaseAllocator {
      * Utility Functions
      ************************/
 
-    function _claimAndExercise() internal returns (uint256) {
+    function _claimAndExercise() internal {
         // claim rKP3R and exercise option
         distributor.claim();
         uint256 okp3rId = rKp3r.claim();
@@ -191,14 +203,11 @@ contract Kp3rAllocatorV2 is BaseAllocator {
         IClaim.option memory option = rKp3r.options(okp3rId);
         uint256 amount = option.strike;
 
-        extender.requestFundsFromTreasury(1, amount);
+        console.log(amount);
 
-        _tokens[1].approve(address(rKp3r), amount);
         rKp3r.redeem(okp3rId);
 
-        // there should never be any USDC left over after this so shouldn't need a returnFundsToTreasury call
-
-        return amount;
+        usdcUsed = uint128(amount);
     }
 
     function _canExtendLock() internal view returns (bool) {

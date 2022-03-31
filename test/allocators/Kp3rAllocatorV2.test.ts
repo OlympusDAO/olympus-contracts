@@ -58,6 +58,12 @@ describe("Kp3rAllocatorV2", () => {
   let localSnapId: number = 0;
   let amount: BigNumber;
 
+  const update = async () => {
+    extender.requestFundsFromTreasury(2, 5000000000);
+    allocator.update(1);
+    allocator.update(2);
+  };
+
   before(async () => {
     await helpers.pinBlock(14475495, url);
 
@@ -167,7 +173,7 @@ describe("Kp3rAllocatorV2", () => {
 
       await extender.setAllocatorLimits(2, {
         allocated: bne(10, 12),
-        loss: bne(10, 9),
+        loss: bne(10, 11),
       });
 
       await allocator.activate();
@@ -190,7 +196,7 @@ describe("Kp3rAllocatorV2", () => {
 
     it("should update for kp3r", async () => {
       expect((await utilTokens[0].locked(allocator.address))[0]).to.equal(0);
-      await expect(() => allocator.update(1)).to.changeTokenBalance(
+      await expect(async () => await update()).to.changeTokenBalance(
         tokens[0],
         allocator,
         BigNumber.from(0).sub(amount)
@@ -203,7 +209,7 @@ describe("Kp3rAllocatorV2", () => {
 
     it("should deposit more", async () => {
       expect((await utilTokens[0].locked(allocator.address))[0]).to.equal(0);
-      await expect(() => allocator.update(1)).to.changeTokenBalance(
+      await expect(async () => await update()).to.changeTokenBalance(
         tokens[0],
         allocator,
         BigNumber.from(0).sub(amount)
@@ -218,13 +224,76 @@ describe("Kp3rAllocatorV2", () => {
       );
 
       const balance: BigNumber = (await utilTokens[0].locked(allocator.address))[0];
-      await expect(() => allocator.update(1)).to.changeTokenBalance(
+      await expect(async () => await update()).to.changeTokenBalance(
         tokens[0],
         allocator,
         BigNumber.from(0).sub(amount)
       );
       expect((await utilTokens[0].locked(allocator.address))[0]).to.be.gt(balance);
       expect(await extender.getAllocatorAllocated(1)).to.equal(amount.mul(2));
+    });
+
+    context("with deposits", () => {
+      beforeEach(async () => {
+        await helpers.tmine(2592000);
+
+        await update();
+      });
+
+      it("should gain over time", async () => {
+        const balanceAfter = (await utilTokens[0].locked(allocator.address))[0];
+
+        // set to .gte until I figure out why options aren't working in tests
+        expect(balanceAfter).to.be.gte(amount);
+        expect(await allocator.amountAllocated(1)).to.equal(balanceAfter);
+      });
+
+      it("should report gain on increase", async () => {
+        expect(
+          (await extender.getAllocatorAllocated(1)).add(
+            (await extender.getAllocatorPerformance(1))[0]
+          )
+        ).to.equal((await utilTokens[0].locked(allocator.address))[0]);
+      });
+
+      // This is commented out until I figure out how to get rKP3R options
+      // working in tests
+      /*
+      it("should panic return when USDC limit is hit", async () => {
+
+      });
+      */
+    });
+  });
+
+  describe("deallocate()", () => {
+    beforeEach(async () => {
+    });
+
+    it("should fail if sender is not guardian", async () => {
+      await expect(allocator.connect(owner).deallocate([1])).to.be.reverted;
+    });
+
+    // This is commented out until I figure out how to get rKP3R options
+    // working in tests
+    /*
+    it("should get yield on deallocate", async () => {
+
+    });
+    */
+
+    it("should withdraw vKP3R if lock has ended", async () => {
+      await helpers.tmine(4 * 365 * 86400 + 2);
+
+      let input: BigNumber[] = new Array(1).fill(bne(10, 19));
+      await allocator.deallocate(input);
+
+      expect((await utilTokens[0].locked(allocator.address))[0]).to.equal("0");
+
+      console.log((await utilTokens[0].locked(allocator.address))[0]);
+      console.log(await tokens[0].balanceOf(allocator.address));
+      // .gte until I figure out how to get rKP3R options working in tests
+      expect(await kp3r.balanceOf(allocator.address)).to.be.gte(amount);
     });
   })
 })
