@@ -30,12 +30,14 @@ contract SushiMigrator is OlympusAccessControlledV2 {
 
     constructor(address _olympusAuthority) OlympusAccessControlledV2(IOlympusAuthority(_olympusAuthority)) {}
 
-    // / @notice Takes lp from treasury, remove liquidity from sushi, adds liquidity to uniswap v2
-    // / @param sushiRouter_ sushi router addres
-    // / @param uniRouter_ gelato router address
-    // / @param sushiLpAddress_ lp address
-    // / @param amount_ lp amount to get from treasury and amount of liquidity to remove
-    // / @param percentage_ minimum percentage when using the addLiquidityGuni function....i.e 95% will be 950
+    /// @notice Takes lp from treasury, remove liquidity from sushi, adds liquidity to uniswap v2
+    /// @param sushiRouter_ sushi router addres
+    /// @param uniRouter_ uni router address
+    /// @param sushiLpAddress_ sushi lp address
+    /// @param uniswapLpAddress_ uni lp address
+    /// @param amount_ lp amount to get from treasury and amount of liquidity to remove
+    /// @param removeLiquiditySlippage_ slippage used when removing liquidity....i.e 95% will be 950
+    /// @param addLiquiditySlippage_ slippage used when adding liquidity....i.e 95% will be 950
     function executeTx(
         address sushiRouter_,
         address uniRouter_,
@@ -80,10 +82,11 @@ contract SushiMigrator is OlympusAccessControlledV2 {
         txCount++;
     }
 
-    // / @notice Removes liquidity from sushiswap
-    // / @param pairAddr_ lp address
-    // / @param router_ sushiswaprouter address
-    // / @param amount_ amount of lp to remove
+    /// @notice Removes liquidity from sushiswap
+    /// @param pairAddr_ lp address
+    /// @param router_ sushiswaprouter address
+    /// @param amount_ amount of lp to remove
+    /// @param slippage_ slippage to use
     function removeLiquidity(
         address pairAddr_,
         address router_,
@@ -111,12 +114,13 @@ contract SushiMigrator is OlympusAccessControlledV2 {
         );
     }
 
-    // / @notice Adds liquidity to uniswap pool
-    // / @param router_ uniswap router address
-    // / @param token0_ token address
-    // / @param token1_ token address
-    // / @param contractToken0Bal_ max amount of token 0 to be added as liquidity
-    // / @param contractToken1Bal_ max amount of token 1 to be added as liquidity
+    /// @notice Adds liquidity to uniswap pool
+    /// @param router_ uniswap router address
+    /// @param token0_ token address
+    /// @param token1_ token address
+    /// @param contractToken0Bal_ max amount of token 0 to be added as liquidity
+    /// @param contractToken1Bal_ max amount of token 1 to be added as liquidity
+    /// @param slippage_ slippage to use
     function addLiquidity(
         address router_,
         address token0_,
