@@ -239,6 +239,7 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
         if (_ohmAmount > borrower.limit - borrower.debt) revert IncurDebtV1_AmountMoreThanBorrowersLimit(_ohmAmount);
         if (_ohmAmount > getAvailableToBorrow()) revert IncurDebtV1_OHMAmountMoreThanAvailableLoan(_ohmAmount);
 
+        ITreasury(treasury).incurDebt(_ohmAmount, OHM);
         IERC20(OHM).approve(_strategy, _ohmAmount);
 
         (uint256 liquidity, uint256 ohmUnused, address lpTokenAddress) = IStrategy(_strategy).addLiquidity(
