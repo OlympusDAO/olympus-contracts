@@ -231,7 +231,6 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
     function createLP(
         uint256 _ohmAmount,
         uint256 _pairDesiredAmount,
-        // address _pairAddress,
         address _strategy,
         bytes calldata _strategyParams
     ) external isBorrower(msg.sender) isStrategy(msg.sender) returns (uint256) {
@@ -242,7 +241,12 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
 
         IERC20(OHM).approve(_strategy, _ohmAmount);
 
-        (uint256 liquidity, uint256 ohmUnused, address lpTokenAddress) = IStrategy(_strategy).addLiquidity(_strategyParams, _ohmAmount, _pairDesiredAmount);
+        (uint256 liquidity, uint256 ohmUnused, address lpTokenAddress) = IStrategy(_strategy).addLiquidity(
+            _strategyParams,
+            _ohmAmount,
+            _pairDesiredAmount,
+            msg.sender
+        );
 
         // Mapping edit user owns x liquidity
         lpTokenOwnership[lpTokenAddress][msg.sender] += liquidity;
@@ -260,26 +264,24 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
     /**
      * @notice unwinds an LP position and pays off OHM debt
      * @param _strategy the address of the AMM strategy to use
-     * @param _pairAddress the contract address of the pair token
      * @param _strategyParams strategy-specific params
-     * @return amountA of _pair token send to _to and OHM to pay
+     * @return ohmRecieved of _pair token send to _to and OHM to pay
      */
     function removeLP(
+        uint256 _liquidity,
         address _strategy,
-        address _pairAddress,
         bytes calldata _strategyParams
-    ) external isBorrower(msg.sender) isStrategy(msg.sender) returns (uint256 amountA, uint256 amountB) {
+    ) external isBorrower(msg.sender) isStrategy(msg.sender) returns (uint256 ohmRecieved) {
         Borrower storage borrower = borrowers[msg.sender];
         if (borrower.debt == 0) revert IncurDebtV1_BorrowerHasNoOutstandingDebt(msg.sender);
 
-        (amountA, amountB) = IStrategy(_strategy).removeLiquidity(_strategyParams);
-        IERC20(_pairAddress).transfer(msg.sender, amountB);
+        ohmRecieved = IStrategy(_strategy).removeLiquidity(_strategyParams, _liquidity, msg.sender);
 
-        totalOutstandingGlobalDebt -= amountA;
-        borrower.debt = uint128(borrower.debt - amountA);
+        totalOutstandingGlobalDebt -= ohmRecieved;
+        borrower.debt = uint128(borrower.debt - ohmRecieved);
 
-        IERC20(OHM).approve(treasury, amountA);
-        ITreasury(treasury).repayDebtWithOHM(amountA);
+        IERC20(OHM).approve(treasury, ohmRecieved);
+        ITreasury(treasury).repayDebtWithOHM(ohmRecieved);
     }
 
     /**

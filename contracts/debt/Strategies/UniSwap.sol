@@ -2,28 +2,53 @@
 pragma solidity ^0.8.10;
 
 import "../../interfaces/IUniswapV2Router.sol";
+import "../../interfaces/IUniswapV2Factory.sol";
+import "../../interfaces/IUniswapV2Pair.sol";
 import "../../interfaces/IERC20.sol";
 import "../../libraries/SafeERC20.sol";
+
+error UniswapStrategy_NotIncurDebtAddress(address _borrower);
+error UniswapStrategy_LiquidityDoesNotMatch();
+error UniswapStrategy_OhmAddressNotFound();
 
 contract UniSwapStrategy {
     using SafeERC20 for IERC20;
 
     IUniswapV2Router router;
+    IUniswapV2Factory factory;
+
     address incurDebtAddress;
     address ohmAddress;
 
-    constructor(address _router, address _incurDebtAddress, address _ohmAddress) {
+    constructor(
+        address _router,
+        address _factory,
+        address _incurDebtAddress,
+        address _ohmAddress
+    ) {
         router = IUniswapV2Router(_router);
+        factory = IUniswapV2Factory(_factory);
+
         incurDebtAddress = _incurDebtAddress;
         ohmAddress = _ohmAddress;
 
-        //preapproveOhm
+        IERC20(ohmAddress).approve(address(router), type(uint256).max);
     }
 
-    function addLiquidity(bytes memory _data, uint256 _ohmAmount, uint256 _pairTokenAmount, address _user) external returns (uint256 liquidity, uint256 ohmUnused, address lpTokenAddress) {
-
-        // enforce caller is incurDebt contract
-    
+    function addLiquidity(
+        bytes memory _data,
+        uint256 _ohmAmount,
+        uint256 _pairTokenAmount,
+        address _user
+    )
+        external
+        returns (
+            uint256 liquidity,
+            uint256 ohmUnused,
+            address lpTokenAddress
+        )
+    {
+        if (msg.sender != incurDebtAddress) revert UniswapStrategy_NotIncurDebtAddress(msg.sender);
         (
             address tokenA,
             address tokenB,
@@ -35,17 +60,21 @@ contract UniSwapStrategy {
         ) = abi.decode(_data, (address, address, uint256, uint256, uint256, uint256, uint256));
 
         if (tokenA == ohmAddress) {
-            //preapprove token B to router
-            //require amountA and amountB equal to ohmAmount and pairTokenAmount
+            require(_ohmAmount == amountADesired);
+            require(_pairTokenAmount == amountBDesired);
+
             IERC20(tokenA).safeTransferFrom(incurDebtAddress, address(this), _ohmAmount);
             IERC20(tokenB).safeTransferFrom(_user, address(this), _pairTokenAmount);
+            IERC20(tokenB).approve(address(router), _pairTokenAmount);
         } else if (tokenB == ohmAddress) {
-            //preapprove token A to router
-            //require amountA and amountB equal to ohmAmount and pairTokenAmount
+            require(_pairTokenAmount == amountADesired);
+            require(_ohmAmount == amountBDesired);
+
             IERC20(tokenB).safeTransferFrom(incurDebtAddress, address(this), _ohmAmount);
             IERC20(tokenA).safeTransferFrom(_user, address(this), _pairTokenAmount);
+            IERC20(tokenA).approve(address(router), _pairTokenAmount);
         } else {
-            // revert
+            revert UniswapStrategy_OhmAddressNotFound();
         }
 
         uint256 amountA;
@@ -65,13 +94,13 @@ contract UniSwapStrategy {
         uint256 amountALeftover = amountADesired - amountA;
         uint256 amountBLeftover = amountBDesired - amountB;
 
-        // use uniswap to get which is token a or b.
-        if (tokenA == ohmAddress) { // Return leftover ohm to incurdebt and pair token to user
+        if (tokenA == ohmAddress) {
+            // Return leftover ohm to incurdebt and pair token to user
             ohmUnused = amountALeftover;
             if (amountALeftover > 0) {
                 IERC20(ohmAddress).safeTransfer(incurDebtAddress, amountALeftover);
             }
-            
+
             if (amountBLeftover > 0) {
                 IERC20(tokenB).safeTransfer(_user, amountBLeftover);
             }
@@ -80,37 +109,55 @@ contract UniSwapStrategy {
             if (amountBLeftover > 0) {
                 IERC20(ohmAddress).safeTransfer(incurDebtAddress, amountBLeftover);
             }
-            
+
             if (amountALeftover > 0) {
                 IERC20(tokenA).safeTransfer(_user, amountALeftover);
             }
         }
 
-        //Might need to use uniswapv2 library to get lp token address and return it as well
+        lpTokenAddress = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
     }
 
-    function removeLiquidity(bytes memory _data) external {
+    function removeLiquidity(
+        bytes memory _data,
+        uint256 _liquidity,
+        address _user
+    ) external returns (uint256 ohmRecieved) {
+        //address lpTokenAddress,
+        if (msg.sender != incurDebtAddress) revert UniswapStrategy_NotIncurDebtAddress(msg.sender);
         (
             address tokenA,
             address tokenB,
             uint256 liquidity,
             uint256 amountAMin,
             uint256 amountBMin,
-            address to,
-            uint256 deadline,
             uint256 slippage
-        ) = abi.decode(_data, (address, address, uint256, uint256, uint256, address, uint256, uint256));
+        ) = abi.decode(_data, (address, address, uint256, uint256, uint256, uint256));
 
-        require(to == incurDebtAddress);
+        if (liquidity != _liquidity) revert UniswapStrategy_LiquidityDoesNotMatch();
+        if (tokenA != ohmAddress && tokenB != ohmAddress) revert UniswapStrategy_OhmAddressNotFound();
 
-        router.removeLiquidity(
+        address lpTokenAddress = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
+        IUniswapV2Pair(lpTokenAddress).approve(address(router), liquidity);
+
+        (uint256 amountA, uint256 amountB) = router.removeLiquidity(
             tokenA,
             tokenB,
             liquidity,
             (amountAMin * slippage) / 1000,
             (amountBMin * slippage) / 1000,
-            to,
-            deadline
+            address(this),
+            block.timestamp
         );
+
+        if (tokenA == ohmAddress) {
+            ohmRecieved = amountA;
+            IERC20(tokenA).safeTransfer(incurDebtAddress, amountA);
+            IERC20(tokenB).safeTransfer(_user, amountB);
+        } else {
+            ohmRecieved = amountB;
+            IERC20(tokenB).safeTransfer(incurDebtAddress, amountB);
+            IERC20(tokenA).safeTransfer(_user, amountA);
+        }
     }
 }
