@@ -3,12 +3,9 @@ pragma solidity ^0.8.10;
 
 // types
 import "../types/BaseAllocator.sol";
-import "hardhat/console.sol";
 
 // interfaces
 interface IKp3rVault {
-    function checkpoint() external;
-
     function create_lock(uint256 value_, uint256 unlockTime_) external;
 
     function increase_amount(uint256 value_) external;
@@ -108,7 +105,6 @@ contract Kp3rAllocatorV2 is BaseAllocator {
                 lockEnd = block.timestamp + MAX_TIME;
 
                 kp3rVault.create_lock(balance, lockEnd);
-                kp3rVault.checkpoint();
             } else if (balance > 0 || lockedBalance > 0) {
                 // claim rKP3R and exercise option
                 _claimAndExercise();
@@ -141,7 +137,6 @@ contract Kp3rAllocatorV2 is BaseAllocator {
 
         // If lock is up, claim KP3R out of  veKP3R
         if (block.timestamp >= kp3rVault.locked__end(address(this))) {
-            console.log("withdrawing");
             kp3rVault.withdraw();
         }
     }
@@ -202,8 +197,6 @@ contract Kp3rAllocatorV2 is BaseAllocator {
 
         IClaim.option memory option = rKp3r.options(okp3rId);
         uint256 amount = option.strike;
-
-        console.log(amount);
 
         rKp3r.redeem(okp3rId);
 

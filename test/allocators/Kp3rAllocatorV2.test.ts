@@ -15,7 +15,6 @@ import {
 import { coins } from "../utils/coins";
 import { olympus } from "../utils/olympus";
 import { helpers } from "../utils/helpers";
-import { join } from "path/posix";
 import { gaugeAbi, kp3rVaultAbi, rkp3rAbi, rkp3rDistributorAbi } from "../utils/abi";
 import { protocols } from "../utils/protocols";
 import { wlContractAbi } from "../utils/fxsAllocatorAbis";
@@ -163,6 +162,8 @@ describe("Kp3rAllocatorV2", () => {
 
   describe("updates correctly", () => {
     beforeEach(async () => {
+      snapshotId = await helpers.snapshot();
+
       await extender.registerDeposit(allocator.address);
       await extender.registerDeposit(allocator.address);
 
@@ -183,6 +184,10 @@ describe("Kp3rAllocatorV2", () => {
         allocator,
         amount
       );
+    });
+
+    afterEach(async () => {
+      await helpers.revert(snapshotId);
     });
 
     it("should revert if not guardian", async () => {
@@ -235,9 +240,9 @@ describe("Kp3rAllocatorV2", () => {
 
     context("with deposits", () => {
       beforeEach(async () => {
-        await helpers.tmine(2592000);
-
         await update();
+
+        await helpers.tmine(2592001);
       });
 
       it("should gain over time", async () => {
@@ -267,7 +272,39 @@ describe("Kp3rAllocatorV2", () => {
   });
 
   describe("deallocate()", () => {
+    before(async () => {
+      await extender.registerDeposit(allocator.address);
+      await extender.registerDeposit(allocator.address);
+
+      await extender.setAllocatorLimits(1, {
+        allocated: bne(10, 23),
+        loss: bne(10, 19),
+      });
+
+      await extender.setAllocatorLimits(2, {
+        allocated: bne(10, 12),
+        loss: bne(10, 11),
+      });
+
+      await allocator.activate();
+
+      await expect(() => extender.requestFundsFromTreasury(1, amount)).to.changeTokenBalance(
+        kp3r,
+        allocator,
+        amount
+      );
+
+      await update();
+    })
+    
     beforeEach(async () => {
+      snapshotId = await helpers.snapshot();
+
+      await helpers.tmine(5 * 365 * 86400);
+    });
+
+    afterEach(async () => {
+      await helpers.revert(snapshotId);
     });
 
     it("should fail if sender is not guardian", async () => {
@@ -283,17 +320,76 @@ describe("Kp3rAllocatorV2", () => {
     */
 
     it("should withdraw vKP3R if lock has ended", async () => {
-      await helpers.tmine(4 * 365 * 86400 + 2);
-
-      let input: BigNumber[] = new Array(1).fill(bne(10, 19));
+      let input: BigNumber[] = new Array(2).fill(amount);
       await allocator.deallocate(input);
 
       expect((await utilTokens[0].locked(allocator.address))[0]).to.equal("0");
 
-      console.log((await utilTokens[0].locked(allocator.address))[0]);
-      console.log(await tokens[0].balanceOf(allocator.address));
       // .gte until I figure out how to get rKP3R options working in tests
       expect(await kp3r.balanceOf(allocator.address)).to.be.gte(amount);
     });
-  })
-})
+  });
+
+  describe("migrate()", () => {
+    before(async () => {
+      const mAllocator: Kp3rAllocatorV2 = await factory.deploy(
+        {
+          authority: authority.address,
+          tokens: [kp3r.address, usdc.address],
+          extender: extender.address,
+        },
+        olympus.treasury,
+        veKp3r.address,
+        gauge.address,
+        distributor.address,
+        rkp3r.address,
+      );
+
+      await whitelist.approveWallet(mAllocator.address);
+
+      await extender.registerDeposit(mAllocator.address);
+      await extender.registerDeposit(mAllocator.address);
+
+      await extender.setAllocatorLimits(3, {
+        allocated: bne(10, 23),
+        loss: bne(10, 19),
+      });
+
+      await extender.setAllocatorLimits(4, {
+        allocated: bne(10, 12),
+        loss: bne(10, 11),
+      });
+
+      await mAllocator.activate();
+    });
+
+    beforeEach(async () => {
+      snapshotId = await helpers.snapshot();
+
+      await update();
+    });
+
+    afterEach(async () => {
+      await helpers.revert(snapshotId);
+    });
+
+    it("should successfully migrate when lock is up", async () => {
+      await helpers.tmine(5 * 365 * 86400);
+
+      await allocator.prepareMigration();
+
+      expect((await utilTokens[0].locked(allocator.address))[0]).to.equal("0");
+      expect(await kp3r.balanceOf(allocator.address)).to.be.gt("0");
+      expect(await allocator.status()).to.equal(2);
+
+      await allocator.migrate();
+
+      const mAddress: string = await extender.allocators(2);
+
+      expect(await kp3r.balanceOf(mAddress)).to.be.gte("0");
+      expect(await kp3r.balanceOf(allocator.address)).to.equal("0");
+
+      expect(await allocator.status()).to.equal(0);
+    });
+  });
+});
