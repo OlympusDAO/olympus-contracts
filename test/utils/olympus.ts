@@ -4,5 +4,14 @@ const treasury = "0x9A315BdF513367C0377FB36545857d12e85813Ef";
 const depository = "0x9025046c6fb25Fb39e720d97a8FD881ED69a1Ef6";
 const authority = "0x1c21F8EA7e39E2BA00BC12d2968D63F4acb38b7A";
 const extender = "0xb32Ad041f23eAfd682F57fCe31d3eA4fd92D17af";
+const multisig = "0x245cc372C84B3645Bf0Ffe6538620B04a217988B";
 
-export const olympus = { staking, distributor, treasury, depository, authority, extender };
+export const olympus = {
+    staking,
+    distributor,
+    treasury,
+    depository,
+    authority,
+    extender,
+    multisig,
+};

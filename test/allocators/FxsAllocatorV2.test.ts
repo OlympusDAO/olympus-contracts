@@ -10,7 +10,7 @@ import {
     TreasuryExtender,
     TreasuryExtender__factory,
     OlympusAuthority,
-    MockERC20,
+    ERC20,
     FxsAllocatorV2,
     FxsAllocatorV2__factory,
 } from "../../types";
@@ -39,9 +39,9 @@ describe("FxsAllocatorV2", () => {
     let factory: FxsAllocatorV2__factory;
 
     // tokens
-    let fxs: MockERC20;
+    let fxs: ERC20;
     let vefxs: any;
-    let tokens: MockERC20[];
+    let tokens: ERC20[];
     let utilTokens: any[];
 
     // network

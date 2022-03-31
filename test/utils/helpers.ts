@@ -1,7 +1,7 @@
 import { ethers, network } from "hardhat";
 import { BigNumber, BaseContract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { MockERC20 } from "../../types";
+import { ERC20 } from "../../types";
 
 // CONSTANTS
 
@@ -17,6 +17,10 @@ const constants = { addressZero, uint256Max };
 
 function trim(slot: BigNumber): string {
     return slot.eq(0) ? "0x0" : "0x" + slot._hex.slice(2).replace(/^0+/, "");
+}
+
+function strim(addr: string): string {
+    return "0x" + addr.slice(2).replace(/^0+/, "");
 }
 
 function checksum(address: string): string {
@@ -45,27 +49,6 @@ function bne(base: number, expo: number): BigNumber {
     return bn;
 }
 
-//// accounts + contracts
-
-async function impersonate(address: string): Promise<SignerWithAddress> {
-    await network.provider.send("hardhat_impersonateAccount", [address]);
-    return await ethers.getSigner(address);
-}
-
-async function getCoin(address: string): Promise<MockERC20> {
-    return (await ethers.getContractAt("MockERC20", address)) as MockERC20;
-}
-
-async function getCoins(addresses: string[]): Promise<MockERC20[]> {
-    const result: MockERC20[] = [];
-
-    for (const address of addresses) {
-        result.push(await getCoin(address));
-    }
-
-    return result;
-}
-
 //// storage modding
 
 async function setStorage(address: string, slot: BigNumber, value: BigNumber): Promise<void> {
@@ -87,6 +70,36 @@ async function sload(address: string, slot: BigNumber, type: any): Promise<strin
 
 async function addEth(address: string, value: BigNumber): Promise<void> {
     await network.provider.send("hardhat_setBalance", [address, value._hex]);
+}
+
+//// accounts + contracts
+
+async function spawn<T extends BaseContract>(name: string, ...args: any[]): Promise<T> {
+    const factory: any = await ethers.getContractFactory(name);
+    return (await factory.deploy(...args)) as T;
+}
+
+async function summon<T extends BaseContract>(name: string, address: string): Promise<T> {
+    return (await ethers.getContractAt(name, address)) as T;
+}
+
+async function impersonate(address: string): Promise<SignerWithAddress> {
+    await network.provider.send("hardhat_impersonateAccount", [address]);
+    return await ethers.getSigner(address);
+}
+
+async function getCoin(address: string): Promise<ERC20> {
+    return (await ethers.getContractAt("contracts/types/ERC20.sol:ERC20", address)) as ERC20;
+}
+
+async function getCoins(addresses: string[]): Promise<ERC20[]> {
+    const result: ERC20[] = [];
+
+    for (const address of addresses) {
+        result.push(await getCoin(address));
+    }
+
+    return result;
 }
 
 //// timestamps + blocks
@@ -114,10 +127,13 @@ async function tmine(elapsed: number): Promise<void> {
 
 export const helpers = {
     trim,
+    strim,
     checksum,
     addressify,
     bnn,
     bne,
+    spawn,
+    summon,
     impersonate,
     getCoin,
     getCoins,
