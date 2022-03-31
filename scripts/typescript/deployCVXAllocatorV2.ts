@@ -31,7 +31,7 @@ async function main(): Promise<void> {
     const AID: AllocatorInitData = {
         authority: olympus.authority,
         extender: olympus.extender,
-        tokens: [],
+        tokens: [coins.cvx, coins.crv, coins.cvxcrv],
     };
 
     const OD: OperationData = {
@@ -43,11 +43,7 @@ async function main(): Promise<void> {
     };
 
     if (!(allocators.CVXAllocatorV2.length > 1)) {
-        const factory: CVXAllocatorV2__factory = (await ethers.getContractFactory(
-            allocatorName
-        )) as CVXAllocatorV2__factory;
-
-        const allocator: CVXAllocatorV2 = (await factory.deploy(OD, AID)) as CVXAllocatorV2;
+        const allocator = await helpers.spawn<CVXAllocatorV2>(allocatorName, OD, AID);
 
         console.log(`${allocatorName} deployed at:`, allocator.address);
 

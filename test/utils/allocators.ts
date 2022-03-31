@@ -17,5 +17,5 @@ export const allocators = {
     BTRFLYAllocatorV2: "0xC8431fEb345B46c30A4576c1b5faF080fdc54e2f",
     FXSAllocatorV2: "0x0f953D861347414698F34B75dbFd6e7dF1A73493",
     RariFuseAllocator: "0x061c8610a784b8a1599de5b1157631e35180d818",
-    CVXAllocatorV2: "",
+    CVXAllocatorV2: "0x88de0a7E6fEe94131FFA6E52ce5a90b61F7E9584",
 };

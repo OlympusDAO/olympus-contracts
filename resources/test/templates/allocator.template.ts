@@ -28,21 +28,13 @@ const bnn = helpers.bnn;
 /////////////////// CUSTOM
 
 /// TYPES - IMPORT HERE
-import { CVXAllocatorV2, CVXAllocatorV2__factory, ILockedCvx } from "../../types";
 
 /// SET TYPES HERE, VARIABLES ARE PRESET
-const ALLOCATORN: string = "CVXAllocatorV2";
-type ALLOCATORT = CVXAllocatorV2;
-type FACTORYT = CVXAllocatorV2__factory;
+const ALLOCATORN: string;
+type ALLOCATORT = typeof undefined;
+type FACTORYT = typeof undefined;
 
 /// INTERFACES
-interface OperationData {
-    cvxLocker: string;
-    spendRatio: BigNumber;
-    relock: boolean;
-    crvDeposit: string;
-    ccStaking: string;
-}
 
 /// DATA
 
@@ -79,10 +71,8 @@ describe(ALLOCATORN, () => {
 
     ////// DEFINE YOUR CUSTOM OBJECTS ONLY FOR USE IN FUNCTIONS HERE
     /// SIGNERS
-    let notifier: SignerWithAddress;
 
     /// CONTRACTS
-    let LOCKER: ILockedCvx;
 
     /// NETWORK
     // OBLIGATORY
@@ -91,9 +81,6 @@ describe(ALLOCATORN, () => {
     /// TOKENS
 
     /// VARS
-    let OD: OperationData;
-    let AID: AllocatorInitData;
-    let nrBef: number = 1;
 
     //////// FUNCTIONS
     // In future ( next test ) all of this will be delegated to a dedicated file as exports.
@@ -102,194 +89,34 @@ describe(ALLOCATORN, () => {
     // inside last part of the first before block. You can handles assignments, interactions in this and
     // it will be used below.
 
-    async function setupTestingEnvironment(): Promise<void> {
-        let cvxc = (await helpers.getCoin(coins.cvx)).connect(
-            await helpers.impersonate("0x4e3fbd56cd56c3e72c1403e103b45db9da5b5d2b")
-        );
-
-        AID = {
-            authority: olympus.authority,
-            extender: olympus.extender,
-            tokens: [coins.cvx, coins.crv, coins.cvxcrv],
-        };
-
-        OD = {
-            cvxLocker: protocols.convex.cvxLocker,
-            spendRatio: bnn(0),
-            relock: true,
-            crvDeposit: protocols.convex.crvDeposit,
-            ccStaking: protocols.convex.ccStaking,
-        };
-
-        underlying = await helpers.getCoins([coins.cvx, coins.crv, coins.cvxcrv]);
-        utility = await helpers.getCoins([coins.crv, coins.cvxcrv]);
-        reward = await helpers.getCoins([coins.crv, coins.cvxcrv]);
-
-        nrBef = (await extender.getTotalAllocatorCount()).toNumber();
-
-        LOCKER = await helpers.summon<ILockedCvx>("ILockedCvx", protocols.convex.cvxLocker);
-
-        notifier = await helpers.impersonate((await LOCKER.owner()) as string);
-
-        await helpers.addEth(notifier.address, bne(10, 18));
-        await helpers.addEth("0x4e3fbd56cd56c3e72c1403e103b45db9da5b5d2b", bne(10, 18));
-
-        const bal = await cvxc.balanceOf(notifier.address);
-
-        await cvxc.transfer(notifier.address, bal);
-
-        cvxc = cvxc.connect(notifier);
-
-        await cvxc.approve(LOCKER.address, bal);
-
-        LOCKER = LOCKER.connect(notifier);
-    }
+    async function setupTestingEnvironment(): Promise<void> {}
 
     // These should test the initialization procedure. This means setting up parameters and adding
     // everything up until the point where funds can be added and harvested. This means, the last function
     // in these tests should be allocator.activate()
 
-    async function beforeEachInitializationProcedureTest(): Promise<void> {
-        snapshotId = await helpers.snapshot();
-        allocator = await factory.connect(guardian).deploy(OD, AID);
-        allocator = allocator.connect(guardian);
-    }
+    async function beforeEachInitializationProcedureTest(): Promise<void> {}
 
-    function initializationProcedureTests(): void {
-        it("passing: should have properly initalized data", async () => {
-            const opdata: OperationData = await allocator.opData();
+    function initializationProcedureTests(): void {}
 
-            expect(OD.cvxLocker).to.equal(opdata.cvxLocker);
-            expect(OD.spendRatio).to.equal(opdata.spendRatio);
-            expect(OD.crvDeposit).to.equal(opdata.crvDeposit);
-            expect(OD.relock).to.equal(opdata.relock);
-            expect(OD.ccStaking).to.equal(opdata.ccStaking);
-        });
-
-        it("passing: setOperationData() setRelock()", async () => {
-            const nOD: OperationData = {
-                cvxLocker: helpers.constants.addressZero,
-                spendRatio: bnn(0),
-                crvDeposit: helpers.constants.addressZero,
-                relock: false,
-                ccStaking: helpers.constants.addressZero,
-            };
-
-            await allocator.setOperationData(nOD);
-
-            const opdata: OperationData = await allocator.opData();
-
-            expect(nOD.cvxLocker).to.equal(opdata.cvxLocker);
-            expect(nOD.spendRatio).to.equal(opdata.spendRatio);
-            expect(nOD.crvDeposit).to.equal(opdata.crvDeposit);
-            expect(nOD.relock).to.equal(opdata.relock);
-            expect(nOD.ccStaking).to.equal(opdata.ccStaking);
-
-            await allocator.setRelock(true);
-
-            const opdata2: OperationData = await allocator.opData();
-
-            expect(opdata2.relock).to.be.true;
-        });
-
-        it("passing: registerDeposit() setAllocatorLimits() activate()", async () => {
-            for (let i = 0; i < underlying.length; i++) {
-                await extender.registerDeposit(allocator.address);
-            }
-
-            const nrNow: number = (await extender.getTotalAllocatorCount()).toNumber();
-
-            expect(nrNow - 3).to.equal(nrBef);
-
-            await extender.setAllocatorLimits(nrBef, {
-                allocated: bne(10, 20),
-                loss: bne(10, 19).div(2),
-            });
-            await extender.setAllocatorLimits(nrBef + 1, {
-                allocated: bnn(0),
-                loss: bne(10, 26),
-            });
-            await extender.setAllocatorLimits(nrBef + 2, { allocated: 0, loss: 0 });
-
-            const limits: any[] = [
-                await extender.getAllocatorLimits(nrBef),
-                await extender.getAllocatorLimits(nrBef + 1),
-                await extender.getAllocatorLimits(nrBef + 2),
-            ];
-
-            expect(limits[0].allocated).to.equal(bne(10, 20));
-            expect(limits[1].loss).to.equal(bne(10, 26));
-            expect(limits[2].loss.add(limits[2].allocated)).to.equal(0);
-
-            await allocator.activate();
-        });
-    }
-
-    async function afterEachInitializationProcedureTest(): Promise<void> {
-        await helpers.revert(snapshotId);
-    }
+    async function afterEachInitializationProcedureTest(): Promise<void> {}
 
     // Now define a basic version so it can be repeatedly called.
 
-    async function initialize(): Promise<void> {
-        factory = factory.connect(guardian);
-        allocator = await factory.deploy(OD, AID);
-        allocator = allocator.connect(guardian);
-
-        for (let i = 0; i < underlying.length; i++) {
-            await extender.registerDeposit(allocator.address);
-        }
-
-        await extender.setAllocatorLimits(nrBef, {
-            allocated: bne(10, 21),
-            loss: bne(10, 19).div(2),
-        });
-        await extender.setAllocatorLimits(nrBef + 1, {
-            allocated: bnn(0),
-            loss: bne(10, 26),
-        });
-        await extender.setAllocatorLimits(nrBef + 2, { allocated: 0, loss: 0 });
-
-        const limits: any[] = [
-            await extender.getAllocatorLimits(nrBef),
-            await extender.getAllocatorLimits(nrBef + 1),
-            await extender.getAllocatorLimits(nrBef + 2),
-        ];
-
-        expect(limits[0].allocated).to.equal(bne(10, 21));
-        expect(limits[1].loss).to.equal(bne(10, 26));
-        expect(limits[2].loss.add(limits[2].allocated)).to.equal(0);
-
-        await allocator.activate();
-
-        await expect(() =>
-            extender.requestFundsFromTreasury(nrBef, bne(10, 20))
-        ).to.changeTokenBalance(underlying[0], allocator, bne(10, 20));
-    }
+    async function initialize(): Promise<void> {}
 
     // Return out all deposit ids of the allocator in `TreasuryExtender`
 
     let depositIds: BigNumber[] = [];
 
     async function getDepositIds(): Promise<BigNumber[]> {
-        return [bnn(nrBef), bnn(nrBef + 1), bnn(nrBef + 2)];
+        // sample return to fix compile
+        return [BigNumber.from(0)];
     }
 
     // And all other preparatory if they are necessary.
 
-    async function beforeEachUtilityAndRewardsTest(): Promise<void> {
-        const treasuryMan: SignerWithAddress = await helpers.impersonate(treasury.address);
-
-        await helpers.addEth(treasury.address, bne(10, 25));
-
-        await underlying[1]
-            .connect(treasuryMan)
-            .transfer(extender.address, await underlying[1].balanceOf(treasury.address));
-
-        await underlying[2]
-            .connect(treasuryMan)
-            .transfer(extender.address, await underlying[2].balanceOf(treasury.address));
-    }
+    async function beforeEachUtilityAndRewardsTest(): Promise<void> {}
 
     // UPDATE TESTS
 
@@ -298,83 +125,11 @@ describe(ALLOCATORN, () => {
     // throw it blocks inside and use the naming optimally, it consists of
     // "passing:" and "revert:" and then specifiers after it
 
-    function updateRevertingTests(): void {
-        it("revert: should revert if non-guardian calls function", async () => {
-            await expect(allocator.connect(owner).update(nrBef)).to.be.reverted;
-        });
-    }
+    function updateRevertingTests(): void {}
 
-    function updateGainTests(): void {
-        it("passing: should be able to harvest properly with gain", async () => {
-            let perf: any;
+    function updateGainTests(): void {}
 
-            await allocator.update(nrBef);
-            perf = await extender.getAllocatorPerformance(nrBef);
-            let ccGain = await allocator.amountAllocated(nrBef + 2);
-
-            await helpers.tmine(24 * 3600 * 100);
-            await allocator.update(nrBef);
-
-            await LOCKER.checkpointEpoch();
-
-            await helpers.tmine(24 * 3600 * 40);
-            await allocator.update(nrBef);
-
-            await LOCKER.checkpointEpoch();
-
-            await helpers.tmine(24 * 3600 * 200);
-            await allocator.update(nrBef);
-
-            expect((await extender.getAllocatorPerformance(nrBef))[0]).to.be.gte(perf[0]);
-            perf = await extender.getAllocatorPerformance(nrBef);
-
-            expect(ccGain).to.be.lt(await allocator.amountAllocated(nrBef + 2));
-
-            await helpers.tmine(24 * 3600 * 100);
-            await LOCKER.checkpointEpoch();
-            await allocator.update(nrBef);
-            await helpers.tmine(24 * 3600 * 24);
-            await allocator.update(nrBef);
-
-            expect((await extender.getAllocatorPerformance(nrBef))[0]).to.be.gte(perf[0]);
-        });
-    }
-
-    function updateLossTests(): void {
-        it("passing: should be able to harvest properly with loss", async () => {
-            const as: SignerWithAddress = await helpers.impersonate(allocator.address);
-            let perf: any;
-            let bal: BigNumber;
-
-            await helpers.addEth(allocator.address, bne(10, 25));
-
-            await allocator.update(nrBef);
-            perf = await extender.getAllocatorPerformance(nrBef);
-
-            await helpers.tmine(24 * 3600 * 24);
-            await allocator.update(nrBef);
-            await helpers.tmine(24 * 3600 * 104);
-            await allocator.deallocate([1, 0]);
-
-            bal = await utility[0].balanceOf(allocator.address);
-            await utility[0].connect(as).transfer(treasury.address, bal.div(2));
-
-            await allocator.update(nrBef);
-            expect((await extender.getAllocatorPerformance(nrBef))[1]).to.be.gte(perf[1]);
-            perf = await extender.getAllocatorPerformance(nrBef);
-
-            await helpers.tmine(24 * 3600 * 24);
-            await allocator.update(nrBef);
-            await helpers.tmine(24 * 3600 * 104);
-            await allocator.deallocate([1, 0]);
-
-            bal = await utility[0].balanceOf(allocator.address);
-            await utility[0].connect(as).transfer(treasury.address, bal.div(2));
-
-            await allocator.update(nrBef);
-            expect((await extender.getAllocatorPerformance(nrBef))[1]).to.be.gte(perf[1]);
-        });
-    }
+    function updateLossTests(): void {}
 
     // DEALLOCATE
 
@@ -393,120 +148,30 @@ describe(ALLOCATORN, () => {
     // Return out input for deallocate *some*
 
     async function beforeEachDeallocateTest(): Promise<BigNumber[]> {
-        await allocator.update(nrBef);
-        await helpers.tmine(24 * 3600 * 24);
-        await allocator.update(nrBef);
-        await helpers.tmine(24 * 3600 * 24);
-        await allocator.update(nrBef);
-        await helpers.tmine(24 * 3600 * 104);
-
-        return [bne(10, 20).div(2), bnn(0), bnn(0)];
+        return [BigNumber.from(0)];
     }
 
     // extender withdrawal, you need to deallocate before it
 
     async function beforeEachExtenderWithdrawalTest(): Promise<void> {
-        await allocator.update(nrBef);
-        await helpers.tmine(24 * 3600 * 24);
-        await allocator.update(nrBef);
-        await helpers.tmine(24 * 3600 * 24);
-        await allocator.update(nrBef);
-        await helpers.tmine(24 * 3600 * 104);
-
-        await allocator.deallocate([1, helpers.constants.uint256Max]);
+        return Promise.resolve(undefined);
     }
 
     // prepareMigration
 
-    async function beforeEachPrepareMigrationTest(): Promise<void> {
-        await allocator.update(nrBef);
-        await helpers.tmine(24 * 3600 * 24);
-        await allocator.update(nrBef);
-        await helpers.tmine(24 * 3600 * 24);
-        await allocator.update(nrBef);
-        await helpers.tmine(24 * 3600 * 104);
-    }
+    async function beforeEachPrepareMigrationTest(): Promise<void> {}
 
-    async function prepareMigrationRevertingTests(): Promise<void> {
-        it("revert: should fail with wrong access ", async () => {
-            await expect(allocator.connect(owner).prepareMigration()).to.be.reverted;
-        });
-    }
+    async function prepareMigrationRevertingTests(): Promise<void> {}
 
-    async function prepareMigrationPassingTests(): Promise<void> {
-        it("passing: should prepare migration", async () => {
-            const bal1: BigNumber = await underlying[0].balanceOf(allocator.address);
-            const bal2: BigNumber = await underlying[2].balanceOf(allocator.address);
-
-            await allocator.prepareMigration();
-
-            const bal3: BigNumber = await underlying[0].balanceOf(allocator.address);
-            const bal4: BigNumber = await underlying[2].balanceOf(allocator.address);
-
-            expect(bal3).to.be.gt(bal1);
-            expect(bal4).to.be.gte(bal2);
-        });
-    }
+    async function prepareMigrationPassingTests(): Promise<void> {}
 
     // migrate
 
-    async function beforeEachMigrateTest(): Promise<void> {
-        await allocator.update(nrBef);
+    async function beforeEachMigrateTest(): Promise<void> {}
 
-        await helpers.tmine(24 * 3600 * 200);
-        await allocator.update(nrBef);
+    async function migrateRevertingTests(): Promise<void> {}
 
-        await helpers.tmine(24 * 3600 * 24);
-        await allocator.update(nrBef);
-
-        await helpers.tmine(24 * 3600 * 104);
-
-        let fallocator: ALLOCATORT = await factory.deploy(OD, AID);
-        fallocator = fallocator.connect(guardian);
-
-        await extender.registerDeposit(fallocator.address);
-        await extender.setAllocatorLimits(nrBef + 3, { allocated: bne(10, 21), loss: 0 });
-        await fallocator.activate();
-
-        await allocator.prepareMigration();
-    }
-
-    async function migrateRevertingTests(): Promise<void> {
-        it("revert: should fail with wrong access ", async () => {
-            await expect(allocator.connect(owner).migrate()).to.be.reverted;
-            for (let i = nrBef; i < nrBef + 3; i++) {
-                await expect(allocator.connect(owner).update(i)).to.be.reverted;
-            }
-        });
-    }
-
-    async function migratePassingTests(): Promise<void> {
-        it("passing: should migrate", async () => {
-            let balances: BigNumber[][] = [];
-
-            for (let i = 0; i < 3; i++) {
-                balances.push([
-                    await underlying[i].balanceOf(allocator.address),
-                    i < 2 ? await utility[i].balanceOf(allocator.address) : bnn(1),
-                    i < 2 ? await reward[i].balanceOf(allocator.address) : bnn(1),
-                ]);
-            }
-
-            await allocator.migrate();
-
-            let arr: any[] = [underlying, utility, reward];
-
-            for (let i = 0; i < 3; i++) {
-                for (let j = 0; j < 2; j++) {
-                    expect(balances[i][j]).to.be.gte(
-                        i < 2 || j == 0 ? await arr[i][j].balanceOf(allocator.address) : bnn(0)
-                    );
-                }
-            }
-
-            expect(balances[0][2]).to.be.gte(await arr[0][2].balanceOf(allocator.address));
-        });
-    }
+    async function migratePassingTests(): Promise<void> {}
 
     /// TESTS
     // IF A TEST DOESN'T WORK BECAUSE OF THE PROTOCOL, then don't delete but SKIP the test.
@@ -567,7 +232,7 @@ describe(ALLOCATORN, () => {
 
     // Test initialization procedure
 
-    context("initialization procedure tests", () => {
+    context.skip("initialization procedure tests", () => {
         beforeEach(async () => {
             await beforeEachInitializationProcedureTest();
         });
@@ -581,7 +246,7 @@ describe(ALLOCATORN, () => {
 
     // Now start all other tests.
 
-    context("with initialization", () => {
+    context.skip("with initialization", () => {
         ///// TEST ISOLATION /////
         beforeEach(async () => {
             snapshotId = await helpers.snapshot();

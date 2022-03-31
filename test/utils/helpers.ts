@@ -49,27 +49,6 @@ function bne(base: number, expo: number): BigNumber {
     return bn;
 }
 
-//// accounts + contracts
-
-async function impersonate(address: string): Promise<SignerWithAddress> {
-    await network.provider.send("hardhat_impersonateAccount", [address]);
-    return await ethers.getSigner(address);
-}
-
-async function getCoin(address: string): Promise<ERC20> {
-    return (await ethers.getContractAt("contracts/types/ERC20.sol:ERC20", address)) as ERC20;
-}
-
-async function getCoins(addresses: string[]): Promise<ERC20[]> {
-    const result: ERC20[] = [];
-
-    for (const address of addresses) {
-        result.push(await getCoin(address));
-    }
-
-    return result;
-}
-
 //// storage modding
 
 async function setStorage(address: string, slot: BigNumber, value: BigNumber): Promise<void> {
@@ -91,6 +70,36 @@ async function sload(address: string, slot: BigNumber, type: any): Promise<strin
 
 async function addEth(address: string, value: BigNumber): Promise<void> {
     await network.provider.send("hardhat_setBalance", [address, value._hex]);
+}
+
+//// accounts + contracts
+
+async function spawn<T extends BaseContract>(name: string, ...args: any[]): Promise<T> {
+    const factory: any = await ethers.getContractFactory(name);
+    return (await factory.deploy(...args)) as T;
+}
+
+async function summon<T extends BaseContract>(name: string, address: string): Promise<T> {
+    return (await ethers.getContractAt(name, address)) as T;
+}
+
+async function impersonate(address: string): Promise<SignerWithAddress> {
+    await network.provider.send("hardhat_impersonateAccount", [address]);
+    return await ethers.getSigner(address);
+}
+
+async function getCoin(address: string): Promise<ERC20> {
+    return (await ethers.getContractAt("contracts/types/ERC20.sol:ERC20", address)) as ERC20;
+}
+
+async function getCoins(addresses: string[]): Promise<ERC20[]> {
+    const result: ERC20[] = [];
+
+    for (const address of addresses) {
+        result.push(await getCoin(address));
+    }
+
+    return result;
 }
 
 //// timestamps + blocks
@@ -123,6 +132,8 @@ export const helpers = {
     addressify,
     bnn,
     bne,
+    spawn,
+    summon,
     impersonate,
     getCoin,
     getCoins,
