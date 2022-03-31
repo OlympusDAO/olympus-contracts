@@ -7,8 +7,8 @@ import "../interfaces/IUniswapV2Pair.sol";
 import "../interfaces/IUniswapV2Router.sol";
 import "../types/OlympusAccessControlledV2.sol";
 
-/// @notice This contract handles migrating lps from uniswap v2 and sushiswap to uniswap v3 via gelato
-///         to make use of the contract ensure a pool has been created on uniswap v3 and gelato
+/// @notice This contract handles migrating lps from sushiswap to uniswap v2
+///         to make use of this contract ensure contract address is RESERVEMANAGER IN OHM Treasury
 contract SushiMigrator is OlympusAccessControlledV2 {
     using SafeERC20 for IERC20;
 
