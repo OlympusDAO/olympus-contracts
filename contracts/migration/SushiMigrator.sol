@@ -12,19 +12,19 @@ import "../types/OlympusAccessControlledV2.sol";
 contract SushiMigrator is OlympusAccessControlledV2 {
     using SafeERC20 for IERC20;
 
-    struct TxDetails {
-        uint256 balanceALeft;
-        uint256 balanceBLeft;
-        uint256 contractV2lpBalanceBeforeRemovingLiquidity;
-        uint256 contractV2lpBalanceAfterRemovingLiquidity;
-        uint256 expectedToken0ToBeAddedOnUniswapV2;
-        uint256 expectedToken1ToBeAddedOnUniswapV2;
-        uint256 lp;
+    struct Amounts {
+        uint256 sushiLpBeforeMigration;
+        uint256 leftoverSushiLpAfterMigration;
+        uint256 uniPoolToken0AddedToPool;
+        uint256 uniPoolToken1AddedToPool;
+        uint256 uniPoolLpReceived;
+        uint256 uniPoolToken0ReturnedToTreasury;
+        uint256 uniPoolToken1ReturnedToTreasury;
     }
 
     uint256 public txCount;
 
-    mapping(uint256 => TxDetails) public transactions;
+    mapping(uint256 => Amounts) public amountsByMigrationId;
 
     address immutable treasury = 0x9A315BdF513367C0377FB36545857d12e85813Ef;
 
@@ -69,14 +69,14 @@ contract SushiMigrator is OlympusAccessControlledV2 {
             addLiquiditySlippage_
         );
 
-        transactions[txCount] = TxDetails({
-            balanceALeft: amountA,
-            balanceBLeft: amountB,
-            contractV2lpBalanceBeforeRemovingLiquidity: amount,
-            contractV2lpBalanceAfterRemovingLiquidity: amountAfterTx,
-            expectedToken0ToBeAddedOnUniswapV2: amountOHM,
-            expectedToken1ToBeAddedOnUniswapV2: amountToken,
-            lp: liquidity
+        amountsByMigrationId[txCount] = Amounts({
+            sushiLpBeforeMigration: amount,
+            leftoverSushiLpAfterMigration: amountAfterTx,
+            uniPoolToken0AddedToPool: amountOHM,
+            uniPoolToken1AddedToPool: amountToken,
+            uniPoolLpReceived: liquidity,
+            uniPoolToken0ReturnedToTreasury: amountA,
+            uniPoolToken1ReturnedToTreasury: amountB
         });
 
         txCount++;
@@ -93,13 +93,13 @@ contract SushiMigrator is OlympusAccessControlledV2 {
         uint256 amount_,
         uint256 slippage_
     ) internal returns (uint256 amountOHM, uint256 amountToken) {
-        (address token0, address token1, uint256 pairBalanaceInTokenA, uint256 pairBalanaceInTokenB) = getTokenInfo(
+        (address token0, address token1, uint256 token0PoolBalance, uint256 token1PoolBalance) = getTokenInfo(
             pairAddr_,
             pairAddr_
         );
 
-        uint256 amount1Min = (pairBalanaceInTokenA * amount_) / IUniswapV2Pair(pairAddr_).totalSupply();
-        uint256 amount2Min = (pairBalanaceInTokenB * amount_) / IUniswapV2Pair(pairAddr_).totalSupply();
+        uint256 amount1Min = (token0PoolBalance * amount_) / IUniswapV2Pair(pairAddr_).totalSupply();
+        uint256 amount2Min = (token1PoolBalance * amount_) / IUniswapV2Pair(pairAddr_).totalSupply();
 
         IUniswapV2Pair(pairAddr_).approve(router_, amount_);
 

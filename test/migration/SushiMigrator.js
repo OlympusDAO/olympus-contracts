@@ -64,21 +64,21 @@ describe("SushiMigrator", async () => {
                 900
             );
 
-        const tx = await sushiMigrator.transactions(0);
+        const tx = await sushiMigrator.amountsByMigrationId(0);
         const ohmBalAfterTx = await ohmContract.balanceOf(treasury.address);
 
         const daiBalAfterTx = await daiContract.balanceOf(treasury.address);
         const lpBalAfterTx = await uniswapLpContract.balanceOf(treasury.address);
 
-        if (tx.balanceALeft > 0) {
-            assert.equal(Number(ohmBalAfterTx), Number(ohmBalBeforeTx) + Number(tx.balanceALeft));
+        if (tx.uniPoolToken0ReturnedToTreasury > 0) {
+            assert.equal(Number(ohmBalAfterTx), Number(ohmBalBeforeTx) + Number(tx.uniPoolToken0ReturnedToTreasury));
         }
 
-        if (tx.balanceBLeft > 0) {
-            assert.equal(Number(daiBalAfterTx), Number(daiBalBeforeTx) + Number(tx.balanceBLeft));
+        if (tx.uniPoolToken1ReturnedToTreasury > 0) {
+            assert.equal(Number(daiBalAfterTx), Number(daiBalBeforeTx) + Number(tx.uniPoolToken1ReturnedToTreasury));
         }
 
-        assert.equal(Number(lpBalBeforeTx) + Number(tx.lp), Number(lpBalAfterTx));
+        assert.equal(Number(lpBalBeforeTx) + Number(tx.uniPoolLpReceived), Number(lpBalAfterTx));
     });
 
     it("Migrate Sushi OHM/ETH pair to Uniswap OHM/ETH pair", async () => {
@@ -151,16 +151,16 @@ describe("SushiMigrator", async () => {
         const wethBalAfterTx = await wethContract.balanceOf(treasury.address);
 
         const lpBalAfterTx = await uniswapLpContract.balanceOf(treasury.address);
-        const tx = await sushiMigrator.transactions(0);
+        const tx = await sushiMigrator.amountsByMigrationId(0);
 
-        if (tx.balanceALeft > 0) {
-            assert.equal(Number(ohmBalAfterTx), Number(ohmBalBeforeTx) + Number(tx.balanceALeft));
+        if (tx.uniPoolToken0ReturnedToTreasury > 0) {
+            assert.equal(Number(ohmBalAfterTx), Number(ohmBalBeforeTx) + Number(tx.uniPoolToken0ReturnedToTreasury));
         }
 
-        if (tx.balanceBLeft > 0) {
-            assert.equal(Number(wethBalAfterTx), Number(wethBalBeforeTx) + Number(tx.balanceBLeft));
+        if (tx.uniPoolToken1ReturnedToTreasury > 0) {
+            assert.equal(Number(wethBalAfterTx), Number(wethBalBeforeTx) + Number(tx.uniPoolToken1ReturnedToTreasury));
         }
 
-        assert.equal(Number(lpBalBeforeTx) + Number(tx.lp), Number(lpBalAfterTx));
+        assert.equal(Number(lpBalBeforeTx) + Number(tx.uniPoolLpReceived), Number(lpBalAfterTx));
     });
 });
