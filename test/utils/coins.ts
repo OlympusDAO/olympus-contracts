@@ -36,6 +36,10 @@ const aweth = "0x030bA81f1c18d280636F32af80b9AAd02Cf0854e";
 const ausdc = "0xBcca60bB61934080951369a648Fb03DF4F96263C";
 const afrax = "0xd4937682df3C8aEF4FE912A96A74121C0829E664";
 
+// KP3R
+const kp3r = "0x1cEB5cB57C4D4E2b2433641b95Dd330A33185A44";
+const rkp3r = "0xd4260B2781e2460f49dB746112BB592ba3fb6382";
+
 export const coins = {
     ohm,
     gohm,
@@ -63,4 +67,6 @@ export const coins = {
     aweth,
     ausdc,
     afrax,
+    kp3r,
+    rkp3r,
 };
