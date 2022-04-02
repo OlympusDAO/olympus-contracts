@@ -97,7 +97,11 @@ contract Kp3rAllocatorV2 is BaseAllocator {
         uint256 tokenIndex = tokenIds[id];
 
         if (tokenIndex == 1) {
-            loss = uint128(extender.getAllocatorAllocated(id)  + extender.getAllocatorPerformance(id).loss  - _tokens[1].balanceOf(address(this)));
+            loss = uint128(
+                extender.getAllocatorAllocated(id) +
+                    extender.getAllocatorPerformance(id).loss -
+                    _tokens[1].balanceOf(address(this))
+            );
         } else {
             uint256 balance = _tokens[0].balanceOf(address(this));
             (uint256 lockedBalance, ) = kp3rVault.locked(address(this));
@@ -207,9 +211,9 @@ contract Kp3rAllocatorV2 is BaseAllocator {
     }
 
     function _setMaxTime(uint256 time_) external {
-      _onlyGuardian();
+        _onlyGuardian();
 
-      relockPeriod = time_;
+        relockPeriod = time_;
     }
 
     // allows us to continue to vote in Fixed Forex Gauge despite allocating

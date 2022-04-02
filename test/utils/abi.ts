@@ -1678,4 +1678,3 @@ export const gaugeAbi = [
         type: "function",
     },
 ];
-
