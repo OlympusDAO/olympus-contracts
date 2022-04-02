@@ -45,7 +45,7 @@ error Kp3rAllocatorV2_InvalidAddress();
 error Kp3rAllocatorV2_LowUSDCLimits();
 
 contract Kp3rAllocatorV2 is BaseAllocator {
-    uint256 private constant MAX_TIME = 4 * 365 * 86400 + 1;
+    uint256 private relockPeriod = 4 * 365 * 86400 + 1;
 
     ITreasury public treasury;
 
@@ -55,7 +55,6 @@ contract Kp3rAllocatorV2 is BaseAllocator {
     IClaim public rKp3r;
 
     uint256 lockEnd;
-    uint128 usdcUsed;
 
     constructor(
         AllocatorInitData memory data,
@@ -85,9 +84,9 @@ contract Kp3rAllocatorV2 is BaseAllocator {
         _tokens[1].approve(address(rKp3r), type(uint256).max);
 
         // approve extender
-        _tokens[0].approve(address(treasury), type(uint256).max);
-        _tokens[1].approve(address(treasury), type(uint256).max);
-        rKp3r.approve(address(treasury), type(uint256).max);
+        _tokens[0].approve(address(extender), type(uint256).max);
+        _tokens[1].approve(address(extender), type(uint256).max);
+        rKp3r.approve(address(extender), type(uint256).max);
     }
 
     function _activate() internal override {
@@ -95,17 +94,19 @@ contract Kp3rAllocatorV2 is BaseAllocator {
     }
 
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
-        if (id == 2) {
-            loss = usdcUsed;
+        uint256 tokenIndex = tokenIds[id];
+
+        if (tokenIndex == 1) {
+            loss = uint128(extender.getAllocatorAllocated(id)  + extender.getAllocatorPerformance(id).loss  - _tokens[1].balanceOf(address(this)));
         } else {
             uint256 balance = _tokens[0].balanceOf(address(this));
             (uint256 lockedBalance, ) = kp3rVault.locked(address(this));
 
             if (balance > 0 && lockedBalance == 0) {
-                lockEnd = block.timestamp + MAX_TIME;
+                lockEnd = block.timestamp + relockPeriod;
 
                 kp3rVault.create_lock(balance, lockEnd);
-            } else if (balance > 0 || lockedBalance > 0) {
+            } else if (lockedBalance > 0) {
                 // claim rKP3R and exercise option
                 _claimAndExercise();
 
@@ -115,7 +116,7 @@ contract Kp3rAllocatorV2 is BaseAllocator {
                     kp3rVault.increase_amount(balance);
 
                     if (_canExtendLock()) {
-                        lockEnd = block.timestamp + MAX_TIME;
+                        lockEnd = block.timestamp + relockPeriod;
                         kp3rVault.increase_unlock_time(lockEnd);
                     }
                 }
@@ -199,12 +200,16 @@ contract Kp3rAllocatorV2 is BaseAllocator {
         uint256 amount = option.strike;
 
         rKp3r.redeem(okp3rId);
-
-        usdcUsed = uint128(amount);
     }
 
     function _canExtendLock() internal view returns (bool) {
-        return lockEnd < block.timestamp + MAX_TIME - 7 * 86400;
+        return lockEnd < block.timestamp + relockPeriod - 7 * 86400;
+    }
+
+    function _setMaxTime(uint256 time_) external {
+      _onlyGuardian();
+
+      relockPeriod = time_;
     }
 
     // allows us to continue to vote in Fixed Forex Gauge despite allocating
