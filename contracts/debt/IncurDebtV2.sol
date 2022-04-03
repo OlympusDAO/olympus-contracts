@@ -264,8 +264,9 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
     }
 
     /**
-     * @notice unwinds an LP position and pays off OHM debt
+     * @notice unwinds an LP position and pays off OHM debt. Excess ohm is sent back to caller.
      * @param _strategy the address of the AMM strategy to use
+     * @param _lpToken address of lp token to remove liquidity from
      * @param _strategyParams strategy-specific params
      * @return ohmRecieved of _pair token send to _to and OHM to pay
      */
@@ -278,11 +279,12 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
         Borrower storage borrower = borrowers[msg.sender];
         if (borrower.debt == 0) revert IncurDebtV2_BorrowerHasNoOutstandingDebt(msg.sender);
 
-        if (_liquidity > lpTokenOwnership[_lpToken][msg.sender]) revert IncurDebtV2_AmountAboveBorrowerBalance(_liquidity);
+        if (_liquidity > lpTokenOwnership[_lpToken][msg.sender])
+            revert IncurDebtV2_AmountAboveBorrowerBalance(_liquidity);
         lpTokenOwnership[_lpToken][msg.sender] -= _liquidity;
 
         ohmRecieved = IStrategy(_strategy).removeLiquidity(_strategyParams, _liquidity, _lpToken, msg.sender);
-    
+
         uint256 ohmToRepay;
 
         if (borrower.debt < ohmRecieved) {
