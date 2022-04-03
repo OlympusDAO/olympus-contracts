@@ -17,6 +17,7 @@ interface IStrategy {
     function removeLiquidity(
         bytes memory data,
         uint256 _liquidity,
+        address lpTokenAddress,
         address _user
     ) external returns (uint256 ohmRecieved);
 }
