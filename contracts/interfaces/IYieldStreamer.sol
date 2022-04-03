@@ -18,11 +18,9 @@ interface IYieldStreamer {
 
     function withdrawAllYield() external;
 
-    function withdrawYieldInStreamTokens(uint256 id_) external;
-
     function harvestStreamTokens(uint256 id_) external;
 
-    function updateUserMinDaiThreshold(uint256 id_, uint128 threshold_) external;
+    function updateUserMinThreshold(uint256 id_, uint128 threshold_) external;
 
     function updatePaymentInterval(uint256 id_, uint128 paymentInterval) external;
 
