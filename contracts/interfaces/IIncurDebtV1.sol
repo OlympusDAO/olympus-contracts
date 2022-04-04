@@ -7,14 +7,12 @@ interface IIncurDebtV1 {
     /* ========== TOKEMAK FUNCTIONS ========== */
 
     /**
-     * @notice deposits gOHM/sOHM to use as collateral
+     * @notice deposits gOHM to use as collateral
      * - msg.sender must be a borrower
      * - this contract must have been approved _amount
-     * @dev will unwrap and hold as sOHM in this contract
-     * @param _amount amount of gOHM/sOHM
-     * @param _token token(gOHM/sOHM) to deposit with
+     * @param _amount amount of gOHM
      */
-    function deposit(uint256 _amount, address _token) external;
+    function deposit(uint256 _amount) external;
 
     /**
      * @notice allow borrowers to borrow OHM
@@ -31,13 +29,8 @@ interface IIncurDebtV1 {
      * - _amount (in OHM) must be less than or equal to depositedOhm - debt
      * @param _amount amount of gOHM/sOHM to withdraw
      * @param _to address to send _amount
-     * @param _token token to send _amount
      */
-    function withdraw(
-        uint256 _amount,
-        address _to,
-        address _token
-    ) external;
+    function withdraw(uint256 _amount, address _to) external;
 
     /**
      * @notice repay debt with collateral
@@ -47,12 +40,11 @@ interface IIncurDebtV1 {
     function repayDebtWithCollateral() external;
 
     /**
-     * @notice repay debt with collateral and withdraw the accrued earnings to sOHM/gOHM
+     * @notice repay debt with collateral and withdraw the accrued earnings to gOHM
      * - msg.sender must be a borrower
      * - borrower must have outstanding debt
-     * @param _tokenToReceiveExcess amount of OHM to borrow
      */
-    function repayDebtWithCollateralAndWithdrawTheRest(address _tokenToReceiveExcess) external;
+    function repayDebtWithCollateralAndWithdrawTheRest() external;
 
     /**
      * @notice deposits OHM to pay debt
@@ -62,12 +54,6 @@ interface IIncurDebtV1 {
      * @param _ohmAmount amount of OHM to borrow
      */
     function repayDebtWithOHM(uint256 _ohmAmount) external;
-
-    /**
-     * @notice updates borrowers sOHM collateral to current index
-     * @param _borrower borrowers address
-     */
-    function updateCollateralInSOHM(address _borrower) external;
 
     /**
      * @notice gets available OHM to borrow for account
@@ -115,11 +101,10 @@ interface IIncurDebtV1 {
     /**
      * @notice repays debt using collateral and returns remaining tokens to borrower
      * - onlyOwner (or governance)
-     * - sends remaining tokens to owner in sOHM
+     * - sends remaining tokens to owner in GOHM
      * @param _borrower the address that will interact with contract
-     * @param _to where to send remaining sOHM
      */
-    function forceRepay(address _borrower, address _to) external;
+    function forceRepay(address _borrower) external;
 
     /**
      * @notice seize and burn _borrowers collateral and forgive debt
