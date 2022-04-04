@@ -126,7 +126,7 @@ abstract contract YieldSplitter {
         DepositInfo storage userDeposit = depositInfo[id_];
 
         amountRedeemed = _getOutstandingYield(userDeposit.principalAmount, userDeposit.agnosticAmount);
-        userDeposit.agnosticAmount = _toAgnostic(userDeposit.principalAmount);
+        userDeposit.agnosticAmount = userDeposit.agnosticAmount - amountRedeemed;
     }
 
     /**
@@ -141,12 +141,13 @@ abstract contract YieldSplitter {
         internal
         returns (uint256 principal, uint256 agnosticAmount)
     {
-        if (depositInfo[id_].depositor != depositorAddress) revert YieldSplitter_NotYourDeposit();
+        address depositorAddressToClose = depositInfo[id_].depositor;
+        if (depositorAddressToClose != depositorAddress) revert YieldSplitter_NotYourDeposit();
 
         principal = _toAgnostic(depositInfo[id_].principalAmount);
         agnosticAmount = depositInfo[id_].agnosticAmount;
 
-        uint256[] storage depositorIdsArray = depositorIds[depositInfo[id_].depositor];
+        uint256[] storage depositorIdsArray = depositorIds[depositorAddressToClose];
         for (uint256 i = 0; i < depositorIdsArray.length; i++) {
             if (depositorIdsArray[i] == id_) {
                 // Remove id from depositor's ids array
@@ -164,7 +165,7 @@ abstract contract YieldSplitter {
         @return uint256 amount of yield in gOHM. 18 decimals.
      */
     function _getOutstandingYield(uint256 principal_, uint256 agnosticAmount_) internal view returns (uint256) {
-        return agnosticAmount_ - _toAgnostic(principal_);
+        unchecked { return agnosticAmount_ - _toAgnostic(principal_); }
     }
 
     /**
