@@ -272,6 +272,18 @@ describe("YieldStreamer", async () => {
         await expect((await yieldStreamer.depositInfo(0)).principalAmount).is.equal(toOhm(49.95));
     });
 
+    it("withdrawing all of principal", async () => {
+        await yieldStreamer.connect(alice).deposit(toDecimals(10), alice.address, 1, toDecimals(5)); //10gOhm deposited. 100sOhm principal
+        await triggerRebase();
+        await expect(await gOhm.balanceOf(alice.address)).is.equal("0");
+
+        await expect(
+            await yieldStreamer.connect(alice).withdrawPrincipal(0, toDecimals(100))
+        ).to.emit(yieldStreamer, "Withdrawn"); // withdraw 5 gOhm principal should be a bit less than 100sOhm since rebase happened
+        await expect(await gOhm.balanceOf(alice.address)).is.equal(toDecimals(10));
+        await expect(yieldStreamer.activeDepositIds(0)).to.be.reverted;
+    });
+
     it("harvest unclaimed dai premature", async () => {
         await yieldStreamer
             .connect(alice)
@@ -311,9 +323,6 @@ describe("YieldStreamer", async () => {
             "WithdrawDisabled"
         );
         await expect(yieldStreamer.withdrawYield(0)).to.be.revertedWith("WithdrawDisabled");
-        await expect(yieldStreamer.withdrawYieldInStreamTokens(0)).to.be.revertedWith(
-            "WithdrawDisabled"
-        );
         await expect(yieldStreamer.harvestStreamTokens(0)).to.be.revertedWith("WithdrawDisabled");
     });
 
@@ -323,7 +332,7 @@ describe("YieldStreamer", async () => {
             .deposit(toDecimals(10), alice.address, 604800, toDecimals(1000));
 
         await yieldStreamer.connect(alice).updatePaymentInterval(0, 2419200);
-        await yieldStreamer.connect(alice).updateUserMinDaiThreshold(0, toDecimals(2000));
+        await yieldStreamer.connect(alice).updateUserMinThreshold(0, toDecimals(2000));
 
         await expect((await yieldStreamer.recipientInfo(0)).paymentInterval).is.equal(2419200);
         await expect((await yieldStreamer.recipientInfo(0)).userMinimumAmountThreshold).is.equal(
