@@ -13,7 +13,6 @@ const sOhmHolderAddress = "0xB4e168232ac61b49053f263F57920f9BF38856C2";
 
 describe("IncurDebtV1", async () => {
     let user,
-        limit,
         amount,
         staking,
         governor,
@@ -25,7 +24,6 @@ describe("IncurDebtV1", async () => {
         sOhmHolder,
         IncurDebtV1,
         incurDebtV1,
-        amountInGOHM,
         amountInSOHM,
         halfOfTotalDeposit;
 
@@ -40,7 +38,6 @@ describe("IncurDebtV1", async () => {
         IncurDebtV1 = await ethers.getContractFactory("IncurDebtV1");
         incurDebtV1 = await IncurDebtV1.deploy(
             olympus.ohm,
-            olympus.gohm,
             olympus.sohm,
             olympus.staking,
             olympus.treasury,
@@ -167,7 +164,7 @@ describe("IncurDebtV1", async () => {
         });
     });
 
-    describe("deposit(uint256 _amount, address _token)", () => {
+    describe("deposit(uint256 _amount)", () => {
         it("Should fail if _borrower is not borrower", async () => {
             await expect(incurDebtV1.connect(user).deposit(amount)).to.revertedWith(
                 `IncurDebtV1_NotBorrower("${user.address}")`
@@ -307,7 +304,7 @@ describe("IncurDebtV1", async () => {
         });
     });
 
-    describe("withdraw(uint256 _amount,address _to,address _token)", () => {
+    describe("withdraw(uint256 _amount,address _to)", () => {
         it("Should fail if _borrower is not borrower", async () => {
             await expect(incurDebtV1.connect(user).withdraw(amount, user.address)).to.revertedWith(
                 `IncurDebtV1_NotBorrower("${user.address}")`
@@ -461,7 +458,7 @@ describe("IncurDebtV1", async () => {
         });
     });
 
-    describe("repayDebtWithCollateralAndWithdrawTheRest(address _tokenToReceiveExcess)", () => {
+    describe("repayDebtWithCollateralAndWithdrawTheRest()", () => {
         it("Should fail if _borrower is not borrower", async () => {
             await expect(
                 incurDebtV1.connect(user).repayDebtWithCollateralAndWithdrawTheRest()
@@ -560,7 +557,7 @@ describe("IncurDebtV1", async () => {
         });
     });
 
-    describe("forceRepay(address _borrower, address _to)", () => {
+    describe("forceRepay(address _borrower)", () => {
         it("Should fail if caller is not governor  address", async () => {
             await expect(incurDebtV1.connect(user).forceRepay(gOhmHolder.address)).to.revertedWith(
                 "UNAUTHORIZED()"
