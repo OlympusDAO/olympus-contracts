@@ -9,6 +9,7 @@ import "../../libraries/SafeERC20.sol";
 
 error UniswapStrategy_NotIncurDebtAddress(address _borrower);
 error UniswapStrategy_LiquidityDoesNotMatch();
+error UniswapStrategy_LPTokenDoesNotMatch();
 error UniswapStrategy_OhmAddressNotFound();
 
 contract UniSwapStrategy {
@@ -121,9 +122,9 @@ contract UniSwapStrategy {
     function removeLiquidity(
         bytes memory _data,
         uint256 _liquidity,
+        address _lpTokenAddress,
         address _user
     ) external returns (uint256 ohmRecieved) {
-        //address lpTokenAddress,
         if (msg.sender != incurDebtAddress) revert UniswapStrategy_NotIncurDebtAddress(msg.sender);
         (
             address tokenA,
@@ -134,10 +135,12 @@ contract UniSwapStrategy {
             uint256 slippage
         ) = abi.decode(_data, (address, address, uint256, uint256, uint256, uint256));
 
+        address lpTokenAddress = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
+
         if (liquidity != _liquidity) revert UniswapStrategy_LiquidityDoesNotMatch();
         if (tokenA != ohmAddress && tokenB != ohmAddress) revert UniswapStrategy_OhmAddressNotFound();
+        if (_lpTokenAddress != lpTokenAddress) revert UniswapStrategy_LPTokenDoesNotMatch();
 
-        address lpTokenAddress = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
         IUniswapV2Pair(lpTokenAddress).approve(address(router), liquidity);
 
         (uint256 amountA, uint256 amountB) = router.removeLiquidity(
