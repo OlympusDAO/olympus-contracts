@@ -528,6 +528,9 @@ describe("YieldDirector", async () => {
         const donatedAmount = await gOhm.balanceTo("20000000");
         const bobBalance = await gOhm.balanceOf(bob.address);
         await expect(bobBalance).is.equal(donatedAmount.add("2"));
+
+        await tyche.revokePermissionToRedeem(alice.address);
+        await expect(tyche.connect(alice).redeemYield("0")).to.be.reverted;
     });
 
     it("should redeem all tokens as sOHM", async () => {

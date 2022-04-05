@@ -361,7 +361,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
                 Does not include harvestable stream tokens which is found in recipientInfo.
         @param recipient_ Address of recipient.
     */
-    function totalRedeemableBalance(address recipient_) public view override returns (uint256 totalGOHM) {
+    function totalRedeemableBalance(address recipient_) external view override returns (uint256 totalGOHM) {
         for (uint256 i = 0; i < recipientIds[recipient_].length; i++) {
             totalGOHM += redeemableBalance(recipientIds[recipient_][i]);
         }

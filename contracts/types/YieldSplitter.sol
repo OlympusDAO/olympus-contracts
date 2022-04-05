@@ -206,7 +206,7 @@ abstract contract YieldSplitter is OlympusAccessControlledV2, IYieldSplitter {
         @notice Get redeemable gOHM balance of a recipient address
         @param recipient_ Address of user receiving donated yield
      */
-    function totalRedeemableBalance(address recipient_) public view virtual returns (uint256) {}
+    function totalRedeemableBalance(address recipient_) external view virtual returns (uint256) {}
 
     /**
         @notice Gives a contract permission to redeem yield on behalf of users

@@ -304,7 +304,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter {
         @notice Get redeemable gOHM balance of a recipient address
         @param recipient_ Address of user receiving donated yield
      */
-    function totalRedeemableBalance(address recipient_) public view override returns (uint256) {
+    function totalRedeemableBalance(address recipient_) external view override returns (uint256) {
         uint256[] memory receiptIds = recipientIds[recipient_];
 
         uint256 agnosticRedeemable = 0;
