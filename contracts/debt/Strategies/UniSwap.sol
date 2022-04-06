@@ -5,14 +5,15 @@ import "../../interfaces/IUniswapV2Router.sol";
 import "../../interfaces/IUniswapV2Factory.sol";
 import "../../interfaces/IUniswapV2Pair.sol";
 import "../../interfaces/IERC20.sol";
+import "../interfaces/IStrategy.sol";
 import "../../libraries/SafeERC20.sol";
 
-error UniswapStrategy_NotIncurDebtAddress(address _borrower);
-error UniswapStrategy_LiquidityDoesNotMatch();
+error UniswapStrategy_NotIncurDebtAddress();
+error UniswapStrategy_AmountDoesNotMatch();
 error UniswapStrategy_LPTokenDoesNotMatch();
 error UniswapStrategy_OhmAddressNotFound();
 
-contract UniSwapStrategy {
+contract UniSwapStrategy is IStrategy {
     using SafeERC20 for IERC20;
 
     IUniswapV2Router router;
@@ -33,7 +34,7 @@ contract UniSwapStrategy {
         incurDebtAddress = _incurDebtAddress;
         ohmAddress = _ohmAddress;
 
-        IERC20(ohmAddress).approve(address(router), type(uint256).max);
+        IERC20(ohmAddress).approve(_router, type(uint256).max);
     }
 
     function addLiquidity(
@@ -49,7 +50,7 @@ contract UniSwapStrategy {
             address lpTokenAddress
         )
     {
-        if (msg.sender != incurDebtAddress) revert UniswapStrategy_NotIncurDebtAddress(msg.sender);
+        if (msg.sender != incurDebtAddress) revert UniswapStrategy_NotIncurDebtAddress();
         (
             address tokenA,
             address tokenB,
@@ -125,7 +126,7 @@ contract UniSwapStrategy {
         address _lpTokenAddress,
         address _user
     ) external returns (uint256 ohmRecieved) {
-        if (msg.sender != incurDebtAddress) revert UniswapStrategy_NotIncurDebtAddress(msg.sender);
+        if (msg.sender != incurDebtAddress) revert UniswapStrategy_NotIncurDebtAddress();
         (
             address tokenA,
             address tokenB,
@@ -137,7 +138,7 @@ contract UniSwapStrategy {
 
         address lpTokenAddress = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
 
-        if (liquidity != _liquidity) revert UniswapStrategy_LiquidityDoesNotMatch();
+        if (liquidity != _liquidity) revert UniswapStrategy_AmountDoesNotMatch();
         if (tokenA != ohmAddress && tokenB != ohmAddress) revert UniswapStrategy_OhmAddressNotFound();
         if (_lpTokenAddress != lpTokenAddress) revert UniswapStrategy_LPTokenDoesNotMatch();
 
