@@ -5,7 +5,7 @@ import "../interfaces/IOHM.sol";
 import "../interfaces/IsOHM.sol";
 import "../interfaces/IERC20.sol";
 import "../interfaces/IStaking.sol";
-import "./interfaces/ITreasury.sol";
+import "../interfaces/ITreasury.sol";
 import "../libraries/SafeERC20.sol";
 import "../interfaces/IIncurDebtV1.sol";
 import "../types/OlympusAccessControlledV2.sol";
