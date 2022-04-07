@@ -27,13 +27,13 @@ interface IIncurDebt {
      * @param _ohmAmount the desired amount of OHM to borrow
      * @param _strategy the address of the AMM strategy to use
      * @param _strategyParams strategy-specific params
-     * @return amount of LP tokens created 
+     * @return amount of LP tokens created
      */
     function createLP(
         uint256 _ohmAmount,
         address _strategy,
         bytes calldata _strategyParams
-    ) external returns (uint);
+    ) external returns (uint256);
 
     /**
      * @notice unwinds an LP position and pays off OHM debt
@@ -56,9 +56,9 @@ interface IIncurDebt {
      * @param _to address to send LP token
      */
     function withdrawLP(
-         address _pairToken,
-         address _strategy,
-         address _to
+        address _pairToken,
+        address _strategy,
+        address _to
     ) external;
 
     /**
@@ -68,7 +68,7 @@ interface IIncurDebt {
      * @param _amount amount of gOHM to withdraw
      * @param _to address to send gOHM
      */
-    function withdrawgOHM(uint256 _amount, address _to) external; 
+    function withdrawgOHM(uint256 _amount, address _to) external;
 
     /**
      * @notice repays debt using deposited OHM
@@ -81,10 +81,10 @@ interface IIncurDebt {
      * @notice returns OHM available to borrow
      * @return amount of OHM
      */
-    function getAvailableToBorrow() external returns (uint);
+    function getAvailableToBorrow() external returns (uint256);
 
     /* ========== MANAGEMENT FUNCTIONS ========== */
-    
+
     /**
      * @notice sets the maximum debt limit for the system
      * - onlyOwner (or governance)
@@ -92,7 +92,7 @@ interface IIncurDebt {
      * @param _limit in OHM
      */
     function setGlobalDebtLimit(uint256 _limit) external;
-    
+
     /**
      * @notice sets the maximum debt limit for the system
      * - onlyOwner (or governance)
@@ -153,4 +153,3 @@ interface IIncurDebt {
      */
     function revokeStrategy(address _strategy) external;
 }
-
