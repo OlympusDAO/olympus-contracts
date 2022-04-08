@@ -13,6 +13,10 @@ error UniswapStrategy_AmountDoesNotMatch();
 error UniswapStrategy_LPTokenDoesNotMatch();
 error UniswapStrategy_OhmAddressNotFound();
 
+/**
+    @title UniswapStrategy
+    @notice This contract provides liquidity to uniswap on behalf of IncurDebt contract.
+ */
 contract UniSwapStrategy is IStrategy {
     using SafeERC20 for IERC20;
 

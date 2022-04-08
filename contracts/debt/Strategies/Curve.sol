@@ -24,6 +24,10 @@ error CurveStrategy_AmountsDoNotMatch();
 error CurveStrategy_LPTokenDoesNotMatch();
 error CurveStrategy_OhmAddressNotFound();
 
+/**
+    @title CurveStrategy
+    @notice This contract provides liquidity to curve on behalf of IncurDebt contract.
+ */
 contract CurveStrategy is IStrategy {
     using SafeERC20 for IERC20;
 
