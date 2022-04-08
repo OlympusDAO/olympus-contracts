@@ -6,6 +6,7 @@ import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 struct V3Params {
     uint24[] fees;
@@ -100,17 +101,7 @@ contract OlympusChainlinkBasedSwapper {
         if (!check) revert OlympusLinkswap_ApproveFailed();
 
         // big interaction
-        if (!isIn) {
-            amount = v3SwapRouter.exactOutput(
-                ISwapRouter.ExactOutputParams({
-                    path: _encode(params.fees.length, params.path, params.fees),
-                    recipient: params.recipient,
-                    deadline: (params.deadline == 0) ? block.timestamp : params.deadline,
-                    amountOut: _calcAmountMin(inputToken, out, denomination, params.slippage, params.amount),
-                    amountInMaximum: params.amount
-                })
-            );
-        } else {
+        if (isIn) {
             amount = v3SwapRouter.exactInput(
                 ISwapRouter.ExactInputParams({
                     path: _encode(params.fees.length, params.path, params.fees),
@@ -118,6 +109,16 @@ contract OlympusChainlinkBasedSwapper {
                     deadline: (params.deadline == 0) ? block.timestamp : params.deadline,
                     amountIn: params.amount,
                     amountOutMinimum: _calcAmountMin(inputToken, out, denomination, params.slippage, params.amount)
+                })
+            );
+        } else {
+            amount = v3SwapRouter.exactOutput(
+                ISwapRouter.ExactOutputParams({
+                    path: _encode(params.fees.length, params.path, params.fees),
+                    recipient: params.recipient,
+                    deadline: (params.deadline == 0) ? block.timestamp : params.deadline,
+                    amountOut: _calcAmountMin(inputToken, out, denomination, params.slippage, params.amount),
+                    amountInMaximum: params.amount
                 })
             );
         }
@@ -143,7 +144,8 @@ contract OlympusChainlinkBasedSwapper {
         uint256 outPrice = uint256(_latestPrice(out, denom));
 
         // slippage must be normalized to 1e18
-        amountMin = (amount * inPrice * slippage) / (slippage * outPrice);
+        amountMin = (amount * inPrice * slippage) / (1e18 * outPrice);
+        amountMin = (amountMin * IERC20Metadata(out).decimals()) / IERC20Metadata(inputToken).decimals();
     }
 
     function _latestPrice(address base, address quote) internal view returns (int256 price) {
@@ -152,8 +154,8 @@ contract OlympusChainlinkBasedSwapper {
 
     function _encode(
         uint256 pairs,
-        address[] calldata tokens,
-        uint24[] calldata poolFees
+        address[] memory tokens,
+        uint24[] memory poolFees
     ) internal pure returns (bytes memory path) {
         if (pairs == 1) {
             path = abi.encodePacked(tokens[0], poolFees[0], tokens[1]);

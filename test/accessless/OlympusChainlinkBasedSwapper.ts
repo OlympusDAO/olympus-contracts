@@ -77,6 +77,11 @@ describe(CN, () => {
         await helpers.revert(snapshotId);
     });
 
+    it("should have correct params", async () => {
+        console.log(await swapper.registry());
+        console.log(await swapper.v3SwapRouter());
+    });
+
     it("Should be able to swap treasury CRV to CVX via exact input", async () => {
         let crv = (
             await helpers.summon<ERC20>(
@@ -91,20 +96,26 @@ describe(CN, () => {
             )
         ).connect(treasury);
 
-        let rbal = await crv.balanceOf(treasury.address);
+        let rbal = (await crv.balanceOf(treasury.address)).div(3);
         let per3: BigNumber = bne(10, 16).mul(9).add(bne(10, 15).mul(7));
 
         await crv.approve(swapper.address, rbal);
 
         let input1: V3Params = {
-            fees: [3000],
-            path: [coins.crv, coins.cvx],
+            fees: [10000, 10000],
+            path: [
+                helpers.checksum(coins.crv),
+                helpers.checksum(coins.weth),
+                helpers.checksum(coins.cvx),
+            ],
             denomination: helpers.constants.addressZero,
             recipient: treasury.address,
             deadline: bnn(0),
             amount: rbal,
             slippage: per3,
         };
+
+        console.log(input1);
 
         await swapper.v3ExactInput(input1);
 
@@ -135,8 +146,8 @@ describe(CN, () => {
         await crv.approve(swapper.address, rbal);
 
         let input1: V3Params = {
-            fees: [3000],
-            path: [coins.crv, coins.cvx],
+            fees: [10000, 10000],
+            path: [coins.crv, coins.weth, coins.cvx],
             denomination: helpers.constants.addressZero,
             recipient: treasury.address,
             deadline: bnn(0),
