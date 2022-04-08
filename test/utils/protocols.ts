@@ -58,5 +58,16 @@ const convex = {
     ccStaking: "0x3Fe65692bfCD0e6CF84cB1E7d24108E434A7587e",
 };
 
+// chainlink
+const chainlink = {
+    feedRegistry: "0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf",
+};
+
+// uniswap
+const uniswap = {
+    v3SwapRouter: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    v2SwapRouter: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+};
+
 // export
-export const protocols = { alchemix, tokemak, rari, convex };
+export const protocols = { alchemix, tokemak, rari, convex, chainlink, uniswap };
