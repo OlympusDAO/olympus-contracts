@@ -1,7 +1,7 @@
 pragma solidity 0.7.5;
 
 import "./FraxSharesAllocator.sol";
-import "./interfaces/FxsInterfaces.sol";
+import "../interfaces/FxsInterfaces.sol";
 
 contract FraxSharesAllocatorVoting is FraxSharesAllocator {
     GaugeController public gaugeController;
