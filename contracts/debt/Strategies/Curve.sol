@@ -6,15 +6,11 @@ import "../interfaces/IStrategy.sol";
 import "../../libraries/SafeERC20.sol";
 
 interface ICurvePool {
-    function add_liquidity(
-        uint256[2] memory _deposit_amounts,
-        uint256 _min_mint_amount
-    ) external returns (uint256);
+    function add_liquidity(uint256[2] memory _deposit_amounts, uint256 _min_mint_amount) external returns (uint256);
 
-    function remove_liquidity(
-        uint256 _burn_amount,
-        uint256[2] memory _min_amounts
-    ) external returns (uint256[2] memory);
+    function remove_liquidity(uint256 _burn_amount, uint256[2] memory _min_amounts)
+        external
+        returns (uint256[2] memory);
 }
 
 interface ICurveFactory {
@@ -37,7 +33,11 @@ contract CurveStrategy is IStrategy {
     address public immutable incurDebtAddress;
     address public immutable ohmAddress;
 
-    constructor(address _incurDebtAddress, address _ohmAddress, address _factory) {
+    constructor(
+        address _incurDebtAddress,
+        address _ohmAddress,
+        address _factory
+    ) {
         factory = ICurveFactory(_factory);
         incurDebtAddress = _incurDebtAddress;
         ohmAddress = _ohmAddress;
@@ -61,10 +61,8 @@ contract CurveStrategy is IStrategy {
     {
         if (msg.sender != incurDebtAddress) revert CurveStrategy_NotIncurDebtAddress();
 
-        (uint256[2] memory amounts, uint256 min_mint_amount, address pairTokenAddress, address poolAddress) = abi.decode(
-            _data,
-            (uint256[2], uint256, address, address)
-        );
+        (uint256[2] memory amounts, uint256 min_mint_amount, address pairTokenAddress, address poolAddress) = abi
+            .decode(_data, (uint256[2], uint256, address, address));
 
         address[8] memory poolTokens = factory.get_coins(poolAddress);
 
@@ -72,12 +70,10 @@ contract CurveStrategy is IStrategy {
             if (poolTokens[1] != pairTokenAddress) revert CurveStrategy_LPTokenDoesNotMatch();
             if (_ohmAmount != amounts[0]) revert CurveStrategy_AmountsDoNotMatch();
             if (_pairTokenAmount != amounts[1]) revert CurveStrategy_AmountsDoNotMatch();
-
         } else if (poolTokens[1] == ohmAddress) {
             if (poolTokens[0] != pairTokenAddress) revert CurveStrategy_LPTokenDoesNotMatch();
             if (_ohmAmount != amounts[1]) revert CurveStrategy_AmountsDoNotMatch();
             if (_pairTokenAmount != amounts[0]) revert CurveStrategy_AmountsDoNotMatch();
-
         } else {
             revert CurveStrategy_LPTokenDoesNotMatch();
         }
@@ -99,10 +95,7 @@ contract CurveStrategy is IStrategy {
     ) external returns (uint256 ohmRecieved) {
         if (msg.sender != incurDebtAddress) revert CurveStrategy_NotIncurDebtAddress();
 
-        (uint256 _burn_amount, uint256[2] memory _min_amounts) = abi.decode(
-            _data,
-            (uint256, uint256[2])
-        );
+        (uint256 _burn_amount, uint256[2] memory _min_amounts) = abi.decode(_data, (uint256, uint256[2]));
 
         if (_burn_amount != _liquidity) revert CurveStrategy_AmountsDoNotMatch();
 
@@ -122,6 +115,4 @@ contract CurveStrategy is IStrategy {
 
         IERC20(ohmAddress).safeTransfer(incurDebtAddress, ohmRecieved);
     }
-
-
 }
