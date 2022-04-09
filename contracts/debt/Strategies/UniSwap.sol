@@ -66,15 +66,15 @@ contract UniSwapStrategy is IStrategy {
         ) = abi.decode(_data, (address, address, uint256, uint256, uint256, uint256, uint256));
 
         if (tokenA == ohmAddress) {
-            require(_ohmAmount == amountADesired);
-            require(_pairTokenAmount == amountBDesired);
+            if (_ohmAmount != amountADesired) revert UniswapStrategy_AmountDoesNotMatch();
+            if (_pairTokenAmount != amountBDesired) revert UniswapStrategy_AmountDoesNotMatch();
 
             IERC20(tokenA).safeTransferFrom(incurDebtAddress, address(this), _ohmAmount);
             IERC20(tokenB).safeTransferFrom(_user, address(this), _pairTokenAmount);
             IERC20(tokenB).approve(address(router), _pairTokenAmount);
         } else if (tokenB == ohmAddress) {
-            require(_pairTokenAmount == amountADesired);
-            require(_ohmAmount == amountBDesired);
+            if (_pairTokenAmount != amountADesired) revert UniswapStrategy_AmountDoesNotMatch();
+            if (_ohmAmount != amountBDesired) revert UniswapStrategy_AmountDoesNotMatch();
 
             IERC20(tokenB).safeTransferFrom(incurDebtAddress, address(this), _ohmAmount);
             IERC20(tokenA).safeTransferFrom(_user, address(this), _pairTokenAmount);

@@ -44,7 +44,7 @@ contract CurveStrategy is IStrategy {
     }
 
     /**
-     * @dev Make sure input amunts is in the same order as the order of the tokens in the pool
+     * @dev Make sure input amounts is in the same order as the order of the tokens in the pool when calling get_coins
      */
     function addLiquidity(
         bytes memory _data,
@@ -69,14 +69,14 @@ contract CurveStrategy is IStrategy {
         address[8] memory poolTokens = factory.get_coins(poolAddress);
 
         if (poolTokens[0] == ohmAddress) {
-            require(poolTokens[1] == pairTokenAddress);
-            require(_ohmAmount == amounts[0]);
-            require(_pairTokenAmount == amounts[1]);
+            if (poolTokens[1] != pairTokenAddress) revert CurveStrategy_LPTokenDoesNotMatch();
+            if (_ohmAmount != amounts[0]) revert CurveStrategy_AmountsDoNotMatch();
+            if (_pairTokenAmount != amounts[1]) revert CurveStrategy_AmountsDoNotMatch();
 
         } else if (poolTokens[1] == ohmAddress) {
-            require(poolTokens[0] == pairTokenAddress);
-            require(_ohmAmount == amounts[1]);
-            require(_pairTokenAmount == amounts[0]);
+            if (poolTokens[0] != pairTokenAddress) revert CurveStrategy_LPTokenDoesNotMatch();
+            if (_ohmAmount != amounts[1]) revert CurveStrategy_AmountsDoNotMatch();
+            if (_pairTokenAmount != amounts[0]) revert CurveStrategy_AmountsDoNotMatch();
 
         } else {
             revert CurveStrategy_LPTokenDoesNotMatch();
