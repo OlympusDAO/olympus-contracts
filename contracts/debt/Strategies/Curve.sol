@@ -15,8 +15,10 @@ interface ICurvePool {
         uint256 _burn_amount,
         uint256[2] memory _min_amounts
     ) external returns (uint256[2] memory);
+}
 
-    function coins(uint256 index) external view returns (address);
+interface ICurveFactory {
+    function get_coins(address _pool) external view returns (address[8] memory);
 }
 
 error CurveStrategy_NotIncurDebtAddress();
@@ -31,34 +33,19 @@ error CurveStrategy_OhmAddressNotFound();
 contract CurveStrategy is IStrategy {
     using SafeERC20 for IERC20;
 
-    ICurvePool curve;
+    ICurveFactory factory;
     address public immutable incurDebtAddress;
     address public immutable ohmAddress;
-    address public pairTokenAddress;
-    uint256 public ohmAddressIndex;
-    uint256 public pairTokenAddressIndex;
 
-    constructor(address _curve, address _incurDebtAddress, address _ohmAddress) {
-        curve = ICurvePool(_curve);
+    constructor(address _incurDebtAddress, address _ohmAddress, address _factory) {
+        factory = ICurveFactory(_factory);
         incurDebtAddress = _incurDebtAddress;
         ohmAddress = _ohmAddress;
-
-        if (curve.coins(0) == ohmAddress) {
-            pairTokenAddress = curve.coins(1);
-            ohmAddressIndex = 0;
-            pairTokenAddressIndex = 1;
-        } else if (curve.coins(1) == ohmAddress) {
-            pairTokenAddress = curve.coins(0);
-            ohmAddressIndex = 1;
-            pairTokenAddressIndex = 0;
-        } else {
-            revert CurveStrategy_OhmAddressNotFound();
-        }
-
-        IERC20(ohmAddress).approve(_curve, type(uint256).max);
-        IERC20(pairTokenAddress).approve(_curve, type(uint256).max);
     }
 
+    /**
+     * @dev Make sure input amunts is in the same order as the order of the tokens in the pool
+     */
     function addLiquidity(
         bytes memory _data,
         uint256 _ohmAmount,
@@ -74,19 +61,34 @@ contract CurveStrategy is IStrategy {
     {
         if (msg.sender != incurDebtAddress) revert CurveStrategy_NotIncurDebtAddress();
 
-        (uint256[2] memory amounts, uint256 min_mint_amount) = abi.decode(
+        (uint256[2] memory amounts, uint256 min_mint_amount, address pairTokenAddress, address poolAddress) = abi.decode(
             _data,
-            (uint256[2], uint256)
+            (uint256[2], uint256, address, address)
         );
 
-        if (_ohmAmount != amounts[ohmAddressIndex] || _pairTokenAmount != amounts[_pairTokenAmount]) revert CurveStrategy_AmountsDoNotMatch();
+        address[8] memory poolTokens = factory.get_coins(poolAddress);
+
+        if (poolTokens[0] == ohmAddress) {
+            require(poolTokens[1] == pairTokenAddress);
+            require(_ohmAmount == amounts[0]);
+            require(_pairTokenAmount == amounts[1]);
+
+        } else if (poolTokens[1] == ohmAddress) {
+            require(poolTokens[0] == pairTokenAddress);
+            require(_ohmAmount == amounts[1]);
+            require(_pairTokenAmount == amounts[0]);
+
+        } else {
+            revert CurveStrategy_LPTokenDoesNotMatch();
+        }
 
         IERC20(ohmAddress).safeTransferFrom(incurDebtAddress, address(this), _ohmAmount);
         IERC20(pairTokenAddress).safeTransferFrom(_user, address(this), _pairTokenAmount);
 
-        liquidity = curve.add_liquidity(amounts, min_mint_amount); // Ohm unused will be 0 since curve uses up all input tokens for LP.
+        IERC20(pairTokenAddress).approve(poolAddress, _pairTokenAmount);
+        liquidity = ICurvePool(poolAddress).add_liquidity(amounts, min_mint_amount); // Ohm unused will be 0 since curve uses up all input tokens for LP.
 
-        lpTokenAddress = address(this); // For factory pools on curve, the LP token is the pool contract.
+        lpTokenAddress = poolAddress; // For factory pools on curve, the LP token is the pool contract.
     }
 
     function removeLiquidity(
@@ -103,14 +105,22 @@ contract CurveStrategy is IStrategy {
         );
 
         if (_burn_amount != _liquidity) revert CurveStrategy_AmountsDoNotMatch();
-        if (_lpTokenAddress != address(this)) revert CurveStrategy_LPTokenDoesNotMatch();
 
         // probably dont need to but test if need approve token to pool before remove lp. if all good remove this comment.
 
-        uint256[2] memory resultAmounts = curve.remove_liquidity(_burn_amount, _min_amounts);
-        ohmRecieved = resultAmounts[ohmAddressIndex];
+        uint256[2] memory resultAmounts = ICurvePool(_lpTokenAddress).remove_liquidity(_burn_amount, _min_amounts);
+
+        address[8] memory poolTokens = factory.get_coins(_lpTokenAddress);
+
+        if (poolTokens[0] == ohmAddress) {
+            ohmRecieved = resultAmounts[0];
+            IERC20(poolTokens[1]).safeTransfer(_user, resultAmounts[1]);
+        } else {
+            ohmRecieved = resultAmounts[1];
+            IERC20(poolTokens[0]).safeTransfer(_user, resultAmounts[0]);
+        }
+
         IERC20(ohmAddress).safeTransfer(incurDebtAddress, ohmRecieved);
-        IERC20(pairTokenAddress).safeTransfer(_user, resultAmounts[pairTokenAddressIndex]);
     }
 
 

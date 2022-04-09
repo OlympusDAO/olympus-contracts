@@ -10,6 +10,7 @@ interface IStrategy {
         @dev Some strategies like uniswap will have tokens left over which is either sent back to 
         incur debt contract (OHM) or back to LPer's wallet address (pair token). Other strategies like
         curve will have no leftover tokens.
+        This function is also only for LPing for pools with two tokens. Do not use this for pools with more than 2 tokens.
         @param _data Data needed to input into external call to add liquidity. Different for different strategies.
         @param _ohmAmount amount of OHM to LP
         @param _pairTokenAmount amount of pair token to LP with OHM. 
