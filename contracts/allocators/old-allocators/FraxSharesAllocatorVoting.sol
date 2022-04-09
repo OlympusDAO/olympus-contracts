@@ -13,4 +13,12 @@ contract FraxSharesAllocatorVoting is FraxSharesAllocator {
     function vote(address gauge, uint256 votingPowerToUse) external onlyOwner {
         gaugeController.vote_for_gauge_weights(gauge, votingPowerToUse);
     }
+
+    function withdrawFXS() external onlyOwner {
+        veFXS.withdraw();
+    }
+
+    function withdrawToken(address token, uint256 amount) external onlyOwner {
+        IERC20(token).transfer(address(treasury), amount);
+    }
 }

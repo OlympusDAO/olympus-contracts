@@ -17,18 +17,20 @@ import { BigNumber } from "ethers";
 
 const allocatorName: string = "FraxSharesAllocatorVoting";
 
+function timeout(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function main(): Promise<void> {
     let addr: string;
 
-    if (!(allocators.FXSImplUpgrade.length > 1)) {
-        const allocator = await helpers.spawn<FraxSharesAllocatorVoting>(allocatorName);
+    const allocator = await helpers.spawn<FraxSharesAllocatorVoting>(allocatorName);
 
-        console.log(`${allocatorName} deployed at:`, allocator.address);
+    console.log(`${allocatorName} deployed at:`, allocator.address);
 
-        addr = allocator.address;
-    } else {
-        addr = allocators.FXSImplUpgrade;
-    }
+    addr = allocator.address;
+
+    await timeout(70000);
 
     await run("verify:verify", {
         address: addr,
