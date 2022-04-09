@@ -28,10 +28,10 @@ struct V2Params {
     uint256 slippage;
 }
 
-error OlympuusLinkswap_WrongV3PathLength();
-error OlympusLinkswap_ApproveFailed();
-error OlympusLinkswap_TransferFromFailed();
-error OlympusLinkswap_TransferFailed();
+error OlympusChainlinkBasedSwapper_WrongV3PathLength();
+error OlympusChainlinkBasedSwapper_ApproveFailed();
+error OlympusChainlinkBasedSwapper_TransferFromFailed();
+error OlympusChainlinkBasedSwapper_TransferFailed();
 
 contract OlympusChainlinkBasedSwapper {
     FeedRegistryInterface public registry;
@@ -53,25 +53,25 @@ contract OlympusChainlinkBasedSwapper {
     function v2Swap(V2Params calldata params) external {
         // reads
         address inputToken = params.path[0];
-        address out = params.path[params.path.length - 1];
+        address outputToken = params.path[params.path.length - 1];
         IUniswapV2Router02 router = IUniswapV2Router02(params.router);
         address denomination = (params.denomination == address(0)) ? Denominations.USD : params.denomination;
 
         // interactions + checks
         // didn't abstract to keep readable
 
-        bool check = IERC20(params.path[0]).transferFrom(msg.sender, address(this), params.amount);
+        bool check = IERC20(inputToken).transferFrom(msg.sender, address(this), params.amount);
 
-        if (!check) revert OlympusLinkswap_TransferFromFailed();
+        if (!check) revert OlympusChainlinkBasedSwapper_TransferFromFailed();
 
-        check = IERC20(params.path[0]).approve(params.router, params.amount);
+        check = IERC20(inputToken).approve(params.router, params.amount);
 
-        if (!check) revert OlympusLinkswap_ApproveFailed();
+        if (!check) revert OlympusChainlinkBasedSwapper_ApproveFailed();
 
         // big interaction
         router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             params.amount,
-            _calcAmountMin(inputToken, out, denomination, params.slippage, params.amount),
+            _calcAmountMin(inputToken, outputToken, denomination, params.slippage, params.amount),
             params.path,
             params.recipient,
             (params.deadline == 0) ? block.timestamp : params.deadline
@@ -84,21 +84,21 @@ contract OlympusChainlinkBasedSwapper {
     function _exact(V3Params calldata params, bool isIn) internal returns (uint256 amount) {
         // reads + calcs
         address inputToken = params.path[0];
-        address out = params.path[params.path.length - 1];
+        address outputToken = params.path[params.path.length - 1];
         address denomination = (params.denomination == address(0)) ? Denominations.USD : params.denomination;
 
         // checks
-        if (params.path.length - 1 != params.fees.length) revert OlympuusLinkswap_WrongV3PathLength();
+        if (params.path.length - 1 != params.fees.length) revert OlympusChainlinkBasedSwapper_WrongV3PathLength();
 
         // interactions + checks
 
-        bool check = IERC20(params.path[0]).transferFrom(msg.sender, address(this), params.amount);
+        bool check = IERC20(inputToken).transferFrom(msg.sender, address(this), params.amount);
 
-        if (!check) revert OlympusLinkswap_TransferFromFailed();
+        if (!check) revert OlympusChainlinkBasedSwapper_TransferFromFailed();
 
-        check = IERC20(params.path[0]).approve(address(v3SwapRouter), params.amount);
+        check = IERC20(inputToken).approve(address(v3SwapRouter), params.amount);
 
-        if (!check) revert OlympusLinkswap_ApproveFailed();
+        if (!check) revert OlympusChainlinkBasedSwapper_ApproveFailed();
 
         // big interaction
         if (isIn) {
@@ -108,7 +108,13 @@ contract OlympusChainlinkBasedSwapper {
                     recipient: params.recipient,
                     deadline: (params.deadline == 0) ? block.timestamp : params.deadline,
                     amountIn: params.amount,
-                    amountOutMinimum: _calcAmountMin(inputToken, out, denomination, params.slippage, params.amount)
+                    amountOutMinimum: _calcAmountMin(
+                        inputToken,
+                        outputToken,
+                        denomination,
+                        params.slippage,
+                        params.amount
+                    )
                 })
             );
         } else {
@@ -117,7 +123,7 @@ contract OlympusChainlinkBasedSwapper {
                     path: _encode(params.fees.length, params.path, params.fees),
                     recipient: params.recipient,
                     deadline: (params.deadline == 0) ? block.timestamp : params.deadline,
-                    amountOut: _calcAmountMin(inputToken, out, denomination, params.slippage, params.amount),
+                    amountOut: _calcAmountMin(inputToken, outputToken, denomination, params.slippage, params.amount),
                     amountInMaximum: params.amount
                 })
             );
@@ -130,22 +136,22 @@ contract OlympusChainlinkBasedSwapper {
     // @notice
     function _clean(address inputToken) internal {
         bool check = IERC20(inputToken).transfer(msg.sender, IERC20(inputToken).balanceOf(address(this)));
-        if (!check) revert OlympusLinkswap_TransferFailed();
+        if (!check) revert OlympusChainlinkBasedSwapper_TransferFailed();
     }
 
     function _calcAmountMin(
         address inputToken,
-        address out,
+        address outputToken,
         address denom,
         uint256 slippage,
         uint256 amount
     ) internal view returns (uint256 amountMin) {
         uint256 inPrice = uint256(_latestPrice(inputToken, denom));
-        uint256 outPrice = uint256(_latestPrice(out, denom));
+        uint256 outPrice = uint256(_latestPrice(outputToken, denom));
 
         // slippage must be normalized to 1e18
         amountMin = (amount * inPrice * slippage) / (1e18 * outPrice);
-        amountMin = (amountMin * IERC20Metadata(out).decimals()) / IERC20Metadata(inputToken).decimals();
+        amountMin = (amountMin * IERC20Metadata(outputToken).decimals()) / IERC20Metadata(inputToken).decimals();
     }
 
     function _latestPrice(address base, address quote) internal view returns (int256 price) {

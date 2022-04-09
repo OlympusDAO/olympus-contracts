@@ -82,6 +82,50 @@ describe(CN, () => {
         console.log(await swapper.v3SwapRouter());
     });
 
+    it.only("Should be able to swap treasury CRV to CVX via exact input", async () => {
+        let dai = (
+            await helpers.summon<ERC20>(
+                "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20",
+                coins.dai
+            )
+        ).connect(treasury);
+        let cvx = (
+            await helpers.summon<ERC20>(
+                "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20",
+                coins.cvx
+            )
+        ).connect(treasury);
+
+        let rbal = (await dai.balanceOf(treasury.address)).div(100);
+        let per3: BigNumber = bne(10, 16).mul(9).add(bne(10, 15).mul(7));
+
+        await dai.approve(swapper.address, rbal);
+
+        let input1: V3Params = {
+            fees: [500, 10000],
+            path: [
+                helpers.checksum(coins.dai),
+                helpers.checksum(coins.weth),
+                helpers.checksum(coins.cvx),
+            ],
+            denomination: helpers.constants.addressZero,
+            recipient: treasury.address,
+            deadline: bnn(0),
+            amount: rbal,
+            slippage: per3,
+        };
+
+        console.log(input1);
+
+        await swapper.v3ExactInput(input1);
+
+        expect(await dai.balanceOf(treasury.address)).to.equal(0);
+
+        console.log(
+            `Received ${(await cvx.balanceOf(treasury.address)).div(bne(10, 17)).toNumber()} CVX`
+        );
+    });
+
     it("Should be able to swap treasury CRV to CVX via exact input", async () => {
         let crv = (
             await helpers.summon<ERC20>(
