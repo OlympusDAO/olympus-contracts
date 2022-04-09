@@ -30,7 +30,7 @@ async function main(): Promise<void> {
 
     console.log(`${CN} deployed at:`, thing.address);
 
-    await delay(80);
+    await delay(70000);
 
     await run("verify:verify", {
         address: thing.address,
