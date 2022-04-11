@@ -12,6 +12,7 @@ import "../libraries/SafeERC20.sol";
 import "../types/OlympusAccessControlledV2.sol";
 
 error IncurDebtV2_NotBorrower(address _borrower);
+error IncurDebtV2_StrategyUnauthorized(address _strategy);
 error IncurDebtV2_InvaildNumber(uint256 _amount);
 error IncurDebtV2_WrongTokenAddress(address _token);
 error IncurDebtV2_AlreadyBorrower(address _borrower);
@@ -130,8 +131,8 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
         _;
     }
 
-    modifier isStrategy(address _borrower) {
-        if (!strategies[_borrower]) revert IncurDebtV2_NotBorrower(_borrower); //change error msg
+    modifier isStrategyApproved(address _strategy) {
+        if (!strategies[_strategy]) revert IncurDebtV2_StrategyUnauthorized(_strategy);
         _;
     }
 
@@ -227,14 +228,14 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
      * @param _strategy the address of the AMM strategy to use
      * @param _strategyParams strategy-specific params
      * @param _pairDesiredAmount the address of the AMM strategy to use
-     * @return liquidity of LP tokens created
+     * @return number of LP tokens created
      */
     function createLP(
         uint256 _ohmAmount,
         uint256 _pairDesiredAmount,
         address _strategy,
         bytes calldata _strategyParams
-    ) external isBorrower(msg.sender) isStrategy(msg.sender) returns (uint256) {
+    ) external isBorrower(msg.sender) isStrategyApproved(msg.sender) returns (uint256) {
         Borrower storage borrower = borrowers[msg.sender];
 
         if (_ohmAmount > borrower.limit - borrower.debt) revert IncurDebtV2_AmountMoreThanBorrowersLimit(_ohmAmount);
@@ -265,6 +266,7 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
 
     /**
      * @notice unwinds an LP position and pays off OHM debt. Excess ohm is sent back to caller.
+     @ @param _liquidity the amount of LP tokens to remove.
      * @param _strategy the address of the AMM strategy to use
      * @param _lpToken address of lp token to remove liquidity from
      * @param _strategyParams strategy-specific params
@@ -275,7 +277,7 @@ contract IncurDebtV2 is OlympusAccessControlledV2 {
         address _strategy,
         address _lpToken,
         bytes calldata _strategyParams
-    ) external isBorrower(msg.sender) isStrategy(msg.sender) returns (uint256 ohmRecieved) {
+    ) external isBorrower(msg.sender) isStrategyApproved(msg.sender) returns (uint256 ohmRecieved) {
         Borrower storage borrower = borrowers[msg.sender];
         if (borrower.debt == 0) revert IncurDebtV2_BorrowerHasNoOutstandingDebt(msg.sender);
 
