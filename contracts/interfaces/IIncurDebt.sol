@@ -24,13 +24,12 @@ interface IIncurDebt {
     function borrow(uint256 _ohmAmount) external;
 
     /**
-     * @notice withdraws gOHM/sOHM  to _to address
+     * @notice withdraws gOHM
      * - msg.sender must be a borrower
      * - _amount (in OHM) must be less than or equal to depositedOhm - debt
      * @param _amount amount of gOHM/sOHM to withdraw
-     * @param _to address to send _amount
      */
-    function withdraw(uint256 _amount, address _to) external;
+    function withdraw(uint256 _amount) external;
 
     /**
      * @notice repay debt with collateral
