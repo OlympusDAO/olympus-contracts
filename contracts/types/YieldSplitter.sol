@@ -239,6 +239,8 @@ abstract contract YieldSplitter is OlympusAccessControlledV2, IYieldSplitter {
         @return uint256 amount of yield in gOHM. 18 decimals.
      */
     function _getOutstandingYield(uint256 principal_, uint256 agnosticAmount_) internal view returns (uint256) {
+        // agnosticAmount must be greater than or equal to _toAgnostic(principal_) since agnosticAmount_
+        // is the sum of principal_ and the yield. Thus this can be unchecked.
         unchecked { return agnosticAmount_ - _toAgnostic(principal_); }
     }
 
