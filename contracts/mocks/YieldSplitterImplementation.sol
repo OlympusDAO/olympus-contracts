@@ -13,7 +13,7 @@ contract YieldSplitterImpl is YieldSplitter {
     @notice Constructor
     @param sOHM_ Address of sOHM.
     */
-    constructor(address sOHM_) YieldSplitter(sOHM_) {}
+    constructor(address sOHM_, address authority_) YieldSplitter(sOHM_, authority_) {}
 
     /**
         @notice Create a deposit.
@@ -57,8 +57,16 @@ contract YieldSplitterImpl is YieldSplitter {
         @return amountRedeemed : amount of yield redeemed in gOHM. 18 decimals.
     */
     function redeemYield(uint256 id_) external returns (uint256) {
-        uint256 amountRedeemed = _redeemYield(id_);
-        return amountRedeemed;
+        return _redeemYield(id_);
+    }
+
+    /**
+        @notice Redeems yield from a deposit and sends it to the recipient
+        @param id_ Id of the deposit.
+    */
+    function redeemYieldOnBehalfOf(uint256 id_) external override returns (uint256) {
+        require(hasPermissionToRedeem[msg.sender], "unauthorized");
+        return _redeemYield(id_);
     }
 
     /**

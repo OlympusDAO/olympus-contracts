@@ -18,11 +18,9 @@ interface IYieldStreamer {
 
     function withdrawAllYield() external;
 
-    function withdrawYieldInStreamTokens(uint256 id_) external;
-
     function harvestStreamTokens(uint256 id_) external;
 
-    function updateUserMinDaiThreshold(uint256 id_, uint128 threshold_) external;
+    function updateUserMinThreshold(uint256 id_, uint128 threshold_) external;
 
     function updatePaymentInterval(uint256 id_, uint128 paymentInterval) external;
 
@@ -31,13 +29,7 @@ interface IYieldStreamer {
     // View Functions
     function upkeepEligibility() external view returns (uint256 numberOfDepositsEligible, uint256 amountOfYieldToSwap);
 
-    function getOutstandingYield(uint256 id_) external view returns (uint256);
-
     function getPrincipalInGOHM(uint256 id_) external view returns (uint256);
 
-    function getTotalHarvestableYieldGOHM(address recipient_) external view returns (uint256 totalGOHM);
-
     function getRecipientIds(address recipient_) external view returns (uint256[] memory);
-
-    function getDepositorIds(address donor_) external view returns (uint256[] memory);
 }

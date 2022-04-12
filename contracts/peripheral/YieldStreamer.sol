@@ -5,7 +5,6 @@ import {IERC20} from "../interfaces/IERC20.sol";
 import {IgOHM} from "../interfaces/IgOHM.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
 import {IYieldStreamer} from "../interfaces/IYieldStreamer.sol";
-import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 import {IUniswapV2Router} from "../interfaces/IUniswapV2Router.sol";
 import {IStaking} from "../interfaces/IStaking.sol";
 import {YieldSplitter} from "../types/YieldSplitter.sol";
@@ -22,10 +21,8 @@ error YieldStreamer_InvalidAmount();
     @notice This contract allows users to deposit their gOhm and have their yield
             converted into a streamToken(normally DAI) and sent to their address every interval.
  */
-contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled {
+contract YieldStreamer is IYieldStreamer, YieldSplitter {
     using SafeERC20 for IERC20;
-
-    uint256 private constant MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     address public immutable OHM;
     address public immutable gOHM;
@@ -40,6 +37,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
 
     uint256 public maxSwapSlippagePercent; // 6 decimals 1e6 is 100%
     uint256 public feeToDaoPercent; // 6 decimals 1e6 is 100%
+    uint256 private constant sixDecimalMaxNumber = 1e6;
     uint256 public minimumTokenThreshold;
 
     struct RecipientInfo {
@@ -84,7 +82,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         uint128 maxSwapSlippagePercent_,
         uint128 feeToDaoPercent_,
         uint256 minimumTokenThreshold_
-    ) YieldSplitter(sOHM_) OlympusAccessControlled(IOlympusAuthority(authority_)) {
+    ) YieldSplitter(sOHM_, authority_) {
         gOHM = gOHM_;
         OHM = OHM_;
         streamToken = streamToken_;
@@ -96,8 +94,8 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         feeToDaoPercent = feeToDaoPercent_;
         minimumTokenThreshold = minimumTokenThreshold_;
 
-        IERC20(gOHM).approve(address(staking), MAX_INT);
-        IERC20(OHM).approve(address(sushiRouter), MAX_INT);
+        IERC20(gOHM).approve(address(staking), type(uint256).max);
+        IERC20(OHM).approve(address(sushiRouter), type(uint256).max);
     }
 
     /**
@@ -114,7 +112,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         uint128 userMinimumAmountThreshold_
     ) external override {
         if (depositDisabled) revert YieldStreamer_DepositDisabled();
-        if (amount_ <= 0) revert YieldStreamer_InvalidAmount();
+        if (amount_ == 0) revert YieldStreamer_InvalidAmount();
         if (userMinimumAmountThreshold_ < minimumTokenThreshold) revert YieldStreamer_MinTokenThresholdTooLow();
 
         uint256 depositId = _deposit(msg.sender, amount_);
@@ -160,7 +158,10 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
     function withdrawPrincipal(uint256 id_, uint256 amount_) external override {
         if (withdrawDisabled) revert YieldStreamer_WithdrawDisabled();
 
-        if (amount_ >= IgOHM(gOHM).balanceTo(depositInfo[id_].principalAmount)) {
+        if (amount_ < IgOHM(gOHM).balanceTo(depositInfo[id_].principalAmount)) {
+            _withdrawPrincipal(id_, amount_, msg.sender);
+            IERC20(gOHM).safeTransfer(msg.sender, amount_);
+        } else {
             address recipient = recipientInfo[id_].recipientAddress;
             uint256 unclaimedStreamTokens = recipientInfo[id_].unclaimedStreamTokens;
             (uint256 principal, uint256 totalGOHM) = _closeDeposit(id_, msg.sender);
@@ -192,9 +193,6 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
             if (unclaimedStreamTokens != 0) {
                 IERC20(streamToken).safeTransfer(recipient, unclaimedStreamTokens);
             }
-        } else {
-            _withdrawPrincipal(id_, amount_, msg.sender);
-            IERC20(gOHM).safeTransfer(msg.sender, amount_);
         }
 
         emit Withdrawn(msg.sender, amount_);
@@ -232,34 +230,6 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
     }
 
     /**
-        @notice Withdraw excess yield from your deposit in streamTokens
-        @param id_ Id of the deposit
-    */
-    function withdrawYieldInStreamTokens(uint256 id_) external override {
-        if (withdrawDisabled) revert YieldStreamer_WithdrawDisabled();
-        if (recipientInfo[id_].recipientAddress != msg.sender) revert YieldStreamer_UnauthorisedAction();
-
-        recipientInfo[id_].lastUpkeepTimestamp = uint128(block.timestamp);
-
-        uint256 gOHMYield = _redeemYield(id_);
-        uint256 totalOhmToSwap = staking.unwrap(address(this), gOHMYield);
-        staking.unstake(address(this), totalOhmToSwap, false, false);
-
-        uint256[] memory calculatedAmounts = sushiRouter.getAmountsOut(totalOhmToSwap, sushiRouterPath);
-        uint256[] memory amounts = sushiRouter.swapExactTokensForTokens(
-            totalOhmToSwap,
-            (calculatedAmounts[1] * (1000000 - maxSwapSlippagePercent)) / 1000000,
-            sushiRouterPath,
-            msg.sender,
-            block.timestamp
-        );
-
-        uint256 streamTokensToSend = recipientInfo[id_].unclaimedStreamTokens + amounts[1];
-        recipientInfo[id_].unclaimedStreamTokens = 0;
-        IERC20(streamToken).safeTransfer(msg.sender, streamTokensToSend);
-    }
-
-    /**
         @notice harvest all your unclaimed stream tokens
         @param id_ Id of the deposit
     */
@@ -273,11 +243,41 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
     }
 
     /**
+        @notice Redeems yield from a deposit and sends it to the recipient
+        @param id_ Id of the deposit.
+    */
+    function redeemYieldOnBehalfOf(uint256 id_) external override returns (uint256 amount_) {
+        if (withdrawDisabled) revert YieldStreamer_WithdrawDisabled();
+        if (!hasPermissionToRedeem[msg.sender]) revert YieldStreamer_UnauthorisedAction();
+
+        amount_ = _redeemYield(id_);
+
+        IERC20(gOHM).safeTransfer(recipientInfo[id_].recipientAddress, amount_);
+    }
+
+    /**
+        @notice Redeems all yield tied to a recipient and sends it to the recipient
+        @param recipient_ recipient address.
+    */
+    function redeemAllYieldOnBehalfOf(address recipient_) external override returns (uint256 amount_) {
+        if (withdrawDisabled) revert YieldStreamer_WithdrawDisabled();
+        if (!hasPermissionToRedeem[msg.sender]) revert YieldStreamer_UnauthorisedAction();
+
+        uint256[] memory receiptIds = recipientIds[recipient_];
+
+        for (uint256 i = 0; i < receiptIds.length; i++) {
+            amount_ += _redeemYield(receiptIds[i]);
+        }
+
+        IERC20(gOHM).safeTransfer(recipient_, amount_);
+    }
+
+    /**
         @notice User updates the minimum amount of streamTokens threshold before upkeep sends streamTokens to recipients wallet
         @param id_ Id of the deposit
         @param threshold_ amount of streamTokens
     */
-    function updateUserMinDaiThreshold(uint256 id_, uint128 threshold_) external override {
+    function updateUserMinThreshold(uint256 id_, uint128 threshold_) external override {
         if (threshold_ < minimumTokenThreshold) revert YieldStreamer_MinTokenThresholdTooLow();
         if (depositInfo[id_].depositor != msg.sender) revert YieldStreamer_UnauthorisedAction();
 
@@ -311,20 +311,19 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
             uint256 currentId = activeDepositIds[i];
 
             if (_isUpkeepEligible(currentId)) {
-                totalGOHM += getOutstandingYield(currentId);
+                totalGOHM += redeemableBalance(currentId);
             }
         }
 
-        uint256 feeToDao = (totalGOHM * feeToDaoPercent) / 1000000;
+        uint256 feeToDao = (totalGOHM * feeToDaoPercent) / sixDecimalMaxNumber;
         IERC20(gOHM).safeTransfer(authority.governor(), feeToDao);
 
-        uint256 totalOhmToSwap = staking.unwrap(address(this), totalGOHM - feeToDao);
-        staking.unstake(address(this), totalOhmToSwap, false, false);
+        uint256 totalOhmToSwap = staking.unstake(address(this), totalGOHM - feeToDao, false, false);
 
         uint256[] memory calculatedAmounts = sushiRouter.getAmountsOut(totalOhmToSwap, sushiRouterPath);
         uint256[] memory amounts = sushiRouter.swapExactTokensForTokens(
             totalOhmToSwap,
-            (calculatedAmounts[1] * (1000000 - maxSwapSlippagePercent)) / 1000000,
+            (calculatedAmounts[1] * (sixDecimalMaxNumber - maxSwapSlippagePercent)) / sixDecimalMaxNumber,
             sushiRouterPath,
             address(this),
             block.timestamp
@@ -362,9 +361,9 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
                 Does not include harvestable stream tokens which is found in recipientInfo.
         @param recipient_ Address of recipient.
     */
-    function getTotalHarvestableYieldGOHM(address recipient_) external view returns (uint256 totalGOHM) {
+    function totalRedeemableBalance(address recipient_) external view override returns (uint256 totalGOHM) {
         for (uint256 i = 0; i < recipientIds[recipient_].length; i++) {
-            totalGOHM += getOutstandingYield(recipientIds[recipient_][i]);
+            totalGOHM += redeemableBalance(recipientIds[recipient_][i]);
         }
     }
 
@@ -378,7 +377,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         for (uint256 i = 0; i < activeDepositIds.length; i++) {
             if (_isUpkeepEligible(activeDepositIds[i])) {
                 numberOfDepositsEligible++;
-                amountOfYieldToSwap += getOutstandingYield(activeDepositIds[i]);
+                amountOfYieldToSwap += redeemableBalance(activeDepositIds[i]);
             }
         }
     }
@@ -387,7 +386,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         @notice Returns the outstanding yield of a deposit.
         @param id_ Id of the deposit.
      */
-    function getOutstandingYield(uint256 id_) public view returns (uint256) {
+    function redeemableBalance(uint256 id_) public view override returns (uint256) {
         return _getOutstandingYield(depositInfo[id_].principalAmount, depositInfo[id_].agnosticAmount);
     }
 
@@ -416,14 +415,6 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         return recipientIds[recipient_];
     }
 
-    /**
-        @notice Returns the array of deposit id's belonging to the depositor
-        @return uint256[] array of depositor Id's
-     */
-    function getDepositorIds(address donor_) external view returns (uint256[] memory) {
-        return depositorIds[donor_];
-    }
-
     /************************
      * Restricted Setter Functions
      ************************/
@@ -433,7 +424,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         @param slippagePercent_ new slippage value is a percentage with 6 decimals. 1e6 = 100%
     */
     function setMaxSwapSlippagePercent(uint256 slippagePercent_) external onlyGovernor {
-        if (slippagePercent_ > 1e6) revert YieldStreamer_InvalidAmount();
+        if (slippagePercent_ > sixDecimalMaxNumber) revert YieldStreamer_InvalidAmount();
         maxSwapSlippagePercent = slippagePercent_;
     }
 
@@ -442,7 +433,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter, OlympusAccessControlled
         @param feePercent_ new fee value is a percentage with 6 decimals. 1e6 = 100%
     */
     function setFeeToDaoPercent(uint256 feePercent_) external onlyGovernor {
-        if (feePercent_ > 1e6) revert YieldStreamer_InvalidAmount();
+        if (feePercent_ > sixDecimalMaxNumber) revert YieldStreamer_InvalidAmount();
         feeToDaoPercent = feePercent_;
     }
 

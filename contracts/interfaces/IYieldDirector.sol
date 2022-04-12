@@ -2,6 +2,7 @@
 pragma solidity >=0.7.5;
 
 interface IYieldDirector {
+    // Write Functions
     function deposit(uint256 amount_, address recipient_) external returns (uint256);
 
     function depositSohm(uint256 amount_, address recipient_) external returns (uint256);
@@ -16,6 +17,17 @@ interface IYieldDirector {
 
     function withdrawAll() external;
 
+    function redeemYield(uint256 depositId_) external;
+
+    function redeemYieldAsSohm(uint256 depositId_) external;
+
+    function redeemAllYield() external;
+
+    function redeemAllYieldAsSohm() external;
+
+    // View Functions
+    function getRecipientIds(address recipient_) external view returns (uint256[] memory);
+
     function depositsTo(address donor_, address recipient_) external view returns (uint256);
 
     function getAllDeposits(address donor_) external view returns (address[] memory, uint256[] memory);
@@ -25,20 +37,4 @@ interface IYieldDirector {
     function donatedTo(address donor_, address recipient_) external view returns (uint256);
 
     function totalDonated(address donor_) external view returns (uint256);
-
-    function getDepositorIds(address donor_) external view returns (uint256[] memory);
-
-    function redeemYield(uint256 depositId_) external;
-
-    function redeemYieldAsSohm(uint256 depositId_) external;
-
-    function redeemAllYield() external;
-
-    function redeemAllYieldAsSohm() external;
-
-    function redeemableBalance(uint256 depositId_) external view returns (uint256);
-
-    function totalRedeemableBalance(address recipient_) external view returns (uint256);
-
-    function getRecipientIds(address recipient_) external view returns (uint256[] memory);
 }
