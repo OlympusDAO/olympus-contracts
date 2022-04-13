@@ -8,6 +8,7 @@ import {IYieldStreamer} from "../interfaces/IYieldStreamer.sol";
 import {IUniswapV2Router} from "../interfaces/IUniswapV2Router.sol";
 import {IStaking} from "../interfaces/IStaking.sol";
 import {YieldSplitter} from "../types/YieldSplitter.sol";
+import {AggregatorV3Interface} from "../interfaces/IAggregatorV3.sol";
 
 error YieldStreamer_DepositDisabled();
 error YieldStreamer_WithdrawDisabled();
@@ -30,6 +31,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
     IUniswapV2Router public immutable sushiRouter;
     address[] public sushiRouterPath = new address[](2);
     IStaking public immutable staking;
+    AggregatorV3Interface public immutable priceConverterOracleWrapper;
 
     bool public depositDisabled;
     bool public withdrawDisabled;
@@ -79,6 +81,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
         address sushiRouter_,
         address staking_,
         address authority_,
+        address priceConverterOracleWrapper_,
         uint128 maxSwapSlippagePercent_,
         uint128 feeToDaoPercent_,
         uint256 minimumTokenThreshold_
@@ -88,6 +91,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
         streamToken = streamToken_;
         sushiRouter = IUniswapV2Router(sushiRouter_);
         staking = IStaking(staking_);
+        priceConverterOracleWrapper = AggregatorV3Interface(priceConverterOracleWrapper_);
         sushiRouterPath[0] = OHM;
         sushiRouterPath[1] = streamToken;
         maxSwapSlippagePercent = maxSwapSlippagePercent_;
@@ -208,6 +212,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
         if (recipientInfo[id_].recipientAddress != msg.sender) revert YieldStreamer_UnauthorisedAction();
 
         uint256 yield = _redeemYield(id_);
+        recipientInfo[id_].lastUpkeepTimestamp = uint128(block.timestamp);
 
         IERC20(gOHM).safeTransfer(msg.sender, yield);
     }
@@ -224,6 +229,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
 
         for (uint256 i = 0; i < receiptIds.length; i++) {
             total += _redeemYield(receiptIds[i]);
+            recipientInfo[receiptIds[i]].lastUpkeepTimestamp = uint128(block.timestamp);
         }
 
         IERC20(gOHM).safeTransfer(msg.sender, total);
@@ -251,6 +257,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
         if (!hasPermissionToRedeem[msg.sender]) revert YieldStreamer_UnauthorisedAction();
 
         amount_ = _redeemYield(id_);
+        recipientInfo[id_].lastUpkeepTimestamp = uint128(block.timestamp);
 
         IERC20(gOHM).safeTransfer(recipientInfo[id_].recipientAddress, amount_);
     }
@@ -267,6 +274,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
 
         for (uint256 i = 0; i < receiptIds.length; i++) {
             amount_ += _redeemYield(receiptIds[i]);
+            recipientInfo[receiptIds[i]].lastUpkeepTimestamp = uint128(block.timestamp);
         }
 
         IERC20(gOHM).safeTransfer(recipient_, amount_);
@@ -320,10 +328,10 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
 
         uint256 totalOhmToSwap = staking.unstake(address(this), totalGOHM - feeToDao, false, false);
 
-        uint256[] memory calculatedAmounts = sushiRouter.getAmountsOut(totalOhmToSwap, sushiRouterPath);
+        ( , int256 ohmOraclePrice, , , ) = priceConverterOracleWrapper.latestRoundData();
         uint256[] memory amounts = sushiRouter.swapExactTokensForTokens(
             totalOhmToSwap,
-            (calculatedAmounts[1] * (sixDecimalMaxNumber - maxSwapSlippagePercent)) / sixDecimalMaxNumber,
+            (uint256(ohmOraclePrice) * (sixDecimalMaxNumber - maxSwapSlippagePercent)) / sixDecimalMaxNumber,
             sushiRouterPath,
             address(this),
             block.timestamp

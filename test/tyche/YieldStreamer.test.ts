@@ -12,6 +12,7 @@ import {
     Distributor,
     YieldStreamer,
     IUniswapV2Router,
+    AggregatorV3Interface,
 } from "../../types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { toDecimals, toOhm, advanceEpoch, fromDecimals } from "../utils/Utilities";
@@ -56,6 +57,7 @@ describe("YieldStreamer", async () => {
     let distributor: Distributor;
     let yieldStreamer: YieldStreamer;
     let sushiRouter: FakeContract<IUniswapV2Router>;
+    let oracleRouter: FakeContract<AggregatorV3Interface>
 
     before(async () => {
         [deployer, alice, bob] = await ethers.getSigners();
@@ -69,6 +71,7 @@ describe("YieldStreamer", async () => {
         distributorFactory = await ethers.getContractFactory("Distributor");
         yieldStreamerFactory = await ethers.getContractFactory("YieldStreamer");
         sushiRouter = await smock.fake<IUniswapV2Router>("IUniswapV2Router");
+        oracleRouter = await smock.fake<AggregatorV3Interface>("AggregatorV3Interface");
     });
 
     beforeEach(async () => {
@@ -113,6 +116,7 @@ describe("YieldStreamer", async () => {
             sushiRouter.address,
             staking.address,
             auth.address,
+            oracleRouter.address,
             1000,
             1000,
             toDecimals(1)
@@ -210,7 +214,7 @@ describe("YieldStreamer", async () => {
         await expect(actualYield).is.closeTo(expectedYield, 1); // 1 digit off due to precision issues of converting gOhm to sOhm and back to gOhm.
 
         const amountOfDai = toOhm(0.2).mul(100).mul(1000000000).mul(999).div(1000); // Mock the amount of Dai coming out of swap.
-        sushiRouter.getAmountsOut.returns([BigNumber.from("0"), amountOfDai]);
+        oracleRouter.latestRoundData.returns([0, amountOfDai, 0, 0, 0]);
         sushiRouter.swapExactTokensForTokens.returns([BigNumber.from("0"), amountOfDai]);
 
         await yieldStreamer.upkeep();
@@ -325,7 +329,7 @@ describe("YieldStreamer", async () => {
         await triggerRebase();
 
         const amountOfDai = toOhm(0.1).mul(100).mul(1000000000); // Mock the amount of Dai coming out of swap. 0.1 Ohm should give roughly 10 DAi. Assuming Ohm=100DAI
-        sushiRouter.getAmountsOut.returns([BigNumber.from("0"), amountOfDai]);
+        oracleRouter.latestRoundData.returns([0, amountOfDai, 0, 0, 0]);
         sushiRouter.swapExactTokensForTokens.returns([BigNumber.from("0"), amountOfDai]);
 
         await expect(await yieldStreamer.upkeep()).to.emit(yieldStreamer, "UpkeepComplete");
