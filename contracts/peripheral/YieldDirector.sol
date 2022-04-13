@@ -7,7 +7,6 @@ import {IStaking} from "../interfaces/IStaking.sol";
 import {IYieldDirector} from "../interfaces/IYieldDirector.sol";
 import {SafeERC20} from "../libraries/SafeERC20.sol";
 import {YieldSplitter} from "../types/YieldSplitter.sol";
-import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccessControlled.sol";
 
 /**
     @title  YieldDirector (codename Tyche) 
@@ -19,7 +18,7 @@ import {OlympusAccessControlled, IOlympusAuthority} from "../types/OlympusAccess
             withdraw or redeem functions) will take the ID of the deposit. All functions that return
             aggregated data grouped by user will take an address (iterates across all relevant IDs).
  */
-contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled {
+contract YieldDirector is IYieldDirector, YieldSplitter {
     using SafeERC20 for IERC20;
 
     error YieldDirector_InvalidAddress();
@@ -54,7 +53,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         address gOhm_,
         address staking_,
         address authority_
-    ) OlympusAccessControlled(IOlympusAuthority(authority_)) YieldSplitter(sOhm_) {
+    ) YieldSplitter(sOhm_, authority_) {
         if (sOhm_ == address(0) || gOhm_ == address(0) || staking_ == address(0) || authority_ == address(0))
             revert YieldDirector_InvalidAddress();
 
@@ -69,15 +68,15 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
      * Modifiers
      ************************/
     function isInvalidDeposit(uint256 amount_, address recipient_) internal view returns (bool) {
-        return depositDisabled || amount_ <= 0 || recipient_ == address(0);
+        return depositDisabled || amount_ == 0 || recipient_ == address(0);
     }
 
     function isInvalidUpdate(uint256 depositId_, uint256 amount_) internal view returns (bool) {
-        return depositDisabled || amount_ <= 0 || depositInfo[depositId_].depositor == address(0);
+        return depositDisabled || amount_ == 0 || depositInfo[depositId_].depositor == address(0);
     }
 
     function isInvalidWithdrawal(uint256 amount_) internal view returns (bool) {
-        return withdrawDisabled || amount_ <= 0;
+        return withdrawDisabled || amount_ == 0;
     }
 
     /************************
@@ -195,15 +194,16 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
     function depositsTo(address donor_, address recipient_) external view override returns (uint256) {
         uint256[] memory depositIds = depositorIds[donor_];
 
+        uint256 totalPrincipalDeposits;
         for (uint256 index = 0; index < depositIds.length; ++index) {
             uint256 id = depositIds[index];
 
             if (recipientLookup[id] == recipient_) {
-                return _toAgnostic(depositInfo[id].principalAmount);
+                totalPrincipalDeposits += depositInfo[id].principalAmount;
             }
         }
 
-        return 0;
+        return _toAgnostic(totalPrincipalDeposits);
     }
 
     /**
@@ -256,13 +256,14 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
     function donatedTo(address donor_, address recipient_) external view override returns (uint256) {
         uint256[] memory depositIds = depositorIds[donor_];
 
+        uint256 totalRedeemable;
         for (uint256 index = 0; index < depositIds.length; ++index) {
             if (recipientLookup[depositIds[index]] == recipient_) {
-                return redeemableBalance(depositIds[index]);
+                totalRedeemable += redeemableBalance(depositIds[index]);
             }
         }
 
-        return 0;
+        return totalRedeemable;
     }
 
     /**
@@ -285,15 +286,6 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         return _getOutstandingYield(principalTotal, agnosticTotal);
     }
 
-    /**
-        @notice Getter function for a depositor's list of IDs. This is needed for the frontend
-                as public state variables that map to arrays only return one element at a time
-                rather than the full array
-    */
-    function getDepositorIds(address donor_) external view override returns (uint256[] memory) {
-        return depositorIds[donor_];
-    }
-
     /************************
      * Recipient Functions
      ************************/
@@ -312,7 +304,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @notice Get redeemable gOHM balance of a recipient address
         @param recipient_ Address of user receiving donated yield
      */
-    function totalRedeemableBalance(address recipient_) public view override returns (uint256) {
+    function totalRedeemableBalance(address recipient_) external view override returns (uint256) {
         uint256[] memory receiptIds = recipientIds[recipient_];
 
         uint256 agnosticRedeemable = 0;
@@ -338,7 +330,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @param depositId_ Deposit ID for this donation
     */
     function redeemYield(uint256 depositId_) external override {
-        uint256 amountRedeemed = _redeem(depositId_);
+        uint256 amountRedeemed = _redeem(depositId_, msg.sender);
 
         IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
     }
@@ -348,7 +340,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @param depositId_ Deposit id for this donation
     */
     function redeemYieldAsSohm(uint256 depositId_) external override {
-        uint256 amountRedeemed = _redeem(depositId_);
+        uint256 amountRedeemed = _redeem(depositId_, msg.sender);
 
         staking.unwrap(msg.sender, amountRedeemed);
     }
@@ -357,7 +349,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @notice Redeem recipient's full donated amount of sOHM at current index as gOHM
     */
     function redeemAllYield() external override {
-        uint256 amountRedeemed = _redeemAll();
+        uint256 amountRedeemed = _redeemAll(msg.sender);
 
         IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);
     }
@@ -366,9 +358,35 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
         @notice Redeem recipient's full donated amount of sOHM at current index as gOHM
     */
     function redeemAllYieldAsSohm() external override {
-        uint256 amountRedeemed = _redeemAll();
+        uint256 amountRedeemed = _redeemAll(msg.sender);
 
         staking.unwrap(msg.sender, amountRedeemed);
+    }
+
+    /**
+        @notice Redeems yield from a deposit and sends it to the recipient
+        @param id_ Id of the deposit.
+    */
+    function redeemYieldOnBehalfOf(uint256 id_) external override returns (uint256 amount_) {
+        if (!hasPermissionToRedeem[msg.sender]) revert YieldDirector_NotYourYield();
+
+        address recipient = recipientLookup[id_];
+
+        amount_ = _redeem(id_, recipient);
+
+        IERC20(gOHM).safeTransfer(recipient, amount_);
+    }
+
+    /**
+        @notice Redeems all yield tied to a recipient and sends it to the recipient
+        @param recipient_ recipient address.
+    */
+    function redeemAllYieldOnBehalfOf(address recipient_) external override returns (uint256 amount_) {
+        if (!hasPermissionToRedeem[msg.sender]) revert YieldDirector_NotYourYield();
+
+        amount_ = _redeemAll(recipient_);
+
+        IERC20(gOHM).safeTransfer(recipient_, amount_);
     }
 
     /************************
@@ -401,7 +419,7 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
 
         _addToDeposit(depositId_, amount_, msg.sender);
 
-        emit Deposited(depositInfo[depositId_].depositor, recipientLookup[depositId_], amount_);
+        emit Deposited(msg.sender, recipientLookup[depositId_], amount_);
     }
 
     /**
@@ -412,11 +430,11 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
     function _withdraw(uint256 depositId_, uint256 amount_) internal returns (uint256 amountWithdrawn) {
         if (isInvalidWithdrawal(amount_)) revert YieldDirector_InvalidWithdrawal();
 
-        if (amount_ >= _toAgnostic(depositInfo[depositId_].principalAmount)) {
-            amountWithdrawn = _withdrawAllPrincipal(depositId_, msg.sender);
-        } else {
+        if (amount_ < _toAgnostic(depositInfo[depositId_].principalAmount)) {
             _withdrawPrincipal(depositId_, amount_, msg.sender);
             amountWithdrawn = amount_;
+        } else {
+            amountWithdrawn = _withdrawAllPrincipal(depositId_, msg.sender);
         }
 
         emit Withdrawn(msg.sender, recipientLookup[depositId_], amountWithdrawn);
@@ -425,17 +443,18 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
     /**
         @notice Redeem available gOHM yield from a specific deposit
         @param depositId_ Deposit ID to withdraw gOHM yield from
+        @param recipient_ address of recipient
     */
-    function _redeem(uint256 depositId_) internal returns (uint256 amountRedeemed) {
+    function _redeem(uint256 depositId_, address recipient_) internal returns (uint256 amountRedeemed) {
         if (redeemDisabled) revert YieldDirector_RedeemsDisabled();
-        if (recipientLookup[depositId_] != msg.sender) revert YieldDirector_NotYourYield();
+        if (recipientLookup[depositId_] != recipient_) revert YieldDirector_NotYourYield();
 
         amountRedeemed = _redeemYield(depositId_);
 
         if (depositInfo[depositId_].principalAmount == 0) {
             _closeDeposit(depositId_, depositInfo[depositId_].depositor);
 
-            uint256[] storage receiptIds = recipientIds[msg.sender];
+            uint256[] storage receiptIds = recipientIds[recipient_];
             uint256 idsLength = receiptIds.length;
 
             for (uint256 i = 0; i < idsLength; ++i) {
@@ -450,41 +469,44 @@ contract YieldDirector is IYieldDirector, YieldSplitter, OlympusAccessControlled
             delete recipientLookup[depositId_];
         }
 
-        emit Redeemed(msg.sender, amountRedeemed);
-        emit Donated(depositInfo[depositId_].depositor, msg.sender, amountRedeemed);
+        emit Redeemed(recipient_, amountRedeemed);
+        emit Donated(depositInfo[depositId_].depositor, recipient_, amountRedeemed);
     }
 
     /**
         @notice Redeem all available gOHM yield from the vault
+        @param recipient_ address of recipient
     */
-    function _redeemAll() internal returns (uint256 amountRedeemed) {
+    function _redeemAll(address recipient_) internal returns (uint256 amountRedeemed) {
         if (redeemDisabled) revert YieldDirector_RedeemsDisabled();
 
-        amountRedeemed = 0;
-
-        uint256[] storage receiptIds = recipientIds[msg.sender];
+        uint256[] storage receiptIds = recipientIds[recipient_];
 
         // We iterate through the array back to front so that we can delete
         // elements from the array without changing the locations of any
         // entries that have not been checked yet
         for (uint256 index = receiptIds.length; index > 0; index--) {
-            uint256 currRedemption = _redeemYield(receiptIds[index - 1]);
+            uint256 currIndex = index - 1;
+
+            address currDepositor = depositInfo[receiptIds[currIndex]].depositor;
+            uint256 currRedemption = _redeemYield(receiptIds[currIndex]);
             amountRedeemed += currRedemption;
 
-            emit Donated(depositInfo[receiptIds[index - 1]].depositor, msg.sender, currRedemption);
+            emit Donated(currDepositor, recipient_, currRedemption);
 
-            if (depositInfo[receiptIds[index - 1]].principalAmount == 0) {
-                _closeDeposit(receiptIds[index - 1], depositInfo[receiptIds[index - 1]].depositor);
+            if (depositInfo[receiptIds[currIndex]].principalAmount == 0) {
+                _closeDeposit(receiptIds[currIndex], currDepositor);
 
-                if (index - 1 != receiptIds.length - 1) {
-                    receiptIds[index - 1] = receiptIds[receiptIds.length - 1]; // Delete integer from array by swapping with last element and calling pop()
+                if (currIndex != receiptIds.length - 1) {
+                    receiptIds[currIndex] = receiptIds[receiptIds.length - 1]; // Delete integer from array by swapping with last element and calling pop()
                 }
 
+                delete recipientLookup[receiptIds[currIndex]];
                 receiptIds.pop();
             }
         }
 
-        emit Redeemed(msg.sender, amountRedeemed);
+        emit Redeemed(recipient_, amountRedeemed);
     }
 
     /************************
