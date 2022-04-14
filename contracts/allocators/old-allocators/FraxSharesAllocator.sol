@@ -36,6 +36,8 @@ interface IveFXS is IERC20 {
      * @return Epoch time of the lock end
      */
     function locked__end(address _addr) external view returns (uint256);
+
+    function withdraw() external;
 }
 
 interface IveFXSYieldDistributorV4 {
