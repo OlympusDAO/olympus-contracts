@@ -1,83 +1,117 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.7.5;
-
-import "./libraries/SafeERC20.sol";
-import "./libraries/SafeMath.sol";
+pragma solidity ^0.8.10;
+pragma abicoder v2;
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
-import "./interfaces/IDistributor.sol";
+import "./interfaces/IStaking.sol";
+import "./interfaces/IUniswapV2Pair.sol";
 
 import "./types/OlympusAccessControlled.sol";
 
-contract Distributor is IDistributor, OlympusAccessControlled {
-    /* ========== DEPENDENCIES ========== */
+/// @notice Updated distributor adds the ability to mint and sync
+///         into Uniswap V2-style liquidity pools, removing the
+///         opportunity-cost dilemma of providing liquidity for
+///         OHM, as well as patches a small bug in the staking contract
+///         that pulls forward an amount of the next epoch rewards. Note that
+///         this implementation bases staking reward distributions on
+///         staked supply, whereas previous implementations used total supply.
+contract Distributor is OlympusAccessControlled {
 
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+    error Only_Staking();
+    error Not_Unlocked();
+    error Sanity_Check();
+    error Adjustment_Limit();
+    error Adjustment_Overflow();
+    error Not_Permissioned();
+
+    struct Adjust {
+        bool add; // whether to add or subtract from the reward rate
+        uint256 rate; // the amount to add or subtract per epoch
+        uint256 target; // the resulting reward rate
+    }
 
     /* ====== VARIABLES ====== */
 
+    /// The OHM Token
     IERC20 private immutable ohm;
+    /// The Olympus Treasury
     ITreasury private immutable treasury;
+    /// The OHM Staking Contract
     address private immutable staking;
 
-    mapping(uint256 => Adjust) public adjustments;
-    uint256 public override bounty;
+    /// The % to increase balances per epoch
+    uint256 public rewardRate;
+    /// Liquidity pools to receive rewards
+    address[] public pools;
 
-    uint256 private immutable rateDenominator = 1_000_000;
+    /// Information about adjusting reward rate
+    Adjust public adjustment;
+    /// A bounty for keepers to call the triggerRebase() function
+    uint256 public bounty;
 
-    /* ====== STRUCTS ====== */
-
-    struct Info {
-        uint256 rate; // in ten-thousandths ( 5000 = 0.5% )
-        address recipient;
-    }
-    Info[] public info;
-
-    struct Adjust {
-        bool add;
-        uint256 rate;
-        uint256 target;
-    }
-
-    /* ====== CONSTRUCTOR ====== */
+    uint256 private constant DENOMINATOR = 1_000_000;
 
     constructor(
-        address _treasury,
-        address _ohm,
+        ITreasury _treasury,
+        IERC20 _ohm,
         address _staking,
-        address _authority
-    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
-        require(_treasury != address(0), "Zero address: Treasury");
-        treasury = ITreasury(_treasury);
-        require(_ohm != address(0), "Zero address: OHM");
-        ohm = IERC20(_ohm);
-        require(_staking != address(0), "Zero address: Staking");
+        IOlympusAuthority _authority
+    ) OlympusAccessControlled(_authority) {
+        treasury = _treasury;
+        ohm = _ohm;
         staking = _staking;
     }
 
     /* ====== PUBLIC FUNCTIONS ====== */
 
-    /**
-        @notice send epoch reward to staking contract
-     */
-    function distribute() external override {
-        require(msg.sender == staking, "Only staking");
-        // distribute rewards to each recipient
-        for (uint256 i = 0; i < info.length; i++) {
-            if (info[i].rate > 0) {
-                treasury.mint(info[i].recipient, nextRewardAt(info[i].rate)); // mint and send tokens
-                adjust(i); // check for adjustment
-            }
-        }
+    /// @notice Patch to trigger rebases via distributor. There is an error in Staking's
+    ///         `stake` function which pulls forward part of the rebase for the next epoch.
+    ///         This patch triggers a rebase by calling unstake (which does not have the issue).
+    ///         The patch also restricts `distribute` to only be able to be called from a tx
+    ///         originating this function.
+
+    bool private unlockRebase; // restricts distribute() to only this call
+
+    function triggerRebase() external {
+        unlockRebase = true;
+        IStaking(staking).unstake(msg.sender, 0, true, true); // Give the caller the bounty ohm.
+        unlockRebase = false;
     }
 
-    function retrieveBounty() external override returns (uint256) {
-        require(msg.sender == staking, "Only staking");
+    /* ====== GUARDED FUNCTIONS ====== */
+
+    /// @notice send epoch reward to staking contract
+    function distribute() external {
+        if (msg.sender != staking) revert Only_Staking();
+        if (!unlockRebase) revert Not_Unlocked();
+
+        treasury.mint(staking, nextRewardFor(staking));
+
+        // mint to pools and sync
+        //
+        // this removes opportunity cost for liquidity providers by
+        // sending rebase rewards directly into the liquidity pool
+        //
+        // note that this does not add additional emissions (user could
+        // be staked instead and get the same tokens)
+
+        for (uint256 i = 0; i < pools.length; i++) {
+            address pool = pools[i];
+            if (pool != address(0)) {
+                treasury.mint(pool, nextRewardFor(pool));
+                IUniswapV2Pair(pool).sync();
+            }
+        }
+
+        if (adjustment.rate != 0) adjust();
+    }
+
+    function retrieveBounty() external returns (uint256) {
+        if (msg.sender != staking) revert Only_Staking();
         // If the distributor bounty is > 0, mint it for the staking contract.
         if (bounty > 0) {
-            treasury.mint(address(staking), bounty);
+            treasury.mint(staking, bounty);
         }
 
         return bounty;
@@ -85,127 +119,82 @@ contract Distributor is IDistributor, OlympusAccessControlled {
 
     /* ====== INTERNAL FUNCTIONS ====== */
 
-    /**
-        @notice increment reward rate for collector
-     */
-    function adjust(uint256 _index) internal {
-        Adjust memory adjustment = adjustments[_index];
-        if (adjustment.rate != 0) {
-            if (adjustment.add) {
-                // if rate should increase
-                info[_index].rate = info[_index].rate.add(adjustment.rate); // raise rate
-                if (info[_index].rate >= adjustment.target) {
-                    // if target met
-                    adjustments[_index].rate = 0; // turn off adjustment
-                    info[_index].rate = adjustment.target; // set to target
-                }
+    /// @notice increment reward rate for collector
+    function adjust() internal {
+        if (adjustment.add) {
+            // if rate should increase
+            rewardRate += adjustment.rate; // raise rate
+            if (rewardRate >= adjustment.target) {
+                // if target met
+                adjustment.rate = 0; // turn off adjustment
+                rewardRate = adjustment.target; // set to target
+            }
+        } else {
+            // if rate should decrease
+            if (rewardRate > adjustment.rate) {
+                // protect from underflow
+                rewardRate -= adjustment.rate; // lower rate
             } else {
-                // if rate should decrease
-                if (info[_index].rate > adjustment.rate) {
-                    // protect from underflow
-                    info[_index].rate = info[_index].rate.sub(adjustment.rate); // lower rate
-                } else {
-                    info[_index].rate = 0;
-                }
+                rewardRate = 0;
+            }
 
-                if (info[_index].rate <= adjustment.target) {
-                    // if target met
-                    adjustments[_index].rate = 0; // turn off adjustment
-                    info[_index].rate = adjustment.target; // set to target
-                }
+            if (rewardRate <= adjustment.target) {
+                // if target met
+                adjustment.rate = 0; // turn off adjustment
+                rewardRate = adjustment.target; // set to target
             }
         }
     }
 
     /* ====== VIEW FUNCTIONS ====== */
 
-    /**
-        @notice view function for next reward at given rate
-        @param _rate uint
-        @return uint
-     */
-    function nextRewardAt(uint256 _rate) public view override returns (uint256) {
-        return ohm.totalSupply().mul(_rate).div(rateDenominator);
-    }
-
-    /**
-        @notice view function for next reward for specified address
-        @param _recipient address
-        @return uint
-     */
-    function nextRewardFor(address _recipient) public view override returns (uint256) {
-        uint256 reward;
-        for (uint256 i = 0; i < info.length; i++) {
-            if (info[i].recipient == _recipient) {
-                reward = reward.add(nextRewardAt(info[i].rate));
-            }
-        }
-        return reward;
+    /// @notice view function for next reward for an address
+    function nextRewardFor(address who) public view returns (uint256) {
+        return ohm.balanceOf(who) * rewardRate / DENOMINATOR;
     }
 
     /* ====== POLICY FUNCTIONS ====== */
 
-    /**
-     * @notice set bounty to incentivize keepers
-     * @param _bounty uint256
-     */
-    function setBounty(uint256 _bounty) external override onlyGovernor {
-        require(_bounty <= 2e9, "Too much");
+    /// @notice set bounty to incentivize keepers
+    function setBounty(uint256 _bounty) external onlyGovernor {
         bounty = _bounty;
     }
 
-    /**
-        @notice adds recipient for distributions
-        @param _recipient address
-        @param _rewardRate uint
-     */
-    function addRecipient(address _recipient, uint256 _rewardRate) external override onlyGovernor {
-        require(_recipient != address(0), "Zero address: Recipient");
-        require(_rewardRate <= rateDenominator, "Rate cannot exceed denominator");
-        info.push(Info({recipient: _recipient, rate: _rewardRate}));
+    /// @notice sets the liquidity pools for mint and sync
+    /// @dev    note that this overwrites the entire list (!!)
+    function setPools(address[] calldata _pools) external onlyGovernor {
+        pools = _pools;
     }
 
-    /**
-        @notice removes recipient for distributions
-        @param _index uint
-     */
-    function removeRecipient(uint256 _index) external override {
-        require(
-            msg.sender == authority.governor() || msg.sender == authority.guardian(),
-            "Caller is not governor or guardian"
-        );
-        require(info[_index].recipient != address(0), "Recipient does not exist");
-        info[_index].recipient = address(0);
-        info[_index].rate = 0;
+    /// @notice removes a pool from the list
+    function removePool(uint256 index, address pool) external onlyGovernor {
+        if (pools[index] != pool) revert Sanity_Check();
+        pools[index] = address(0);
     }
 
-    /**
-        @notice set adjustment info for a collector's reward rate
-        @param _index uint
-        @param _add bool
-        @param _rate uint
-        @param _target uint
-     */
+    /// @notice adds a pool to the list
+    /// @dev    note you should find an empty slot offchain before calling
+    /// @dev    if there are no empty slots, pass in an occupied index to push
+    function addPool(uint256 index, address pool) external onlyGovernor {
+        // we want to overwrite slots where possible
+        if (pools[index] == address(0)) {
+            pools[index] = pool;
+        } else {
+            // if the passed in slot is not empty, push to the end
+            pools.push(pool);
+        }
+    }
+
+    /// @notice set adjustment info for a collector's reward rate
     function setAdjustment(
-        uint256 _index,
         bool _add,
         uint256 _rate,
         uint256 _target
-    ) external override {
-        require(
-            msg.sender == authority.governor() || msg.sender == authority.guardian(),
-            "Caller is not governor or guardian"
-        );
-        require(info[_index].recipient != address(0), "Recipient does not exist");
+    ) external {
+        if (msg.sender != authority.governor() && msg.sender != authority.guardian()) revert Not_Permissioned();
+        if (msg.sender == authority.guardian() && _rate > rewardRate * 25 / 1000) revert Adjustment_Limit();
+        if (!_add && _rate > rewardRate) revert Adjustment_Overflow();
 
-        if (msg.sender == authority.guardian()) {
-            require(_rate <= info[_index].rate.mul(25).div(1000), "Limiter: cannot adjust by >2.5%");
-        }
-
-        if (!_add) {
-            require(_rate <= info[_index].rate, "Cannot decrease rate by more than it already is");
-        }
-
-        adjustments[_index] = Adjust({add: _add, rate: _rate, target: _target});
+        adjustment = Adjust({add: _add, rate: _rate, target: _target});
     }
 }
