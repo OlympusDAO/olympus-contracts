@@ -6,9 +6,9 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
-import "../interfaces/ITreasury.sol";
-import "../interfaces/IERC20.sol";
-import "../libraries/SafeERC20.sol";
+import "../../interfaces/ITreasury.sol";
+import "../../interfaces/IERC20.sol";
+import "../../libraries/SafeERC20.sol";
 
 interface IveFXS is IERC20 {
     /**
