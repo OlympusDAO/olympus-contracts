@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.10;
-pragma abicoder v2;
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
@@ -14,15 +13,14 @@ import "./types/OlympusAccessControlled.sol";
 ///         opportunity-cost dilemma of providing liquidity for
 ///         OHM, as well as patches a small bug in the staking contract
 ///         that pulls forward an amount of the next epoch rewards. Note that
-///         this implementation bases staking reward distributions on
-///         staked supply, whereas previous implementations used total supply.
+///         this implementation bases staking reward distributions on staked supply.
 contract Distributor is OlympusAccessControlled {
 
     error Only_Staking();
     error Not_Unlocked();
     error Sanity_Check();
     error Adjustment_Limit();
-    error Adjustment_Overflow();
+    error Adjustment_Underflow();
     error Not_Permissioned();
 
     struct Adjust {
@@ -193,7 +191,7 @@ contract Distributor is OlympusAccessControlled {
     ) external {
         if (msg.sender != authority.governor() && msg.sender != authority.guardian()) revert Not_Permissioned();
         if (msg.sender == authority.guardian() && _rate > rewardRate * 25 / 1000) revert Adjustment_Limit();
-        if (!_add && _rate > rewardRate) revert Adjustment_Overflow();
+        if (!_add && _rate > rewardRate) revert Adjustment_Underflow();
 
         adjustment = Adjust({add: _add, rate: _rate, target: _target});
     }
