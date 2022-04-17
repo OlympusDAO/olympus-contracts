@@ -33,7 +33,7 @@ contract LidoAllocator is BaseAllocator {
 
       if (balance > 0) {
         // I'm not sure if this is the right way to handle a referrer
-        lido.submit(address(this)){ value: balance};
+        lido.submit{ value: balance}(address(this));
       }
     }
 }
