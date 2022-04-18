@@ -33,10 +33,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     event BorrowerRevoked(address indexed _borrower, bool _lpBorrower, bool _nonLpBorrower);
     event BorrowerDebtLimitSet(address indexed _borrower, uint256 _limit);
 
-    event BorrowerDeposit(
-        address indexed _borrower,
-        uint256 _amountToDeposit
-    );
+    event BorrowerDeposit(address indexed _borrower, uint256 _amountToDeposit);
     event Borrowed(
         address indexed _borrower,
         uint256 _amountToBorrow,
@@ -81,17 +78,14 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         uint256 _collateralLeftForWithdraw
     );
 
-    event Withdrawal(
-        address indexed _borrower,
-        uint256 _amountToWithdraw,
-        uint256 _currentCollateral
-    );
+    event Withdrawal(address indexed _borrower, uint256 _amountToWithdraw, uint256 _currentCollateral);
 
     uint256 public globalDebtLimit;
     uint256 public totalOutstandingGlobalDebt;
 
     address public immutable OHM;
     address public immutable gOHM;
+    address public immutable sOHM;
     address public immutable staking;
     address public immutable treasury;
 
@@ -111,16 +105,19 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     constructor(
         address _OHM,
         address _gOHM,
+        address _sOHM,
         address _staking,
         address _treasury,
         address _olympusAuthority
     ) OlympusAccessControlledV2(IOlympusAuthority(_olympusAuthority)) {
         OHM = _OHM;
         gOHM = _gOHM;
+        sOHM = _sOHM;
         staking = _staking;
         treasury = _treasury;
         IERC20(OHM).safeApprove(treasury, type(uint256).max);
         IERC20(gOHM).safeApprove(staking, type(uint256).max);
+        IERC20(sOHM).safeApprove(staking, type(uint256).max);
     }
 
     modifier isBorrower(address _borrower) {
@@ -242,7 +239,8 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         (uint256 seizedCollateral, uint256 paidDebt) = _repay(_borrower);
         borrowers[_borrower].collateralInGOHM = 0;
 
-        IgOHM(gOHM).burn(address(this), seizedCollateral);
+        uint256 amountToBurn = IStaking(staking).unstake(address(this), seizedCollateral, false, false); // unstakes gOHM to OHM and burn
+        IOHM(OHM).burn(amountToBurn);
 
         emit DebtPaidWithCollateralAndBurnTheRest(
             _borrower,
@@ -375,9 +373,11 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         if (_amount == 0) revert IncurDebt_InvaildNumber(_amount);
         Borrower storage borrower = borrowers[msg.sender];
 
-        if (_amount > getAvailableToBorrow()) revert IncurDebt_AmountAboveBorrowerBalance(_amount);
+        if (IgOHM(gOHM).balanceFrom(_amount) > getAvailableToBorrow())
+            revert IncurDebt_AmountAboveBorrowerBalance(_amount);
 
-        if (_amount > borrower.collateralInGOHM - borrower.unwrappedGOHM) { // Does uint256 > uint128 cause problem?
+        if (_amount > borrower.collateralInGOHM - borrower.unwrappedGOHM) {
+            // Does uint256 > uint128 cause problem?
             uint256 amountGOHMToWrap = borrower.unwrappedGOHM + _amount - borrower.collateralInGOHM;
             borrower.unwrappedGOHM -= uint128(amountGOHMToWrap);
             uint256 amountOHMNeededToWrap = IgOHM(gOHM).balanceFrom(amountGOHMToWrap);
@@ -433,7 +433,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
 
         totalOutstandingGlobalDebt -= _ohmAmount;
         borrower.debt -= uint128(_ohmAmount);
-                
+
         IERC20(OHM).safeTransferFrom(msg.sender, address(this), _ohmAmount);
         ITreasury(treasury).repayDebtWithOHM(_ohmAmount);
 
@@ -458,7 +458,8 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
 
         uint256 totalDebtInGOHM = IgOHM(gOHM).balanceTo(borrower.debt);
 
-        if (totalDebtInGOHM > borrower.unwrappedGOHM) { //is there issue comparing uint256 to uint128
+        if (totalDebtInGOHM > borrower.unwrappedGOHM) {
+            //is there issue comparing uint256 to uint128
             uint128 amountToUnwrap = borrower.collateralInGOHM - borrower.unwrappedGOHM;
             borrower.unwrappedGOHM += amountToUnwrap;
             IStaking(staking).unwrap(address(this), amountToUnwrap); // Due to rounding error should have tiny less sOhm in wallet than amount they borrowed. Keep small sOhm amount in wallet to make sure no errors.
