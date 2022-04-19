@@ -346,6 +346,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
             revert IncurDebt_AmountAboveBorrowerBalance(_liquidity);
 
         lpTokenOwnership[_lpToken][msg.sender] -= _liquidity;
+        IERC20(_lpToken).safeTransfer(_strategy, _liquidity);
 
         ohmRecieved = IStrategy(_strategy).removeLiquidity(_strategyParams, _liquidity, _lpToken, msg.sender);
 
@@ -354,6 +355,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         if (borrower.debt < ohmRecieved) {
             ohmToRepay = borrower.debt;
             totalOutstandingGlobalDebt -= borrower.debt;
+
             borrower.debt = 0;
             IERC20(OHM).safeTransfer(msg.sender, ohmRecieved - ohmToRepay);
         } else {
