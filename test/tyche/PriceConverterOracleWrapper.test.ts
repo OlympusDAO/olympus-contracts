@@ -4,10 +4,7 @@ import { expect } from "chai";
 const { fork_network } = require("../utils/network_fork");
 
 // types
-import {
-    AggregatorV3Interface,
-    PriceConverterOracleWrapper__factory,
-} from "../../types";
+import { AggregatorV3Interface, PriceConverterOracleWrapper__factory } from "../../types";
 
 describe("PriceConverterOracleWrapper", () => {
     let ohmEthOracle: AggregatorV3Interface;
@@ -31,16 +28,20 @@ describe("PriceConverterOracleWrapper", () => {
             "PriceConverterOracleWrapper"
         )) as PriceConverterOracleWrapper__factory;
 
-        priceConverterOracleWrapper = await factory.deploy(ohmEthOracle.address, ethDaiOracle.address, 18);
+        priceConverterOracleWrapper = await factory.deploy(
+            ohmEthOracle.address,
+            ethDaiOracle.address,
+            18
+        );
     });
 
     it("price converter oracle wrapper returns the correct price", async () => {
-        let ohmEthData = await ohmEthOracle.latestRoundData()
-        let ohmEthPrice = ohmEthData.answer
-        let ethDaiData = await ethDaiOracle.latestRoundData()
-        let ethDaiPrice = ethDaiData.answer
-        let expectedPrice = ohmEthPrice.mul("1000000000000000000").div(ethDaiPrice)
-        let returnedAnswer = await priceConverterOracleWrapper.latestRoundData()
-        expect(returnedAnswer.answer).is.equal(expectedPrice)
+        let ohmEthData = await ohmEthOracle.latestRoundData();
+        let ohmEthPrice = ohmEthData.answer;
+        let ethDaiData = await ethDaiOracle.latestRoundData();
+        let ethDaiPrice = ethDaiData.answer;
+        let expectedPrice = ohmEthPrice.mul("1000000000000000000").div(ethDaiPrice);
+        let returnedAnswer = await priceConverterOracleWrapper.latestRoundData();
+        expect(returnedAnswer.answer).is.equal(expectedPrice);
     });
 });

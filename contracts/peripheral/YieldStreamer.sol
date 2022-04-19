@@ -328,7 +328,7 @@ contract YieldStreamer is IYieldStreamer, YieldSplitter {
 
         uint256 totalOhmToSwap = staking.unstake(address(this), totalGOHM - feeToDao, false, false);
 
-        ( , int256 ohmOraclePrice, , , ) = priceConverterOracleWrapper.latestRoundData();
+        (, int256 ohmOraclePrice, , , ) = priceConverterOracleWrapper.latestRoundData();
         uint256[] memory amounts = sushiRouter.swapExactTokensForTokens(
             totalOhmToSwap,
             (uint256(ohmOraclePrice) * (sixDecimalMaxNumber - maxSwapSlippagePercent)) / sixDecimalMaxNumber,

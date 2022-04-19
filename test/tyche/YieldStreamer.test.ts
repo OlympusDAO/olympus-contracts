@@ -57,7 +57,7 @@ describe("YieldStreamer", async () => {
     let distributor: Distributor;
     let yieldStreamer: YieldStreamer;
     let sushiRouter: FakeContract<IUniswapV2Router>;
-    let oracleRouter: FakeContract<AggregatorV3Interface>
+    let oracleRouter: FakeContract<AggregatorV3Interface>;
 
     before(async () => {
         [deployer, alice, bob] = await ethers.getSigners();
