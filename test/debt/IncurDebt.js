@@ -12,7 +12,7 @@ const gOhmHolderAddress = "0xD3D086B36d5502122F275F4Bc18e04c844Bd6E2e";
 const sOhmHolderAddress = "0xa8b4bcB15382641574822214771b7f05a3e0B408";
 const daiHolderAddress = "0x1B7BAa734C00298b9429b518D621753Bb0f6efF2";
 
-describe.only("IncurDebt", async () => {
+describe("IncurDebt", async () => {
     let user,
         amount,
         factory,
@@ -29,10 +29,12 @@ describe.only("IncurDebt", async () => {
         IncurDebt,
         incurDebt,
         daiContract,
+        halfOfAmount,
         amountInGOHM,
         UniSwapStrategy,
         uniSwapStrategy,
-        halfOfAmount;
+        uniswapLpContract,
+        uniOhmDaiLpAddress;
 
     beforeEach(async () => {
         await fork_network(14565910);
@@ -44,6 +46,7 @@ describe.only("IncurDebt", async () => {
 
         uniRouter = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
         factory = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
+        uniOhmDaiLpAddress = "0x1b851374b8968393c11e8fb30c2842cfc4e986a5";
 
         IncurDebt = await ethers.getContractFactory("IncurDebt");
         incurDebt = await IncurDebt.deploy(
@@ -66,6 +69,11 @@ describe.only("IncurDebt", async () => {
         daiContract = await ethers.getContractAt(
             "contracts/interfaces/IERC20.sol:IERC20",
             "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+        );
+
+        uniswapLpContract = await ethers.getContractAt(
+            "contracts/interfaces/IERC20.sol:IERC20",
+            uniOhmDaiLpAddress
         );
 
         treasury = await ethers.getContractAt("OlympusTreasury", olympus.treasury);
@@ -698,7 +706,7 @@ describe.only("IncurDebt", async () => {
         });
     });
 
-    describe("function createLP(_ohmAmount, _pairDesiredAmount, _strategy, _strategyParams)", () => {
+    describe("function createLP(_ohmAmount, _pairDesiredAmount, _strategy, _strategyParams)", async () => {
         const ohmAmount = "33000000000";
         const daiAmount = "1000000000000000000000";
         const token0 = olympus.ohm;
@@ -777,6 +785,188 @@ describe.only("IncurDebt", async () => {
             await incurDebt
                 .connect(daiHolder)
                 .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data);
+        });
+    });
+
+    describe("function removeLP(_liquidity, _strategy, _lpToken, _strategyParams)", () => {
+        const ohmAmount = "33000000000";
+        const daiAmount = "1000000000000000000000";
+
+        const token0 = olympus.ohm;
+        const token1 = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+
+        const slippage = 900;
+        const slippage1 = 700;
+
+        const fakeData = ethers.utils.defaultAbiCoder.encode(
+            ["address", "address", "uint256", "uint256", "uint256", "uint256"],
+            [token0, token1, ohmAmount, daiAmount, ohmAmount, slippage]
+        );
+
+        const data1 = ethers.utils.defaultAbiCoder.encode(
+            ["address", "address", "uint256", "uint256", "uint256", "uint256", "uint256"],
+            [token0, token1, ohmAmount, daiAmount, ohmAmount, daiAmount, slippage]
+        );
+
+        it("Should fail if borrower isNonLpBorrower", async () => {
+            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
+
+            await expect(
+                incurDebt
+                    .connect(daiHolder)
+                    .removeLP(ohmAmount, uniSwapStrategy.address, uniOhmDaiLpAddress, fakeData)
+            ).to.revertedWith(`IncurDebt_NotBorrower("${daiHolder.address}")`);
+        });
+
+        //     it("Should allow lp borrower withdraw LP", async () => {
+
+        //         await incurDebt.connect(governor).setGlobalDebtLimit(amount);
+        //         await incurDebt.connect(governor).allowBorrower(daiHolder.address, true, false);
+
+        //         await incurDebt.connect(governor).setBorrowerDebtLimit(daiHolder.address, ohmAmount);
+
+        //         await gohm_token.connect(daiHolder).approve(incurDebt.address, amountInGOHM);
+        //         await gohm_token.connect(gOhmHolder).transfer(daiHolder.address, amountInGOHM);
+
+        //         await incurDebt.connect(daiHolder).deposit(amountInGOHM);
+        //         await treasury.connect(governor).setDebtLimit(incurDebt.address, '3000000000000');
+
+        //         await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
+        //         await daiContract.connect(daiHolder).approve(uniSwapStrategy.address, daiAmount);
+
+        //         await incurDebt
+        //             .connect(daiHolder)
+        //             .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data1);
+
+        //         const borrowerInfoBeforerTx = await incurDebt.borrowers(daiHolder.address)
+        //         assert(borrowerInfoBeforerTx.collateralInGOHM, amountInGOHM);
+
+        //         const borrowerLpBeforeTx = await incurDebt.lpTokenOwnership(uniOhmDaiLpAddress, daiHolder.address)
+        //         expect(borrowerLpBeforeTx).to.be.above(0);
+
+        //         const borrowerLpBalanceBeforeTx = await uniswapLpContract.balanceOf(daiHolder.address);
+        //         assert.equal(borrowerLpBalanceBeforeTx, 0);
+
+        //         const token0PoolBalance = await ohm_token.balanceOf(uniOhmDaiLpAddress);
+        //         const token1PoolBalance = await daiContract.balanceOf(uniOhmDaiLpAddress);
+        //         const poolTotalSupply = await uniswapLpContract.totalSupply()
+
+        //         const amount1Min = (token0PoolBalance * borrowerLpBeforeTx) / poolTotalSupply;
+        //     const amount2Min = (token1PoolBalance * borrowerLpBeforeTx) / poolTotalSupply;
+
+        //         const data = ethers.utils.defaultAbiCoder.encode(
+        //         ["address", "address", "uint256", "uint256", "uint256", "uint256"],
+        //         [token0, token1, borrowerLpBeforeTx, amount1Min.toString(), amount2Min.toString(), slippage1]
+        //     );
+        //         await incurDebt
+        //                 .connect(daiHolder)
+        //                 .removeLP(borrowerLpBeforeTx, uniSwapStrategy.address, uniOhmDaiLpAddress, data)
+        //     });
+    });
+
+    describe("withdrawLP(uint256 _liquidity, address _lpToken)", async () => {
+        const ohmAmount = "33000000000";
+        const daiAmount = "1000000000000000000000";
+
+        const token0 = olympus.ohm;
+        const token1 = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+
+        const slippage = 900;
+
+        const data = ethers.utils.defaultAbiCoder.encode(
+            ["address", "address", "uint256", "uint256", "uint256", "uint256", "uint256"],
+            [token0, token1, ohmAmount, daiAmount, ohmAmount, daiAmount, slippage]
+        );
+
+        it("Should fail if borrower isNonLpBorrower", async () => {
+            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
+
+            await expect(
+                incurDebt.connect(daiHolder).withdrawLP(ohmAmount, uniOhmDaiLpAddress)
+            ).to.revertedWith(`IncurDebt_NotBorrower("${daiHolder.address}")`);
+        });
+
+        it("Should fail if borrower amount is above borrower balance", async () => {
+            await incurDebt.connect(governor).setGlobalDebtLimit(amount);
+            await incurDebt.connect(governor).allowBorrower(daiHolder.address, true, false);
+
+            await incurDebt.connect(governor).setBorrowerDebtLimit(daiHolder.address, ohmAmount);
+
+            await gohm_token.connect(daiHolder).approve(incurDebt.address, amountInGOHM);
+            await gohm_token.connect(gOhmHolder).transfer(daiHolder.address, amountInGOHM);
+
+            await incurDebt.connect(daiHolder).deposit(amountInGOHM);
+            await treasury.connect(governor).setDebtLimit(incurDebt.address, "3000000000000");
+
+            await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
+            await daiContract.connect(daiHolder).approve(uniSwapStrategy.address, daiAmount);
+
+            await incurDebt
+                .connect(daiHolder)
+                .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data);
+
+            const borrowerLpBeforeTx = await incurDebt.lpTokenOwnership(
+                uniOhmDaiLpAddress,
+                daiHolder.address
+            );
+            await expect(
+                incurDebt
+                    .connect(daiHolder)
+                    .withdrawLP(Number(borrowerLpBeforeTx) + 1, uniOhmDaiLpAddress)
+            ).to.revertedWith(
+                `IncurDebt_AmountAboveBorrowerBalance(${Number(borrowerLpBeforeTx) + 1})`
+            );
+        });
+
+        it("Should allow lp borrower withdraw LP", async () => {
+            await incurDebt.connect(governor).setGlobalDebtLimit(amount);
+            await incurDebt.connect(governor).allowBorrower(daiHolder.address, true, false);
+
+            await incurDebt.connect(governor).setBorrowerDebtLimit(daiHolder.address, ohmAmount);
+
+            await gohm_token.connect(daiHolder).approve(incurDebt.address, amountInGOHM);
+            await gohm_token.connect(gOhmHolder).transfer(daiHolder.address, amountInGOHM);
+
+            await incurDebt.connect(daiHolder).deposit(amountInGOHM);
+            await treasury.connect(governor).setDebtLimit(incurDebt.address, "3000000000000");
+
+            await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
+            await daiContract.connect(daiHolder).approve(uniSwapStrategy.address, daiAmount);
+
+            await incurDebt
+                .connect(daiHolder)
+                .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data);
+
+            const borrowerInfoBeforerTx = await incurDebt.borrowers(daiHolder.address);
+            assert.equal(borrowerInfoBeforerTx.collateralInGOHM, amountInGOHM);
+
+            const borrowerLpBeforeTx = await incurDebt.lpTokenOwnership(
+                uniOhmDaiLpAddress,
+                daiHolder.address
+            );
+            expect(borrowerLpBeforeTx).to.be.above(0);
+
+            const borrowerLpBalanceBeforeTx = await uniswapLpContract.balanceOf(daiHolder.address);
+            assert(borrowerLpBalanceBeforeTx, 0);
+
+            await incurDebt.connect(daiHolder).withdrawLP(borrowerLpBeforeTx, uniOhmDaiLpAddress);
+
+            const borrowerInfoAfterTx = await incurDebt.borrowers(daiHolder.address);
+            assert.equal(
+                Number(borrowerInfoAfterTx.collateralInGOHM),
+                amountInGOHM - Number(await gohm_token.balanceTo(borrowerInfoBeforerTx.debt))
+            );
+
+            const borrowerLpAfterTx = await incurDebt.lpTokenOwnership(
+                uniOhmDaiLpAddress,
+                daiHolder.address
+            );
+            assert.equal(borrowerLpAfterTx, 0);
+
+            const borrowerLpBalanceAfterTx = await uniswapLpContract.balanceOf(daiHolder.address);
+            assert.equal(Number(borrowerLpBalanceAfterTx), Number(borrowerLpBeforeTx));
         });
     });
 
