@@ -315,8 +315,8 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         // Mapping edit user owns x liquidity
         lpTokenOwnership[lpTokenAddress][msg.sender] += liquidity;
 
-        borrower.debt += uint128(_ohmAmount - ohmUnused);
-        totalOutstandingGlobalDebt += (_ohmAmount - ohmUnused);
+        borrower.debt -= uint128(ohmUnused);
+        totalOutstandingGlobalDebt -= (ohmUnused);
 
         if (ohmUnused > 0) {
             ITreasury(treasury).repayDebtWithOHM(ohmUnused);
@@ -336,7 +336,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         address _strategy,
         address _lpToken,
         bytes calldata _strategyParams
-    ) external isStrategyApproved(msg.sender) returns (uint256 ohmRecieved) {
+    ) external isStrategyApproved(_strategy) returns (uint256 ohmRecieved) {
         Borrower storage borrower = borrowers[msg.sender];
         if (!borrower.isLpBorrower) revert IncurDebt_NotBorrower(msg.sender);
 
@@ -363,6 +363,19 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         }
 
         ITreasury(treasury).repayDebtWithOHM(ohmToRepay);
+    }
+
+    function withdrawLP(uint256 _liquidity, address _lpToken) external {
+        if (!borrowers[msg.sender].isLpBorrower) revert IncurDebt_NotBorrower(msg.sender);
+
+        if (_liquidity > lpTokenOwnership[_lpToken][msg.sender])
+            revert IncurDebt_AmountAboveBorrowerBalance(_liquidity);
+
+        // borrower can decide to call repayDebtWithOHM() and clear debt
+        if (borrowers[msg.sender].debt != 0) repayDebtWithCollateral();
+        lpTokenOwnership[_lpToken][msg.sender] -= _liquidity;
+
+        IERC20(_lpToken).safeTransfer(msg.sender, _liquidity);
     }
 
     /// @notice withdraws gOHM
@@ -393,7 +406,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     /// @notice repay debt with collateral
     /// - msg.sender must be a borrower
     /// - borrower must have outstanding debt
-    function repayDebtWithCollateral() external override {
+    function repayDebtWithCollateral() public override {
         Borrower storage borrower = borrowers[msg.sender];
         (uint256 currentCollateral, uint256 paidDebt) = _repay(msg.sender);
 
