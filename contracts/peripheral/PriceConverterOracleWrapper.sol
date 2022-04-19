@@ -12,7 +12,7 @@ contract PriceConverterOracleWrapper is AggregatorV3Interface {
     AggregatorV3Interface public immutable quotePriceOracle;
     uint8 public immutable override decimals;
     string public constant override description =
-        "Oracle wrapper that uses two oracles to return price in a differen denomination";
+        "Oracle wrapper that uses two oracles to return price in a different denomination";
     uint256 public constant override version = 0;
 
     constructor(
@@ -39,15 +39,16 @@ contract PriceConverterOracleWrapper is AggregatorV3Interface {
         (, int256 basePrice, uint256 baseStartedAt, uint256 baseUpdatedAt, ) = AggregatorV3Interface(basePriceOracle)
             .latestRoundData();
         uint8 baseDecimals = AggregatorV3Interface(basePriceOracle).decimals();
-        basePrice = _scalePrice(basePrice, baseDecimals, decimals);
 
         (, int256 quotePrice, uint256 quoteStartedAt, uint256 quoteUpdatedAt, ) = AggregatorV3Interface(
             quotePriceOracle
         ).latestRoundData();
         uint8 quoteDecimals = AggregatorV3Interface(quotePriceOracle).decimals();
-        quotePrice = _scalePrice(quotePrice, quoteDecimals, decimals);
 
-        answer = (basePrice * int256(10**uint256(decimals))) / quotePrice;
+        int256 unscaledAnswer = (basePrice * int256(10**uint256(decimals)) * int256(10**uint256(quoteDecimals))) /
+            quotePrice;
+        answer = _adjustDecimals(unscaledAnswer, baseDecimals);
+
         startedAt = baseStartedAt > quoteStartedAt ? baseStartedAt : quoteStartedAt;
         updatedAt = baseUpdatedAt > quoteUpdatedAt ? baseUpdatedAt : quoteUpdatedAt;
     }
@@ -64,16 +65,7 @@ contract PriceConverterOracleWrapper is AggregatorV3Interface {
         )
     {}
 
-    function _scalePrice(
-        int256 _price,
-        uint8 _priceDecimals,
-        uint8 _decimals
-    ) internal pure returns (int256) {
-        if (_priceDecimals < _decimals) {
-            return _price * int256(10**uint256(_decimals - _priceDecimals));
-        } else if (_priceDecimals > _decimals) {
-            return _price / int256(10**uint256(_priceDecimals - _decimals));
-        }
-        return _price;
+    function _adjustDecimals(int256 _unscaledAnswer, uint8 _baseDecimals) internal pure returns (int256) {
+        return _unscaledAnswer / int256(10**uint256(_baseDecimals));
     }
 }
