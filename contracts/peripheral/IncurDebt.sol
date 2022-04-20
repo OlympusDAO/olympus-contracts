@@ -77,6 +77,15 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         uint256 _totalOutstandingGlobalDebt,
         uint256 _collateralLeftForWithdraw
     );
+    event LpInteraction(
+        uint256 _ohmBorrowed,
+        uint256 _liquidityCreated,
+        uint256 _currentDebt,
+        uint256 _totalOutstandingGlobalDebt,
+        address indexed _borrower
+    );
+
+    event LpWithdrawn(uint256 _liquidity, address _lpToken, address indexed _borrower);
 
     event Withdrawal(address indexed _borrower, uint256 _amountToWithdraw, uint256 _currentCollateral);
 
@@ -291,11 +300,9 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     ///@param _ohmAmount the desired amount of OHM to borrow
     ///@param _strategy the address of the AMM strategy to use
     ///@param _strategyParams strategy-specific params
-    ///@param _pairDesiredAmount the address of the AMM strategy to use
     ///@return number of LP tokens created
     function createLP(
         uint256 _ohmAmount,
-        uint256 _pairDesiredAmount,
         address _strategy,
         bytes calldata _strategyParams
     ) external isStrategyApproved(_strategy) returns (uint256) {
@@ -308,7 +315,6 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         (uint256 liquidity, uint256 ohmUnused, address lpTokenAddress) = IStrategy(_strategy).addLiquidity(
             _strategyParams,
             _ohmAmount,
-            _pairDesiredAmount,
             msg.sender
         );
 
@@ -322,6 +328,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
             ITreasury(treasury).repayDebtWithOHM(ohmUnused);
         }
 
+        emit LpInteraction(_ohmAmount - ohmUnused, liquidity, borrower.debt, totalOutstandingGlobalDebt, msg.sender);
         return liquidity;
     }
 
@@ -346,6 +353,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
             revert IncurDebt_AmountAboveBorrowerBalance(_liquidity);
 
         lpTokenOwnership[_lpToken][msg.sender] -= _liquidity;
+        IERC20(_lpToken).safeTransfer(_strategy, _liquidity);
 
         ohmRecieved = IStrategy(_strategy).removeLiquidity(_strategyParams, _liquidity, _lpToken, msg.sender);
 
@@ -354,6 +362,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         if (borrower.debt < ohmRecieved) {
             ohmToRepay = borrower.debt;
             totalOutstandingGlobalDebt -= borrower.debt;
+
             borrower.debt = 0;
             IERC20(OHM).safeTransfer(msg.sender, ohmRecieved - ohmToRepay);
         } else {
@@ -363,6 +372,8 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         }
 
         ITreasury(treasury).repayDebtWithOHM(ohmToRepay);
+
+        emit LpInteraction(ohmToRepay, _liquidity, borrower.debt, totalOutstandingGlobalDebt, msg.sender);
     }
 
     function withdrawLP(uint256 _liquidity, address _lpToken) external {
@@ -376,6 +387,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         lpTokenOwnership[_lpToken][msg.sender] -= _liquidity;
 
         IERC20(_lpToken).safeTransfer(msg.sender, _liquidity);
+        emit LpWithdrawn(_liquidity, _lpToken, msg.sender);
     }
 
     /// @notice withdraws gOHM

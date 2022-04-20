@@ -12,8 +12,7 @@ interface IStrategy {
         curve will have no leftover tokens.
         This function is also only for LPing for pools with two tokens. Do not use this for pools with more than 2 tokens.
         @param _data Data needed to input into external call to add liquidity. Different for different strategies.
-        @param _ohmAmount amount of OHM to LP
-        @param _pairTokenAmount amount of pair token to LP with OHM. 
+        @param _ohmAmount amount of OHM to LP 
         @param _user address of user that called incur debt function to do this operation.
         @return liquidity : total amount of lp tokens gained.
         ohmUnused : total amount of ohm unused in LP process and sent back to incur debt address.
@@ -22,7 +21,6 @@ interface IStrategy {
     function addLiquidity(
         bytes memory _data,
         uint256 _ohmAmount,
-        uint256 _pairTokenAmount,
         address _user
     )
         external

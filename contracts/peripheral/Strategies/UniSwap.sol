@@ -44,7 +44,6 @@ contract UniSwapStrategy is IStrategy {
     function addLiquidity(
         bytes memory _data,
         uint256 _ohmAmount,
-        uint256 _pairTokenAmount,
         address _user
     )
         external
@@ -67,18 +66,16 @@ contract UniSwapStrategy is IStrategy {
 
         if (tokenA == ohmAddress) {
             if (_ohmAmount != amountADesired) revert UniswapStrategy_AmountDoesNotMatch();
-            if (_pairTokenAmount != amountBDesired) revert UniswapStrategy_AmountDoesNotMatch();
 
             IERC20(tokenA).safeTransferFrom(incurDebtAddress, address(this), _ohmAmount);
-            IERC20(tokenB).safeTransferFrom(_user, address(this), _pairTokenAmount);
-            IERC20(tokenB).approve(address(router), _pairTokenAmount);
+            IERC20(tokenB).safeTransferFrom(_user, address(this), amountBDesired);
+            IERC20(tokenB).approve(address(router), amountBDesired);
         } else if (tokenB == ohmAddress) {
-            if (_pairTokenAmount != amountADesired) revert UniswapStrategy_AmountDoesNotMatch();
             if (_ohmAmount != amountBDesired) revert UniswapStrategy_AmountDoesNotMatch();
 
             IERC20(tokenB).safeTransferFrom(incurDebtAddress, address(this), _ohmAmount);
-            IERC20(tokenA).safeTransferFrom(_user, address(this), _pairTokenAmount);
-            IERC20(tokenA).approve(address(router), _pairTokenAmount);
+            IERC20(tokenA).safeTransferFrom(_user, address(this), amountBDesired);
+            IERC20(tokenA).approve(address(router), amountBDesired);
         } else {
             revert UniswapStrategy_OhmAddressNotFound();
         }
