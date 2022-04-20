@@ -706,7 +706,7 @@ describe("IncurDebt", async () => {
         });
     });
 
-    describe("function createLP(_ohmAmount, _pairDesiredAmount, _strategy, _strategyParams)", async () => {
+    describe("function createLP(_ohmAmount, _strategy, _strategyParams)", async () => {
         const ohmAmount = "33000000000";
         const daiAmount = "1000000000000000000000";
         const token0 = olympus.ohm;
@@ -723,18 +723,14 @@ describe("IncurDebt", async () => {
             await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
 
             await expect(
-                incurDebt
-                    .connect(daiHolder)
-                    .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data)
+                incurDebt.connect(daiHolder).createLP(ohmAmount, uniSwapStrategy.address, data)
             ).to.revertedWith(`IncurDebt_NotBorrower("${daiHolder.address}")`);
         });
 
         it("Should fail if strategy is not whitelist", async () => {
             await incurDebt.connect(governor).allowBorrower(daiHolder.address, true, false);
             await expect(
-                incurDebt
-                    .connect(daiHolder)
-                    .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data)
+                incurDebt.connect(daiHolder).createLP(ohmAmount, uniSwapStrategy.address, data)
             ).to.revertedWith(`IncurDebt_StrategyUnauthorized("${uniSwapStrategy.address}")`);
         });
 
@@ -748,9 +744,7 @@ describe("IncurDebt", async () => {
 
             await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
             await expect(
-                incurDebt
-                    .connect(daiHolder)
-                    .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data)
+                incurDebt.connect(daiHolder).createLP(ohmAmount, uniSwapStrategy.address, data)
             ).to.revertedWith(`IncurDebt_AboveBorrowersDebtLimit(33000000000)`);
         });
 
@@ -762,9 +756,7 @@ describe("IncurDebt", async () => {
 
             await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
             await expect(
-                incurDebt
-                    .connect(daiHolder)
-                    .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data)
+                incurDebt.connect(daiHolder).createLP(ohmAmount, uniSwapStrategy.address, data)
             ).to.revertedWith(`IncurDebt_OHMAmountMoreThanAvailableLoan(33000000000)`);
         });
 
@@ -782,9 +774,9 @@ describe("IncurDebt", async () => {
 
             await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
             await daiContract.connect(daiHolder).approve(uniSwapStrategy.address, daiAmount);
-            await incurDebt
-                .connect(daiHolder)
-                .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data);
+            await expect(
+                incurDebt.connect(daiHolder).createLP(ohmAmount, uniSwapStrategy.address, data)
+            ).to.emit(incurDebt, "LpInteraction");
         });
     });
 
@@ -834,9 +826,7 @@ describe("IncurDebt", async () => {
             await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
             await daiContract.connect(daiHolder).approve(uniSwapStrategy.address, daiAmount);
 
-            await incurDebt
-                .connect(daiHolder)
-                .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data1);
+            await incurDebt.connect(daiHolder).createLP(ohmAmount, uniSwapStrategy.address, data1);
 
             const borrowerInfoBeforeTx = await incurDebt.borrowers(daiHolder.address);
             assert.equal(borrowerInfoBeforeTx.collateralInGOHM, amountInGOHM);
@@ -873,9 +863,11 @@ describe("IncurDebt", async () => {
                     slippage1,
                 ]
             );
-            await incurDebt
-                .connect(daiHolder)
-                .removeLP(borrowerLpBeforeTx, uniSwapStrategy.address, uniOhmDaiLpAddress, data);
+            await expect(
+                incurDebt
+                    .connect(daiHolder)
+                    .removeLP(borrowerLpBeforeTx, uniSwapStrategy.address, uniOhmDaiLpAddress, data)
+            ).to.emit(incurDebt, "LpInteraction");
 
             const borrowerInfoAfterTx = await incurDebt.borrowers(daiHolder.address);
             assert.equal(Number(borrowerInfoAfterTx.debt), 1);
@@ -923,9 +915,7 @@ describe("IncurDebt", async () => {
             await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
             await daiContract.connect(daiHolder).approve(uniSwapStrategy.address, daiAmount);
 
-            await incurDebt
-                .connect(daiHolder)
-                .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data);
+            await incurDebt.connect(daiHolder).createLP(ohmAmount, uniSwapStrategy.address, data);
 
             const borrowerLpBeforeTx = await incurDebt.lpTokenOwnership(
                 uniOhmDaiLpAddress,
@@ -955,9 +945,7 @@ describe("IncurDebt", async () => {
             await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
             await daiContract.connect(daiHolder).approve(uniSwapStrategy.address, daiAmount);
 
-            await incurDebt
-                .connect(daiHolder)
-                .createLP(ohmAmount, daiAmount, uniSwapStrategy.address, data);
+            await incurDebt.connect(daiHolder).createLP(ohmAmount, uniSwapStrategy.address, data);
 
             const borrowerInfoBeforerTx = await incurDebt.borrowers(daiHolder.address);
             assert.equal(borrowerInfoBeforerTx.collateralInGOHM, amountInGOHM);
@@ -971,7 +959,9 @@ describe("IncurDebt", async () => {
             const borrowerLpBalanceBeforeTx = await uniswapLpContract.balanceOf(daiHolder.address);
             assert(borrowerLpBalanceBeforeTx, 0);
 
-            await incurDebt.connect(daiHolder).withdrawLP(borrowerLpBeforeTx, uniOhmDaiLpAddress);
+            await expect(
+                incurDebt.connect(daiHolder).withdrawLP(borrowerLpBeforeTx, uniOhmDaiLpAddress)
+            ).to.emit(incurDebt, "LpWithdrawn");
 
             const borrowerInfoAfterTx = await incurDebt.borrowers(daiHolder.address);
             assert.equal(

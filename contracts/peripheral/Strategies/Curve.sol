@@ -49,7 +49,6 @@ contract CurveStrategy is IStrategy {
     function addLiquidity(
         bytes memory _data,
         uint256 _ohmAmount,
-        uint256 _pairTokenAmount,
         address _user
     )
         external
@@ -69,19 +68,23 @@ contract CurveStrategy is IStrategy {
         if (poolTokens[0] == ohmAddress) {
             if (poolTokens[1] != pairTokenAddress) revert CurveStrategy_LPTokenDoesNotMatch();
             if (_ohmAmount != amounts[0]) revert CurveStrategy_AmountsDoNotMatch();
-            if (_pairTokenAmount != amounts[1]) revert CurveStrategy_AmountsDoNotMatch();
+
+            IERC20(ohmAddress).safeTransferFrom(incurDebtAddress, address(this), _ohmAmount);
+            IERC20(pairTokenAddress).safeTransferFrom(_user, address(this), amounts[1]);
+
+            IERC20(pairTokenAddress).approve(poolAddress, amounts[1]);
         } else if (poolTokens[1] == ohmAddress) {
             if (poolTokens[0] != pairTokenAddress) revert CurveStrategy_LPTokenDoesNotMatch();
             if (_ohmAmount != amounts[1]) revert CurveStrategy_AmountsDoNotMatch();
-            if (_pairTokenAmount != amounts[0]) revert CurveStrategy_AmountsDoNotMatch();
+
+            IERC20(ohmAddress).safeTransferFrom(incurDebtAddress, address(this), _ohmAmount);
+            IERC20(pairTokenAddress).safeTransferFrom(_user, address(this), amounts[0]);
+
+            IERC20(pairTokenAddress).approve(poolAddress, amounts[0]);
         } else {
             revert CurveStrategy_LPTokenDoesNotMatch();
         }
 
-        IERC20(ohmAddress).safeTransferFrom(incurDebtAddress, address(this), _ohmAmount);
-        IERC20(pairTokenAddress).safeTransferFrom(_user, address(this), _pairTokenAmount);
-
-        IERC20(pairTokenAddress).approve(poolAddress, _pairTokenAmount);
         liquidity = ICurvePool(poolAddress).add_liquidity(amounts, min_mint_amount); // Ohm unused will be 0 since curve uses up all input tokens for LP.
 
         lpTokenAddress = poolAddress; // For factory pools on curve, the LP token is the pool contract.
