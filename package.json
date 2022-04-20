@@ -78,5 +78,10 @@
   "bugs": {
     "url": "https://github.com/OlympusDAO/olympus-contracts/issues"
   },
-  "homepage": "https://github.com/OlympusDAO/olympus-contracts#readme"
+  "homepage": "https://github.com/OlympusDAO/olympus-contracts#readme",
+  "dependencies": {
+    "@chainlink/contracts": "^0.4.0",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "@uniswap/v3-periphery": "^1.4.0"
+  }
 }
