@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import "../../interfaces/IERC20.sol";
 import "../../libraries/SafeERC20.sol";
 import "../../interfaces/IStrategy.sol";
+import "../../interfaces/ICurvePoolFactory.sol";
 
 interface ICurvePool {
     function add_liquidity(uint256[2] memory _deposit_amounts, uint256 _min_mint_amount) external returns (uint256);
@@ -11,22 +12,6 @@ interface ICurvePool {
     function remove_liquidity(uint256 _burn_amount, uint256[2] memory _min_amounts)
         external
         returns (uint256[2] memory);
-}
-
-interface ICurvePoolFactory {
-    function get_coins(address _pool) external view returns (address[4] memory);
-
-    function deploy_plain_pool(
-        string memory _name,
-        string memory _symbol,
-        address[4] memory _coins,
-        uint256 _A,
-        uint256 _fee
-    ) external returns (address);
-
-    function pool_list(uint256 _arg) external view returns (address);
-
-    function pool_count() external view returns (uint256);
 }
 
 error CurveStrategy_NotIncurDebtAddress();
