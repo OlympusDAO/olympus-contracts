@@ -1,9 +1,10 @@
 .DS_Store
 cache/
 artifacts/
-
+/out
 coverage*
 /types/
+docs/
 
 .vscode/*
 !.vscode/settings.json.default

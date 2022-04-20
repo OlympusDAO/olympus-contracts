@@ -1,18 +1,24 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "module": "commonjs",
-    "strict": true,
-    "esModuleInterop": true,
-    "moduleResolution": "node",
-    "forceConsistentCasingInFileNames": true,
-    "outDir": "dist"
+      "allowUnreachableCode": false,
+      "allowUnusedLabels": false,
+      "declaration": true,
+      "forceConsistentCasingInFileNames": true,
+      "lib": ["es2018"],
+      "module": "commonjs",
+      "noEmitOnError": true,
+      "noFallthroughCasesInSwitch": true,
+      "noImplicitReturns": true,
+      "pretty": true,
+      "sourceMap": true,
+      "strict": true,
+      "target": "es2018",
+      "rootDir": ".",
+      "outDir": "build",
+      "esModuleInterop": true,
+      "resolveJsonModule": true,
+      "skipLibCheck": true
   },
-  "include": [
-    "hardhat.config.ts",
-    "./scripts",
-    "./deploy",
-    "./test",
-    "typechain/**/*"
-  ]
+  "include": ["src/**/*.ts", "types/**/*.ts"],
+  "exclude": ["node_modules"]
 }

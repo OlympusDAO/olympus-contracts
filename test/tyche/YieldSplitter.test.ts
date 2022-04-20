@@ -293,7 +293,8 @@ describe("YieldSplitter", async () => {
         await yieldSplitter.deposit(deployer.address, toDecimals(10));
         await triggerRebase();
 
-        await yieldSplitter.givePermissionToRedeem(alice.address);
+        expect(yieldSplitter.connect(alice).givePermissionToRedeem(alice.address)).to.be.reverted;
+        await yieldSplitter.connect(deployer).givePermissionToRedeem(alice.address);
         await yieldSplitter.connect(alice).redeemYieldOnBehalfOf(0);
         await triggerRebase();
 

@@ -1,3 +1,12 @@
+import 'dotenv/config';
+
+
+
+import { HardhatUserConfig } from "hardhat/config";
+import { NetworkUserConfig } from "hardhat/types";
+import { resolve } from "path";
+import { config as dotenvConfig } from "dotenv";
+
 import "@typechain/hardhat";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
@@ -8,11 +17,7 @@ import "@openzeppelin/hardhat-upgrades";
 
 import "hardhat-deploy";
 
-import { resolve } from "path";
 
-import { config as dotenvConfig } from "dotenv";
-import { HardhatUserConfig } from "hardhat/config";
-import { NetworkUserConfig } from "hardhat/types";
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 
@@ -39,6 +44,7 @@ function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
     };
 }
 
+/** @type import('hardhat/config').HardhatUserConfig */
 const config: HardhatUserConfig = {
     defaultNetwork: "hardhat",
     gasReporter: {
