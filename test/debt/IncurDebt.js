@@ -34,7 +34,12 @@ describe("IncurDebt", async () => {
         UniSwapStrategy,
         uniSwapStrategy,
         uniswapLpContract,
-        uniOhmDaiLpAddress;
+        uniOhmDaiLpAddress,
+        curveStrategyFactory,
+        curveStrategy,
+        curvePoolFactory;
+
+    let zeroAddress = "0x0000000000000000000000000000000000000000";
 
     beforeEach(async () => {
         await fork_network(14565910);
@@ -47,6 +52,7 @@ describe("IncurDebt", async () => {
         uniRouter = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
         factory = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
         uniOhmDaiLpAddress = "0x1b851374b8968393c11e8fb30c2842cfc4e986a5";
+        curveFactoryAddress = "0xB9fC157394Af804a3578134A6585C0dc9cc990d4";
 
         IncurDebt = await ethers.getContractFactory("IncurDebt");
         incurDebt = await IncurDebt.deploy(
@@ -65,6 +71,15 @@ describe("IncurDebt", async () => {
             incurDebt.address,
             olympus.ohm
         );
+
+        curveStrategyFactory = await ethers.getContractFactory("CurveStrategy");
+        curveStrategy = await curveStrategyFactory.deploy(
+            incurDebt.address,
+            olympus.ohm,
+            curveFactoryAddress
+        );
+
+        curvePoolFactory = await ethers.getContractAt("ICurvePoolFactory", curveFactoryAddress);
 
         daiContract = await ethers.getContractAt(
             "contracts/interfaces/IERC20.sol:IERC20",
@@ -778,6 +793,94 @@ describe("IncurDebt", async () => {
                 incurDebt.connect(daiHolder).createLP(ohmAmount, uniSwapStrategy.address, data)
             ).to.emit(incurDebt, "LpInteraction");
         });
+
+        it("Should allow borrower create lp for curve", async () => {
+            await curvePoolFactory.deploy_plain_pool(
+                "Test Ohm Dai Pool",
+                "TEST",
+                [olympus.ohm, olympus.sohm, zeroAddress, zeroAddress],
+                10,
+                4000000
+            );
+            let poolCount = await curvePoolFactory.pool_count();
+            let lpPoolAddress = await curvePoolFactory.pool_list(poolCount.sub(1));
+
+            const curveParaData = ethers.utils.defaultAbiCoder.encode(
+                ["uint256[2]", "uint256", "address", "address"],
+                [[ohmAmount, ohmAmount], 0, olympus.sohm, lpPoolAddress]
+            );
+
+            await incurDebt.connect(governor).setGlobalDebtLimit(amount);
+            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, true, false);
+
+            await incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, ohmAmount);
+
+            await gohm_token.connect(gOhmHolder).approve(incurDebt.address, amountInGOHM);
+            await sohm_token.connect(sOhmHolder).transfer(gOhmHolder.address, ohmAmount);
+
+            await incurDebt.connect(gOhmHolder).deposit(amountInGOHM);
+            await treasury.connect(governor).setDebtLimit(incurDebt.address, amount);
+
+            await incurDebt.connect(governor).whitelistStrategy(curveStrategy.address);
+            await sohm_token.connect(gOhmHolder).approve(curveStrategy.address, ohmAmount);
+            await incurDebt
+                .connect(gOhmHolder)
+                .createLP(ohmAmount, curveStrategy.address, curveParaData);
+
+            let liquidityAmount = await incurDebt.lpTokenOwnership(
+                lpPoolAddress,
+                gOhmHolder.address
+            );
+
+            await expect(liquidityAmount).to.equal("66000000000000000000");
+            await expect(await incurDebt.totalOutstandingGlobalDebt()).to.equal(ohmAmount);
+        });
+
+        it("curve strategy should revert when wrong lp address or amount", async () => {
+            await curvePoolFactory.deploy_plain_pool(
+                "Test Ohm Dai Pool",
+                "TEST",
+                [olympus.ohm, olympus.sohm, zeroAddress, zeroAddress],
+                10,
+                4000000
+            );
+            let poolCount = await curvePoolFactory.pool_count();
+            let lpPoolAddress = await curvePoolFactory.pool_list(poolCount.sub(1));
+
+            let curveParaData = ethers.utils.defaultAbiCoder.encode(
+                ["uint256[2]", "uint256", "address", "address"],
+                [[ohmAmount, ohmAmount], 0, olympus.sohm, olympus.ohm]
+            );
+
+            await incurDebt.connect(governor).setGlobalDebtLimit(amount);
+            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, true, false);
+
+            await incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, ohmAmount);
+
+            await gohm_token.connect(gOhmHolder).approve(incurDebt.address, amountInGOHM);
+            await sohm_token.connect(sOhmHolder).transfer(gOhmHolder.address, ohmAmount);
+
+            await incurDebt.connect(gOhmHolder).deposit(amountInGOHM);
+            await treasury.connect(governor).setDebtLimit(incurDebt.address, amount);
+
+            await incurDebt.connect(governor).whitelistStrategy(curveStrategy.address);
+            await sohm_token.connect(gOhmHolder).approve(curveStrategy.address, ohmAmount);
+            expect(
+                incurDebt
+                    .connect(gOhmHolder)
+                    .createLP(ohmAmount, curveStrategy.address, curveParaData)
+            ).to.revertedWith("CurveStrategy_LPTokenDoesNotMatch()");
+
+            curveParaData = ethers.utils.defaultAbiCoder.encode(
+                ["uint256[2]", "uint256", "address", "address"],
+                [[ohmAmount, "1230124902"], 0, olympus.sohm, lpPoolAddress]
+            );
+            expect(
+                incurDebt
+                    .connect(gOhmHolder)
+                    .createLP(ohmAmount, curveStrategy.address, curveParaData)
+            ).to.revertedWith("CurveStrategy_AmountsDoNotMatch()");
+        });
     });
 
     describe("function removeLP(_liquidity, _strategy, _lpToken, _strategyParams)", () => {
@@ -874,6 +977,61 @@ describe("IncurDebt", async () => {
 
             const totalOutstandingGlobalDebtAfterTx = await incurDebt.totalOutstandingGlobalDebt();
             assert.equal(Number(totalOutstandingGlobalDebtAfterTx), 1);
+        });
+
+        it("Should allow borrower remove lp for curve", async () => {
+            await curvePoolFactory.deploy_plain_pool(
+                "Test Ohm Dai Pool",
+                "TEST",
+                [olympus.ohm, olympus.sohm, zeroAddress, zeroAddress],
+                10,
+                4000000
+            );
+            let poolCount = await curvePoolFactory.pool_count();
+            let lpPoolAddress = await curvePoolFactory.pool_list(poolCount.sub(1));
+
+            const curveParaData = ethers.utils.defaultAbiCoder.encode(
+                ["uint256[2]", "uint256", "address", "address"],
+                [[ohmAmount, ohmAmount], 0, olympus.sohm, lpPoolAddress]
+            );
+
+            await incurDebt.connect(governor).setGlobalDebtLimit(amount);
+            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, true, false);
+
+            await incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, ohmAmount);
+
+            await gohm_token.connect(gOhmHolder).approve(incurDebt.address, amountInGOHM);
+            await sohm_token.connect(sOhmHolder).transfer(gOhmHolder.address, ohmAmount);
+
+            await incurDebt.connect(gOhmHolder).deposit(amountInGOHM);
+            await treasury.connect(governor).setDebtLimit(incurDebt.address, amount);
+
+            await incurDebt.connect(governor).whitelistStrategy(curveStrategy.address);
+            await sohm_token.connect(gOhmHolder).approve(curveStrategy.address, ohmAmount);
+            await incurDebt
+                .connect(gOhmHolder)
+                .createLP(ohmAmount, curveStrategy.address, curveParaData);
+
+            let liquidityAmount = await incurDebt.lpTokenOwnership(
+                lpPoolAddress,
+                gOhmHolder.address
+            );
+
+            let sOhmAmountBeforeRemove = await sohm_token.balanceOf(gOhmHolder.address);
+
+            const curveRemoveData = ethers.utils.defaultAbiCoder.encode(
+                ["uint256", "uint256[2]"],
+                [liquidityAmount, [0, 0]]
+            );
+
+            await incurDebt
+                .connect(gOhmHolder)
+                .removeLP(liquidityAmount, curveStrategy.address, lpPoolAddress, curveRemoveData);
+
+            let sOhmAmountAfterRemove = await sohm_token.balanceOf(gOhmHolder.address);
+
+            await expect(sOhmAmountAfterRemove.sub(sOhmAmountBeforeRemove)).to.equal(ohmAmount);
+            await expect(await incurDebt.totalOutstandingGlobalDebt()).to.equal(0);
         });
     });
 
@@ -977,6 +1135,60 @@ describe("IncurDebt", async () => {
 
             const borrowerLpBalanceAfterTx = await uniswapLpContract.balanceOf(daiHolder.address);
             assert.equal(Number(borrowerLpBalanceAfterTx), Number(borrowerLpBeforeTx));
+        });
+
+        it("Should allow borrower withdraw lp for curve", async () => {
+            await curvePoolFactory.deploy_plain_pool(
+                "Test Ohm Dai Pool",
+                "TEST",
+                [olympus.ohm, olympus.sohm, zeroAddress, zeroAddress],
+                10,
+                4000000
+            );
+            let poolCount = await curvePoolFactory.pool_count();
+            let lpPoolAddress = await curvePoolFactory.pool_list(poolCount.sub(1));
+
+            const curveParaData = ethers.utils.defaultAbiCoder.encode(
+                ["uint256[2]", "uint256", "address", "address"],
+                [[ohmAmount, ohmAmount], 0, olympus.sohm, lpPoolAddress]
+            );
+
+            await incurDebt.connect(governor).setGlobalDebtLimit(amount);
+            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, true, false);
+
+            await incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, ohmAmount);
+
+            await gohm_token.connect(gOhmHolder).approve(incurDebt.address, amountInGOHM);
+            await sohm_token.connect(sOhmHolder).transfer(gOhmHolder.address, ohmAmount);
+
+            await incurDebt.connect(gOhmHolder).deposit(amountInGOHM);
+            await treasury.connect(governor).setDebtLimit(incurDebt.address, amount);
+
+            await incurDebt.connect(governor).whitelistStrategy(curveStrategy.address);
+            await sohm_token.connect(gOhmHolder).approve(curveStrategy.address, ohmAmount);
+            await incurDebt
+                .connect(gOhmHolder)
+                .createLP(ohmAmount, curveStrategy.address, curveParaData);
+
+            let liquidityAmount = await incurDebt.lpTokenOwnership(
+                lpPoolAddress,
+                gOhmHolder.address
+            );
+
+            await incurDebt.connect(gOhmHolder).repayDebtWithCollateral();
+
+            let lpTokenContract = await ethers.getContractAt(
+                "contracts/interfaces/IERC20.sol:IERC20",
+                lpPoolAddress
+            );
+
+            await expect(await lpTokenContract.balanceOf(gOhmHolder.address)).to.equal(0);
+
+            await incurDebt.connect(gOhmHolder).withdrawLP(liquidityAmount, lpPoolAddress);
+
+            await expect(await lpTokenContract.balanceOf(gOhmHolder.address)).to.equal(
+                liquidityAmount
+            );
         });
     });
 

@@ -353,6 +353,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
             revert IncurDebt_AmountAboveBorrowerBalance(_liquidity);
 
         lpTokenOwnership[_lpToken][msg.sender] -= _liquidity;
+
         IERC20(_lpToken).safeTransfer(_strategy, _liquidity);
 
         ohmRecieved = IStrategy(_strategy).removeLiquidity(_strategyParams, _liquidity, _lpToken, msg.sender);
@@ -384,6 +385,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
 
         // borrower can decide to call repayDebtWithOHM() and clear debt
         if (borrowers[msg.sender].debt != 0) repayDebtWithCollateral();
+
         lpTokenOwnership[_lpToken][msg.sender] -= _liquidity;
 
         IERC20(_lpToken).safeTransfer(msg.sender, _liquidity);
