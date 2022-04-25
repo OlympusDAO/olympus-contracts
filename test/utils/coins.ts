@@ -30,6 +30,7 @@ const toke = "0x2e9d63788249371f1dfc918a52f8d799f4a38c94";
 const tribe = "0xc7283b66Eb1EB5FB86327f08e1B5816b0720212B";
 const cvxcrv = "0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7";
 const wbtc = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599";
+const steth = "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84";
 
 // AAVE
 const adai = "0x028171bCA77440897B824Ca71D1c56caC55b68A3";
@@ -60,6 +61,7 @@ export const coins = {
     toke,
     tribe,
     cvxcrv,
+    steth,
     adai,
     aweth,
     ausdc,
