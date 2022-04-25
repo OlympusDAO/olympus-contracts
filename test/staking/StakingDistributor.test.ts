@@ -57,7 +57,7 @@ describe("Distributor", () => {
 
     before(async () => {
         await pinBlock(14609847, url);
-    })
+    });
 
     beforeEach(async () => {
         [owner, other] = await ethers.getSigners();
@@ -72,10 +72,7 @@ describe("Distributor", () => {
             olympus.authority
         )) as OlympusAuthority;
 
-        staking = (await ethers.getContractAt(
-            "OlympusStaking",
-            olympus.staking
-        )) as OlympusStaking;
+        staking = (await ethers.getContractAt("OlympusStaking", olympus.staking)) as OlympusStaking;
 
         governor = await impersonate(await authority.governor());
         guardian = await impersonate(await authority.guardian());
@@ -101,7 +98,7 @@ describe("Distributor", () => {
     });
 
     describe("post-construction", () => {
-        const bounty = 1000000
+        const bounty = 1000000;
 
         before(async () => {
             distributor = await new Distributor__factory(owner).deploy(
@@ -132,10 +129,14 @@ describe("Distributor", () => {
                 await advanceEpoch();
                 const pools = ["0x055475920a8c93cffb64d039a8205f7acc7722d3"];
                 await distributor.connect(governor).setPools(pools);
+                const rewardRate = await distributor.rewardRate();
 
                 let [reserve0, reserve1, timestamp] = await ohmDai.getReserves();
                 const priceBefore = reserve1 / (reserve0 * 1000000000);
                 const balanceBefore = await ohm.balanceOf(pools[0]);
+                const expectedBalanceAfter = balanceBefore.add(
+                    balanceBefore.mul(rewardRate).div(1000000)
+                );
                 console.log(priceBefore);
 
                 await distributor.triggerRebase();
@@ -146,6 +147,7 @@ describe("Distributor", () => {
                 console.log(priceAfter);
 
                 expect(balanceAfter).to.be.gt(balanceBefore);
+                expect(balanceAfter).to.equal(expectedBalanceAfter);
                 expect(priceBefore).to.be.gt(priceAfter);
 
                 await advanceEpoch();
@@ -177,7 +179,7 @@ describe("Distributor", () => {
                     "Only_Staking()"
                 );
 
-                await expect(staking.rebase())
+                await expect(staking.rebase());
             });
         });
 
@@ -211,7 +213,10 @@ describe("Distributor", () => {
             });
 
             it("returns the next reward for pool", async () => {
-                const pools = ["0x055475920a8c93cffb64d039a8205f7acc7722d3", "0x69b81152c5a8d35a67b32a4d3772795d96cae4da"];
+                const pools = [
+                    "0x055475920a8c93cffb64d039a8205f7acc7722d3",
+                    "0x69b81152c5a8d35a67b32a4d3772795d96cae4da",
+                ];
                 await distributor.connect(governor).setPools(pools);
 
                 const reward = await distributor.nextRewardFor(pools[0]);
@@ -244,7 +249,10 @@ describe("Distributor", () => {
         });
 
         describe("setPools", () => {
-            const pools = ["0x055475920a8c93cffb64d039a8205f7acc7722d3", "0x69b81152c5a8d35a67b32a4d3772795d96cae4da"];
+            const pools = [
+                "0x055475920a8c93cffb64d039a8205f7acc7722d3",
+                "0x69b81152c5a8d35a67b32a4d3772795d96cae4da",
+            ];
 
             beforeEach(async () => {
                 await distributor.connect(governor).setPools([]);
@@ -265,7 +273,10 @@ describe("Distributor", () => {
         });
 
         describe("removePools", () => {
-            const pools = ["0x055475920a8c93cffb64d039a8205f7acc7722d3", "0x69b81152c5a8d35a67b32a4d3772795d96cae4da"];
+            const pools = [
+                "0x055475920a8c93cffb64d039a8205f7acc7722d3",
+                "0x69b81152c5a8d35a67b32a4d3772795d96cae4da",
+            ];
 
             beforeEach(async () => {
                 await distributor.connect(governor).setPools(pools);
@@ -278,22 +289,24 @@ describe("Distributor", () => {
             });
 
             it("should revert with sanity check if pool doesn't match", async () => {
-                await expect(distributor.connect(governor).removePool(0, pools[1])).to.be.revertedWith(
-                    "Sanity_Check()"
-                );
+                await expect(
+                    distributor.connect(governor).removePool(0, pools[1])
+                ).to.be.revertedWith("Sanity_Check()");
 
-                await expect(distributor.connect(governor).removePool(1, pools[0])).to.be.revertedWith(
-                    "Sanity_Check()"
-                );
+                await expect(
+                    distributor.connect(governor).removePool(1, pools[0])
+                ).to.be.revertedWith("Sanity_Check()");
             });
 
             it("should remove pool", async () => {
-                await expect(distributor.connect(governor).removePool(0, pools[0])).to.not.be.reverted;
+                await expect(distributor.connect(governor).removePool(0, pools[0])).to.not.be
+                    .reverted;
 
                 await expect((await distributor.pools(0)).toLowerCase()).to.equal(addressZero);
                 await expect((await distributor.pools(1)).toLowerCase()).to.equal(pools[1]);
 
-                await expect(distributor.connect(governor).removePool(1, pools[1])).to.not.be.reverted;
+                await expect(distributor.connect(governor).removePool(1, pools[1])).to.not.be
+                    .reverted;
 
                 await expect((await distributor.pools(0)).toLowerCase()).to.equal(addressZero);
                 await expect((await distributor.pools(1)).toLowerCase()).to.equal(addressZero);
@@ -301,7 +314,10 @@ describe("Distributor", () => {
         });
 
         describe("addPool", () => {
-            const pools = ["0x055475920a8c93cffb64d039a8205f7acc7722d3", "0x69b81152c5a8d35a67b32a4d3772795d96cae4da"];
+            const pools = [
+                "0x055475920a8c93cffb64d039a8205f7acc7722d3",
+                "0x69b81152c5a8d35a67b32a4d3772795d96cae4da",
+            ];
             const newPool = "0xb8127f3fbfe1d18299028d89523d7eb5db89f155";
 
             beforeEach(async () => {
@@ -342,13 +358,13 @@ describe("Distributor", () => {
             });
 
             it("should revert if not called by governor", async () => {
-                await expect(distributor.connect(owner).setAdjustment(add, rate, target)).to.be.revertedWith(
-                    "Not_Permissioned()"
-                );
-                
-                await expect(distributor.connect(other).setAdjustment(add, rate, target)).to.be.revertedWith(
-                    "Not_Permissioned()"
-                );
+                await expect(
+                    distributor.connect(owner).setAdjustment(add, rate, target)
+                ).to.be.revertedWith("Not_Permissioned()");
+
+                await expect(
+                    distributor.connect(other).setAdjustment(add, rate, target)
+                ).to.be.revertedWith("Not_Permissioned()");
             });
 
             it("should set an increase adjustment", async () => {
