@@ -29,7 +29,7 @@ describe("YieldDirector", async () => {
     // Mine block and rebase. Returns the new index.
     const triggerRebase = async () => {
         advanceEpoch(); // 8 hours per rebase
-        await staking.rebase();
+        await distributor.triggerRebase();
         return await sOhm.index();
     };
 
@@ -99,7 +99,8 @@ describe("YieldDirector", async () => {
             treasury.address,
             ohm.address,
             staking.address,
-            auth.address
+            auth.address,
+            initialRewardRate
         );
         tyche = await tycheFactory.deploy(
             sOhm.address,
@@ -142,9 +143,6 @@ describe("YieldDirector", async () => {
         await treasury
             .connect(deployer)
             .deposit("10000000000000000000000", dai.address, "9000000000000");
-
-        // Add staking as recipient of distributor with a test reward rate
-        await distributor.addRecipient(staking.address, initialRewardRate);
 
         // Get sOHM in deployer wallet
         const sohmAmount = "1000000000000";
