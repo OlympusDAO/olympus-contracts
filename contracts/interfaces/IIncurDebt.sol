@@ -70,19 +70,17 @@ interface IIncurDebt {
      */
     function setGlobalDebtLimit(uint256 _limit) external;
 
-    /**
-     * @notice lets a user become a borrower
-     * - onlyOwner (or governance)
-     * - user must not be borrower
-     * @param _borrower the address that will interact with contract
-     * @param _lpBorrower indicate if the address to approve is an lp borrower
-     * @param _nonLpBorrower indicate if the address to approve is an lp borrower
-     */
-    function allowBorrower(
-        address _borrower,
-        bool _lpBorrower,
-        bool _nonLpBorrower
-    ) external;
+    /// @notice lets a user become a LP borrower
+    /// - onlyOwner (or governance)
+    /// - user must not be borrower
+    /// @param _borrower the address that will interact with contract
+    function allowLPBorrower(address _borrower) external;
+
+    /// @notice lets a user become a Non LP borrower
+    /// - onlyOwner (or governance)
+    /// - user must not be borrower
+    /// @param _borrower the address that will interact with contract
+    function allowNonLPBorrower(address _borrower) external;
 
     /**
      * @notice sets the maximum debt limit for a borrower
@@ -100,13 +98,9 @@ interface IIncurDebt {
      * - user must be borrower
      * - borrower must not have outstanding debt
      * @param _borrower the address that will interact with contract
-     * @param _lpBorrower indicate if the address to approve is an lp borrower
-     * @param _nonLpBorrower indicate if the address to approve is an lp borrower
      */
     function revokeBorrower(
-        address _borrower,
-        bool _lpBorrower,
-        bool _nonLpBorrower
+        address _borrower
     ) external;
 
     /**
