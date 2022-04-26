@@ -52,6 +52,8 @@ interface IBalancerVault {
 
 interface IstETH is IERC20 {
     function submit(address _referral) external payable returns (uint256);
+
+    function withdraw(uint256 _amount, bytes32 _pubkeyHash) external;
 }
 
 interface IwstETH is IERC20 {
@@ -59,6 +61,8 @@ interface IwstETH is IERC20 {
 }
 
 interface IwETH is IERC20 {
+    function deposit() external payable;
+
     function withdraw(uint256 wad) external;
 }
 
@@ -66,6 +70,7 @@ interface IwETH is IERC20 {
 error LidoAllocator_InvalidAddress();
 error LidoAllocator_FeeToLarge();
 error LidoAllocator_RatioTooLarge();
+error LidoAllocator_WithdrawalNotEnabled();
 
 // @title Lido Allocator
 // @notice Stake treasury WETH into Lido as stETH
@@ -101,6 +106,7 @@ contract LidoAllocator is BaseAllocator {
 
     uint24 public poolFee = 3000;
     uint256 public minETHstETHRatio; // out of 1000 (950 -> 95.0%)
+    bool public isLidoWithdrawalEnabled = false;
 
     /*///////////////////////////////////////////////////////////////
                                 CONSTRUCTOR
@@ -212,9 +218,16 @@ contract LidoAllocator is BaseAllocator {
     // @notice Convert full stETH balance back to WETH to prepare to return to the treasury
     // @param panic If true, denotes losses have been major, and funds are immediately sent to the treasury
     function _deactivate(bool panic) internal override {
-        uint256[] memory amounts = new uint256[](1);
-        amounts[0] = lido.balanceOf(address(this));
-        deallocate(amounts);
+        uint256 lidoBalance = lido.balanceOf(address(this));
+
+        // Only deallocate if there is non-dust stETH (> 0.01). migrate() calls deactivate after a migration
+        // has happened which triggers this to all run again when balance is near zero which reverts
+        // on the swap
+        if (lidoBalance > 10000000000000000) {
+            uint256[] memory amounts = new uint256[](1);
+            amounts[0] = lido.balanceOf(address(this));
+            deallocate(amounts);
+        }
 
         uint256 wethBalance = _tokens[0].balanceOf(address(this));
         if (panic) {
@@ -223,8 +236,23 @@ contract LidoAllocator is BaseAllocator {
     }
 
     // @notice Convert full stETH balance back to WETH to prepare to move to a new contract
-    function _prepareMigration() internal override {
-        _deactivate(false);
+    function _prepareMigration() internal override {}
+
+    // @notice Convert full stETH balance back to WETH through Lido withdrawal rather than swap
+    // @param amounts A uint256 array of the amounts to convert out of stETH (only first index is used)
+    function deallocateWithdraw(uint256[] memory amounts) public {
+        _onlyGuardian();
+        if (!isLidoWithdrawalEnabled) revert LidoAllocator_WithdrawalNotEnabled();
+
+        // Withdraw stETH to ETH
+        // This probably doesn't actually work because the Lido contract has the second parameter
+        // bytes 32 but is supposed to represent the public key hash of the user. I don't think that's
+        // something we can get in Solidity. Not sure how to proceed
+        lido.withdraw(amounts[0], bytes32(uint256(uint160(address(this))) << 96));
+
+        // Wrap to WETH
+        uint256 ethBalance = address(this).balance;
+        IwETH(address(_tokens[0])).deposit{value: ethBalance}();
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -278,6 +306,14 @@ contract LidoAllocator is BaseAllocator {
         if (minETHstETHRatio_ > 1000) revert LidoAllocator_RatioTooLarge();
 
         minETHstETHRatio = minETHstETHRatio_;
+    }
+
+    // @notice Allows us to enable access to deallocateWithdraw() when Lido enables withdrawals
+    // @param isLidoWithdrawalEnabled_ Whether withdrawals are enabled
+    function setisLidoWithdrawalEnabled(bool isLidoWithdrawalEnabled_) external {
+        _onlyGuardian();
+
+        isLidoWithdrawalEnabled = isLidoWithdrawalEnabled_;
     }
 
     /*///////////////////////////////////////////////////////////////

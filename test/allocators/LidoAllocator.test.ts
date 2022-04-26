@@ -45,6 +45,8 @@ describe("LidoAllocator", () => {
     let snapshotId: number = 0;
     let minRatio: number = 900;
 
+    const amount: BigNumber = bne(10, 20);
+
     before(async () => {
         await helpers.pinBlock(14635126, url);
 
@@ -179,8 +181,6 @@ describe("LidoAllocator", () => {
     });
 
     describe("updates correctly", () => {
-        const amount: BigNumber = bne(10, 20);
-
         beforeEach(async () => {
             allocator = await factory.deploy(
                 {
@@ -263,8 +263,6 @@ describe("LidoAllocator", () => {
         });
 
         context("with deposits", () => {
-            const amount: BigNumber = bne(10, 18);
-
             beforeEach(async () => {
                 await allocator.update(9);
             });
@@ -301,6 +299,133 @@ describe("LidoAllocator", () => {
                 expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("1");
                 expect(await tokens[0].balanceOf(allocator.address)).to.equal("0");
             });
+        });
+    });
+
+    describe("deallocate()", () => {
+        beforeEach(async () => {
+            allocator = await factory.deploy(
+                {
+                    authority: authority.address,
+                    tokens: [WETH.address],
+                    extender: extender.address,
+                },
+                olympus.treasury,
+                swapRouter,
+                stETH.address,
+                wstETH,
+                minRatio
+            );
+
+            await extender.registerDeposit(allocator.address);
+            await extender.setAllocatorLimits(9, {
+                allocated: bne(10, 23),
+                loss: bne(10, 16),
+            });
+
+            await allocator.activate();
+
+            await expect(() => extender.requestFundsFromTreasury(9, amount)).to.changeTokenBalance(
+                WETH,
+                allocator,
+                amount
+            );
+
+            await allocator.update(9);
+        });
+
+        it("should fail if sender is not guardian", async () => {
+            await expect(allocator.connect(owner).deallocate([amount])).to.be.reverted;
+        });
+
+        it("should swap stETH to WETH", async () => {
+            expect(await utilTokens[0].balanceOf(allocator.address)).to.equal(
+                "999999999999999999999"
+            );
+            expect(await WETH.balanceOf(allocator.address)).to.equal("0");
+
+            await allocator.deallocate([amount]);
+
+            expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("0");
+            // we lose some precision. probably because we have to convert stETH to wstETH,
+            // then swap it with some level of slippage
+            expect(await WETH.balanceOf(allocator.address)).to.equal("999256977472297504388");
+        });
+    });
+
+    describe("migrate()", () => {
+        beforeEach(async () => {
+            allocator = await factory.deploy(
+                {
+                    authority: authority.address,
+                    tokens: [WETH.address],
+                    extender: extender.address,
+                },
+                olympus.treasury,
+                swapRouter,
+                stETH.address,
+                wstETH,
+                minRatio
+            );
+
+            await extender.registerDeposit(allocator.address);
+            await extender.setAllocatorLimits(9, {
+                allocated: bne(10, 23),
+                loss: bne(10, 16),
+            });
+
+            await allocator.activate();
+
+            await expect(() => extender.requestFundsFromTreasury(9, amount)).to.changeTokenBalance(
+                WETH,
+                allocator,
+                amount
+            );
+
+            await allocator.update(9);
+
+            const mAllocator: LidoAllocator = await factory.deploy(
+                {
+                    authority: authority.address,
+                    tokens: [WETH.address],
+                    extender: extender.address,
+                },
+                olympus.treasury,
+                swapRouter,
+                stETH.address,
+                wstETH,
+                minRatio
+            );
+
+            await extender.registerDeposit(mAllocator.address);
+
+            await extender.setAllocatorLimits(10, {
+                allocated: bne(10, 23),
+                loss: bne(10, 16),
+            });
+
+            await mAllocator.activate();
+        });
+
+        it("should successfully migrate", async () => {
+            await allocator.prepareMigration();
+
+            expect(await utilTokens[0].balanceOf(allocator.address)).to.equal(
+                "999999999999999999999"
+            );
+            expect(await WETH.balanceOf(allocator.address)).to.equal("0");
+            expect(await allocator.status()).to.equal(2);
+
+            await allocator.migrate();
+
+            const mAddress: string = await extender.allocators(10);
+
+            expect(await utilTokens[0].balanceOf(mAddress)).to.equal("999999999999999999998");
+            expect(await WETH.balanceOf(mAddress)).to.equal("0");
+            expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("1");
+            expect(await WETH.balanceOf(allocator.address)).to.equal("0");
+
+            expect(await allocator.status()).to.equal(0);
         });
     });
 });
