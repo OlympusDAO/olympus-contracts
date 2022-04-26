@@ -24,6 +24,9 @@ error IncurDebt_OHMAmountMoreThanAvailableLoan(uint256 _amount);
 error IncurDebt_BorrowerHasNoOutstandingDebt(address _borrower);
 error IncurDebt_BorrowerStillHasOutstandingDebt(address _borrower);
 
+/// @title IncurDebt
+/// @notice Contract that allows users to use the treasury's incurdebt function.
+/// It allows users(other DAOs) to borrow OHM against their sOHM/gOHM to use to provide liquidity for their token.
 contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     using SafeERC20 for IERC20;
 
