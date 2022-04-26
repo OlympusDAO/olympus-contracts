@@ -27,7 +27,7 @@ describe("YieldStreamer", async () => {
 
     const triggerRebase = async () => {
         advanceEpoch(); // 8 hours per rebase
-        await staking.rebase();
+        await distributor.triggerRebase();
         return await sOhm.index();
     };
 
@@ -103,7 +103,8 @@ describe("YieldStreamer", async () => {
             treasury.address,
             ohm.address,
             staking.address,
-            auth.address
+            auth.address,
+            initialRewardRate
         )) as Distributor;
         yieldStreamer = (await yieldStreamerFactory.deploy(
             gOhm.address,
@@ -150,9 +151,6 @@ describe("YieldStreamer", async () => {
 
         // Deposit 10,000 DAI to treasury, 1,000 OHM gets minted to deployer with 9000 as excess reserves (ready to be minted)
         await treasury.connect(deployer).deposit(toDecimals(10000), dai.address, toOhm(9000));
-
-        // Add staking as recipient of distributor with a test reward rate
-        await distributor.addRecipient(staking.address, initialRewardRate);
 
         // Get sOHM in deployer wallet
         const sohmAmount = toOhm(1000);

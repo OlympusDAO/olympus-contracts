@@ -53,11 +53,13 @@ contract Distributor is OlympusAccessControlled {
         ITreasury _treasury,
         IERC20 _ohm,
         address _staking,
-        IOlympusAuthority _authority
+        IOlympusAuthority _authority,
+        uint256 _initialRate
     ) OlympusAccessControlled(_authority) {
         treasury = _treasury;
         ohm = _ohm;
         staking = _staking;
+        rewardRate = _initialRate;
     }
 
     /* ====== PUBLIC FUNCTIONS ====== */
@@ -101,7 +103,9 @@ contract Distributor is OlympusAccessControlled {
             }
         }
 
-        if (adjustment.rate != 0) adjust();
+        if (adjustment.rate != 0) {
+            adjust();
+        }
     }
 
     function retrieveBounty() external returns (uint256) {
