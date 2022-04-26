@@ -101,7 +101,7 @@ describe("Treasury", async () => {
             gOhm.address,
             "10",
             "1",
-            "9",
+            "2000997655",
             auth.address
         );
         treasury = await treasuryFactory.deploy(ohm.address, "0", auth.address);

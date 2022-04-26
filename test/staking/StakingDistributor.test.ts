@@ -137,14 +137,12 @@ describe("Distributor", () => {
                 const expectedBalanceAfter = balanceBefore.add(
                     balanceBefore.mul(rewardRate).div(1000000)
                 );
-                console.log(priceBefore);
 
                 await distributor.triggerRebase();
 
                 [reserve0, reserve1, timestamp] = await ohmDai.getReserves();
                 const priceAfter = reserve1 / (reserve0 * 1000000000);
                 const balanceAfter = await ohm.balanceOf(pools[0]);
-                console.log(priceAfter);
 
                 expect(balanceAfter).to.be.gt(balanceBefore);
                 expect(balanceAfter).to.equal(expectedBalanceAfter);
@@ -159,7 +157,6 @@ describe("Distributor", () => {
 
                 [reserve0, reserve1, timestamp] = await ohmDai.getReserves();
                 const price3 = reserve1 / (reserve0 * 1000000000);
-                console.log(price3);
 
                 expect(priceBefore).to.be.gt(price3);
             });
