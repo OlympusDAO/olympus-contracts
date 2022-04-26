@@ -51,6 +51,8 @@ describe("Distributor", () => {
 
     // uniswap
     let ohmDai: any;
+    let ohmWeth: any;
+    let ohmBtrfly: any;
 
     // tokens
     let ohm: MockERC20;
@@ -82,6 +84,16 @@ describe("Distributor", () => {
         ohmDai = await ethers.getContractAt(
             uniPairAbi,
             "0x055475920a8c93cffb64d039a8205f7acc7722d3"
+        );
+
+        ohmWeth = await ethers.getContractAt(
+            uniPairAbi,
+            "0x69b81152c5a8d35a67b32a4d3772795d96cae4da"
+        );
+
+        ohmBtrfly = await ethers.getContractAt(
+            uniPairAbi,
+            "0xe9ab8038ee6dd4fcc7612997fe28d4e22019c4b4"
         );
     });
 
@@ -125,9 +137,9 @@ describe("Distributor", () => {
                 await expect(distributor.connect(governor).triggerRebase()).to.not.be.reverted;
             });
 
-            it("mints to pools", async () => {
+            it("mints to single pool", async () => {
                 await advanceEpoch();
-                const pools = ["0x055475920a8c93cffb64d039a8205f7acc7722d3"];
+                const pools = [ohmDai.address];
                 await distributor.connect(governor).setPools(pools);
                 const rewardRate = await distributor.rewardRate();
 
@@ -159,6 +171,80 @@ describe("Distributor", () => {
                 const price3 = reserve1 / (reserve0 * 1000000000);
 
                 expect(priceBefore).to.be.gt(price3);
+            });
+
+            it("mints and syncs to multiple pools", async () => {
+                await advanceEpoch();
+                const pools = [ohmDai.address, ohmWeth.address, ohmBtrfly.address];
+                await distributor.connect(governor).setPools(pools);
+                const rewardRate = await distributor.rewardRate();
+
+                let [odReserve0, odReserve1, odTimestamp] = await ohmDai.getReserves();
+                const odPriceBefore = odReserve1 / (odReserve0 * 1000000000);
+                const odBalanceBefore = await ohm.balanceOf(pools[0]);
+                const expectedOdBalanceAfter = odBalanceBefore.add(
+                    odBalanceBefore.mul(rewardRate).div(1000000)
+                );
+
+                let [owReserve0, owReserve1, owTimestamp] = await ohmWeth.getReserves();
+                const owPriceBefore = owReserve1 / (owReserve0 * 1000000000);
+                const owBalanceBefore = await ohm.balanceOf(pools[1]);
+                const expectedOwBalanceAfter = owBalanceBefore.add(
+                    owBalanceBefore.mul(rewardRate).div(1000000)
+                );
+
+                let [obReserve0, obReserve1, obTimestamp] = await ohmBtrfly.getReserves();
+                const obPriceBefore = obReserve1 / (obReserve0 * 1000000000);
+                const obBalanceBefore = await ohm.balanceOf(pools[2]);
+                const expectedObBalanceAfter = obBalanceBefore.add(
+                    obBalanceBefore.mul(rewardRate).div(1000000)
+                );
+
+                await distributor.triggerRebase();
+
+                [odReserve0, odReserve1, odTimestamp] = await ohmDai.getReserves();
+                const odPriceAfter = odReserve1 / (odReserve0 * 1000000000);
+                const odBalanceAfter = await ohm.balanceOf(pools[0]);
+
+                [owReserve0, owReserve1, owTimestamp] = await ohmWeth.getReserves();
+                const owPriceAfter = owReserve1 / (owReserve0 * 1000000000);
+                const owBalanceAfter = await ohm.balanceOf(pools[1]);
+
+                [obReserve0, obReserve1, obTimestamp] = await ohmBtrfly.getReserves();
+                const obPriceAfter = obReserve1 / (obReserve0 * 1000000000);
+                const obBalanceAfter = await ohm.balanceOf(pools[2]);
+
+                expect(odBalanceAfter).to.be.gt(odBalanceBefore);
+                expect(odBalanceAfter).to.equal(expectedOdBalanceAfter);
+                expect(odPriceBefore).to.be.gt(odPriceAfter);
+
+                expect(owBalanceAfter).to.be.gt(owBalanceBefore);
+                expect(owBalanceAfter).to.equal(expectedOwBalanceAfter);
+                expect(owPriceBefore).to.be.gt(owPriceAfter);
+
+                expect(obBalanceAfter).to.be.gt(obBalanceBefore);
+                expect(obBalanceAfter).to.equal(expectedObBalanceAfter);
+                expect(obPriceBefore).to.be.gt(obPriceAfter);
+
+                await advanceEpoch();
+                await distributor.triggerRebase();
+                await advanceEpoch();
+                await distributor.triggerRebase();
+                await advanceEpoch();
+                await distributor.triggerRebase();
+
+                [odReserve0, odReserve1, odTimestamp] = await ohmDai.getReserves();
+                const odPrice3 = odReserve1 / (odReserve0 * 1000000000);
+
+                [owReserve0, owReserve1, owTimestamp] = await ohmWeth.getReserves();
+                const owPrice3 = owReserve1 / (owReserve0 * 1000000000);
+
+                [obReserve0, obReserve1, obTimestamp] = await ohmBtrfly.getReserves();
+                const obPrice3 = obReserve1 / (obReserve0 * 1000000000);
+
+                expect(odPriceBefore).to.be.gt(odPrice3);
+                expect(owPriceBefore).to.be.gt(owPrice3);
+                expect(obPriceBefore).to.be.gt(obPrice3);
             });
         });
 
@@ -217,7 +303,7 @@ describe("Distributor", () => {
                 await distributor.connect(governor).setPools(pools);
 
                 const reward = await distributor.nextRewardFor(pools[0]);
-                expect(reward).to.equal(3555420587872);
+                expect(reward).to.equal(3583949396499);
             });
         });
 
