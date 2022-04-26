@@ -7,12 +7,55 @@ import "../types/BaseAllocator.sol";
 // Interfaces
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IERC20.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 import "hardhat/console.sol";
 
+/*///////////////////////////////////////////////////////////////
+                            TYPES
+//////////////////////////////////////////////////////////////*/
+
+enum SwapKind {
+    GIVEN_IN,
+    GIVEN_OUT
+}
+
+struct SingleSwap {
+    bytes32 poolId;
+    SwapKind kind;
+    address assetIn;
+    address assetOut;
+    uint256 amount;
+    bytes userData;
+}
+
+struct FundManagement {
+    address sender;
+    bool fromInternalBalance;
+    address recipient;
+    bool toInternalBalance;
+}
+
+interface IBalancerVault {
+    function swap(
+        SingleSwap memory singleSwap,
+        FundManagement memory funds,
+        uint256 limit,
+        uint256 deadline
+    ) external payable returns (uint256 amountCalculated);
+
+    function setRelayerApproval(
+        address sender,
+        address relayer,
+        bool approved
+    ) external;
+}
+
 interface IstETH is IERC20 {
     function submit(address _referral) external payable returns (uint256);
+}
+
+interface IwstETH is IERC20 {
+    function wrap(uint256 _stETHAmount) external returns (uint256);
 }
 
 interface IwETH is IERC20 {
@@ -36,7 +79,7 @@ contract LidoAllocator is BaseAllocator {
     address public immutable treasury;
 
     // @notice Uniswap V2 Router for stETH to WETH swaps
-    IUniswapV2Router02 public swapRouter;
+    IBalancerVault public swapRouter;
 
     /*///////////////////////////////////////////////////////////////
                                TOKENS
@@ -45,11 +88,14 @@ contract LidoAllocator is BaseAllocator {
     // @notice Lido/stETH contract. Accepts ETH deposits, and then returns stETH
     //         which behaves as an ERC20 token.
     IstETH public lido;
+    IwstETH public wstETH;
 
     /*///////////////////////////////////////////////////////////////
                             CONFIG VARIABLES
     //////////////////////////////////////////////////////////////*/
 
+    bytes32 public constant BALANCER_POOL_ID = 0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
+    address public constant BALANCER_LIDO_RELAYER = 0xdcdbf71A870cc60C6F9B621E28a7D3Ffd6Dd4965;
     uint256 public constant POOL_FEE_MAX = 10000;
     uint256 public constant ETH_STETH_PRECISION = 10000;
 
@@ -72,6 +118,7 @@ contract LidoAllocator is BaseAllocator {
         address treasury_,
         address swapRouter_,
         address lido_,
+        address wsteth_,
         uint256 minETHstETHRatio_
     ) BaseAllocator(data) {
         // Verify that all addresses are valid
@@ -83,17 +130,19 @@ contract LidoAllocator is BaseAllocator {
 
         // Set contracts
         treasury = treasury_;
-        swapRouter = IUniswapV2Router02(swapRouter_);
+        swapRouter = IBalancerVault(swapRouter_);
 
         // Set tokens
         lido = IstETH(lido_);
+        wstETH = IwstETH(wsteth_);
 
         // Set config variables
         minETHstETHRatio = minETHstETHRatio_;
 
         // Approvals
-        IERC20(lido_).safeApprove(address(swapRouter), type(uint256).max);
+        IERC20(wsteth_).safeApprove(address(swapRouter), type(uint256).max);
         IERC20(lido_).safeApprove(address(extender), type(uint256).max);
+        IERC20(lido_).safeApprove(wsteth_, type(uint256).max);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -133,21 +182,31 @@ contract LidoAllocator is BaseAllocator {
     function deallocate(uint256[] memory amounts) public override {
         _onlyGuardian();
 
+        // Wrap stETH to wstETH
+        uint256 wstETHAmount = wstETH.wrap(amounts[0]);
+
         // Calculate the minimum quantity of WETH we would accept
         uint256 minWETH = (minETHstETHRatio * amounts[0]) / ETH_STETH_PRECISION;
+        bytes memory userData;
 
-        address[] memory path = new address[](2);
-        path[0] = address(lido);
-        path[1] = address(_tokens[0]);
+        SingleSwap memory singleSwap = SingleSwap({
+            poolId: BALANCER_POOL_ID,
+            kind: SwapKind.GIVEN_IN,
+            assetIn: address(wstETH),
+            assetOut: address(_tokens[0]),
+            amount: wstETHAmount,
+            userData: userData
+        });
+
+        FundManagement memory funds = FundManagement({
+            sender: address(this),
+            fromInternalBalance: false,
+            recipient: address(this),
+            toInternalBalance: false
+        });
 
         // Execute the swap
-        swapRouter.swapExactTokensForTokens(
-            amounts[0],
-            minWETH,
-            path,
-            msg.sender,
-            block.timestamp
-        );
+        swapRouter.swap(singleSwap, funds, minWETH, block.timestamp);
     }
 
     // @notice Convert full stETH balance back to WETH to prepare to return to the treasury

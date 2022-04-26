@@ -33,6 +33,7 @@ describe("LidoAllocator", () => {
 
     // Tokens
     let stETH: ERC20;
+    let wstETH: string;
     let WETH: ERC20;
     let tokens: ERC20[];
     let utilTokens: ERC20[];
@@ -51,6 +52,7 @@ describe("LidoAllocator", () => {
         tokens = [WETH];
 
         stETH = await helpers.getCoin(coins.steth);
+        wstETH = "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0";
         utilTokens = [stETH];
 
         treasury = (await ethers.getContractAt(
@@ -68,7 +70,7 @@ describe("LidoAllocator", () => {
             olympus.extender
         )) as TreasuryExtender;
 
-        swapRouter = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
+        swapRouter = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
         owner = (await ethers.getSigners())[0];
 
@@ -90,6 +92,7 @@ describe("LidoAllocator", () => {
             olympus.treasury,
             swapRouter,
             stETH.address,
+            wstETH,
             minRatio
         );
     });
@@ -113,6 +116,7 @@ describe("LidoAllocator", () => {
                 olympus.treasury,
                 swapRouter,
                 stETH.address,
+                wstETH,
                 minRatio
             );
 
@@ -133,6 +137,7 @@ describe("LidoAllocator", () => {
                     helpers.constants.addressZero,
                     swapRouter,
                     stETH.address,
+                    wstETH,
                     minRatio
                 )
             ).to.be.revertedWith("LidoAllocator_InvalidAddress()");
@@ -149,6 +154,7 @@ describe("LidoAllocator", () => {
                     olympus.treasury,
                     swapRouter,
                     stETH.address,
+                    wstETH,
                     1010
                 )
             ).to.be.revertedWith("LidoAllocator_RatioTooLarge()");
@@ -164,6 +170,7 @@ describe("LidoAllocator", () => {
                 olympus.treasury,
                 swapRouter,
                 stETH.address,
+                wstETH,
                 minRatio
             );
 
@@ -172,7 +179,7 @@ describe("LidoAllocator", () => {
     });
 
     describe("updates correctly", () => {
-        const amount: BigNumber = bne(10, 18);
+        const amount: BigNumber = bne(10, 20);
 
         beforeEach(async () => {
             allocator = await factory.deploy(
@@ -184,6 +191,7 @@ describe("LidoAllocator", () => {
                 olympus.treasury,
                 swapRouter,
                 stETH.address,
+                wstETH,
                 minRatio
             );
 
@@ -198,7 +206,7 @@ describe("LidoAllocator", () => {
             await expect(() => extender.requestFundsFromTreasury(9, amount)).to.changeTokenBalance(
                 WETH,
                 allocator,
-                amount,
+                amount
             );
         });
 
@@ -211,12 +219,14 @@ describe("LidoAllocator", () => {
             await expect(() => allocator.update(9)).to.changeTokenBalance(
                 tokens[0],
                 allocator,
-                BigNumber.from("0").sub(amount),
+                BigNumber.from("0").sub(amount)
             );
 
             // Conversion to stETH shares loses some precision
-            expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("9999999999999999999");
-            expect(await extender.getAllocatorAllocated(9)).to.equal("9999999999999999999");
+            expect(await utilTokens[0].balanceOf(allocator.address)).to.equal(
+                "999999999999999999999"
+            );
+            expect(await extender.getAllocatorAllocated(9)).to.equal("999999999999999999999");
         });
 
         it("should deposit more", async () => {
@@ -224,12 +234,14 @@ describe("LidoAllocator", () => {
             await expect(() => allocator.update(9)).to.changeTokenBalance(
                 tokens[0],
                 allocator,
-                BigNumber.from("0").sub(amount),
+                BigNumber.from("0").sub(amount)
             );
 
             // Conversion to stETH shares loses some precision
-            expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("9999999999999999999");
-            expect(await extender.getAllocatorAllocated(9)).to.equal("9999999999999999999");
+            expect(await utilTokens[0].balanceOf(allocator.address)).to.equal(
+                "999999999999999999999"
+            );
+            expect(await extender.getAllocatorAllocated(9)).to.equal("999999999999999999999");
 
             await expect(() => extender.requestFundsFromTreasury(9, amount)).to.changeTokenBalance(
                 WETH,
@@ -241,20 +253,22 @@ describe("LidoAllocator", () => {
             await expect(() => allocator.update(9)).to.changeTokenBalance(
                 tokens[0],
                 allocator,
-                BigNumber.from("0").sub(amount),
+                BigNumber.from("0").sub(amount)
             );
 
             expect(await utilTokens[0].balanceOf(allocator.address)).to.gt(balance);
-            expect(await extender.getAllocatorAllocated(9)).to.equal(BigNumber.from("9999999999999999999").mul("2"));
+            expect(await extender.getAllocatorAllocated(9)).to.equal(
+                BigNumber.from("999999999999999999999").mul("2")
+            );
         });
 
         context("with deposits", () => {
             const amount: BigNumber = bne(10, 18);
-    
+
             beforeEach(async () => {
                 await allocator.update(9);
             });
-            
+
             // Not sure how to test this without somehow mocking Beacon chain...
             /*
             it("should gain over time", async () => {
@@ -271,22 +285,20 @@ describe("LidoAllocator", () => {
             */
 
             it("should panic return in case of loss above limit", async () => {
-                const impersonatedAllocator: SignerWithAddress = await helpers.impersonate(allocator.address);
+                const impersonatedAllocator: SignerWithAddress = await helpers.impersonate(
+                    allocator.address
+                );
 
                 const tempcoin: ERC20 = utilTokens[0].connect(impersonatedAllocator);
+                await helpers.addEth(allocator.address, bne(10, 18));
 
-                await tempcoin.transfer(
-                    owner.address,
-                    bne(10, 18).sub(10),
-                );
-                console.log(await extender.getAllocatorPerformance(9));
+                await tempcoin.transfer(owner.address, bne(10, 20).sub(10));
 
                 await allocator.update(9);
-                console.log(await extender.getAllocatorPerformance(9));
 
                 expect(await allocator.status()).to.equal(0);
 
-                expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("0");
+                expect(await utilTokens[0].balanceOf(allocator.address)).to.equal("1");
                 expect(await tokens[0].balanceOf(allocator.address)).to.equal("0");
             });
         });
