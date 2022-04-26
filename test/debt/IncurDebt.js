@@ -701,14 +701,15 @@ describe("IncurDebt", async () => {
 
     describe("function createLP(_ohmAmount, _strategy, _strategyParams)", async () => {
         const ohmAmount = "33000000000";
+        const minOhmAmount = "30000000000";
         const daiAmount = "1000000000000000000000";
+        const minDaiAmount = "500000000000000000000";
         const token0 = olympus.ohm;
         const token1 = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
-        const slippage = 900;
 
         const data = ethers.utils.defaultAbiCoder.encode(
-            ["address", "address", "uint256", "uint256", "uint256", "uint256", "uint256"],
-            [token0, token1, ohmAmount, daiAmount, ohmAmount, daiAmount, slippage]
+            ["address", "address", "uint256", "uint256", "uint256", "uint256"],
+            [token0, token1, ohmAmount, daiAmount, minOhmAmount, minDaiAmount]
         );
 
         it("Should fail if borrower isNonLpBorrower", async () => {
@@ -863,22 +864,21 @@ describe("IncurDebt", async () => {
 
     describe("function removeLP(_liquidity, _strategy, _lpToken, _strategyParams)", () => {
         const ohmAmount = "33000000000";
+        const minOhmAmount = "30000000000";
         const daiAmount = "1000000000000000000000";
+        const minDaiAmount = "500000000000000000000";
 
         const token0 = olympus.ohm;
         const token1 = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
 
-        const slippage = 900;
-        const slippage1 = 900;
-
         const fakeData = ethers.utils.defaultAbiCoder.encode(
-            ["address", "address", "uint256", "uint256", "uint256", "uint256"],
-            [token0, token1, ohmAmount, daiAmount, ohmAmount, slippage]
+            ["address", "address", "uint256", "uint256", "uint256"],
+            [token0, token1, ohmAmount, daiAmount, ohmAmount]
         );
 
         const data1 = ethers.utils.defaultAbiCoder.encode(
-            ["address", "address", "uint256", "uint256", "uint256", "uint256", "uint256"],
-            [token0, token1, ohmAmount, daiAmount, ohmAmount, daiAmount, slippage]
+            ["address", "address", "uint256", "uint256", "uint256", "uint256"],
+            [token0, token1, ohmAmount, daiAmount, minOhmAmount, minDaiAmount]
         );
 
         it("Should fail if borrower isNonLpBorrower", async () => {
@@ -892,7 +892,7 @@ describe("IncurDebt", async () => {
             ).to.revertedWith(`IncurDebt_NotBorrower("${daiHolder.address}")`);
         });
 
-        it("Should allow lp borrower removeLP LP", async () => {
+        it("Should allow lp borrower removeLP", async () => {
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
             await incurDebt.connect(governor).allowLPBorrower(daiHolder.address);
 
@@ -934,14 +934,13 @@ describe("IncurDebt", async () => {
             const amount2Min = (token1PoolBalance * borrowerLpBeforeTx) / poolTotalSupply;
 
             const data = ethers.utils.defaultAbiCoder.encode(
-                ["address", "address", "uint256", "uint256", "uint256", "uint256"],
+                ["address", "address", "uint256", "uint256", "uint256"],
                 [
                     token0,
                     token1,
                     borrowerLpBeforeTx,
-                    amount1Min.toString(),
-                    amount2Min.toString(),
-                    slippage1,
+                    (amount1Min * 0.9).toString(),
+                    (amount2Min * 0.9).toString(),
                 ]
             );
             await expect(
@@ -1015,16 +1014,16 @@ describe("IncurDebt", async () => {
 
     describe("withdrawLP(uint256 _liquidity, address _lpToken)", async () => {
         const ohmAmount = "33000000000";
+        const minOhmAmount = "30000000000";
         const daiAmount = "1000000000000000000000";
+        const minDaiAmount = "500000000000000000000";
 
         const token0 = olympus.ohm;
         const token1 = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
 
-        const slippage = 900;
-
         const data = ethers.utils.defaultAbiCoder.encode(
-            ["address", "address", "uint256", "uint256", "uint256", "uint256", "uint256"],
-            [token0, token1, ohmAmount, daiAmount, ohmAmount, daiAmount, slippage]
+            ["address", "address", "uint256", "uint256", "uint256", "uint256"],
+            [token0, token1, ohmAmount, daiAmount, minOhmAmount, minDaiAmount]
         );
 
         it("Should fail if borrower isNonLpBorrower", async () => {
