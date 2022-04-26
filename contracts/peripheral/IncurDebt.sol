@@ -11,7 +11,6 @@ import "../interfaces/IStrategy.sol";
 import "../interfaces/IIncurDebt.sol";
 import "../types/OlympusAccessControlledV2.sol";
 
-error IncurDebt_BothParamsCannotBeTrue();
 error IncurDebt_NotBorrower(address _borrower);
 error IncurDebt_InvaildNumber(uint256 _amount);
 error IncurDebt_WrongTokenAddress(address _token);
@@ -25,12 +24,15 @@ error IncurDebt_OHMAmountMoreThanAvailableLoan(uint256 _amount);
 error IncurDebt_BorrowerHasNoOutstandingDebt(address _borrower);
 error IncurDebt_BorrowerStillHasOutstandingDebt(address _borrower);
 
+/// @title IncurDebt
+/// @notice Contract that allows users to use the treasury's incurdebt function.
+/// It allows users(other DAOs) to borrow OHM against their sOHM/gOHM to use to provide liquidity for their token.
 contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     using SafeERC20 for IERC20;
 
     event GlobalLimitChanged(uint256 _limit);
     event BorrowerAllowed(address indexed _borrower, bool _lpBorrower, bool _nonLpBorrower);
-    event BorrowerRevoked(address indexed _borrower, bool _lpBorrower, bool _nonLpBorrower);
+    event BorrowerRevoked(address indexed _borrower);
     event BorrowerDebtLimitSet(address indexed _borrower, uint256 _limit);
 
     event BorrowerDeposit(address indexed _borrower, uint256 _amountToDeposit);
@@ -50,42 +52,29 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         address indexed _borrower,
         uint256 _paidDebt,
         uint256 _currentCollateral,
-        uint256 _currentDebt,
         uint256 _totalOutstandingGlobalDebt
     );
     event DebtPaidWithCollateralAndBurnTheRest(
         address indexed _borrower,
         uint256 _paidDebt,
-        uint256 _currentCollateral,
-        uint256 _currentDebt,
         uint256 _totalOutstandingGlobalDebt,
         uint256 _collateralLeftToBurn
     );
     event DebtPaidWithCollateralAndWithdrawTheRest(
         address indexed _borrower,
         uint256 _paidDebt,
-        uint256 _currentCollateral,
-        uint256 _currentDebt,
-        uint256 _totalOutstandingGlobalDebt,
-        uint256 _collateralLeftForWithdraw
-    );
-    event ForceDebtPayWithCollateralAndWithdrawTheRest(
-        address indexed _borrower,
-        uint256 _paidDebt,
-        uint256 _currentCollateral,
-        uint256 _currentDebt,
         uint256 _totalOutstandingGlobalDebt,
         uint256 _collateralLeftForWithdraw
     );
     event LpInteraction(
+        address indexed _borrower,
         uint256 _ohmBorrowed,
         uint256 _liquidityCreated,
         uint256 _currentDebt,
-        uint256 _totalOutstandingGlobalDebt,
-        address indexed _borrower
+        uint256 _totalOutstandingGlobalDebt
     );
 
-    event LpWithdrawn(uint256 _liquidity, address _lpToken, address indexed _borrower);
+    event LpWithdrawn(address indexed _borrower, uint256 _liquidity, address _lpToken);
 
     event Withdrawal(address indexed _borrower, uint256 _amountToWithdraw, uint256 _currentCollateral);
 
@@ -154,30 +143,36 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         emit GlobalLimitChanged(_limit);
     }
 
+    /// @notice whitelist a strategy contract to be used for createLP and removeLP
+    /// - onlyOwner (or governance)
+    /// @param _strategyAddress address of the strategy contract
     function whitelistStrategy(address _strategyAddress) external onlyGovernor {
         strategies[_strategyAddress] = true;
         IERC20(OHM).approve(_strategyAddress, type(uint256).max);
     }
 
-    /// @notice lets a user become a borrower
+    /// @notice lets a user become a LP borrower
     /// - onlyOwner (or governance)
     /// - user must not be borrower
     /// @param _borrower the address that will interact with contract
-    /// @param _lpBorrower indicate if the address to approve is an lp borrower
-    /// @param _nonLpBorrower indicate if the address to approve is an lp borrower
-    function allowBorrower(
-        address _borrower,
-        bool _lpBorrower,
-        bool _nonLpBorrower
-    ) external override onlyGovernor {
-        if (_lpBorrower == true && _nonLpBorrower == true) revert IncurDebt_BothParamsCannotBeTrue();
-        if (borrowers[_borrower].isNonLpBorrower || borrowers[_borrower].isLpBorrower)
-            revert IncurDebt_AlreadyBorrower(_borrower);
+    function allowLPBorrower(address _borrower) external override onlyGovernor {
+        if (borrowers[_borrower].isNonLpBorrower) revert IncurDebt_AlreadyBorrower(_borrower);
 
-        if (_nonLpBorrower == true) borrowers[_borrower].isNonLpBorrower = true;
-        else if (_lpBorrower == true) borrowers[_borrower].isLpBorrower = true;
+        borrowers[_borrower].isLpBorrower = true;
 
-        emit BorrowerAllowed(_borrower, _lpBorrower, _nonLpBorrower);
+        emit BorrowerAllowed(_borrower, true, false);
+    }
+
+    /// @notice lets a user become a Non LP borrower
+    /// - onlyOwner (or governance)
+    /// - user must not be borrower
+    /// @param _borrower the address that will interact with contract
+    function allowNonLPBorrower(address _borrower) external override onlyGovernor {
+        if (borrowers[_borrower].isLpBorrower) revert IncurDebt_AlreadyBorrower(_borrower);
+
+        borrowers[_borrower].isNonLpBorrower = true;
+
+        emit BorrowerAllowed(_borrower, false, true);
     }
 
     /// @notice sets the maximum debt limit for a borrower
@@ -204,20 +199,13 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     /// - user must be borrower
     /// - borrower must not have outstanding debt
     /// @param _borrower the address that will interact with contract
-    /// @param _lpBorrower indicate if the address to approve is an lp borrower
-    /// @param _nonLpBorrower indicate if the address to approve is an lp borrower
-    function revokeBorrower(
-        address _borrower,
-        bool _lpBorrower,
-        bool _nonLpBorrower
-    ) external override onlyGovernor isBorrower(_borrower) {
-        if (_lpBorrower == true && _nonLpBorrower == true) revert IncurDebt_BothParamsCannotBeTrue();
+    function revokeBorrower(address _borrower) external override onlyGovernor isBorrower(_borrower) {
         if (borrowers[_borrower].debt != 0) revert IncurDebt_BorrowerStillHasOutstandingDebt(_borrower);
 
-        if (_nonLpBorrower == true) borrowers[_borrower].isNonLpBorrower = false;
-        else if (_lpBorrower == true) borrowers[_borrower].isLpBorrower = false;
+        borrowers[_borrower].isNonLpBorrower = false;
+        borrowers[_borrower].isLpBorrower = false;
 
-        emit BorrowerRevoked(_borrower, _lpBorrower, _nonLpBorrower);
+        emit BorrowerRevoked(_borrower);
     }
 
     /// @notice Governor repays borrower debt using collateral and sends remaining tokens to borrower
@@ -230,11 +218,9 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
 
         IERC20(gOHM).transfer(_borrower, collateralRemaining);
 
-        emit ForceDebtPayWithCollateralAndWithdrawTheRest(
+        emit DebtPaidWithCollateralAndWithdrawTheRest(
             _borrower,
             paidDebt,
-            borrowers[msg.sender].collateralInGOHM,
-            borrowers[msg.sender].debt,
             totalOutstandingGlobalDebt,
             collateralRemaining
         );
@@ -251,14 +237,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         uint256 amountToBurn = IStaking(staking).unstake(address(this), seizedCollateral, false, false); // unstakes gOHM to OHM and burn
         IOHM(OHM).burn(amountToBurn);
 
-        emit DebtPaidWithCollateralAndBurnTheRest(
-            _borrower,
-            paidDebt,
-            borrowers[msg.sender].collateralInGOHM,
-            borrowers[msg.sender].debt,
-            totalOutstandingGlobalDebt,
-            seizedCollateral
-        );
+        emit DebtPaidWithCollateralAndBurnTheRest(_borrower, paidDebt, totalOutstandingGlobalDebt, seizedCollateral);
     }
 
     /************************
@@ -318,17 +297,15 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
             msg.sender
         );
 
-        // Mapping edit user owns x liquidity
         lpTokenOwnership[lpTokenAddress][msg.sender] += liquidity;
 
-        borrower.debt -= uint128(ohmUnused);
-        totalOutstandingGlobalDebt -= (ohmUnused);
-
         if (ohmUnused > 0) {
+            borrower.debt -= uint128(ohmUnused);
+            totalOutstandingGlobalDebt -= (ohmUnused);
             ITreasury(treasury).repayDebtWithOHM(ohmUnused);
         }
 
-        emit LpInteraction(_ohmAmount - ohmUnused, liquidity, borrower.debt, totalOutstandingGlobalDebt, msg.sender);
+        emit LpInteraction(msg.sender, _ohmAmount - ohmUnused, liquidity, borrower.debt, totalOutstandingGlobalDebt);
         return liquidity;
     }
 
@@ -346,8 +323,6 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     ) external isStrategyApproved(_strategy) returns (uint256 ohmRecieved) {
         Borrower storage borrower = borrowers[msg.sender];
         if (!borrower.isLpBorrower) revert IncurDebt_NotBorrower(msg.sender);
-
-        if (borrower.debt == 0) revert IncurDebt_BorrowerHasNoOutstandingDebt(msg.sender);
 
         if (_liquidity > lpTokenOwnership[_lpToken][msg.sender])
             revert IncurDebt_AmountAboveBorrowerBalance(_liquidity);
@@ -374,22 +349,25 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
 
         ITreasury(treasury).repayDebtWithOHM(ohmToRepay);
 
-        emit LpInteraction(ohmToRepay, _liquidity, borrower.debt, totalOutstandingGlobalDebt, msg.sender);
+        emit LpInteraction(msg.sender, ohmToRepay, _liquidity, borrower.debt, totalOutstandingGlobalDebt);
     }
 
+    ///@notice withdraws LP to the user that created it.
+    ///@dev If user still has debt outstanding, repay that debt with collateral.
+    ///@param _liquidity the amount of LP tokens to withdraw.
+    ///@param _lpToken address of lp token to withdraw liquidity from
     function withdrawLP(uint256 _liquidity, address _lpToken) external {
         if (!borrowers[msg.sender].isLpBorrower) revert IncurDebt_NotBorrower(msg.sender);
 
         if (_liquidity > lpTokenOwnership[_lpToken][msg.sender])
             revert IncurDebt_AmountAboveBorrowerBalance(_liquidity);
 
-        // borrower can decide to call repayDebtWithOHM() and clear debt
         if (borrowers[msg.sender].debt != 0) repayDebtWithCollateral();
 
         lpTokenOwnership[_lpToken][msg.sender] -= _liquidity;
 
         IERC20(_lpToken).safeTransfer(msg.sender, _liquidity);
-        emit LpWithdrawn(_liquidity, _lpToken, msg.sender);
+        emit LpWithdrawn(msg.sender, _liquidity, _lpToken);
     }
 
     /// @notice withdraws gOHM
@@ -426,7 +404,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
 
         borrower.collateralInGOHM = uint128(currentCollateral);
 
-        emit DebtPaidWithCollateral(msg.sender, paidDebt, currentCollateral, borrower.debt, totalOutstandingGlobalDebt);
+        emit DebtPaidWithCollateral(msg.sender, paidDebt, currentCollateral, totalOutstandingGlobalDebt);
     }
 
     /// @notice repay debt with collateral and withdraw the accrued earnings in sOHM
@@ -441,8 +419,6 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         emit DebtPaidWithCollateralAndWithdrawTheRest( //Change event
             msg.sender,
             paidDebt,
-            borrowers[msg.sender].collateralInGOHM,
-            borrowers[msg.sender].debt,
             totalOutstandingGlobalDebt,
             collateralRemaining
         );
@@ -474,6 +450,9 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         return ohmBalance - borrowers[msg.sender].debt;
     }
 
+    /// @notice borrows OHM against collateral
+    /// @dev if user's collateral is in GOHM unwrap it to sOHM to be used as collateral
+    /// @param _ohmAmount amount of OHM to borrow
     function _borrow(uint256 _ohmAmount) internal {
         Borrower storage borrower = borrowers[msg.sender];
 

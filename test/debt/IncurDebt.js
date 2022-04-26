@@ -138,20 +138,14 @@ describe("IncurDebt", async () => {
     describe("allowBorrower(address _borrower)", () => {
         it("Should fail if caller is not governor  address", async () => {
             await expect(
-                incurDebt.connect(user).allowBorrower(gOhmHolder.address, false, true)
+                incurDebt.connect(user).allowNonLPBorrower(gOhmHolder.address)
             ).to.revertedWith("UNAUTHORIZED()");
         });
 
-        it("Should fail if isNonLpBorrower and isLpBorrower is true", async () => {
-            await expect(
-                incurDebt.connect(governor).allowBorrower(gOhmHolder.address, true, true)
-            ).to.revertedWith("IncurDebt_BothParamsCannotBeTrue()");
-        });
-
         it("Should fail if user is already a type of borrower", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             await expect(
-                incurDebt.connect(governor).allowBorrower(gOhmHolder.address, true, false)
+                incurDebt.connect(governor).allowLPBorrower(gOhmHolder.address)
             ).to.revertedWith(`IncurDebt_AlreadyBorrower("${gOhmHolder.address}")`);
         });
 
@@ -159,7 +153,7 @@ describe("IncurDebt", async () => {
             const borrowerInfoBeforerTx = await incurDebt.borrowers(gOhmHolder.address);
             assert.equal(borrowerInfoBeforerTx.isNonLpBorrower, false);
 
-            await expect(incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true))
+            await expect(incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address))
                 .to.emit(incurDebt, "BorrowerAllowed")
                 .withArgs(gOhmHolder.address, false, true);
 
@@ -183,7 +177,7 @@ describe("IncurDebt", async () => {
         });
 
         it("Should fail if _limit above global debt limit", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             await expect(
                 incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, amount)
             ).to.revertedWith(`IncurDebt_AboveGlobalDebtLimit(${amount})`);
@@ -193,7 +187,7 @@ describe("IncurDebt", async () => {
             const _amount = "1000000000000";
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
 
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             const borrowerInfoBeforeTx = await incurDebt.borrowers(gOhmHolder.address);
 
             assert.equal(borrowerInfoBeforeTx.limit, 0);
@@ -211,33 +205,24 @@ describe("IncurDebt", async () => {
     describe("revokeBorrower(address _borrower)", () => {
         it("Should fail if caller is not governor address", async () => {
             await expect(
-                incurDebt.connect(user).revokeBorrower(gOhmHolder.address, false, true)
+                incurDebt.connect(user).revokeBorrower(gOhmHolder.address)
             ).to.revertedWith("UNAUTHORIZED()");
         });
 
         it("Should fail if _borrower is not borrower", async () => {
-            await expect(
-                incurDebt.connect(governor).revokeBorrower(user.address, false, true)
-            ).to.revertedWith(`IncurDebt_NotBorrower("${user.address}")`);
-        });
-
-        it("Should fail if isNonLpBorrower and isLpBorrower is true", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
-            await expect(
-                incurDebt.connect(governor).revokeBorrower(gOhmHolder.address, true, true)
-            ).to.revertedWith("IncurDebt_BothParamsCannotBeTrue()");
+            await expect(incurDebt.connect(governor).revokeBorrower(user.address)).to.revertedWith(
+                `IncurDebt_NotBorrower("${user.address}")`
+            );
         });
 
         it("Should allow to revoke borrower", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             const borrowerInfoBeforeTx = await incurDebt.borrowers(gOhmHolder.address);
 
             assert.equal(borrowerInfoBeforeTx.isNonLpBorrower, true);
-            await expect(
-                incurDebt.connect(governor).revokeBorrower(gOhmHolder.address, false, true)
-            )
+            await expect(incurDebt.connect(governor).revokeBorrower(gOhmHolder.address))
                 .to.emit(incurDebt, "BorrowerRevoked")
-                .withArgs(gOhmHolder.address, false, true);
+                .withArgs(gOhmHolder.address);
 
             const borrowerInfoAfterTx = await incurDebt.borrowers(gOhmHolder.address);
             assert.equal(borrowerInfoAfterTx.isNonLpBorrower, false);
@@ -253,7 +238,7 @@ describe("IncurDebt", async () => {
 
         it("Should fail if _borrower has no fund", async () => {
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(sOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(sOhmHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(sOhmHolder.address, amount);
 
@@ -266,7 +251,7 @@ describe("IncurDebt", async () => {
 
         it("Should deposit gOHM", async () => {
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, amount);
 
@@ -292,7 +277,7 @@ describe("IncurDebt", async () => {
 
         it("Should fail if amount to borrow is above borrowers debt limit", async () => {
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
 
             await incurDebt
                 .connect(governor)
@@ -304,7 +289,7 @@ describe("IncurDebt", async () => {
 
         it("Should fail if borrowers available debt is below amount", async () => {
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, amount);
             await expect(incurDebt.connect(gOhmHolder).borrow(amount)).to.revertedWith(
@@ -351,7 +336,7 @@ describe("IncurDebt", async () => {
             await incurDebt.connect(gOhmHolder).borrow(amount);
 
             await expect(
-                incurDebt.connect(governor).revokeBorrower(gOhmHolder.address, false, true)
+                incurDebt.connect(governor).revokeBorrower(gOhmHolder.address)
             ).to.revertedWith(`IncurDebt_BorrowerStillHasOutstandingDebt("${gOhmHolder.address}")`);
         });
 
@@ -386,14 +371,14 @@ describe("IncurDebt", async () => {
         });
 
         it("Should fail if _amount is 0", async () => {
-            await incurDebt.connect(governor).allowBorrower(user.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(user.address);
             await expect(incurDebt.connect(user).withdraw(0)).to.revertedWith(
                 `IncurDebt_InvaildNumber(${0})`
             );
         });
 
         it("Should fail if below borrower gOHM balance", async () => {
-            await incurDebt.connect(governor).allowBorrower(user.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(user.address);
             await expect(incurDebt.connect(user).withdraw(amount)).to.revertedWith(
                 `IncurDebt_AmountAboveBorrowerBalance(${amount})`
             );
@@ -471,7 +456,7 @@ describe("IncurDebt", async () => {
         });
 
         it("Should fail if _borrower has no debt", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             await expect(incurDebt.connect(gOhmHolder).repayDebtWithCollateral()).to.revertedWith(
                 `IncurDebt_BorrowerHasNoOutstandingDebt("${gOhmHolder.address}")`
             );
@@ -497,7 +482,6 @@ describe("IncurDebt", async () => {
                     borrowerInfoBeforeTx.collateralInGOHM.sub(
                         await gohm_token.balanceTo(halfOfAmount)
                     ),
-                    Number(borrowerInfoBeforeTx.debt) - Number(halfOfAmount),
                     Number(totalDebtBeforeTx) - Number(halfOfAmount)
                 );
             const totalDebtAfterTx = await incurDebt.totalOutstandingGlobalDebt();
@@ -517,7 +501,7 @@ describe("IncurDebt", async () => {
         });
 
         it("Should fail if _borrower has no debt", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             await expect(
                 incurDebt.connect(gOhmHolder).repayDebtWithCollateralAndWithdrawTheRest()
             ).to.revertedWith(`IncurDebt_BorrowerHasNoOutstandingDebt("${gOhmHolder.address}")`);
@@ -540,8 +524,6 @@ describe("IncurDebt", async () => {
                 .withArgs(
                     gOhmHolder.address,
                     halfOfAmount,
-                    Number(borrowerInfoBeforeTx.collateralInGOHM) - Number(amountInGOHM),
-                    Number(borrowerInfoBeforeTx.debt) - Number(halfOfAmount),
                     Number(totalDebtBeforeTx) - Number(halfOfAmount),
                     borrowerInfoBeforeTx.collateralInGOHM.sub(
                         await gohm_token.balanceTo(halfOfAmount)
@@ -566,7 +548,7 @@ describe("IncurDebt", async () => {
         });
 
         it("Should fail if _borrower has no debt", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             await expect(
                 incurDebt.connect(gOhmHolder).repayDebtWithOHM("500000000000")
             ).to.revertedWith(`IncurDebt_BorrowerHasNoOutstandingDebt("${gOhmHolder.address}")`);
@@ -622,7 +604,7 @@ describe("IncurDebt", async () => {
         });
 
         it("Should fail if _borrower has no debt", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             await expect(
                 incurDebt.connect(governor).forceRepay(gOhmHolder.address)
             ).to.revertedWith(`IncurDebt_BorrowerHasNoOutstandingDebt("${gOhmHolder.address}")`);
@@ -643,12 +625,10 @@ describe("IncurDebt", async () => {
             assert.equal(Number(totalDebtBeforeTx), 500000000000);
 
             await expect(incurDebt.connect(governor).forceRepay(gOhmHolder.address))
-                .to.emit(incurDebt, "ForceDebtPayWithCollateralAndWithdrawTheRest")
+                .to.emit(incurDebt, "DebtPaidWithCollateralAndWithdrawTheRest")
                 .withArgs(
                     gOhmHolder.address,
                     "500000000000",
-                    0,
-                    0,
                     0,
                     borrowerInfoBeforeTx.collateralInGOHM.sub(
                         await gohm_token.balanceTo("500000000000")
@@ -678,7 +658,7 @@ describe("IncurDebt", async () => {
         });
 
         it("Should fail if _borrower has no debt", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             await expect(incurDebt.connect(governor).seize(gOhmHolder.address)).to.revertedWith(
                 `IncurDebt_BorrowerHasNoOutstandingDebt("${gOhmHolder.address}")`
             );
@@ -703,8 +683,6 @@ describe("IncurDebt", async () => {
                 .withArgs(
                     gOhmHolder.address,
                     "500000000000",
-                    0,
-                    0,
                     0,
                     borrowerInfoBeforeTx.collateralInGOHM.sub(
                         await gohm_token.balanceTo("500000000000")
@@ -734,7 +712,7 @@ describe("IncurDebt", async () => {
         );
 
         it("Should fail if borrower isNonLpBorrower", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
 
             await expect(
@@ -743,7 +721,7 @@ describe("IncurDebt", async () => {
         });
 
         it("Should fail if strategy is not whitelist", async () => {
-            await incurDebt.connect(governor).allowBorrower(daiHolder.address, true, false);
+            await incurDebt.connect(governor).allowLPBorrower(daiHolder.address);
             await expect(
                 incurDebt.connect(daiHolder).createLP(ohmAmount, uniSwapStrategy.address, data)
             ).to.revertedWith(`IncurDebt_StrategyUnauthorized("${uniSwapStrategy.address}")`);
@@ -751,7 +729,7 @@ describe("IncurDebt", async () => {
 
         it("Should fail if amount to borrow is above borrowers debt limit", async () => {
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(daiHolder.address, true, false);
+            await incurDebt.connect(governor).allowLPBorrower(daiHolder.address);
 
             await incurDebt
                 .connect(governor)
@@ -765,7 +743,7 @@ describe("IncurDebt", async () => {
 
         it("Should fail if borrowers available debt is below amount", async () => {
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(daiHolder.address, true, false);
+            await incurDebt.connect(governor).allowLPBorrower(daiHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(daiHolder.address, ohmAmount);
 
@@ -777,7 +755,7 @@ describe("IncurDebt", async () => {
 
         it("Should allow borrower create lp", async () => {
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(daiHolder.address, true, false);
+            await incurDebt.connect(governor).allowLPBorrower(daiHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(daiHolder.address, ohmAmount);
 
@@ -811,7 +789,7 @@ describe("IncurDebt", async () => {
             );
 
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, true, false);
+            await incurDebt.connect(governor).allowLPBorrower(gOhmHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, ohmAmount);
 
@@ -853,7 +831,7 @@ describe("IncurDebt", async () => {
             );
 
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, true, false);
+            await incurDebt.connect(governor).allowLPBorrower(gOhmHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, ohmAmount);
 
@@ -904,7 +882,7 @@ describe("IncurDebt", async () => {
         );
 
         it("Should fail if borrower isNonLpBorrower", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
 
             await expect(
@@ -916,7 +894,7 @@ describe("IncurDebt", async () => {
 
         it("Should allow lp borrower removeLP LP", async () => {
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(daiHolder.address, true, false);
+            await incurDebt.connect(governor).allowLPBorrower(daiHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(daiHolder.address, ohmAmount);
 
@@ -996,7 +974,7 @@ describe("IncurDebt", async () => {
             );
 
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, true, false);
+            await incurDebt.connect(governor).allowLPBorrower(gOhmHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, ohmAmount);
 
@@ -1050,7 +1028,7 @@ describe("IncurDebt", async () => {
         );
 
         it("Should fail if borrower isNonLpBorrower", async () => {
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, false, true);
+            await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
             await incurDebt.connect(governor).whitelistStrategy(uniSwapStrategy.address);
 
             await expect(
@@ -1060,7 +1038,7 @@ describe("IncurDebt", async () => {
 
         it("Should fail if borrower amount is above borrower balance", async () => {
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(daiHolder.address, true, false);
+            await incurDebt.connect(governor).allowLPBorrower(daiHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(daiHolder.address, ohmAmount);
 
@@ -1090,7 +1068,7 @@ describe("IncurDebt", async () => {
 
         it("Should allow lp borrower withdraw LP", async () => {
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(daiHolder.address, true, false);
+            await incurDebt.connect(governor).allowLPBorrower(daiHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(daiHolder.address, ohmAmount);
 
@@ -1154,7 +1132,7 @@ describe("IncurDebt", async () => {
             );
 
             await incurDebt.connect(governor).setGlobalDebtLimit(amount);
-            await incurDebt.connect(governor).allowBorrower(gOhmHolder.address, true, false);
+            await incurDebt.connect(governor).allowLPBorrower(gOhmHolder.address);
 
             await incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, ohmAmount);
 
@@ -1205,7 +1183,7 @@ describe("IncurDebt", async () => {
 
     async function setUp(amountInToken, userAddress, signer, contract) {
         await incurDebt.connect(governor).setGlobalDebtLimit(amountInToken);
-        await incurDebt.connect(governor).allowBorrower(userAddress, false, true);
+        await incurDebt.connect(governor).allowNonLPBorrower(userAddress);
 
         await incurDebt.connect(governor).setBorrowerDebtLimit(userAddress, amountInToken);
         await contract.connect(signer).approve(incurDebt.address, amountInToken);
