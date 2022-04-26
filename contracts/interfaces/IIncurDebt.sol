@@ -99,9 +99,7 @@ interface IIncurDebt {
      * - borrower must not have outstanding debt
      * @param _borrower the address that will interact with contract
      */
-    function revokeBorrower(
-        address _borrower
-    ) external;
+    function revokeBorrower(address _borrower) external;
 
     /**
      * @notice repays debt using collateral and returns remaining tokens to borrower

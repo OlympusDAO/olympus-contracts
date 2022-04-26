@@ -210,9 +210,9 @@ describe("IncurDebt", async () => {
         });
 
         it("Should fail if _borrower is not borrower", async () => {
-            await expect(
-                incurDebt.connect(governor).revokeBorrower(user.address)
-            ).to.revertedWith(`IncurDebt_NotBorrower("${user.address}")`);
+            await expect(incurDebt.connect(governor).revokeBorrower(user.address)).to.revertedWith(
+                `IncurDebt_NotBorrower("${user.address}")`
+            );
         });
 
         it("Should allow to revoke borrower", async () => {
@@ -220,9 +220,7 @@ describe("IncurDebt", async () => {
             const borrowerInfoBeforeTx = await incurDebt.borrowers(gOhmHolder.address);
 
             assert.equal(borrowerInfoBeforeTx.isNonLpBorrower, true);
-            await expect(
-                incurDebt.connect(governor).revokeBorrower(gOhmHolder.address)
-            )
+            await expect(incurDebt.connect(governor).revokeBorrower(gOhmHolder.address))
                 .to.emit(incurDebt, "BorrowerRevoked")
                 .withArgs(gOhmHolder.address);
 

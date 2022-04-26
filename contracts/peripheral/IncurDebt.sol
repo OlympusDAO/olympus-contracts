@@ -196,9 +196,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     /// - user must be borrower
     /// - borrower must not have outstanding debt
     /// @param _borrower the address that will interact with contract
-    function revokeBorrower(
-        address _borrower
-    ) external override onlyGovernor isBorrower(_borrower) {
+    function revokeBorrower(address _borrower) external override onlyGovernor isBorrower(_borrower) {
         if (borrowers[_borrower].debt != 0) revert IncurDebt_BorrowerStillHasOutstandingDebt(_borrower);
 
         borrowers[_borrower].isNonLpBorrower = false;
@@ -236,12 +234,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         uint256 amountToBurn = IStaking(staking).unstake(address(this), seizedCollateral, false, false); // unstakes gOHM to OHM and burn
         IOHM(OHM).burn(amountToBurn);
 
-        emit DebtPaidWithCollateralAndBurnTheRest(
-            _borrower,
-            paidDebt,
-            totalOutstandingGlobalDebt,
-            seizedCollateral
-        );
+        emit DebtPaidWithCollateralAndBurnTheRest(_borrower, paidDebt, totalOutstandingGlobalDebt, seizedCollateral);
     }
 
     /************************
@@ -301,13 +294,11 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
             msg.sender
         );
 
-        // Mapping edit user owns x liquidity
         lpTokenOwnership[lpTokenAddress][msg.sender] += liquidity;
 
-        borrower.debt -= uint128(ohmUnused);
-        totalOutstandingGlobalDebt -= (ohmUnused);
-
         if (ohmUnused > 0) {
+            borrower.debt -= uint128(ohmUnused);
+            totalOutstandingGlobalDebt -= (ohmUnused);
             ITreasury(treasury).repayDebtWithOHM(ohmUnused);
         }
 
@@ -368,7 +359,6 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         if (_liquidity > lpTokenOwnership[_lpToken][msg.sender])
             revert IncurDebt_AmountAboveBorrowerBalance(_liquidity);
 
-        // borrower can decide to call repayDebtWithOHM() and clear debt
         if (borrowers[msg.sender].debt != 0) repayDebtWithCollateral();
 
         lpTokenOwnership[_lpToken][msg.sender] -= _liquidity;
