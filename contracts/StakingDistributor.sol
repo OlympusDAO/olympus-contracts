@@ -15,6 +15,7 @@ import "./types/OlympusAccessControlled.sol";
 ///         that pulls forward an amount of the next epoch rewards. Note that
 ///         this implementation bases staking reward distributions on staked supply.
 contract Distributor is OlympusAccessControlled {
+    error No_Rebase_Occurred();
     error Only_Staking();
     error Not_Unlocked();
     error Sanity_Check();
@@ -75,7 +76,7 @@ contract Distributor is OlympusAccessControlled {
     function triggerRebase() external {
         unlockRebase = true;
         IStaking(staking).unstake(msg.sender, 0, true, true); // Give the caller the bounty ohm.
-        unlockRebase = false;
+        if(unlockRebase) revert No_Rebase_Occurred();
     }
 
     /* ====== GUARDED FUNCTIONS ====== */
@@ -106,6 +107,8 @@ contract Distributor is OlympusAccessControlled {
         if (adjustment.rate != 0) {
             adjust();
         }
+
+        unlockRebase = false;
     }
 
     function retrieveBounty() external returns (uint256) {
