@@ -27,7 +27,7 @@ const url: string = config.networks.hardhat.forking!.url;
 // variables
 const snapshotId = 0;
 
-describe.only("Distributor", () => {
+describe("Distributor", () => {
     const advanceEpoch = async () => {
         await advanceTime(8 * 60 * 60);
     };
