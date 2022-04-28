@@ -27,7 +27,7 @@ const url: string = config.networks.hardhat.forking!.url;
 // variables
 const snapshotId = 0;
 
-describe("Distributor", () => {
+describe.only("Distributor", () => {
     const advanceEpoch = async () => {
         await advanceTime(8 * 60 * 60);
     };
@@ -131,13 +131,15 @@ describe("Distributor", () => {
         });
 
         describe("triggerRebase", () => {
-            it("can be called by anyone", async () => {
+            it("can only be called once per epoch", async () => {
                 await expect(distributor.connect(other).triggerRebase()).to.be.reverted;
                 await expect(distributor.connect(governor).triggerRebase()).to.be.reverted;
 
                 await advanceEpoch();
 
                 await expect(distributor.connect(governor).triggerRebase()).to.not.be.reverted;
+
+                await expect(distributor.connect(governor).triggerRebase()).to.be.reverted;
             });
 
             it("mints to single pool", async () => {
