@@ -59,13 +59,6 @@ interface ITokemaktReactor {
     function withdrawalRequestsByIndex(address account, uint256 scheduleIndex) external view returns (uint256, uint256);
 }
 
-/**
- *  Contract deploys Alchemix from treasury into the Tokemak staking pool,
- *  which in turn gives staking in ratio 1:1 of Alchemix token deposited and TOKE rewards,
- *  The contract stakes staking in the Alchemix staking pool and earns ALCX as rewards,
- *  The contract withdraws funds from the Alchemix staking pool and Tokemak staking pool,
- *  It sends back Alchemix token with accrued reward to treasury.
- */
 contract TokeMakAllocator is BaseAllocator {
     using SafeERC20 for IERC20;
 
@@ -263,7 +256,7 @@ contract TokeMakAllocator is BaseAllocator {
         s = _s;
     }
 
-    /// @notice used after calling the deactivate and allocate to send tokemak token to treasury
+    /// @notice used after calling the deactivate and deallocate to send tokemak token to treasury
     function withdrawToke() external onlyGuardian {
         if (_tokens.length != 1) revert TokeMakAllocator_OtherTokensInContractUseDeallocate();
         uint256 tokemakBalance = IERC20(toke).balanceOf(address(this));

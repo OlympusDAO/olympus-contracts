@@ -200,7 +200,7 @@ describe("Tokemak Allocator", async () => {
         assert.equal(Number(gohmBalanceAfterTx), bne(10, 20));
     });
 
-    it("Should successfully call update function", async () => {
+    it("Should fail to call update function", async () => {
         await setup(bne(10, 20));
         await expect(tokeMakAllocator.connect(multisig).update(1)).to.be.revertedWith(
             "TokeMakAllocator_CallUpdateClaimInfoFunctionFirst()"
