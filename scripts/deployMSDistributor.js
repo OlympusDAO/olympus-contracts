@@ -13,6 +13,7 @@ async function main() {
         ohm,
         staking,
         authority,
+        1587
     );
 
     console.log("Mint&Sync Distributor deployed at: ", distributor.address);
