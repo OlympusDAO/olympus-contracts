@@ -178,9 +178,15 @@ describe("IncurDebt", async () => {
 
         it("Should fail if _limit above global debt limit", async () => {
             await incurDebt.connect(governor).allowNonLPBorrower(gOhmHolder.address);
-            await expect(
-                incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, amount)
-            ).to.revertedWith(`IncurDebt_AboveGlobalDebtLimit(${amount})`);
+            await incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, amount);
+            await incurDebt.connect(governor).setGlobalDebtLimit("1000000000000");
+            await gohm_token
+                .connect(gOhmHolder)
+                .approve(incurDebt.address, "100000000000000000000");
+            await incurDebt.connect(gOhmHolder).deposit("100000000000000000000");
+            await expect(incurDebt.connect(gOhmHolder).borrow(amount)).to.revertedWith(
+                `IncurDebt_AboveGlobalDebtLimit(1000000000000)`
+            );
         });
 
         it("Should set borrower debt limit", async () => {
@@ -349,17 +355,6 @@ describe("IncurDebt", async () => {
             await expect(
                 incurDebt.connect(governor).setBorrowerDebtLimit(gOhmHolder.address, "900000000000")
             ).to.revertedWith(`IncurDebt_AboveBorrowersDebtLimit(${900000000000})`);
-        });
-
-        it("Should fail if total outstanding debt is > limit", async () => {
-            await setUp(amountInGOHM, gOhmHolder.address, gOhmHolder, gohm_token);
-            await treasury.connect(governor).setDebtLimit(incurDebt.address, amount);
-
-            await incurDebt.connect(gOhmHolder).borrow(amount);
-
-            await expect(
-                incurDebt.connect(governor).setGlobalDebtLimit("900000000000")
-            ).to.revertedWith(`IncurDebt_LimitBelowOutstandingDebt(${900000000000})`);
         });
     });
 

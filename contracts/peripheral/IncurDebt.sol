@@ -18,7 +18,6 @@ error IncurDebt_AlreadyBorrower(address _borrower);
 error IncurDebt_AboveGlobalDebtLimit(uint256 _limit);
 error IncurDebt_AboveBorrowersDebtLimit(uint256 _limit);
 error IncurDebt_StrategyUnauthorized(address _strategy);
-error IncurDebt_LimitBelowOutstandingDebt(uint256 _limit);
 error IncurDebt_AmountAboveBorrowerBalance(uint256 _amount);
 error IncurDebt_OHMAmountMoreThanAvailableLoan(uint256 _amount);
 error IncurDebt_BorrowerHasNoOutstandingDebt(address _borrower);
@@ -138,7 +137,6 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     /// - must be greater than or equal to existing debt
     /// @param _limit in OHM
     function setGlobalDebtLimit(uint256 _limit) external override onlyGovernor {
-        if (_limit < totalOutstandingGlobalDebt) revert IncurDebt_LimitBelowOutstandingDebt(_limit);
         globalDebtLimit = _limit;
         emit GlobalLimitChanged(_limit);
     }
@@ -188,7 +186,6 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         isBorrower(_borrower)
     {
         if (_limit < borrowers[_borrower].debt) revert IncurDebt_AboveBorrowersDebtLimit(_limit);
-        if (_limit > globalDebtLimit) revert IncurDebt_AboveGlobalDebtLimit(_limit);
 
         borrowers[_borrower].limit = uint128(_limit);
         emit BorrowerDebtLimitSet(_borrower, _limit);
@@ -461,6 +458,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
 
         borrower.debt += uint128(_ohmAmount);
         totalOutstandingGlobalDebt += _ohmAmount;
+        if (totalOutstandingGlobalDebt > globalDebtLimit) revert IncurDebt_AboveGlobalDebtLimit(globalDebtLimit);
 
         uint256 totalDebtInGOHM = IgOHM(gOHM).balanceTo(borrower.debt);
 
