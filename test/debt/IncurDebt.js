@@ -5,6 +5,7 @@ const { solidity } = require("ethereum-waffle");
 const { increase } = require("../utils/advancement");
 const { fork_network } = require("../utils/network_fork");
 const impersonateAccount = require("../utils/impersonate_account");
+const { ethers } = require("hardhat");
 
 chai.use(solidity);
 
@@ -29,6 +30,7 @@ describe("IncurDebt", async () => {
         IncurDebt,
         incurDebt,
         daiContract,
+        wethContract,
         halfOfAmount,
         amountInGOHM,
         UniSwapStrategy,
@@ -37,7 +39,10 @@ describe("IncurDebt", async () => {
         uniOhmDaiLpAddress,
         curveStrategyFactory,
         curveStrategy,
-        curvePoolFactory;
+        curvePoolFactory,
+        balancerStrategy,
+        balancerStrategyFactory,
+        balancerVault;
 
     let zeroAddress = "0x0000000000000000000000000000000000000000";
 
@@ -53,6 +58,7 @@ describe("IncurDebt", async () => {
         factory = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
         uniOhmDaiLpAddress = "0x1b851374b8968393c11e8fb30c2842cfc4e986a5";
         curveFactoryAddress = "0xB9fC157394Af804a3578134A6585C0dc9cc990d4";
+        balancerVaultAddress = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
         IncurDebt = await ethers.getContractFactory("IncurDebt");
         incurDebt = await IncurDebt.deploy(
@@ -72,6 +78,13 @@ describe("IncurDebt", async () => {
             olympus.ohm
         );
 
+        balancerStrategyFactory = await ethers.getContractFactory("BalancerStrategy");
+        balancerStrategy = await balancerStrategyFactory.deploy(
+            balancerVaultAddress,
+            incurDebt.address,
+            olympus.ohm
+        );
+
         curveStrategyFactory = await ethers.getContractFactory("CurveStrategy");
         curveStrategy = await curveStrategyFactory.deploy(
             incurDebt.address,
@@ -86,9 +99,21 @@ describe("IncurDebt", async () => {
             "0x6B175474E89094C44Da98b954EedeAC495271d0F"
         );
 
+        wethContract = await ethers.getContractAt(
+            "contracts/interfaces/IERC20.sol:IERC20",
+            "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        );
+
         uniswapLpContract = await ethers.getContractAt(
             "contracts/interfaces/IERC20.sol:IERC20",
             uniOhmDaiLpAddress
+        );
+
+        balancerVault = await ethers.getContractAt("IVault", balancerVaultAddress);
+
+        balancerPoolFactory = await ethers.getContractAt(
+            "IWeightedPoolFactory",
+            "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9"
         );
 
         treasury = await ethers.getContractAt("OlympusTreasury", olympus.treasury);
@@ -97,6 +122,7 @@ describe("IncurDebt", async () => {
         gOhmHolder = await impersonate(gOhmHolderAddress);
         sOhmHolder = await impersonate(sOhmHolderAddress);
         daiHolder = await impersonate(daiHolderAddress);
+        wethHolder = await impersonate("0xcdc1932ec1179acd0b38313aa722971774e2ddf4");
 
         ohm_token = await getContract("IOHM", olympus.ohm);
         gohm_token = await getContract("IgOHM", olympus.gohm);
@@ -854,6 +880,127 @@ describe("IncurDebt", async () => {
                     .createLP(ohmAmount, curveStrategy.address, curveParaData)
             ).to.revertedWith("CurveStrategy_AmountsDoNotMatch()");
         });
+
+        it("Should allow borrower create lp for balancer", async () => {
+            await incurDebt.connect(governor).setGlobalDebtLimit("10000000000");
+            await incurDebt.connect(governor).allowLPBorrower(gOhmHolder.address);
+            await incurDebt
+                .connect(governor)
+                .setBorrowerDebtLimit(gOhmHolder.address, "10000000000");
+            await gohm_token.connect(gOhmHolder).approve(incurDebt.address, amountInGOHM);
+            await incurDebt.connect(gOhmHolder).deposit(amountInGOHM);
+            await treasury.connect(governor).setDebtLimit(incurDebt.address, "10000000000");
+            await incurDebt.connect(governor).whitelistStrategy(balancerStrategy.address);
+
+            await daiContract
+                .connect(daiHolder)
+                .transfer(gOhmHolder.address, ethers.utils.parseEther("2000"));
+            await wethContract
+                .connect(wethHolder)
+                .transfer(gOhmHolder.address, ethers.utils.parseEther("0.5"));
+            await sohm_token.connect(sOhmHolder).approve(staking.address, "10000000000");
+            await staking
+                .connect(sOhmHolder)
+                .unstake(gOhmHolder.address, "10000000000", false, true);
+
+            const poolId = "0xc45d42f801105e861e86658648e3678ad7aa70f900010000000000000000011e";
+            const maxAmountsIn = [
+                ethers.utils.parseUnits("10", 9),
+                ethers.utils.parseEther("1000"),
+                ethers.utils.parseEther("0.5"),
+            ];
+            const tokens = [ohm_token.address, daiContract.address, wethContract.address];
+
+            daiContract
+                .connect(gOhmHolder)
+                .approve(balancerStrategy.address, ethers.utils.parseEther("1000"));
+            wethContract
+                .connect(gOhmHolder)
+                .approve(balancerStrategy.address, ethers.utils.parseEther("0.5"));
+
+            const balancerParaData = ethers.utils.defaultAbiCoder.encode(
+                ["bytes32", "address[]", "uint256[]", "uint256", "bool"],
+                [poolId, tokens, maxAmountsIn, 0, false]
+            );
+
+            await incurDebt
+                .connect(gOhmHolder)
+                .createLP("10000000000", balancerStrategy.address, balancerParaData);
+
+            let liquidityAmount = await incurDebt.lpTokenOwnership(
+                "0xc45D42f801105e861e86658648e3678aD7aa70f9",
+                gOhmHolder.address
+            );
+
+            await expect(liquidityAmount).to.equal("72655750445677420007");
+            await expect(await incurDebt.totalOutstandingGlobalDebt()).to.equal("10000000000");
+        });
+
+        it("balancer lp wrong amount or address", async () => {
+            await incurDebt.connect(governor).setGlobalDebtLimit("10000000000");
+            await incurDebt.connect(governor).allowLPBorrower(gOhmHolder.address);
+            await incurDebt
+                .connect(governor)
+                .setBorrowerDebtLimit(gOhmHolder.address, "10000000000");
+            await gohm_token.connect(gOhmHolder).approve(incurDebt.address, amountInGOHM);
+            await incurDebt.connect(gOhmHolder).deposit(amountInGOHM);
+            await treasury.connect(governor).setDebtLimit(incurDebt.address, "10000000000");
+            await incurDebt.connect(governor).whitelistStrategy(balancerStrategy.address);
+
+            await daiContract
+                .connect(daiHolder)
+                .transfer(gOhmHolder.address, ethers.utils.parseEther("2000"));
+            await wethContract
+                .connect(wethHolder)
+                .transfer(gOhmHolder.address, ethers.utils.parseEther("0.5"));
+            await sohm_token.connect(sOhmHolder).approve(staking.address, "10000000000");
+            await staking
+                .connect(sOhmHolder)
+                .unstake(gOhmHolder.address, "10000000000", false, true);
+
+            const poolId = "0xc45d42f801105e861e86658648e3678ad7aa70f900010000000000000000011e";
+            let maxAmountsIn = [
+                ethers.utils.parseUnits("10", 9),
+                ethers.utils.parseEther("1000"),
+                ethers.utils.parseEther("0.5"),
+            ];
+            let tokens = [sohm_token.address, daiContract.address, wethContract.address];
+
+            daiContract
+                .connect(gOhmHolder)
+                .approve(balancerStrategy.address, ethers.utils.parseEther("1000"));
+            wethContract
+                .connect(gOhmHolder)
+                .approve(balancerStrategy.address, ethers.utils.parseEther("0.5"));
+
+            let balancerParaData = ethers.utils.defaultAbiCoder.encode(
+                ["bytes32", "address[]", "uint256[]", "uint256", "bool"],
+                [poolId, tokens, maxAmountsIn, 0, false]
+            );
+
+            expect(
+                incurDebt
+                    .connect(gOhmHolder)
+                    .createLP("10000000000", balancerStrategy.address, balancerParaData)
+            ).to.revertedWith("BalancerStrategy_OhmAddressNotFound()");
+
+            maxAmountsIn = [
+                ethers.utils.parseUnits("100", 9),
+                ethers.utils.parseEther("1000"),
+                ethers.utils.parseEther("0.5"),
+            ];
+            tokens = [ohm_token.address, daiContract.address, wethContract.address];
+            balancerParaData = ethers.utils.defaultAbiCoder.encode(
+                ["bytes32", "address[]", "uint256[]", "uint256", "bool"],
+                [poolId, tokens, maxAmountsIn, 0, false]
+            );
+
+            expect(
+                incurDebt
+                    .connect(gOhmHolder)
+                    .createLP("10000000000", balancerStrategy.address, balancerParaData)
+            ).to.revertedWith("BalancerStrategy_AmountDoesNotMatch()");
+        });
     });
 
     describe("function removeLP(_liquidity, _strategy, _lpToken, _strategyParams)", () => {
@@ -1004,6 +1151,84 @@ describe("IncurDebt", async () => {
             let sOhmAmountAfterRemove = await sohm_token.balanceOf(gOhmHolder.address);
 
             await expect(sOhmAmountAfterRemove.sub(sOhmAmountBeforeRemove)).to.equal(ohmAmount);
+            await expect(await incurDebt.totalOutstandingGlobalDebt()).to.equal(0);
+        });
+
+        it("Should allow borrower remove lp for balancer", async () => {
+            await incurDebt.connect(governor).setGlobalDebtLimit("10000000000");
+            await incurDebt.connect(governor).allowLPBorrower(gOhmHolder.address);
+            await incurDebt
+                .connect(governor)
+                .setBorrowerDebtLimit(gOhmHolder.address, "10000000000");
+            await gohm_token.connect(gOhmHolder).approve(incurDebt.address, amountInGOHM);
+            await incurDebt.connect(gOhmHolder).deposit(amountInGOHM);
+            await treasury.connect(governor).setDebtLimit(incurDebt.address, "10000000000");
+            await incurDebt.connect(governor).whitelistStrategy(balancerStrategy.address);
+
+            await daiContract
+                .connect(daiHolder)
+                .transfer(gOhmHolder.address, ethers.utils.parseEther("2000"));
+            await wethContract
+                .connect(wethHolder)
+                .transfer(gOhmHolder.address, ethers.utils.parseEther("0.5"));
+            await sohm_token.connect(sOhmHolder).approve(staking.address, "10000000000");
+            await staking
+                .connect(sOhmHolder)
+                .unstake(gOhmHolder.address, "10000000000", false, true);
+
+            const poolId = "0xc45d42f801105e861e86658648e3678ad7aa70f900010000000000000000011e";
+            const maxAmountsIn = [
+                ethers.utils.parseUnits("10", 9),
+                ethers.utils.parseEther("1000"),
+                ethers.utils.parseEther("0.5"),
+            ];
+            const tokens = [ohm_token.address, daiContract.address, wethContract.address];
+
+            daiContract
+                .connect(gOhmHolder)
+                .approve(balancerStrategy.address, ethers.utils.parseEther("1000"));
+            wethContract
+                .connect(gOhmHolder)
+                .approve(balancerStrategy.address, ethers.utils.parseEther("0.5"));
+
+            const balancerParaData = ethers.utils.defaultAbiCoder.encode(
+                ["bytes32", "address[]", "uint256[]", "uint256", "bool"],
+                [poolId, tokens, maxAmountsIn, 0, false]
+            );
+
+            await incurDebt
+                .connect(gOhmHolder)
+                .createLP("10000000000", balancerStrategy.address, balancerParaData);
+
+            let liquidityAmount = await incurDebt.lpTokenOwnership(
+                "0xc45D42f801105e861e86658648e3678aD7aa70f9",
+                gOhmHolder.address
+            );
+
+            const minAmountsIn = [
+                ethers.utils.parseUnits("1", 9),
+                ethers.utils.parseEther("400"),
+                ethers.utils.parseEther("0.1"),
+            ];
+            const balancerRemoveLPData = ethers.utils.defaultAbiCoder.encode(
+                ["bytes32", "address[]", "uint256[]", "bool"],
+                [poolId, tokens, minAmountsIn, false]
+            );
+
+            let daiAmountBeforeRemove = await sohm_token.balanceOf(gOhmHolder.address);
+
+            await incurDebt
+                .connect(gOhmHolder)
+                .removeLP(
+                    liquidityAmount,
+                    balancerStrategy.address,
+                    "0xc45D42f801105e861e86658648e3678aD7aa70f9",
+                    balancerRemoveLPData
+                );
+
+            let daiAmountAfterRemove = await daiContract.balanceOf(gOhmHolder.address);
+
+            await expect(daiAmountAfterRemove.sub(daiAmountBeforeRemove)).to.be.above(0);
             await expect(await incurDebt.totalOutstandingGlobalDebt()).to.equal(0);
         });
     });

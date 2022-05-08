@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import { IncurDebt__factory } from "../types/factories/IncurDebt__factory";
 import { CurveStrategy__factory } from "../types/factories/CurveStrategy__factory";
 import { UniSwapStrategy__factory } from "../types/factories/UniSwapStrategy__factory";
+import { BalancerStrategy__factory } from "../types";
 
 async function main() {
     // Mainnet
@@ -16,6 +17,7 @@ async function main() {
     const uniswapFactory = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
     const sushiRouter = "0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f";
     const sushiFactory = "0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac";
+    const balancerVault = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
     // Testnet
     // const ohm = "0x10b27a31AA4d7544F89898ccAf3Faf776F5671C4"
@@ -65,6 +67,16 @@ async function main() {
         ohm
     );
     console.log("SUSHI STRATEGY DEPLOYED AT", sushiStrategy.address);
+
+    const balancerStrategyFactory = (await ethers.getContractFactory(
+        "BalancerStrategy"
+    )) as BalancerStrategy__factory;
+    const BalancerStrategy = await balancerStrategyFactory.deploy(
+        balancerVault,
+        incurDebt.address,
+        ohm
+    );
+    console.log("BALACER STRATEGY DEPLOYED AT", BalancerStrategy.address);
 }
 
 main().catch((error) => {
