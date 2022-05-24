@@ -78,19 +78,27 @@ interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
-contract TestnetStakingWarmupV1 {
-    address public immutable staking;
-    address public immutable sOHM;
+interface IStaking {
+    function stake(uint256 _amount, address _recipient) external returns (bool);
 
-    constructor(address _staking, address _sOHM) {
+    function claim(address _recipient) external;
+}
+
+contract TestnetStakingHelperV1 {
+    address public immutable staking;
+    address public immutable OHM;
+
+    constructor(address _staking, address _OHM) {
         require(_staking != address(0));
         staking = _staking;
-        require(_sOHM != address(0));
-        sOHM = _sOHM;
+        require(_OHM != address(0));
+        OHM = _OHM;
     }
 
-    function retrieve(address _staker, uint256 _amount) external {
-        require(msg.sender == staking);
-        IERC20(sOHM).transfer(_staker, _amount);
+    function stake(uint256 _amount) external {
+        IERC20(OHM).transferFrom(msg.sender, address(this), _amount);
+        IERC20(OHM).approve(staking, _amount);
+        IStaking(staking).stake(_amount, msg.sender);
+        IStaking(staking).claim(msg.sender);
     }
 }

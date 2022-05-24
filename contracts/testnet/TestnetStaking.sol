@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.7.5;
 
-import "./libraries/SafeMath.sol";
-import "./libraries/SafeERC20.sol";
+import "../libraries/SafeMath.sol";
+import "../libraries/SafeERC20.sol";
 
-import "./interfaces/IERC20.sol";
-import "./interfaces/IsOHM.sol";
-import "./interfaces/IgOHM.sol";
-import "./interfaces/IDistributor.sol";
+import "../interfaces/IERC20.sol";
+import "../interfaces/IsOHM.sol";
+import "../interfaces/IgOHM.sol";
+import "../interfaces/IDistributor.sol";
 
-import "./types/OlympusAccessControlled.sol";
+import "../types/OlympusAccessControlled.sol";
 
-contract OlympusStaking is OlympusAccessControlled {
+import "hardhat/console.sol";
+
+contract TestnetStaking is OlympusAccessControlled {
     /* ========== DEPENDENCIES ========== */
 
     using SafeMath for uint256;
@@ -91,7 +93,7 @@ contract OlympusStaking is OlympusAccessControlled {
         bool _rebasing,
         bool _claim
     ) external returns (uint256) {
-        OHM.safeTransferFrom(msg.sender, address(this), _amount);
+        OHM.transferFrom(msg.sender, address(this), _amount);
         _amount = _amount.add(rebase()); // add bounty if rebase occurred
         if (_claim && warmupPeriod == 0) {
             return _send(_to, _amount, _rebasing);
@@ -220,6 +222,8 @@ contract OlympusStaking is OlympusAccessControlled {
      */
     function rebase() public returns (uint256) {
         uint256 bounty;
+        console.log(epoch.end);
+        console.log(block.timestamp);
         if (epoch.end <= block.timestamp) {
             sOHM.rebase(epoch.distribute, epoch.number);
 

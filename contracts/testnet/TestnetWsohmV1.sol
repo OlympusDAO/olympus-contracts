@@ -830,7 +830,7 @@ interface IStaking {
     function index() external view returns (uint256);
 }
 
-contract wOHM is ERC20 {
+contract TestnetWsohmV1 is ERC20 {
     using SafeERC20 for ERC20;
     using Address for address;
     using SafeMath for uint256;

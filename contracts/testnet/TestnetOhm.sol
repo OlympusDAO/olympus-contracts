@@ -23,8 +23,8 @@ contract TestnetOhm is ERC20Permit, IOHM, OlympusAccessControlled {
         _mint(account_, amount_);
     }
 
-    function faucetMint() external {
-        _mint(msg.sender, 10000000000);
+    function faucetMint(address recipient_) external {
+        _mint(recipient_, 10000000000);
     }
 
     function burn(uint256 amount) external override {

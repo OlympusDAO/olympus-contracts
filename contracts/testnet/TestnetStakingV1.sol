@@ -606,7 +606,7 @@ interface IDistributor {
     function distribute() external returns (bool);
 }
 
-contract OlympusStaking is Ownable {
+contract TestnetStakingV1 is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 

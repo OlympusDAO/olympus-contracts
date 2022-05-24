@@ -14,7 +14,7 @@ import "../types/OlympusAccessControlled.sol";
 ///         OHM, as well as patches a small bug in the staking contract
 ///         that pulls forward an amount of the next epoch rewards. Note that
 ///         this implementation bases staking reward distributions on staked supply.
-contract Distributor is OlympusAccessControlled {
+contract TestnetDistributor is OlympusAccessControlled {
     error No_Rebase_Occurred();
     error Only_Staking();
     error Not_Unlocked();
@@ -76,7 +76,7 @@ contract Distributor is OlympusAccessControlled {
     function triggerRebase() external {
         unlockRebase = true;
         IStaking(staking).unstake(msg.sender, 0, true, true); // Give the caller the bounty ohm.
-        if(unlockRebase) revert No_Rebase_Occurred();
+        if (unlockRebase) revert No_Rebase_Occurred();
     }
 
     /* ====== GUARDED FUNCTIONS ====== */
