@@ -31,7 +31,7 @@ const privateKey = process.env.PRIVATE_KEY ?? "NO_PRIVATE_KEY";
 const alchemyApiKey = process.env.ALCHEMY_API_KEY ?? "NO_ALCHEMY_API_KEY";
 
 function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
-    const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
+    const url: string = "https://" + network + ".infura.io/v3/" + infuraApiKey;
     return {
         accounts: [`${privateKey}`],
         chainId: chainIds[network],
