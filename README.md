@@ -1,4 +1,5 @@
-# Ω Olympus Smart Contracts 
+# Ω Olympus Smart Contracts
+
 ![image](https://img.shields.io/github/forks/OlympusDAO/olympus-contracts?style=social)
 
 This is the main Olympus smart contract development repository.
@@ -33,7 +34,7 @@ yarn typechain
 # run a local hardhat node
 yarn run start
 
-# test deployment or deploy 
+# test deployment or deploy
 # yarn run deploy:<network>, example:
 yarn run deploy:hardhat
 ```
@@ -54,10 +55,12 @@ make run
 
 ## 📜 Contract Addresses
 
- - For [Ethereum Mainnet](./docs/deployments/ethereum.md).
- - For [Rinkeby Testnet](./docs/deployments/rinkeby.md).
+-   For [Ethereum Mainnet](./docs/deployments/ethereum.md).
+-   For [Goerli Testnet](./docs/deployments/goerli.md).
+-   For [Rinkeby Testnet (deprecated)](./docs/deployments/rinkeby.md).
 
 ### Notes for `localhost`
+
 -   The `deployments/localhost` directory is included in the git repository,
     so that the contract addresses remain constant. Otherwise, the frontend's
     `constants.ts` file would need to be updated.
@@ -68,10 +71,13 @@ make run
 ## 📖 Guides
 
 ### Contracts
-- [Allocator Contribution Guidelines](https://hackmd.io/@3_ZONBhqRBukBJN302eDdQ/rk4qUyOlq)
-- [Allocator Interaction Instructions](https://hackmd.io/@OxbBIYzRTlqgmpSwc1bwWA/SJflVXcWq)
-- [Allocator version 1 guide (1.0.0)](./docs/guides/allocator_v1_guide.md).
-- [System Architecture (image)](./docs/guides/system_architecture.md)
+
+-   [Allocator Contribution Guidelines](https://hackmd.io/@3_ZONBhqRBukBJN302eDdQ/rk4qUyOlq)
+-   [Allocator Interaction Instructions](https://hackmd.io/@OxbBIYzRTlqgmpSwc1bwWA/SJflVXcWq)
+-   [Allocator version 1 guide (1.0.0)](./docs/guides/allocator_v1_guide.md).
+-   [System Architecture (image)](./docs/guides/system_architecture.md)
+
 ### Testing
-- [Hardhat testing guide](./docs/guides/hardhat_testing.md)
-- [Dapptools testing guide](./docs/guides/dapptools.md)
+
+-   [Hardhat testing guide](./docs/guides/hardhat_testing.md)
+-   [Dapptools testing guide](./docs/guides/dapptools.md)
