@@ -11,7 +11,7 @@
 |                             |                                              |
 | **Reserve Tokens**          |                                              |
 | DAI                         | `0x26Ea52226a108ba48b9343017A5D0dB1456D4474` |
-| V1 Tokens                   |                                              |
+| **V1 Tokens**               |                                              |
 | OHM                         | `0x00F40a8a6Ec0892D651757F46a64B64fA41601d2` |
 | sOHM                        | `0x6BfbD5A8B09dd27fDDE73B014c664A5330C23Bfa` |
 | wsOHM                       | `0x284BBa240a149D2D0aB97d84D62038a58A7Fe7C1` |
