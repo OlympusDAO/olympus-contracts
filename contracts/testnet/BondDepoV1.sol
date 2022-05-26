@@ -698,7 +698,7 @@ interface IStakingHelper {
     function stake(uint256 _amount, address _recipient) external;
 }
 
-contract TestnetBondDepoV1 is Ownable {
+contract BondDepoV1 is Ownable {
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint256;

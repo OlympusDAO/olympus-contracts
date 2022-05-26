@@ -392,7 +392,7 @@ interface ITreasury {
     function mintRewards(address _recipient, uint256 _amount) external;
 }
 
-contract TestnetDistributorV1 is Policy {
+contract DistributorV1 is Policy {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 

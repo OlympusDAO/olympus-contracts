@@ -1,9 +1,18 @@
 export const CONTRACTS: Record<string, string> = {
+    testnetOHMv1: "TestnetOhmV1",
+    testnetOHM: "TestnetOhm",
     ohm: "OlympusERC20Token",
     sOhm: "sOlympus",
+    sOhmV1: "SohmV1",
     gOhm: "gOHM",
+    wsOHM: "wsOHM",
+    stakingV1: "StakingV1",
+    stakingV1Warmup: "StakingV1Warmup",
+    stakingV1Helper: "StakingV1Helper",
     staking: "OlympusStaking",
     distributor: "Distributor",
+    distributorV1: "DistributorV1",
+    treasuryV1: "OlympusTreasuryV1",
     treasury: "OlympusTreasury",
     bondDepo: "OlympusBondDepository",
     teller: "BondTeller",
@@ -13,6 +22,10 @@ export const CONTRACTS: Record<string, string> = {
     FRAX: "Frax",
     DAI: "DAI",
     lusdAllocator: "LUSDAllocator",
+    daiBond: "BondDepoV1",
+    inverseBonds: "TestnetOPBondDepo",
+    yieldDirector: "YieldDirector",
+    faucet: "DevFaucet",
 };
 
 // Constructor Arguments

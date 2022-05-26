@@ -234,7 +234,7 @@ interface IBondCalculator {
     function valuation(address pair_, uint256 amount_) external view returns (uint256 _value);
 }
 
-contract TestnetTreasuryV1 is Ownable {
+contract OlympusTreasuryV1 is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 

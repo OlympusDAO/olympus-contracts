@@ -1058,7 +1058,7 @@ contract Ownable is IOwnable {
     }
 }
 
-contract TestnetSohmV1 is ERC20Permit, Ownable {
+contract SohmV1 is ERC20Permit, Ownable {
     using SafeMath for uint256;
 
     modifier onlyStakingContract() {
