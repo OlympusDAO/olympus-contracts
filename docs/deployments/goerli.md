@@ -3,7 +3,6 @@
 | Contract                    | Address                                      |
 | --------------------------- | -------------------------------------------- |
 | **Authorization Contracts** |                                              |
-|                             |                                              |
 | Authority                   | `0x571CB39Ce761A60992494Ed5a90db545Cb5739aB` |
 |                             |                                              |
 | **Bonds Contracts**         |                                              |
