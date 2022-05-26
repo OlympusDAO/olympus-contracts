@@ -56,7 +56,7 @@ make run
 ## 📜 Contract Addresses
 
 -   For [Ethereum Mainnet](./docs/deployments/ethereum.md).
--   For [Goerli Testnet](./docs/deployments/goerli.md)/
+-   For [Goerli Testnet](./docs/deployments/goerli.md).
 -   For [Rinkeby Testnet (phase out)](./docs/deployments/rinkeby.md).
 
 ### Notes for `localhost`
