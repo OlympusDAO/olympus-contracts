@@ -20,13 +20,8 @@ import {
 const { fork_network, fork_reset } = require("../utils/network_fork");
 const impersonateAccount = require("../utils/impersonate_account");
 const { advanceBlock, duration, increase } = require("../utils/advancement");
-const lusdAbi = require("../../abis/lusd.json");
-const lusdStabilityPoolAbi = require("../../abis/lusd_stability_pool.json");
-const oldTreasuryAbi = require("../../abis/old_treasury_abi.json");
 
 chai.use(smock.matchers);
-
-const ZERO_ADDRESS = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
 
 describe("AaveAllocator", () => {
     describe("unit tests", () => {
@@ -38,13 +33,8 @@ describe("AaveAllocator", () => {
         let bob: SignerWithAddress;
         let treasuryFake: FakeContract<ITreasury>;
         let stabilityPoolFake: FakeContract<IStabilityPool>;
-        let lqtyStakingFake: FakeContract<ILQTYStaking>;
-        let lusdTokenFake: FakeContract<IERC20Metadata>;
-        let lqtyTokenFake: FakeContract<IERC20Metadata>;
-        let wethTokenFake: FakeContract<IERC20>;
         let daiTokenFake: FakeContract<IERC20>;
-        let swapRouterFake: FakeContract<ISwapRouter>;
-        let lusdAllocator: LUSDAllocator;
+        let adaiTokenFake: FakeContract<IERC20>;
         let aaveAllocator: AaveAllocator;
         let authority: OlympusAuthority;
 
@@ -52,16 +42,8 @@ describe("AaveAllocator", () => {
             [owner, governor, guardian, other, alice, bob] = await ethers.getSigners();
             treasuryFake = await smock.fake<ITreasury>("ITreasury");
             stabilityPoolFake = await smock.fake<IStabilityPool>("IStabilityPool");
-            lqtyStakingFake = await smock.fake<ILQTYStaking>("ILQTYStaking");
-            lusdTokenFake = await smock.fake<IERC20Metadata>(
-                "contracts/interfaces/IERC20Metadata.sol:IERC20Metadata"
-            );
-            lqtyTokenFake = await smock.fake<IERC20Metadata>(
-                "contracts/interfaces/IERC20Metadata.sol:IERC20Metadata"
-            );
-            wethTokenFake = await smock.fake<IERC20>("contracts/interfaces/IERC20.sol:IERC20");
             daiTokenFake = await smock.fake<IERC20>("contracts/interfaces/IERC20.sol:IERC20");
-            swapRouterFake = await smock.fake<ISwapRouter>("ISwapRouter");
+            adaiTokenFake = await smock.fake<IERC20>("contracts/interfaces/IERC20.sol:IERC20");
             authority = await new OlympusAuthority__factory(owner).deploy(
                 governor.address,
                 guardian.address,
@@ -75,7 +57,40 @@ describe("AaveAllocator", () => {
                     authority.address,
                 );
                 expect(await aaveAllocator.referralCode()).to.equal(0);
+                await aaveAllocator.addToken(daiTokenFake.address, adaiTokenFake.address, 100)
             });
         });
+
+        describe("post-constructor", () => {
+            beforeEach(async () => {
+                aaveAllocator = await new AaveAllocator__factory(owner).deploy(
+                    authority.address,
+                );
+            });
+
+            describe("setter tests", () => {
+                it("invalid setReferralCode", async () => {
+                    try {
+                        await expect(aaveAllocator.connect(owner).setReferralCode(-1))
+                        .to.be.revertedWith("value out-of-bounds (argument=\"code\", value=-1, code=INVALID_ARGUMENT, version=abi/5.5.0)");
+                    } catch (error) {
+                        console.log(error)
+                    }
+                });
+                it("valid setReferralCode", async () => {
+                    await aaveAllocator.connect(owner).setReferralCode(65535);
+                    await aaveAllocator.connect(owner).setReferralCode(0);
+                });
+            });
+        });
+        // WIP
+        // describe("deposit", () => {
+        //     it("not guardian", async () => {
+        //         await expect(aaveAllocator.connect(owner).deposit(daiTokenFake.address, 1)).to.be.revertedWith(
+        //             "UNAUTHORIZED"
+        //         );
+        //     });
+        // });
+
     });
 });
