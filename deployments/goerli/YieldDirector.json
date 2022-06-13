@@ -1,0 +1,1366 @@
+{
+  "address": "0x6982CcD55F95A7469746C123f73D54377f382454",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sOhm_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "gOhm_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "staking_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "authority_",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "UNAUTHORIZED",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "YieldDirector_InvalidAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "YieldDirector_InvalidDeposit",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "YieldDirector_InvalidUpdate",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "YieldDirector_InvalidWithdrawal",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "YieldDirector_NoDeposits",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "YieldDirector_NotYourYield",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "YieldDirector_RedeemsDisabled",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "YieldDirector_WithdrawalsDisabled",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "YieldSplitter_NotYourDeposit",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "donor_",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "name": "AllWithdrawn",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "contract IOlympusAuthority",
+          "name": "authority",
+          "type": "address"
+        }
+      ],
+      "name": "AuthorityUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "donor_",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "recipient_",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "name": "Deposited",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "donor_",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "recipient_",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "name": "Donated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "active_",
+          "type": "bool"
+        }
+      ],
+      "name": "EmergencyShutdown",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "recipient_",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "name": "Redeemed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "donor_",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "recipient_",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "name": "Withdrawn",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositId_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "name": "addToDeposit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositId_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "name": "addToSohmDeposit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "authority",
+      "outputs": [
+        {
+          "internalType": "contract IOlympusAuthority",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "recipient_",
+          "type": "address"
+        }
+      ],
+      "name": "deposit",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositId",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "depositDisabled",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "depositInfo",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "depositor",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "principalAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "agnosticAmount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "recipient_",
+          "type": "address"
+        }
+      ],
+      "name": "depositSohm",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositId",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "depositorIds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "donor_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "recipient_",
+          "type": "address"
+        }
+      ],
+      "name": "depositsTo",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "active_",
+          "type": "bool"
+        }
+      ],
+      "name": "disableDeposits",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "active_",
+          "type": "bool"
+        }
+      ],
+      "name": "disableRedeems",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "active_",
+          "type": "bool"
+        }
+      ],
+      "name": "disableWithdrawals",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "donor_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "recipient_",
+          "type": "address"
+        }
+      ],
+      "name": "donatedTo",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "active_",
+          "type": "bool"
+        }
+      ],
+      "name": "emergencyShutdown",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "gOHM",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "donor_",
+          "type": "address"
+        }
+      ],
+      "name": "getAllDeposits",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "donor_",
+          "type": "address"
+        }
+      ],
+      "name": "getDepositorIds",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "recipient_",
+          "type": "address"
+        }
+      ],
+      "name": "getRecipientIds",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "address_",
+          "type": "address"
+        }
+      ],
+      "name": "givePermissionToRedeem",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "hasPermissionToRedeem",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "idCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "indexWrapper",
+      "outputs": [
+        {
+          "internalType": "contract IOHMIndexWrapper",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "recipientIds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "recipientLookup",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "redeemAllYield",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "redeemAllYieldAsSohm",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "recipient_",
+          "type": "address"
+        }
+      ],
+      "name": "redeemAllYieldOnBehalfOf",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "redeemDisabled",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositId_",
+          "type": "uint256"
+        }
+      ],
+      "name": "redeemYield",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositId_",
+          "type": "uint256"
+        }
+      ],
+      "name": "redeemYieldAsSohm",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "id_",
+          "type": "uint256"
+        }
+      ],
+      "name": "redeemYieldOnBehalfOf",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositId_",
+          "type": "uint256"
+        }
+      ],
+      "name": "redeemableBalance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "address_",
+          "type": "address"
+        }
+      ],
+      "name": "revokePermissionToRedeem",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "sOHM",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IOlympusAuthority",
+          "name": "_newAuthority",
+          "type": "address"
+        }
+      ],
+      "name": "setAuthority",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "staking",
+      "outputs": [
+        {
+          "internalType": "contract IStaking",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "donor_",
+          "type": "address"
+        }
+      ],
+      "name": "totalDeposits",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "donor_",
+          "type": "address"
+        }
+      ],
+      "name": "totalDonated",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "recipient_",
+          "type": "address"
+        }
+      ],
+      "name": "totalRedeemableBalance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "withdrawAll",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "withdrawDisabled",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositId_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawPrincipal",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositId_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount_",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawPrincipalAsSohm",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x32ad437accb93304c6315719b068e194af243dab34170efd36f51374dc28809a",
+  "receipt": {
+    "to": null,
+    "from": "0x6e36b2f9f2BcC273f090ff049952Fa4B5Cc67567",
+    "contractAddress": "0x6982CcD55F95A7469746C123f73D54377f382454",
+    "transactionIndex": 39,
+    "gasUsed": "2573423",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000010000000000004000000040000000200000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000001000000000000000000000000000000000000000000000000000008000000000000000000000000000040020000000000000000000000040000000000000000000000000000000008000000000000000000000000180000000000000000000000000000000000004000400010000000000000000008000000000000000000000000000000000000000000",
+    "blockHash": "0xf410240d7e5c36050641873f6b0d89fc628a5164dab944a2bc2610ae87411ddf",
+    "transactionHash": "0x32ad437accb93304c6315719b068e194af243dab34170efd36f51374dc28809a",
+    "logs": [
+      {
+        "transactionIndex": 39,
+        "blockNumber": 7035428,
+        "transactionHash": "0x32ad437accb93304c6315719b068e194af243dab34170efd36f51374dc28809a",
+        "address": "0x6982CcD55F95A7469746C123f73D54377f382454",
+        "topics": [
+          "0x2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad"
+        ],
+        "data": "0x0000000000000000000000004a8c9502a34962a2c6d73c5d181daaef3dcdc88d",
+        "logIndex": 29,
+        "blockHash": "0xf410240d7e5c36050641873f6b0d89fc628a5164dab944a2bc2610ae87411ddf"
+      },
+      {
+        "transactionIndex": 39,
+        "blockNumber": 7035428,
+        "transactionHash": "0x32ad437accb93304c6315719b068e194af243dab34170efd36f51374dc28809a",
+        "address": "0x4EFe119F4949319f2Acb12efD615a7B63896482B",
+        "topics": [
+          "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925",
+          "0x0000000000000000000000006982ccd55f95a7469746c123f73d54377f382454",
+          "0x0000000000000000000000007263372b9ff6e619d8774aeb046ce313677e2ec7"
+        ],
+        "data": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "logIndex": 30,
+        "blockHash": "0xf410240d7e5c36050641873f6b0d89fc628a5164dab944a2bc2610ae87411ddf"
+      }
+    ],
+    "blockNumber": 7035428,
+    "cumulativeGasUsed": "7520247",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0x4EFe119F4949319f2Acb12efD615a7B63896482B",
+    "0xC1863141dc1861122d5410fB5973951c82871d98",
+    "0x7263372b9ff6E619d8774aEB046cE313677E2Ec7",
+    "0x4A8c9502A34962a2C6d73c5D181dAaeF3dcDc88D"
+  ],
+  "solcInputHash": "425eb1f5993ee96e475c14c00fa27971",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sOhm_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"gOhm_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"staking_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"authority_\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"UNAUTHORIZED\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"YieldDirector_InvalidAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"YieldDirector_InvalidDeposit\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"YieldDirector_InvalidUpdate\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"YieldDirector_InvalidWithdrawal\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"YieldDirector_NoDeposits\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"YieldDirector_NotYourYield\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"YieldDirector_RedeemsDisabled\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"YieldDirector_WithdrawalsDisabled\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"YieldSplitter_NotYourDeposit\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"donor_\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"name\":\"AllWithdrawn\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"contract IOlympusAuthority\",\"name\":\"authority\",\"type\":\"address\"}],\"name\":\"AuthorityUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"donor_\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient_\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"name\":\"Deposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"donor_\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient_\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"name\":\"Donated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"active_\",\"type\":\"bool\"}],\"name\":\"EmergencyShutdown\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient_\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"name\":\"Redeemed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"donor_\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient_\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"name\":\"Withdrawn\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"depositId_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"name\":\"addToDeposit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"depositId_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"name\":\"addToSohmDeposit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"authority\",\"outputs\":[{\"internalType\":\"contract IOlympusAuthority\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient_\",\"type\":\"address\"}],\"name\":\"deposit\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"depositId\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"depositDisabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"depositInfo\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"depositor\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"principalAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"agnosticAmount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient_\",\"type\":\"address\"}],\"name\":\"depositSohm\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"depositId\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"depositorIds\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"donor_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"recipient_\",\"type\":\"address\"}],\"name\":\"depositsTo\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"active_\",\"type\":\"bool\"}],\"name\":\"disableDeposits\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"active_\",\"type\":\"bool\"}],\"name\":\"disableRedeems\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"active_\",\"type\":\"bool\"}],\"name\":\"disableWithdrawals\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"donor_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"recipient_\",\"type\":\"address\"}],\"name\":\"donatedTo\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"active_\",\"type\":\"bool\"}],\"name\":\"emergencyShutdown\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gOHM\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"donor_\",\"type\":\"address\"}],\"name\":\"getAllDeposits\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"donor_\",\"type\":\"address\"}],\"name\":\"getDepositorIds\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"recipient_\",\"type\":\"address\"}],\"name\":\"getRecipientIds\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"address_\",\"type\":\"address\"}],\"name\":\"givePermissionToRedeem\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"hasPermissionToRedeem\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"idCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"indexWrapper\",\"outputs\":[{\"internalType\":\"contract IOHMIndexWrapper\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"recipientIds\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"recipientLookup\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"redeemAllYield\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"redeemAllYieldAsSohm\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"recipient_\",\"type\":\"address\"}],\"name\":\"redeemAllYieldOnBehalfOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"redeemDisabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"depositId_\",\"type\":\"uint256\"}],\"name\":\"redeemYield\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"depositId_\",\"type\":\"uint256\"}],\"name\":\"redeemYieldAsSohm\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id_\",\"type\":\"uint256\"}],\"name\":\"redeemYieldOnBehalfOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"depositId_\",\"type\":\"uint256\"}],\"name\":\"redeemableBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"address_\",\"type\":\"address\"}],\"name\":\"revokePermissionToRedeem\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sOHM\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contract IOlympusAuthority\",\"name\":\"_newAuthority\",\"type\":\"address\"}],\"name\":\"setAuthority\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"staking\",\"outputs\":[{\"internalType\":\"contract IStaking\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"donor_\",\"type\":\"address\"}],\"name\":\"totalDeposits\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"donor_\",\"type\":\"address\"}],\"name\":\"totalDonated\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"recipient_\",\"type\":\"address\"}],\"name\":\"totalRedeemableBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawAll\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawDisabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"depositId_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"name\":\"withdrawPrincipal\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"depositId_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount_\",\"type\":\"uint256\"}],\"name\":\"withdrawPrincipalAsSohm\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Any functions dealing with initial deposits will take an address (because no ID has been assigned). After a user has deposited, all functions dealing with deposits (like withdraw or redeem functions) will take the ID of the deposit. All functions that return aggregated data grouped by user will take an address (iterates across all relevant IDs).\",\"kind\":\"dev\",\"methods\":{\"addToDeposit(uint256,uint256)\":{\"params\":{\"amount_\":\"Amount of new gOHM debt issued from donor to recipient\",\"depositId_\":\"Deposit ID to direct additional gOHM to\"}},\"addToSohmDeposit(uint256,uint256)\":{\"params\":{\"amount_\":\"Amount of new sOHM debt issued from donor to recipient\",\"depositId_\":\"Deposit ID to direct additional gOHM to\"}},\"deposit(uint256,address)\":{\"params\":{\"amount_\":\"Amount of gOHM debt issued from donor to recipient\",\"recipient_\":\"Address to direct staking yield and vault shares to\"}},\"depositSohm(uint256,address)\":{\"params\":{\"amount_\":\"Amount of sOHM debt issued from donor to recipient\",\"recipient_\":\"Address to direct staking yield and vault shares to\"}},\"depositsTo(address,address)\":{\"params\":{\"donor_\":\"Address of user donating yield\",\"recipient_\":\"Address of user receiving donated yield\"}},\"donatedTo(address,address)\":{\"params\":{\"donor_\":\"Address of user donating yield\",\"recipient_\":\"Address of user recieiving donated yield\"}},\"getAllDeposits(address)\":{\"params\":{\"donor_\":\"Address of user donating yield\"}},\"getDepositorIds(address)\":{\"returns\":{\"_0\":\"uint256[] array of depositor Id's\"}},\"givePermissionToRedeem(address)\":{\"params\":{\"address_\":\"Id of the deposit.\"}},\"redeemAllYieldOnBehalfOf(address)\":{\"params\":{\"recipient_\":\"recipient address.\"}},\"redeemYield(uint256)\":{\"params\":{\"depositId_\":\"Deposit ID for this donation\"}},\"redeemYieldAsSohm(uint256)\":{\"params\":{\"depositId_\":\"Deposit id for this donation\"}},\"redeemYieldOnBehalfOf(uint256)\":{\"params\":{\"id_\":\"Id of the deposit.\"}},\"redeemableBalance(uint256)\":{\"params\":{\"depositId_\":\"Deposit ID for this donation\"}},\"revokePermissionToRedeem(address)\":{\"params\":{\"address_\":\"Id of the deposit.\"}},\"totalDeposits(address)\":{\"params\":{\"donor_\":\"Address of user donating yield\"}},\"totalDonated(address)\":{\"params\":{\"donor_\":\"Address of user donating yield\"}},\"totalRedeemableBalance(address)\":{\"params\":{\"recipient_\":\"Address of user receiving donated yield\"}},\"withdrawPrincipal(uint256,uint256)\":{\"params\":{\"amount_\":\"Amount of gOHM deposit to remove and return to donor\",\"depositId_\":\"Deposit ID to remove gOHM deposit from\"}},\"withdrawPrincipalAsSohm(uint256,uint256)\":{\"params\":{\"amount_\":\"Amount of gOHM debt to remove and return to donor as sOHM\",\"depositId_\":\"Deposit ID to remove gOHM debt from\"}}},\"title\":\"YieldDirector (codename Tyche) \",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"addToDeposit(uint256,uint256)\":{\"notice\":\"Deposit additional gOHM, and update deposit record\"},\"addToSohmDeposit(uint256,uint256)\":{\"notice\":\"Deposit additional sOHM, wrap to gOHM, and update deposit record\"},\"deposit(uint256,address)\":{\"notice\":\"Deposit gOHM, records sender address and assign rebases to recipient\"},\"depositSohm(uint256,address)\":{\"notice\":\"Deposit sOHM, wrap to gOHM, and records sender address and assign rebases to recipeint\"},\"depositsTo(address,address)\":{\"notice\":\"Get deposited gOHM amounts for specific recipient (updated to current index based on sOHM equivalent amount deposit)\"},\"donatedTo(address,address)\":{\"notice\":\"Return total amount of gOHM donated to recipient since last full redemption\"},\"getAllDeposits(address)\":{\"notice\":\"Return arrays of donor's recipients and deposit amounts (gOHM value based on sOHM equivalent deposit), matched by index\"},\"getDepositorIds(address)\":{\"notice\":\"Returns the array of deposit id's belonging to the depositor\"},\"getRecipientIds(address)\":{\"notice\":\"Getter function for a recipient's list of IDs. This is needed for the frontend as public state variables that map to arrays only return one element at a time rather than the full array\"},\"givePermissionToRedeem(address)\":{\"notice\":\"Gives a contract permission to redeem yield on behalf of users\"},\"redeemAllYield()\":{\"notice\":\"Redeem recipient's full donated amount of sOHM at current index as gOHM\"},\"redeemAllYieldAsSohm()\":{\"notice\":\"Redeem recipient's full donated amount of sOHM at current index as gOHM\"},\"redeemAllYieldOnBehalfOf(address)\":{\"notice\":\"Redeems all yield tied to a recipient and sends it to the recipient\"},\"redeemYield(uint256)\":{\"notice\":\"Redeem recipient's donated amount of sOHM at current index from one donor as gOHM\"},\"redeemYieldAsSohm(uint256)\":{\"notice\":\"Redeem recipient's donated amount of sOHM at current index\"},\"redeemYieldOnBehalfOf(uint256)\":{\"notice\":\"Redeems yield from a deposit and sends it to the recipient\"},\"redeemableBalance(uint256)\":{\"notice\":\"Get redeemable gOHM balance of a specific deposit\"},\"revokePermissionToRedeem(address)\":{\"notice\":\"Revokes a contract permission to redeem yield on behalf of users\"},\"totalDeposits(address)\":{\"notice\":\"Return total amount of donor's gOHM deposited (updated to current index based on sOHM equivalent amount deposited)\"},\"totalDonated(address)\":{\"notice\":\"Return total amount of gOHM donated from donor since last full redemption\"},\"totalRedeemableBalance(address)\":{\"notice\":\"Get redeemable gOHM balance of a recipient address\"},\"withdrawAll()\":{\"notice\":\"Withdraw all gOHM from all donor positions\"},\"withdrawPrincipal(uint256,uint256)\":{\"notice\":\"Withdraw donor's gOHM from vault\"},\"withdrawPrincipalAsSohm(uint256,uint256)\":{\"notice\":\"Withdraw donor's gOHM from vault, and return it as sOHM\"}},\"notice\":\"This contract allows donors to deposit their gOHM and donate their rebases to any address. Donors will be able to withdraw the sOHM equivalent of their principal gOHM at any time. Donation recipients can also redeem accrued rebases at any time.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/peripheral/YieldDirector.sol\":\"YieldDirector\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":800},\"remappings\":[]},\"sources\":{\"contracts/interfaces/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IERC20 {\\n    function totalSupply() external view returns (uint256);\\n\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    function transfer(address recipient, uint256 amount) external returns (bool);\\n\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    function transferFrom(\\n        address sender,\\n        address recipient,\\n        uint256 amount\\n    ) external returns (bool);\\n\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n}\\n\",\"keccak256\":\"0xc379ec1f3a741cc00948003e24687516b8fdb71914cd3b90b10589d74fe1d49f\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IOlympusAuthority.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IOlympusAuthority {\\n    /* ========== EVENTS ========== */\\n\\n    event GovernorPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n    event GuardianPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n    event PolicyPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n    event VaultPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n\\n    event GovernorPulled(address indexed from, address indexed to);\\n    event GuardianPulled(address indexed from, address indexed to);\\n    event PolicyPulled(address indexed from, address indexed to);\\n    event VaultPulled(address indexed from, address indexed to);\\n\\n    /* ========== VIEW ========== */\\n\\n    function governor() external view returns (address);\\n\\n    function guardian() external view returns (address);\\n\\n    function policy() external view returns (address);\\n\\n    function vault() external view returns (address);\\n}\\n\",\"keccak256\":\"0x93c02d36be0a6876183f67e72acf64e0206d0e1e48fb3b9c9ed5614200d9c934\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IStaking.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IStaking {\\n    function stake(\\n        address _to,\\n        uint256 _amount,\\n        bool _rebasing,\\n        bool _claim\\n    ) external returns (uint256);\\n\\n    function claim(address _recipient, bool _rebasing) external returns (uint256);\\n\\n    function forfeit() external returns (uint256);\\n\\n    function toggleLock() external;\\n\\n    function unstake(\\n        address _to,\\n        uint256 _amount,\\n        bool _trigger,\\n        bool _rebasing\\n    ) external returns (uint256);\\n\\n    function wrap(address _to, uint256 _amount) external returns (uint256 gBalance_);\\n\\n    function unwrap(address _to, uint256 _amount) external returns (uint256 sBalance_);\\n\\n    function rebase() external;\\n\\n    function index() external view returns (uint256);\\n\\n    function contractBalance() external view returns (uint256);\\n\\n    function totalStaked() external view returns (uint256);\\n\\n    function supplyInWarmup() external view returns (uint256);\\n}\\n\",\"keccak256\":\"0xc5481248b924479a867d252882a1be9573e4aefe3c7816045e1c0c25daacca70\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IYieldDirector.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IYieldDirector {\\n    // Write Functions\\n    function deposit(uint256 amount_, address recipient_) external returns (uint256);\\n\\n    function depositSohm(uint256 amount_, address recipient_) external returns (uint256);\\n\\n    function addToDeposit(uint256 depositId_, uint256 amount_) external;\\n\\n    function addToSohmDeposit(uint256 depositId_, uint256 amount_) external;\\n\\n    function withdrawPrincipal(uint256 depositId, uint256 amount_) external;\\n\\n    function withdrawPrincipalAsSohm(uint256 depositId_, uint256 amount_) external;\\n\\n    function withdrawAll() external;\\n\\n    function redeemYield(uint256 depositId_) external;\\n\\n    function redeemYieldAsSohm(uint256 depositId_) external;\\n\\n    function redeemAllYield() external;\\n\\n    function redeemAllYieldAsSohm() external;\\n\\n    // View Functions\\n    function getRecipientIds(address recipient_) external view returns (uint256[] memory);\\n\\n    function depositsTo(address donor_, address recipient_) external view returns (uint256);\\n\\n    function getAllDeposits(address donor_) external view returns (address[] memory, uint256[] memory);\\n\\n    function totalDeposits(address donor_) external view returns (uint256);\\n\\n    function donatedTo(address donor_, address recipient_) external view returns (uint256);\\n\\n    function totalDonated(address donor_) external view returns (uint256);\\n}\\n\",\"keccak256\":\"0x14e169009d837ee460929880a6385e2203dd35745bfa4423cdb89566c57f89cc\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IgOHM.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\nimport \\\"./IERC20.sol\\\";\\n\\ninterface IgOHM is IERC20 {\\n    function mint(address _to, uint256 _amount) external;\\n\\n    function burn(address _from, uint256 _amount) external;\\n\\n    function index() external view returns (uint256);\\n\\n    function balanceFrom(uint256 _amount) external view returns (uint256);\\n\\n    function balanceTo(uint256 _amount) external view returns (uint256);\\n\\n    function migrate(address _staking, address _sOHM) external;\\n}\\n\",\"keccak256\":\"0x0e61aa62110e1fa27c32948b2fea2aa7a4805e1c2bdffc489bb39bf7bfb121b1\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IsOHM.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\nimport \\\"./IERC20.sol\\\";\\n\\ninterface IsOHM is IERC20 {\\n    function rebase(uint256 ohmProfit_, uint256 epoch_) external returns (uint256);\\n\\n    function circulatingSupply() external view returns (uint256);\\n\\n    function gonsForBalance(uint256 amount) external view returns (uint256);\\n\\n    function balanceForGons(uint256 gons) external view returns (uint256);\\n\\n    function index() external view returns (uint256);\\n\\n    function toG(uint256 amount) external view returns (uint256);\\n\\n    function fromG(uint256 amount) external view returns (uint256);\\n\\n    function changeDebt(\\n        uint256 amount,\\n        address debtor,\\n        bool add\\n    ) external;\\n\\n    function debtBalances(address _address) external view returns (uint256);\\n}\\n\",\"keccak256\":\"0xa8e9f615088cf1c01284eadef0c1f673f64ca212ac94c00a90cc566981f9065c\",\"license\":\"AGPL-3.0\"},\"contracts/libraries/SafeERC20.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0-only\\npragma solidity >=0.7.5;\\n\\nimport {IERC20} from \\\"../interfaces/IERC20.sol\\\";\\n\\n/// @notice Safe IERC20 and ETH transfer library that safely handles missing return values.\\n/// @author Modified from Uniswap (https://github.com/Uniswap/uniswap-v3-periphery/blob/main/contracts/libraries/TransferHelper.sol)\\n/// Taken from Solmate\\nlibrary SafeERC20 {\\n    function safeTransferFrom(\\n        IERC20 token,\\n        address from,\\n        address to,\\n        uint256 amount\\n    ) internal {\\n        (bool success, bytes memory data) = address(token).call(\\n            abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, amount)\\n        );\\n\\n        require(success && (data.length == 0 || abi.decode(data, (bool))), \\\"TRANSFER_FROM_FAILED\\\");\\n    }\\n\\n    function safeTransfer(\\n        IERC20 token,\\n        address to,\\n        uint256 amount\\n    ) internal {\\n        (bool success, bytes memory data) = address(token).call(\\n            abi.encodeWithSelector(IERC20.transfer.selector, to, amount)\\n        );\\n\\n        require(success && (data.length == 0 || abi.decode(data, (bool))), \\\"TRANSFER_FAILED\\\");\\n    }\\n\\n    function safeApprove(\\n        IERC20 token,\\n        address to,\\n        uint256 amount\\n    ) internal {\\n        (bool success, bytes memory data) = address(token).call(\\n            abi.encodeWithSelector(IERC20.approve.selector, to, amount)\\n        );\\n\\n        require(success && (data.length == 0 || abi.decode(data, (bool))), \\\"APPROVE_FAILED\\\");\\n    }\\n\\n    function safeTransferETH(address to, uint256 amount) internal {\\n        (bool success, ) = to.call{value: amount}(new bytes(0));\\n\\n        require(success, \\\"ETH_TRANSFER_FAILED\\\");\\n    }\\n}\\n\",\"keccak256\":\"0x778abe92595c692abcf3bec8b72f4491746626d1a057c76b97c8d1a7d759f7b0\",\"license\":\"AGPL-3.0-only\"},\"contracts/peripheral/YieldDirector.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0-or-later\\npragma solidity ^0.8.10;\\n\\nimport {IERC20} from \\\"../interfaces/IERC20.sol\\\";\\nimport {IsOHM} from \\\"../interfaces/IsOHM.sol\\\";\\nimport {IStaking} from \\\"../interfaces/IStaking.sol\\\";\\nimport {IYieldDirector} from \\\"../interfaces/IYieldDirector.sol\\\";\\nimport {SafeERC20} from \\\"../libraries/SafeERC20.sol\\\";\\nimport {YieldSplitter} from \\\"../types/YieldSplitter.sol\\\";\\n\\n/**\\n    @title  YieldDirector (codename Tyche) \\n    @notice This contract allows donors to deposit their gOHM and donate their rebases\\n            to any address. Donors will be able to withdraw the sOHM equivalent of their principal\\n            gOHM at any time. Donation recipients can also redeem accrued rebases at any time.\\n    @dev    Any functions dealing with initial deposits will take an address (because no ID has been\\n            assigned). After a user has deposited, all functions dealing with deposits (like\\n            withdraw or redeem functions) will take the ID of the deposit. All functions that return\\n            aggregated data grouped by user will take an address (iterates across all relevant IDs).\\n */\\ncontract YieldDirector is IYieldDirector, YieldSplitter {\\n    using SafeERC20 for IERC20;\\n\\n    error YieldDirector_InvalidAddress();\\n    error YieldDirector_InvalidDeposit();\\n    error YieldDirector_InvalidUpdate();\\n    error YieldDirector_InvalidWithdrawal();\\n    error YieldDirector_NotYourYield();\\n    error YieldDirector_NoDeposits();\\n    error YieldDirector_WithdrawalsDisabled();\\n    error YieldDirector_RedeemsDisabled();\\n\\n    address public immutable sOHM;\\n    address public immutable gOHM;\\n    IStaking public immutable staking;\\n\\n    mapping(address => uint256[]) public recipientIds; // address -> array of deposit id's donating yield to the user\\n    mapping(uint256 => address) public recipientLookup; // depositId -> recipient\\n\\n    bool public depositDisabled;\\n    bool public withdrawDisabled;\\n    bool public redeemDisabled;\\n\\n    event Deposited(address indexed donor_, address indexed recipient_, uint256 amount_);\\n    event Withdrawn(address indexed donor_, address indexed recipient_, uint256 amount_);\\n    event AllWithdrawn(address indexed donor_, uint256 indexed amount_);\\n    event Donated(address indexed donor_, address indexed recipient_, uint256 amount_);\\n    event Redeemed(address indexed recipient_, uint256 amount_);\\n    event EmergencyShutdown(bool active_);\\n\\n    constructor(\\n        address sOhm_,\\n        address gOhm_,\\n        address staking_,\\n        address authority_\\n    ) YieldSplitter(sOhm_, authority_) {\\n        if (sOhm_ == address(0) || gOhm_ == address(0) || staking_ == address(0) || authority_ == address(0))\\n            revert YieldDirector_InvalidAddress();\\n\\n        sOHM = sOhm_;\\n        gOHM = gOhm_;\\n        staking = IStaking(staking_);\\n\\n        IERC20(sOHM).safeApprove(address(staking), type(uint256).max);\\n    }\\n\\n    /************************\\n     * Modifiers\\n     ************************/\\n    function isInvalidDeposit(uint256 amount_, address recipient_) internal view returns (bool) {\\n        return depositDisabled || amount_ == 0 || recipient_ == address(0);\\n    }\\n\\n    function isInvalidUpdate(uint256 depositId_, uint256 amount_) internal view returns (bool) {\\n        return depositDisabled || amount_ == 0 || depositInfo[depositId_].depositor == address(0);\\n    }\\n\\n    function isInvalidWithdrawal(uint256 amount_) internal view returns (bool) {\\n        return withdrawDisabled || amount_ == 0;\\n    }\\n\\n    /************************\\n     * Donor Functions\\n     ************************/\\n\\n    /**\\n        @notice Deposit gOHM, records sender address and assign rebases to recipient\\n        @param amount_ Amount of gOHM debt issued from donor to recipient\\n        @param recipient_ Address to direct staking yield and vault shares to\\n    */\\n    function deposit(uint256 amount_, address recipient_) external override returns (uint256 depositId) {\\n        depositId = _createDeposit(amount_, recipient_);\\n\\n        IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);\\n    }\\n\\n    /**\\n        @notice Deposit sOHM, wrap to gOHM, and records sender address and assign rebases to recipeint\\n        @param amount_ Amount of sOHM debt issued from donor to recipient\\n        @param recipient_ Address to direct staking yield and vault shares to\\n    */\\n    function depositSohm(uint256 amount_, address recipient_) external override returns (uint256 depositId) {\\n        uint256 gohmAmount = _toAgnostic(amount_);\\n        depositId = _createDeposit(gohmAmount, recipient_);\\n\\n        IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);\\n        staking.wrap(address(this), amount_);\\n    }\\n\\n    /**\\n        @notice Deposit additional gOHM, and update deposit record\\n        @param depositId_ Deposit ID to direct additional gOHM to\\n        @param amount_ Amount of new gOHM debt issued from donor to recipient\\n    */\\n    function addToDeposit(uint256 depositId_, uint256 amount_) external override {\\n        _increaseDeposit(depositId_, amount_);\\n\\n        IERC20(gOHM).safeTransferFrom(msg.sender, address(this), amount_);\\n    }\\n\\n    /**\\n        @notice Deposit additional sOHM, wrap to gOHM, and update deposit record\\n        @param depositId_ Deposit ID to direct additional gOHM to\\n        @param amount_ Amount of new sOHM debt issued from donor to recipient\\n    */\\n    function addToSohmDeposit(uint256 depositId_, uint256 amount_) external override {\\n        uint256 gohmAmount = _toAgnostic(amount_);\\n        _increaseDeposit(depositId_, gohmAmount);\\n\\n        IERC20(sOHM).safeTransferFrom(msg.sender, address(this), amount_);\\n        staking.wrap(address(this), amount_);\\n    }\\n\\n    /**\\n        @notice Withdraw donor's gOHM from vault\\n        @param depositId_ Deposit ID to remove gOHM deposit from\\n        @param amount_ Amount of gOHM deposit to remove and return to donor\\n    */\\n    function withdrawPrincipal(uint256 depositId_, uint256 amount_) external override {\\n        uint256 amountWithdrawn = _withdraw(depositId_, amount_);\\n\\n        IERC20(gOHM).safeTransfer(msg.sender, amountWithdrawn);\\n    }\\n\\n    /**\\n        @notice Withdraw donor's gOHM from vault, and return it as sOHM\\n        @param depositId_ Deposit ID to remove gOHM debt from\\n        @param amount_ Amount of gOHM debt to remove and return to donor as sOHM\\n    */\\n    function withdrawPrincipalAsSohm(uint256 depositId_, uint256 amount_) external override {\\n        uint256 amountWithdrawn = _withdraw(depositId_, amount_);\\n\\n        staking.unwrap(msg.sender, amountWithdrawn);\\n    }\\n\\n    /**\\n        @notice Withdraw all gOHM from all donor positions\\n    */\\n    function withdrawAll() external override {\\n        if (withdrawDisabled) revert YieldDirector_WithdrawalsDisabled();\\n\\n        uint256[] memory depositIds = depositorIds[msg.sender];\\n\\n        uint256 depositsLength = depositIds.length;\\n        if (depositsLength == 0) revert YieldDirector_NoDeposits();\\n\\n        uint256 principalTotal = 0;\\n\\n        for (uint256 index = 0; index < depositsLength; ++index) {\\n            DepositInfo storage currDeposit = depositInfo[depositIds[index]];\\n\\n            principalTotal += currDeposit.principalAmount;\\n\\n            _withdrawAllPrincipal(depositIds[index], msg.sender);\\n        }\\n\\n        uint256 agnosticAmount = _toAgnostic(principalTotal);\\n\\n        emit AllWithdrawn(msg.sender, agnosticAmount);\\n\\n        IERC20(gOHM).safeTransfer(msg.sender, agnosticAmount);\\n    }\\n\\n    /************************\\n     * View Functions\\n     ************************/\\n\\n    /**\\n        @notice Get deposited gOHM amounts for specific recipient (updated to current index\\n                based on sOHM equivalent amount deposit)\\n        @param donor_ Address of user donating yield\\n        @param recipient_ Address of user receiving donated yield\\n    */\\n    function depositsTo(address donor_, address recipient_) external view override returns (uint256) {\\n        uint256[] memory depositIds = depositorIds[donor_];\\n\\n        uint256 totalPrincipalDeposits;\\n        for (uint256 index = 0; index < depositIds.length; ++index) {\\n            uint256 id = depositIds[index];\\n\\n            if (recipientLookup[id] == recipient_) {\\n                totalPrincipalDeposits += depositInfo[id].principalAmount;\\n            }\\n        }\\n\\n        return _toAgnostic(totalPrincipalDeposits);\\n    }\\n\\n    /**\\n        @notice Return total amount of donor's gOHM deposited (updated to current index based\\n                on sOHM equivalent amount deposited)\\n        @param donor_ Address of user donating yield\\n    */\\n    function totalDeposits(address donor_) external view override returns (uint256) {\\n        uint256[] memory depositIds = depositorIds[donor_];\\n        uint256 principalTotal = 0;\\n\\n        for (uint256 index = 0; index < depositIds.length; ++index) {\\n            principalTotal += depositInfo[depositIds[index]].principalAmount;\\n        }\\n\\n        return _toAgnostic(principalTotal);\\n    }\\n\\n    /**\\n        @notice Return arrays of donor's recipients and deposit amounts (gOHM value based on\\n                sOHM equivalent deposit), matched by index\\n        @param donor_ Address of user donating yield\\n    */\\n    function getAllDeposits(address donor_) external view override returns (address[] memory, uint256[] memory) {\\n        uint256[] memory depositIds = depositorIds[donor_];\\n\\n        uint256 len = depositIds.length == 0 ? 1 : depositIds.length;\\n\\n        address[] memory addresses = new address[](len);\\n        uint256[] memory agnosticDeposits = new uint256[](len);\\n\\n        if (depositIds.length == 0) {\\n            addresses[0] = address(0);\\n            agnosticDeposits[0] = 0;\\n        } else {\\n            for (uint256 index = 0; index < len; ++index) {\\n                addresses[index] = recipientLookup[depositIds[index]];\\n                agnosticDeposits[index] = _toAgnostic(depositInfo[depositIds[index]].principalAmount);\\n            }\\n        }\\n\\n        return (addresses, agnosticDeposits);\\n    }\\n\\n    /**\\n        @notice Return total amount of gOHM donated to recipient since last full redemption\\n        @param donor_ Address of user donating yield\\n        @param recipient_ Address of user recieiving donated yield\\n    */\\n    function donatedTo(address donor_, address recipient_) external view override returns (uint256) {\\n        uint256[] memory depositIds = depositorIds[donor_];\\n\\n        uint256 totalRedeemable;\\n        for (uint256 index = 0; index < depositIds.length; ++index) {\\n            if (recipientLookup[depositIds[index]] == recipient_) {\\n                totalRedeemable += redeemableBalance(depositIds[index]);\\n            }\\n        }\\n\\n        return totalRedeemable;\\n    }\\n\\n    /**\\n        @notice Return total amount of gOHM donated from donor since last full redemption\\n        @param donor_ Address of user donating yield\\n    */\\n    function totalDonated(address donor_) external view override returns (uint256) {\\n        uint256[] memory depositIds = depositorIds[donor_];\\n\\n        uint256 principalTotal = 0;\\n        uint256 agnosticTotal = 0;\\n\\n        for (uint256 index = 0; index < depositIds.length; ++index) {\\n            DepositInfo storage currDeposit = depositInfo[depositIds[index]];\\n\\n            principalTotal += currDeposit.principalAmount;\\n            agnosticTotal += currDeposit.agnosticAmount;\\n        }\\n\\n        return _getOutstandingYield(principalTotal, agnosticTotal);\\n    }\\n\\n    /************************\\n     * Recipient Functions\\n     ************************/\\n\\n    /**\\n        @notice Get redeemable gOHM balance of a specific deposit\\n        @param depositId_ Deposit ID for this donation\\n    */\\n    function redeemableBalance(uint256 depositId_) public view override returns (uint256) {\\n        DepositInfo storage currDeposit = depositInfo[depositId_];\\n\\n        return _getOutstandingYield(currDeposit.principalAmount, currDeposit.agnosticAmount);\\n    }\\n\\n    /**\\n        @notice Get redeemable gOHM balance of a recipient address\\n        @param recipient_ Address of user receiving donated yield\\n     */\\n    function totalRedeemableBalance(address recipient_) external view override returns (uint256) {\\n        uint256[] memory receiptIds = recipientIds[recipient_];\\n\\n        uint256 agnosticRedeemable = 0;\\n\\n        for (uint256 index = 0; index < receiptIds.length; ++index) {\\n            agnosticRedeemable += redeemableBalance(receiptIds[index]);\\n        }\\n\\n        return agnosticRedeemable;\\n    }\\n\\n    /**\\n        @notice Getter function for a recipient's list of IDs. This is needed for the frontend\\n                as public state variables that map to arrays only return one element at a time\\n                rather than the full array\\n    */\\n    function getRecipientIds(address recipient_) external view override returns (uint256[] memory) {\\n        return recipientIds[recipient_];\\n    }\\n\\n    /**\\n        @notice Redeem recipient's donated amount of sOHM at current index from one donor as gOHM\\n        @param depositId_ Deposit ID for this donation\\n    */\\n    function redeemYield(uint256 depositId_) external override {\\n        uint256 amountRedeemed = _redeem(depositId_, msg.sender);\\n\\n        IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);\\n    }\\n\\n    /**\\n        @notice Redeem recipient's donated amount of sOHM at current index\\n        @param depositId_ Deposit id for this donation\\n    */\\n    function redeemYieldAsSohm(uint256 depositId_) external override {\\n        uint256 amountRedeemed = _redeem(depositId_, msg.sender);\\n\\n        staking.unwrap(msg.sender, amountRedeemed);\\n    }\\n\\n    /**\\n        @notice Redeem recipient's full donated amount of sOHM at current index as gOHM\\n    */\\n    function redeemAllYield() external override {\\n        uint256 amountRedeemed = _redeemAll(msg.sender);\\n\\n        IERC20(gOHM).safeTransfer(msg.sender, amountRedeemed);\\n    }\\n\\n    /**\\n        @notice Redeem recipient's full donated amount of sOHM at current index as gOHM\\n    */\\n    function redeemAllYieldAsSohm() external override {\\n        uint256 amountRedeemed = _redeemAll(msg.sender);\\n\\n        staking.unwrap(msg.sender, amountRedeemed);\\n    }\\n\\n    /**\\n        @notice Redeems yield from a deposit and sends it to the recipient\\n        @param id_ Id of the deposit.\\n    */\\n    function redeemYieldOnBehalfOf(uint256 id_) external override returns (uint256 amount_) {\\n        if (!hasPermissionToRedeem[msg.sender]) revert YieldDirector_NotYourYield();\\n\\n        address recipient = recipientLookup[id_];\\n\\n        amount_ = _redeem(id_, recipient);\\n\\n        IERC20(gOHM).safeTransfer(recipient, amount_);\\n    }\\n\\n    /**\\n        @notice Redeems all yield tied to a recipient and sends it to the recipient\\n        @param recipient_ recipient address.\\n    */\\n    function redeemAllYieldOnBehalfOf(address recipient_) external override returns (uint256 amount_) {\\n        if (!hasPermissionToRedeem[msg.sender]) revert YieldDirector_NotYourYield();\\n\\n        amount_ = _redeemAll(recipient_);\\n\\n        IERC20(gOHM).safeTransfer(recipient_, amount_);\\n    }\\n\\n    /************************\\n     * Internal Functions\\n     ************************/\\n\\n    /**\\n        @notice Creates a new deposit directing the yield from the deposited gOHM amount\\n                to the prescribed recipient\\n        @param amount_ Quantity of gOHM deposited redirecting yield to the recipient\\n        @param recipient_ The address of the user who will be entitled to claim the donated yield\\n    */\\n    function _createDeposit(uint256 amount_, address recipient_) internal returns (uint256 depositId) {\\n        if (isInvalidDeposit(amount_, recipient_)) revert YieldDirector_InvalidDeposit();\\n\\n        depositId = _deposit(msg.sender, amount_);\\n        recipientIds[recipient_].push(depositId);\\n        recipientLookup[depositId] = recipient_;\\n\\n        emit Deposited(msg.sender, recipient_, amount_);\\n    }\\n\\n    /**\\n        @notice Increases the amount of gOHM directing yield to a recipient\\n        @param depositId_ The global ID number of the deposit to add the additional deposit to\\n        @param amount_ Quantity of new gOHM deposited redirecting yield to the current deposit's recipient\\n    */\\n    function _increaseDeposit(uint256 depositId_, uint256 amount_) internal {\\n        if (isInvalidUpdate(depositId_, amount_)) revert YieldDirector_InvalidUpdate();\\n\\n        _addToDeposit(depositId_, amount_, msg.sender);\\n\\n        emit Deposited(msg.sender, recipientLookup[depositId_], amount_);\\n    }\\n\\n    /**\\n        @notice Withdraw gOHM deposit from vault\\n        @param depositId_ Deposit ID to remove gOHM deposit from\\n        @param amount_ Amount of gOHM deposit to remove and return to donor \\n    */\\n    function _withdraw(uint256 depositId_, uint256 amount_) internal returns (uint256 amountWithdrawn) {\\n        if (isInvalidWithdrawal(amount_)) revert YieldDirector_InvalidWithdrawal();\\n\\n        if (amount_ < _toAgnostic(depositInfo[depositId_].principalAmount)) {\\n            _withdrawPrincipal(depositId_, amount_, msg.sender);\\n            amountWithdrawn = amount_;\\n        } else {\\n            amountWithdrawn = _withdrawAllPrincipal(depositId_, msg.sender);\\n        }\\n\\n        emit Withdrawn(msg.sender, recipientLookup[depositId_], amountWithdrawn);\\n    }\\n\\n    /**\\n        @notice Redeem available gOHM yield from a specific deposit\\n        @param depositId_ Deposit ID to withdraw gOHM yield from\\n        @param recipient_ address of recipient\\n    */\\n    function _redeem(uint256 depositId_, address recipient_) internal returns (uint256 amountRedeemed) {\\n        if (redeemDisabled) revert YieldDirector_RedeemsDisabled();\\n        if (recipientLookup[depositId_] != recipient_) revert YieldDirector_NotYourYield();\\n\\n        amountRedeemed = _redeemYield(depositId_);\\n\\n        if (depositInfo[depositId_].principalAmount == 0) {\\n            _closeDeposit(depositId_, depositInfo[depositId_].depositor);\\n\\n            uint256[] storage receiptIds = recipientIds[recipient_];\\n            uint256 idsLength = receiptIds.length;\\n\\n            for (uint256 i = 0; i < idsLength; ++i) {\\n                if (receiptIds[i] == depositId_) {\\n                    // Remove id from recipient's ids array\\n                    receiptIds[i] = receiptIds[idsLength - 1]; // Delete integer from array by swapping with last element and calling pop()\\n                    receiptIds.pop();\\n                    break;\\n                }\\n            }\\n\\n            delete recipientLookup[depositId_];\\n        }\\n\\n        emit Redeemed(recipient_, amountRedeemed);\\n        emit Donated(depositInfo[depositId_].depositor, recipient_, amountRedeemed);\\n    }\\n\\n    /**\\n        @notice Redeem all available gOHM yield from the vault\\n        @param recipient_ address of recipient\\n    */\\n    function _redeemAll(address recipient_) internal returns (uint256 amountRedeemed) {\\n        if (redeemDisabled) revert YieldDirector_RedeemsDisabled();\\n\\n        uint256[] storage receiptIds = recipientIds[recipient_];\\n\\n        // We iterate through the array back to front so that we can delete\\n        // elements from the array without changing the locations of any\\n        // entries that have not been checked yet\\n        for (uint256 index = receiptIds.length; index > 0; index--) {\\n            uint256 currIndex = index - 1;\\n\\n            address currDepositor = depositInfo[receiptIds[currIndex]].depositor;\\n            uint256 currRedemption = _redeemYield(receiptIds[currIndex]);\\n            amountRedeemed += currRedemption;\\n\\n            emit Donated(currDepositor, recipient_, currRedemption);\\n\\n            if (depositInfo[receiptIds[currIndex]].principalAmount == 0) {\\n                _closeDeposit(receiptIds[currIndex], currDepositor);\\n\\n                if (currIndex != receiptIds.length - 1) {\\n                    receiptIds[currIndex] = receiptIds[receiptIds.length - 1]; // Delete integer from array by swapping with last element and calling pop()\\n                }\\n\\n                delete recipientLookup[receiptIds[currIndex]];\\n                receiptIds.pop();\\n            }\\n        }\\n\\n        emit Redeemed(recipient_, amountRedeemed);\\n    }\\n\\n    /************************\\n     * Emergency Functions\\n     ************************/\\n\\n    function emergencyShutdown(bool active_) external onlyGovernor {\\n        depositDisabled = active_;\\n        withdrawDisabled = active_;\\n        redeemDisabled = active_;\\n        emit EmergencyShutdown(active_);\\n    }\\n\\n    function disableDeposits(bool active_) external onlyGovernor {\\n        depositDisabled = active_;\\n    }\\n\\n    function disableWithdrawals(bool active_) external onlyGovernor {\\n        withdrawDisabled = active_;\\n    }\\n\\n    function disableRedeems(bool active_) external onlyGovernor {\\n        redeemDisabled = active_;\\n    }\\n}\",\"keccak256\":\"0xd49308b6ab314914b2506df5f77581b1ee75db9e576779f1fd2c4c3d0a61ce4f\",\"license\":\"AGPL-3.0-or-later\"},\"contracts/types/OlympusAccessControlledV2.sol\":{\"content\":\"pragma solidity ^0.8.10;\\n\\nimport \\\"../interfaces/IOlympusAuthority.sol\\\";\\n\\nerror UNAUTHORIZED();\\nerror AUTHORITY_INITIALIZED();\\n\\n/// @dev Reasoning for this contract = modifiers literaly copy code\\n/// instead of pointing towards the logic to execute. Over many\\n/// functions this bloats contract size unnecessarily.\\n/// imho modifiers are a meme.\\nabstract contract OlympusAccessControlledV2 {\\n    /* ========== EVENTS ========== */\\n\\n    event AuthorityUpdated(IOlympusAuthority authority);\\n\\n    /* ========== STATE VARIABLES ========== */\\n\\n    IOlympusAuthority public authority;\\n\\n    /* ========== Constructor ========== */\\n\\n    constructor(IOlympusAuthority _authority) {\\n        authority = _authority;\\n        emit AuthorityUpdated(_authority);\\n    }\\n\\n    /* ========== \\\"MODIFIERS\\\" ========== */\\n\\n    modifier onlyGovernor {\\n\\t_onlyGovernor();\\n\\t_;\\n    }\\n\\n    modifier onlyGuardian {\\n\\t_onlyGuardian();\\n\\t_;\\n    }\\n\\n    modifier onlyPolicy {\\n\\t_onlyPolicy();\\n\\t_;\\n    }\\n\\n    modifier onlyVault {\\n\\t_onlyVault();\\n\\t_;\\n    }\\n\\n    /* ========== GOV ONLY ========== */\\n\\n    function initializeAuthority(IOlympusAuthority _newAuthority) internal {\\n        if (authority != IOlympusAuthority(address(0))) revert AUTHORITY_INITIALIZED();\\n        authority = _newAuthority;\\n        emit AuthorityUpdated(_newAuthority);\\n    }\\n\\n    function setAuthority(IOlympusAuthority _newAuthority) external {\\n        _onlyGovernor();\\n        authority = _newAuthority;\\n        emit AuthorityUpdated(_newAuthority);\\n    }\\n\\n    /* ========== INTERNAL CHECKS ========== */\\n\\n    function _onlyGovernor() internal view {\\n        if (msg.sender != authority.governor()) revert UNAUTHORIZED();\\n    }\\n\\n    function _onlyGuardian() internal view {\\n        if (msg.sender != authority.guardian()) revert UNAUTHORIZED();\\n    }\\n\\n    function _onlyPolicy() internal view {\\n        if (msg.sender != authority.policy()) revert UNAUTHORIZED();\\n    }\\n\\n    function _onlyVault() internal view {\\n        if (msg.sender != authority.vault()) revert UNAUTHORIZED();\\n    }\\n}\\n\",\"keccak256\":\"0xa14d80d102f7458d6e85d3b28dff785810e0e3dc1642409c7b2f65779808fbe7\"},\"contracts/types/YieldSplitter.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0-or-later\\npragma solidity ^0.8.10;\\n\\nimport {IERC20} from \\\"../interfaces/IERC20.sol\\\";\\nimport {IgOHM} from \\\"../interfaces/IgOHM.sol\\\";\\nimport {SafeERC20} from \\\"../libraries/SafeERC20.sol\\\";\\nimport {OlympusAccessControlledV2, IOlympusAuthority} from \\\"../types/OlympusAccessControlledV2.sol\\\";\\n\\n/**\\n    @title IOHMIndexWrapper\\n    @notice This interface is used to wrap cross-chain oracles to feed an index without needing IsOHM, \\n    while also being able to use sOHM on mainnet.\\n */\\ninterface IOHMIndexWrapper {\\n    function index() external view returns (uint256 index);\\n}\\n\\n/**\\n    @title IYieldSplitter\\n    @notice This interface will be used to access common functions between yieldsplitter implementations.\\n    This will allow certain operations to be done regardless of implementation details.\\n */\\n interface IYieldSplitter {\\n\\n    function redeemYieldOnBehalfOf(uint256 id_) external returns (uint256);\\n\\n    function redeemAllYieldOnBehalfOf(address recipient_) external returns (uint256);\\n\\n    function givePermissionToRedeem(address address_) external;\\n\\n    function revokePermissionToRedeem(address address_) external;\\n\\n    function redeemableBalance(uint256 depositId_) external view returns (uint256);\\n\\n    function totalRedeemableBalance(address recipient_) external view returns (uint256);\\n\\n    function getDepositorIds(address donor_) external view returns (uint256[] memory);\\n}\\n\\nerror YieldSplitter_NotYourDeposit();\\n\\n/**\\n    @title YieldSplitter\\n    @notice Abstract contract that allows users to create deposits for their gOHM and have\\n            their yield claimable by the specified recipient party. This contract's functions\\n            are designed to be as generic as possible. This contract's responsibility is\\n            the accounting of the yield splitting and some error handling. All other logic such as\\n            emergency controls, sending and recieving gOHM is up to the implementation of\\n            this abstract contract to handle.\\n */\\nabstract contract YieldSplitter is OlympusAccessControlledV2, IYieldSplitter {\\n    using SafeERC20 for IERC20;\\n\\n    IOHMIndexWrapper public immutable indexWrapper;\\n\\n    struct DepositInfo {\\n        uint256 id;\\n        address depositor;\\n        uint256 principalAmount; // Total amount of sOhm deposited as principal, 9 decimals.\\n        uint256 agnosticAmount; // Total amount deposited priced in gOhm. 18 decimals.\\n    }\\n\\n    uint256 public idCount;\\n    mapping(uint256 => DepositInfo) public depositInfo; // depositId -> DepositInfo\\n    mapping(address => uint256[]) public depositorIds; // address -> Array of the deposit id's deposited by user\\n    mapping(address => bool) public hasPermissionToRedeem; // keep track of which contracts can redeem deposits on behalf of users\\n\\n    /**\\n        @notice Constructor\\n        @param indexWrapper_ Address of contract that will return the sOHM to gOHM index. \\n                             On mainnet this will be sOHM but on other chains can be an oracle wrapper.\\n    */\\n    constructor(address indexWrapper_, address authority_) OlympusAccessControlledV2(IOlympusAuthority(authority_)) {\\n        indexWrapper = IOHMIndexWrapper(indexWrapper_);\\n    }\\n\\n    /**\\n        @notice Create a deposit.\\n        @param depositor_ Address of depositor\\n        @param amount_ Amount in gOhm. 18 decimals.\\n    */\\n    function _deposit(address depositor_, uint256 amount_) internal returns (uint256 depositId) {\\n        depositorIds[depositor_].push(idCount);\\n\\n        depositInfo[idCount] = DepositInfo({\\n            id: idCount,\\n            depositor: depositor_,\\n            principalAmount: _fromAgnostic(amount_),\\n            agnosticAmount: amount_\\n        });\\n\\n        depositId = idCount;\\n        idCount++;\\n    }\\n\\n    /**\\n        @notice Add more gOhm to the depositor's principal deposit.\\n        @param id_ Id of the deposit.\\n        @param amount_ Amount of gOhm to add. 18 decimals.\\n    */\\n    function _addToDeposit(\\n        uint256 id_,\\n        uint256 amount_,\\n        address depositorAddress\\n    ) internal {\\n        if (depositInfo[id_].depositor != depositorAddress) revert YieldSplitter_NotYourDeposit();\\n\\n        DepositInfo storage userDeposit = depositInfo[id_];\\n        userDeposit.principalAmount += _fromAgnostic(amount_);\\n        userDeposit.agnosticAmount += amount_;\\n    }\\n\\n    /**\\n        @notice Withdraw part of the principal amount deposited.\\n        @param id_ Id of the deposit.\\n        @param amount_ Amount of gOHM to withdraw.\\n    */\\n    function _withdrawPrincipal(\\n        uint256 id_,\\n        uint256 amount_,\\n        address depositorAddress\\n    ) internal {\\n        if (depositInfo[id_].depositor != depositorAddress) revert YieldSplitter_NotYourDeposit();\\n\\n        DepositInfo storage userDeposit = depositInfo[id_];\\n        userDeposit.principalAmount -= _fromAgnostic(amount_); // Reverts if amount > principal due to underflow\\n        userDeposit.agnosticAmount -= amount_;\\n    }\\n\\n    /**\\n        @notice Withdraw all of the principal amount deposited.\\n        @param id_ Id of the deposit.\\n        @return amountWithdrawn : amount of gOHM withdrawn. 18 decimals.\\n    */\\n    function _withdrawAllPrincipal(uint256 id_, address depositorAddress) internal returns (uint256 amountWithdrawn) {\\n        if (depositInfo[id_].depositor != depositorAddress) revert YieldSplitter_NotYourDeposit();\\n\\n        DepositInfo storage userDeposit = depositInfo[id_];\\n        amountWithdrawn = _toAgnostic(userDeposit.principalAmount);\\n        userDeposit.principalAmount = 0;\\n        userDeposit.agnosticAmount -= amountWithdrawn;\\n    }\\n\\n    /**\\n        @notice Redeem excess yield from your deposit in sOHM.\\n        @param id_ Id of the deposit.\\n        @return amountRedeemed : amount of yield redeemed in gOHM. 18 decimals.\\n    */\\n    function _redeemYield(uint256 id_) internal returns (uint256 amountRedeemed) {\\n        DepositInfo storage userDeposit = depositInfo[id_];\\n\\n        amountRedeemed = _getOutstandingYield(userDeposit.principalAmount, userDeposit.agnosticAmount);\\n        userDeposit.agnosticAmount = userDeposit.agnosticAmount - amountRedeemed;\\n    }\\n\\n    /**\\n        @notice Close a deposit. Remove all information in both the deposit info, depositorIds and recipientIds.\\n        @param id_ Id of the deposit.\\n        @dev Internally for accounting reasons principal amount is stored in 9 decimal OHM terms. \\n        Since most implementations will work will gOHM, principal here is returned externally in 18 decimal gOHM terms.\\n        @return principal : amount of principal that was deleted. in gOHM. 18 decimals.\\n        @return agnosticAmount : total amount of gOHM deleted. Principal + Yield. 18 decimals.\\n    */\\n    function _closeDeposit(uint256 id_, address depositorAddress)\\n        internal\\n        returns (uint256 principal, uint256 agnosticAmount)\\n    {\\n        address depositorAddressToClose = depositInfo[id_].depositor;\\n        if (depositorAddressToClose != depositorAddress) revert YieldSplitter_NotYourDeposit();\\n\\n        principal = _toAgnostic(depositInfo[id_].principalAmount);\\n        agnosticAmount = depositInfo[id_].agnosticAmount;\\n\\n        uint256[] storage depositorIdsArray = depositorIds[depositorAddressToClose];\\n        for (uint256 i = 0; i < depositorIdsArray.length; i++) {\\n            if (depositorIdsArray[i] == id_) {\\n                // Remove id from depositor's ids array\\n                depositorIdsArray[i] = depositorIdsArray[depositorIdsArray.length - 1]; // Delete integer from array by swapping with last element and calling pop()\\n                depositorIdsArray.pop();\\n                break;\\n            }\\n        }\\n\\n        delete depositInfo[id_];\\n    }\\n\\n    /**\\n        @notice Redeems yield from a deposit and sends it to the recipient\\n        @param id_ Id of the deposit.\\n    */\\n    function redeemYieldOnBehalfOf(uint256 id_) external virtual returns (uint256) {}\\n\\n    /**\\n        @notice Redeems all yield tied to a recipient and sends it to the recipient\\n        @param recipient_ recipient address.\\n    */\\n    function redeemAllYieldOnBehalfOf(address recipient_) external virtual returns (uint256) {}\\n\\n    /**\\n        @notice Get redeemable gOHM balance of a specific deposit\\n        @param depositId_ Deposit ID for this donation\\n    */\\n    function redeemableBalance(uint256 depositId_) public view virtual returns (uint256) {}\\n\\n    /**\\n        @notice Get redeemable gOHM balance of a recipient address\\n        @param recipient_ Address of user receiving donated yield\\n     */\\n    function totalRedeemableBalance(address recipient_) external view virtual returns (uint256) {}\\n\\n    /**\\n        @notice Gives a contract permission to redeem yield on behalf of users\\n        @param address_ Id of the deposit.\\n    */\\n    function givePermissionToRedeem(address address_) external {\\n        _onlyGuardian();\\n        hasPermissionToRedeem[address_] = true;\\n    }\\n\\n    /**\\n        @notice Revokes a contract permission to redeem yield on behalf of users\\n        @param address_ Id of the deposit.\\n    */\\n    function revokePermissionToRedeem(address address_) external {\\n        _onlyGuardian();\\n        hasPermissionToRedeem[address_] = false;\\n    }\\n\\n    /**\\n        @notice Returns the array of deposit id's belonging to the depositor\\n        @return uint256[] array of depositor Id's\\n     */\\n    function getDepositorIds(address donor_) external view returns (uint256[] memory) {\\n        return depositorIds[donor_];\\n    }\\n\\n    /**\\n        @notice Calculate outstanding yield redeemable based on principal and agnosticAmount.\\n        @return uint256 amount of yield in gOHM. 18 decimals.\\n     */\\n    function _getOutstandingYield(uint256 principal_, uint256 agnosticAmount_) internal view returns (uint256) {\\n        // agnosticAmount must be greater than or equal to _toAgnostic(principal_) since agnosticAmount_\\n        // is the sum of principal_ and the yield. Thus this can be unchecked.\\n        unchecked { return agnosticAmount_ - _toAgnostic(principal_); }\\n    }\\n\\n    /**\\n        @notice Convert flat sOHM value to agnostic gOHM value at current index\\n        @dev Agnostic value earns rebases. Agnostic value is amount / rebase_index.\\n             1e18 is because sOHM has 9 decimals, gOHM has 18 and index has 9.\\n     */\\n    function _toAgnostic(uint256 amount_) internal view returns (uint256) {\\n        return (amount_ * 1e18) / (indexWrapper.index());\\n    }\\n\\n    /**\\n        @notice Convert agnostic gOHM value at current index to flat sOHM value\\n        @dev Agnostic value earns rebases. sOHM amount is gOHMamount * rebase_index.\\n             1e18 is because sOHM has 9 decimals, gOHM has 18 and index has 9.\\n     */\\n    function _fromAgnostic(uint256 amount_) internal view returns (uint256) {\\n        return (amount_ * (indexWrapper.index())) / 1e18;\\n    }\\n}\\n\",\"keccak256\":\"0xfad541b0605a6486697b0956e3d503799cd9ff54a0dca0ab81e057ef5f817805\",\"license\":\"AGPL-3.0-or-later\"}},\"version\":1}",
+  "bytecode": "0x6101006040523480156200001257600080fd5b506040516200306b3803806200306b833981016040819052620000359162000270565b600080546001600160a01b0319166001600160a01b0383169081179091556040519081528490829081907f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad9060200160405180910390a150506001600160a01b0390811660805284161580620000b257506001600160a01b038316155b80620000c557506001600160a01b038216155b80620000d857506001600160a01b038116155b15620000f757604051635dda9f6b60e01b815260040160405180910390fd5b6001600160a01b0384811660a081905284821660c05290831660e08190526200013091906000196200013a602090811b6200180f17901c565b5050505062000336565b604080516001600160a01b038481166024830152604480830185905283518084039091018152606490920183526020820180516001600160e01b031663095ea7b360e01b1790529151600092839290871691620001989190620002cd565b6000604051808303816000865af19150503d8060008114620001d7576040519150601f19603f3d011682016040523d82523d6000602084013e620001dc565b606091505b50915091508180156200020a5750805115806200020a5750808060200190518101906200020a91906200030b565b6200024c5760405162461bcd60e51b815260206004820152600e60248201526d1054141493d59157d1905253115160921b604482015260640160405180910390fd5b5050505050565b80516001600160a01b03811681146200026b57600080fd5b919050565b600080600080608085870312156200028757600080fd5b620002928562000253565b9350620002a26020860162000253565b9250620002b26040860162000253565b9150620002c26060860162000253565b905092959194509250565b6000825160005b81811015620002f05760208186018101518583015201620002d4565b8181111562000300576000828501525b509190910192915050565b6000602082840312156200031e57600080fd5b815180151581146200032f57600080fd5b9392505050565b60805160a05160c05160e051612c84620003e76000396000818161051a015281816109f501528181610a9d0152818161148c0152818161152c015261165d015260008181610344015281816107970152818161096001528181610b3201528181610ce4015281816110b4015281816111a00152818161129101526114350152600081816103b7015281816109b101526116190152600081816104f301528181611f6501526128950152612c846000f3fe608060405234801561001057600080fd5b50600436106102e95760003560e01c8063668b90e311610191578063b33f2b7f116100e3578063e6e4623811610097578063ecda286511610071578063ecda2865146106c5578063fa1de4b2146106d8578063fad71dfd1461070157600080fd5b8063e6e462381461069c578063e742cfc0146106a5578063e9403256146106b257600080fd5b8063bf7e214f116100c8578063bf7e214f14610663578063cd01328414610676578063d312896d1461068957600080fd5b8063b33f2b7f1461063e578063b884110b1461065157600080fd5b80637a9e5e4b116101455780639517a7c11161011f5780639517a7c114610610578063a7628ce114610618578063a774b3161461062b57600080fd5b80637a9e5e4b146105e25780637ce0c7a4146105f5578063853828b61461060857600080fd5b80636b8ac705116101765780636b8ac705146105a95780636e553f65146105bc578063765ad8e3146105cf57600080fd5b8063668b90e31461058357806366cbb0371461059657600080fd5b8063258d3c331161024a578063317d7a2b116101fe5780634d5714cd116101d85780634d5714cd1461053c57806352165b591461054f5780635bd345b71461057057600080fd5b8063317d7a2b146104865780633ca21ce6146104ee5780634cf088d91461051557600080fd5b806328bbc4b01161022f57806328bbc4b01461042d5780632a041c38146104405780632df968b91461047357600080fd5b8063258d3c331461040757806327f78f801461041a57600080fd5b8063115f0b7a116102a1578063171597e611610286578063171597e6146103d95780631cd3c394146103e15780631e1e8300146103f457600080fd5b8063115f0b7a1461039f57806315079925146103b257600080fd5b80630c00c295116102d25780630c00c2951461032c5780630cd305851461033f5780630f3a1d471461037e57600080fd5b806306212a94146102ee578063084bad7814610317575b600080fd5b6103016102fc366004612934565b610714565b60405161030e919061298c565b60405180910390f35b61032a61032536600461299f565b610780565b005b61032a61033a366004612934565b6107c3565b6103667f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b03909116815260200161030e565b61039161038c366004612934565b6107ef565b60405190815260200161030e565b6103016103ad366004612934565b6108dc565b6103667f000000000000000000000000000000000000000000000000000000000000000081565b61032a610946565b6103916103ef3660046129c1565b61098a565b61032a6104023660046129f1565b610a72565b61032a6104153660046129f1565b610b17565b61032a610428366004612934565b610b59565b61039161043b366004612a0a565b610b82565b61046361044e366004612934565b60046020526000908152604090205460ff1681565b604051901515815260200161030e565b6007546104639062010000900460ff1681565b6104c66104943660046129f1565b6002602081905260009182526040909120805460018201549282015460039092015490926001600160a01b0316919084565b604080519485526001600160a01b03909316602085015291830152606082015260800161030e565b6103667f000000000000000000000000000000000000000000000000000000000000000081565b6103667f000000000000000000000000000000000000000000000000000000000000000081565b61039161054a3660046129f1565b610c83565b61056261055d366004612934565b610d11565b60405161030e929190612a38565b61039161057e366004612a0a565b610f77565b61032a610591366004612aa6565b61107e565b61032a6105a436600461299f565b611099565b6103916105b7366004612934565b6110db565b6103916105ca3660046129c1565b611185565b61032a6105dd366004612aa6565b6111c8565b61032a6105f0366004612934565b6111ec565b610391610603366004612934565b611249565b61032a6112bd565b61032a611462565b61032a61062636600461299f565b611501565b61032a610639366004612aa6565b6115a2565b61039161064c366004612ac3565b6115c4565b60075461046390610100900460ff1681565b600054610366906001600160a01b031681565b61032a61068436600461299f565b6115f5565b61032a610697366004612aa6565b611694565b61039160015481565b6007546104639060ff1681565b6103916106c0366004612934565b6116f9565b6103916106d33660046129f1565b6117c9565b6103666106e63660046129f1565b6006602052600090815260409020546001600160a01b031681565b61039161070f366004612ac3565b6117f3565b6001600160a01b03811660009081526003602090815260409182902080548351818402810184019094528084526060939283018282801561077457602002820191906000526020600020905b815481526020019060010190808311610760575b50505050509050919050565b61078a828261192f565b6107bf6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163330846119b7565b5050565b6107cb611adb565b6001600160a01b03166000908152600460205260409020805460ff19166001179055565b6001600160a01b03811660009081526003602090815260408083208054825181850281018501909352808352849383018282801561084c57602002820191906000526020600020905b815481526020019060010190808311610838575b5050505050905060008060005b83518110156108c85760006002600086848151811061087a5761087a612aef565b6020026020010151815260200190815260200160002090508060020154846108a29190612b1b565b93508060030154836108b49190612b1b565b925050806108c190612b33565b9050610859565b506108d38282611b83565b95945050505050565b6001600160a01b03811660009081526005602090815260409182902080548351818402810184019094528084526060939283018282801561077457602002820191906000526020600020908154815260200190600101908083116107605750505050509050919050565b600061095133611b97565b90506109876001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163383611e4d565b50565b60008061099684611f61565b90506109a28184612001565b91506109d96001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163330876119b7565b604051635f9bb63d60e11b8152306004820152602481018590527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063bf376c7a906044016020604051808303816000875af1158015610a46573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610a6a9190612b4e565b505092915050565b6000610a7e82336120bb565b6040516339f4769360e01b8152336004820152602481018290529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906339f47693906044016020604051808303816000875af1158015610aee573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610b129190612b4e565b505050565b6000610b2382336120bb565b90506107bf6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163383611e4d565b610b61611adb565b6001600160a01b03166000908152600460205260409020805460ff19169055565b6001600160a01b038216600090815260036020908152604080832080548251818502810185019093528083528493830182828015610bdf57602002820191906000526020600020905b815481526020019060010190808311610bcb575b50505050509050600080600090505b8251811015610c6e576000838281518110610c0b57610c0b612aef565b602090810291909101810151600081815260069092526040909120549091506001600160a01b0387811691161415610c5d5760008181526002602081905260409091200154610c5a9084612b1b565b92505b50610c6781612b33565b9050610bee565b50610c7881611f61565b925050505b92915050565b3360009081526004602052604081205460ff16610cb3576040516305bbb11360e01b815260040160405180910390fd5b6000828152600660205260409020546001600160a01b0316610cd583826120bb565b9150610d0b6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000168284611e4d565b50919050565b6001600160a01b0381166000908152600360209081526040808320805482518185028101850190935280835260609485949093929190830182828015610d7657602002820191906000526020600020905b815481526020019060010190808311610d62575b5050505050905060008151600014610d8f578151610d92565b60015b905060008167ffffffffffffffff811115610daf57610daf612b67565b604051908082528060200260200182016040528015610dd8578160200160208202803683370190505b50905060008267ffffffffffffffff811115610df657610df6612b67565b604051908082528060200260200182016040528015610e1f578160200160208202803683370190505b509050835160001415610e8757600082600081518110610e4157610e41612aef565b60200260200101906001600160a01b031690816001600160a01b031681525050600081600081518110610e7657610e76612aef565b602002602001018181525050610f6b565b60005b83811015610f695760066000868381518110610ea857610ea8612aef565b6020026020010151815260200190815260200160002060009054906101000a90046001600160a01b0316838281518110610ee457610ee4612aef565b60200260200101906001600160a01b031690816001600160a01b031681525050610f3c60026000878481518110610f1d57610f1d612aef565b6020026020010151815260200190815260200160002060020154611f61565b828281518110610f4e57610f4e612aef565b6020908102919091010152610f6281612b33565b9050610e8a565b505b90969095509350505050565b6001600160a01b038216600090815260036020908152604080832080548251818502810185019093528083528493830182828015610fd457602002820191906000526020600020905b815481526020019060010190808311610fc0575b50505050509050600080600090505b825181101561107557846001600160a01b03166006600085848151811061100c5761100c612aef565b6020908102919091018101518252810191909152604001600020546001600160a01b031614156110655761105883828151811061104b5761104b612aef565b60200260200101516117c9565b6110629083612b1b565b91505b61106e81612b33565b9050610fe3565b50949350505050565b6110866122ec565b6007805460ff1916911515919091179055565b60006110a5838361233d565b9050610b126001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163383611e4d565b6001600160a01b03811660009081526005602090815260408083208054825181850281018501909352808352849383018282801561113857602002820191906000526020600020905b815481526020019060010190808311611124575b505050505090506000805b825181101561117d5761116183828151811061104b5761104b612aef565b61116b9083612b1b565b915061117681612b33565b9050611143565b509392505050565b60006111918383612001565b9050610c7d6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163330866119b7565b6111d06122ec565b60078054911515620100000262ff000019909216919091179055565b6111f46122ec565b600080546001600160a01b0319166001600160a01b0383169081179091556040519081527f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad906020015b60405180910390a150565b3360009081526004602052604081205460ff16611279576040516305bbb11360e01b815260040160405180910390fd5b61128282611b97565b90506112b86001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000168383611e4d565b919050565b600754610100900460ff16156112e6576040516302987ee160e21b815260040160405180910390fd5b3360009081526003602090815260408083208054825181850281018501909352808352919290919083018282801561133d57602002820191906000526020600020905b815481526020019060010190808311611329575b505083519394505050811515905061136857604051631face2f960e21b815260040160405180910390fd5b6000805b828110156113ec5760006002600086848151811061138c5761138c612aef565b6020026020010151815260200190815260200160002090508060020154836113b49190612b1b565b92506113d98583815181106113cb576113cb612aef565b6020026020010151336123f6565b5050806113e590612b33565b905061136c565b5060006113f882611f61565b604051909150819033907f2c13e87212a9869e0b5272de5d2e944f828d0dca3a4200794421708702f92ba590600090a361145c6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163383611e4d565b50505050565b600061146d33611b97565b6040516339f4769360e01b8152336004820152602481018290529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906339f47693906044016020604051808303816000875af11580156114dd573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906107bf9190612b4e565b600061150d838361233d565b6040516339f4769360e01b8152336004820152602481018290529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906339f47693906044015b6020604051808303816000875af115801561157e573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061145c9190612b4e565b6115aa6122ec565b600780549115156101000261ff0019909216919091179055565b600360205281600052604060002081815481106115e057600080fd5b90600052602060002001600091509150505481565b600061160082611f61565b905061160c838261192f565b6116416001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163330856119b7565b604051635f9bb63d60e11b8152306004820152602481018390527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063bf376c7a9060440161155f565b61169c6122ec565b6007805461ffff191661ff00198315159081169190911761010082021762ff00001916620100008202179091556040519081527fba40372a3a724dca3c57156128ef1e896724b65b37a17f190b1ad5de68f3a4f39060200161123e565b6001600160a01b03811660009081526003602090815260408083208054825181850281018501909352808352849383018282801561175657602002820191906000526020600020905b815481526020019060010190808311611742575b505050505090506000805b82518110156117b7576002600084838151811061178057611780612aef565b6020026020010151815260200190815260200160002060020154826117a59190612b1b565b91506117b081612b33565b9050611761565b506117c181611f61565b949350505050565b600081815260026020819052604082209081015460038201546117ec9190611b83565b9392505050565b600560205281600052604060002081815481106115e057600080fd5b604080516001600160a01b038481166024830152604480830185905283518084039091018152606490920183526020820180516001600160e01b031663095ea7b360e01b179052915160009283929087169161186b9190612b7d565b6000604051808303816000865af19150503d80600081146118a8576040519150601f19603f3d011682016040523d82523d6000602084013e6118ad565b606091505b50915091508180156118d75750805115806118d75750808060200190518101906118d79190612bb8565b6119285760405162461bcd60e51b815260206004820152600e60248201527f415050524f56455f4641494c454400000000000000000000000000000000000060448201526064015b60405180910390fd5b5050505050565b611939828261247e565b1561195757604051631f639df160e01b815260040160405180910390fd5b6119628282336124b7565b6000828152600660209081526040918290205491518381526001600160a01b039092169133917f8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a7910160405180910390a35050565b604080516001600160a01b0385811660248301528481166044830152606480830185905283518084039091018152608490920183526020820180516001600160e01b03166323b872dd60e01b1790529151600092839290881691611a1b9190612b7d565b6000604051808303816000865af19150503d8060008114611a58576040519150601f19603f3d011682016040523d82523d6000602084013e611a5d565b606091505b5091509150818015611a87575080511580611a87575080806020019051810190611a879190612bb8565b611ad35760405162461bcd60e51b815260206004820152601460248201527f5452414e534645525f46524f4d5f4641494c4544000000000000000000000000604482015260640161191f565b505050505050565b60008054906101000a90046001600160a01b03166001600160a01b031663452a93206040518163ffffffff1660e01b8152600401602060405180830381865afa158015611b2c573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190611b509190612bd5565b6001600160a01b0316336001600160a01b031614611b815760405163075fd2b160e01b815260040160405180910390fd5b565b6000611b8e83611f61565b90910392915050565b60075460009062010000900460ff1615611bc4576040516336175ff760e11b815260040160405180910390fd5b6001600160a01b038216600090815260056020526040902080545b8015611e03576000611bf2600183612bf2565b9050600060026000858481548110611c0c57611c0c612aef565b9060005260206000200154815260200190815260200160002060010160009054906101000a90046001600160a01b031690506000611c65858481548110611c5557611c55612aef565b9060005260206000200154612544565b9050611c718187612b1b565b9550866001600160a01b0316826001600160a01b03167f4dfff917e1fbb261a082e98cc7d43029621f6a6eb05ff3fef1510d5f1eb4857c83604051611cb891815260200190565b60405180910390a360026000868581548110611cd657611cd6612aef565b906000526020600020015481526020019081526020016000206002015460001415611ded57611d21858481548110611d1057611d10612aef565b906000526020600020015483612584565b50508454611d3190600190612bf2565b8314611d815784548590611d4790600190612bf2565b81548110611d5757611d57612aef565b9060005260206000200154858481548110611d7457611d74612aef565b6000918252602090912001555b60066000868581548110611d9757611d97612aef565b9060005260206000200154815260200190815260200160002060006101000a8154906001600160a01b03021916905584805480611dd657611dd6612c09565b600190038181906000526020600020016000905590555b5050508080611dfb90612c1f565b915050611bdf565b50826001600160a01b03167f4896181ff8f4543cc00db9fe9b6fb7e6f032b7eb772c72ab1ec1b4d2e03b936983604051611e3f91815260200190565b60405180910390a250919050565b604080516001600160a01b038481166024830152604480830185905283518084039091018152606490920183526020820180516001600160e01b031663a9059cbb60e01b1790529151600092839290871691611ea99190612b7d565b6000604051808303816000865af19150503d8060008114611ee6576040519150601f19603f3d011682016040523d82523d6000602084013e611eeb565b606091505b5091509150818015611f15575080511580611f15575080806020019051810190611f159190612bb8565b6119285760405162461bcd60e51b815260206004820152600f60248201527f5452414e534645525f4641494c45440000000000000000000000000000000000604482015260640161191f565b60007f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316632986c0e56040518163ffffffff1660e01b8152600401602060405180830381865afa158015611fc1573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190611fe59190612b4e565b611ff783670de0b6b3a7640000612c36565b610c7d9190612c55565b600061200d83836126fd565b1561202b576040516301c2b09d60e51b815260040160405180910390fd5b6120353384612725565b6001600160a01b0383166000818152600560209081526040808320805460018101825590845282842001859055848352600682529182902080546001600160a01b031916841790559051868152929350909133917f8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a791015b60405180910390a392915050565b60075460009062010000900460ff16156120e8576040516336175ff760e11b815260040160405180910390fd5b6000838152600660205260409020546001600160a01b03838116911614612122576040516305bbb11360e01b815260040160405180910390fd5b61212b83612544565b600084815260026020819052604090912001549091506122585760008381526002602052604090206001015461216b9084906001600160a01b0316612584565b50506001600160a01b0382166000908152600560205260408120805490915b8181101561223857858382815481106121a5576121a5612aef565b9060005260206000200154141561222857826121c2600184612bf2565b815481106121d2576121d2612aef565b90600052602060002001548382815481106121ef576121ef612aef565b90600052602060002001819055508280548061220d5761220d612c09565b60019003818190600052602060002001600090559055612238565b61223181612b33565b905061218a565b505050600083815260066020526040902080546001600160a01b03191690555b816001600160a01b03167f4896181ff8f4543cc00db9fe9b6fb7e6f032b7eb772c72ab1ec1b4d2e03b93698260405161229391815260200190565b60405180910390a26000838152600260209081526040918290206001015491518381526001600160a01b038581169316917f4dfff917e1fbb261a082e98cc7d43029621f6a6eb05ff3fef1510d5f1eb4857c91016120ad565b60008054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa158015611b2c573d6000803e3d6000fd5b6000612348826127ed565b15612366576040516335b66a0b60e21b815260040160405180910390fd5b6000838152600260208190526040909120015461238290611f61565b82101561239b57612394838333612806565b50806123a8565b6123a583336123f6565b90505b6000838152600660209081526040918290205491518381526001600160a01b039092169133917fd1c19fbcd4551a5edfb66d43d2e337c04837afda3482b42bdf569a8fccdae5fb91016120ad565b6000828152600260205260408120600101546001600160a01b0383811691161461243357604051633c25e1f760e01b815260040160405180910390fd5b60008381526002602081905260409091209081015461245190611f61565b915060008160020181905550818160030160008282546124719190612bf2565b9091555091949350505050565b60075460009060ff1680612490575081155b806117ec575050506000908152600260205260409020600101546001600160a01b03161590565b6000838152600260205260409020600101546001600160a01b038281169116146124f457604051633c25e1f760e01b815260040160405180910390fd5b600083815260026020526040902061250b83612888565b81600201600082825461251e9190612b1b565b92505081905550828160030160008282546125399190612b1b565b909155505050505050565b600081815260026020819052604082209081015460038201546125679190611b83565b91508181600301546125799190612bf2565b600390910155919050565b60008281526002602052604081206001015481906001600160a01b0390811690841681146125c557604051633c25e1f760e01b815260040160405180910390fd5b600085815260026020819052604090912001546125e190611f61565b60008681526002602090815260408083206003908101546001600160a01b03871685529252822092955093505b81548110156126c3578682828154811061262a5761262a612aef565b906000526020600020015414156126b1578154829061264b90600190612bf2565b8154811061265b5761265b612aef565b906000526020600020015482828154811061267857612678612aef565b90600052602060002001819055508180548061269657612696612c09565b600190038181906000526020600020016000905590556126c3565b806126bb81612b33565b91505061260e565b505050600093845260026020819052604085208581556001810180546001600160a01b031916905590810185905560030193909355929050565b60075460009060ff168061270f575082155b806117ec5750506001600160a01b031615919050565b6001600160a01b0382166000818152600360209081526040808320600180548254808301845592865284862090920191909155815160808101835290548152918201939093529091810161277884612888565b8152602090810184905260018054600090815260028084526040808320865181559486015185850180546001600160a01b0319166001600160a01b03909216919091179055850151908401556060909301516003909201919091558054925082916127e283612b33565b919050555092915050565b600754600090610100900460ff1680610c7d5750501590565b6000838152600260205260409020600101546001600160a01b0382811691161461284357604051633c25e1f760e01b815260040160405180910390fd5b600083815260026020526040902061285a83612888565b81600201600082825461286d9190612bf2565b92505081905550828160030160008282546125399190612bf2565b6000670de0b6b3a76400007f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316632986c0e56040518163ffffffff1660e01b8152600401602060405180830381865afa1580156128f1573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906129159190612b4e565b611ff79084612c36565b6001600160a01b038116811461098757600080fd5b60006020828403121561294657600080fd5b81356117ec8161291f565b600081518084526020808501945080840160005b8381101561298157815187529582019590820190600101612965565b509495945050505050565b6020815260006117ec6020830184612951565b600080604083850312156129b257600080fd5b50508035926020909101359150565b600080604083850312156129d457600080fd5b8235915060208301356129e68161291f565b809150509250929050565b600060208284031215612a0357600080fd5b5035919050565b60008060408385031215612a1d57600080fd5b8235612a288161291f565b915060208301356129e68161291f565b604080825283519082018190526000906020906060840190828701845b82811015612a7a5781516001600160a01b031684529284019290840190600101612a55565b50505083810382850152612a8e8186612951565b9695505050505050565b801515811461098757600080fd5b600060208284031215612ab857600080fd5b81356117ec81612a98565b60008060408385031215612ad657600080fd5b8235612ae18161291f565b946020939093013593505050565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b60008219821115612b2e57612b2e612b05565b500190565b6000600019821415612b4757612b47612b05565b5060010190565b600060208284031215612b6057600080fd5b5051919050565b634e487b7160e01b600052604160045260246000fd5b6000825160005b81811015612b9e5760208186018101518583015201612b84565b81811115612bad576000828501525b509190910192915050565b600060208284031215612bca57600080fd5b81516117ec81612a98565b600060208284031215612be757600080fd5b81516117ec8161291f565b600082821015612c0457612c04612b05565b500390565b634e487b7160e01b600052603160045260246000fd5b600081612c2e57612c2e612b05565b506000190190565b6000816000190483118215151615612c5057612c50612b05565b500290565b600082612c7257634e487b7160e01b600052601260045260246000fd5b50049056fea164736f6c634300080a000a",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106102e95760003560e01c8063668b90e311610191578063b33f2b7f116100e3578063e6e4623811610097578063ecda286511610071578063ecda2865146106c5578063fa1de4b2146106d8578063fad71dfd1461070157600080fd5b8063e6e462381461069c578063e742cfc0146106a5578063e9403256146106b257600080fd5b8063bf7e214f116100c8578063bf7e214f14610663578063cd01328414610676578063d312896d1461068957600080fd5b8063b33f2b7f1461063e578063b884110b1461065157600080fd5b80637a9e5e4b116101455780639517a7c11161011f5780639517a7c114610610578063a7628ce114610618578063a774b3161461062b57600080fd5b80637a9e5e4b146105e25780637ce0c7a4146105f5578063853828b61461060857600080fd5b80636b8ac705116101765780636b8ac705146105a95780636e553f65146105bc578063765ad8e3146105cf57600080fd5b8063668b90e31461058357806366cbb0371461059657600080fd5b8063258d3c331161024a578063317d7a2b116101fe5780634d5714cd116101d85780634d5714cd1461053c57806352165b591461054f5780635bd345b71461057057600080fd5b8063317d7a2b146104865780633ca21ce6146104ee5780634cf088d91461051557600080fd5b806328bbc4b01161022f57806328bbc4b01461042d5780632a041c38146104405780632df968b91461047357600080fd5b8063258d3c331461040757806327f78f801461041a57600080fd5b8063115f0b7a116102a1578063171597e611610286578063171597e6146103d95780631cd3c394146103e15780631e1e8300146103f457600080fd5b8063115f0b7a1461039f57806315079925146103b257600080fd5b80630c00c295116102d25780630c00c2951461032c5780630cd305851461033f5780630f3a1d471461037e57600080fd5b806306212a94146102ee578063084bad7814610317575b600080fd5b6103016102fc366004612934565b610714565b60405161030e919061298c565b60405180910390f35b61032a61032536600461299f565b610780565b005b61032a61033a366004612934565b6107c3565b6103667f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b03909116815260200161030e565b61039161038c366004612934565b6107ef565b60405190815260200161030e565b6103016103ad366004612934565b6108dc565b6103667f000000000000000000000000000000000000000000000000000000000000000081565b61032a610946565b6103916103ef3660046129c1565b61098a565b61032a6104023660046129f1565b610a72565b61032a6104153660046129f1565b610b17565b61032a610428366004612934565b610b59565b61039161043b366004612a0a565b610b82565b61046361044e366004612934565b60046020526000908152604090205460ff1681565b604051901515815260200161030e565b6007546104639062010000900460ff1681565b6104c66104943660046129f1565b6002602081905260009182526040909120805460018201549282015460039092015490926001600160a01b0316919084565b604080519485526001600160a01b03909316602085015291830152606082015260800161030e565b6103667f000000000000000000000000000000000000000000000000000000000000000081565b6103667f000000000000000000000000000000000000000000000000000000000000000081565b61039161054a3660046129f1565b610c83565b61056261055d366004612934565b610d11565b60405161030e929190612a38565b61039161057e366004612a0a565b610f77565b61032a610591366004612aa6565b61107e565b61032a6105a436600461299f565b611099565b6103916105b7366004612934565b6110db565b6103916105ca3660046129c1565b611185565b61032a6105dd366004612aa6565b6111c8565b61032a6105f0366004612934565b6111ec565b610391610603366004612934565b611249565b61032a6112bd565b61032a611462565b61032a61062636600461299f565b611501565b61032a610639366004612aa6565b6115a2565b61039161064c366004612ac3565b6115c4565b60075461046390610100900460ff1681565b600054610366906001600160a01b031681565b61032a61068436600461299f565b6115f5565b61032a610697366004612aa6565b611694565b61039160015481565b6007546104639060ff1681565b6103916106c0366004612934565b6116f9565b6103916106d33660046129f1565b6117c9565b6103666106e63660046129f1565b6006602052600090815260409020546001600160a01b031681565b61039161070f366004612ac3565b6117f3565b6001600160a01b03811660009081526003602090815260409182902080548351818402810184019094528084526060939283018282801561077457602002820191906000526020600020905b815481526020019060010190808311610760575b50505050509050919050565b61078a828261192f565b6107bf6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163330846119b7565b5050565b6107cb611adb565b6001600160a01b03166000908152600460205260409020805460ff19166001179055565b6001600160a01b03811660009081526003602090815260408083208054825181850281018501909352808352849383018282801561084c57602002820191906000526020600020905b815481526020019060010190808311610838575b5050505050905060008060005b83518110156108c85760006002600086848151811061087a5761087a612aef565b6020026020010151815260200190815260200160002090508060020154846108a29190612b1b565b93508060030154836108b49190612b1b565b925050806108c190612b33565b9050610859565b506108d38282611b83565b95945050505050565b6001600160a01b03811660009081526005602090815260409182902080548351818402810184019094528084526060939283018282801561077457602002820191906000526020600020908154815260200190600101908083116107605750505050509050919050565b600061095133611b97565b90506109876001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163383611e4d565b50565b60008061099684611f61565b90506109a28184612001565b91506109d96001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163330876119b7565b604051635f9bb63d60e11b8152306004820152602481018590527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063bf376c7a906044016020604051808303816000875af1158015610a46573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610a6a9190612b4e565b505092915050565b6000610a7e82336120bb565b6040516339f4769360e01b8152336004820152602481018290529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906339f47693906044016020604051808303816000875af1158015610aee573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610b129190612b4e565b505050565b6000610b2382336120bb565b90506107bf6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163383611e4d565b610b61611adb565b6001600160a01b03166000908152600460205260409020805460ff19169055565b6001600160a01b038216600090815260036020908152604080832080548251818502810185019093528083528493830182828015610bdf57602002820191906000526020600020905b815481526020019060010190808311610bcb575b50505050509050600080600090505b8251811015610c6e576000838281518110610c0b57610c0b612aef565b602090810291909101810151600081815260069092526040909120549091506001600160a01b0387811691161415610c5d5760008181526002602081905260409091200154610c5a9084612b1b565b92505b50610c6781612b33565b9050610bee565b50610c7881611f61565b925050505b92915050565b3360009081526004602052604081205460ff16610cb3576040516305bbb11360e01b815260040160405180910390fd5b6000828152600660205260409020546001600160a01b0316610cd583826120bb565b9150610d0b6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000168284611e4d565b50919050565b6001600160a01b0381166000908152600360209081526040808320805482518185028101850190935280835260609485949093929190830182828015610d7657602002820191906000526020600020905b815481526020019060010190808311610d62575b5050505050905060008151600014610d8f578151610d92565b60015b905060008167ffffffffffffffff811115610daf57610daf612b67565b604051908082528060200260200182016040528015610dd8578160200160208202803683370190505b50905060008267ffffffffffffffff811115610df657610df6612b67565b604051908082528060200260200182016040528015610e1f578160200160208202803683370190505b509050835160001415610e8757600082600081518110610e4157610e41612aef565b60200260200101906001600160a01b031690816001600160a01b031681525050600081600081518110610e7657610e76612aef565b602002602001018181525050610f6b565b60005b83811015610f695760066000868381518110610ea857610ea8612aef565b6020026020010151815260200190815260200160002060009054906101000a90046001600160a01b0316838281518110610ee457610ee4612aef565b60200260200101906001600160a01b031690816001600160a01b031681525050610f3c60026000878481518110610f1d57610f1d612aef565b6020026020010151815260200190815260200160002060020154611f61565b828281518110610f4e57610f4e612aef565b6020908102919091010152610f6281612b33565b9050610e8a565b505b90969095509350505050565b6001600160a01b038216600090815260036020908152604080832080548251818502810185019093528083528493830182828015610fd457602002820191906000526020600020905b815481526020019060010190808311610fc0575b50505050509050600080600090505b825181101561107557846001600160a01b03166006600085848151811061100c5761100c612aef565b6020908102919091018101518252810191909152604001600020546001600160a01b031614156110655761105883828151811061104b5761104b612aef565b60200260200101516117c9565b6110629083612b1b565b91505b61106e81612b33565b9050610fe3565b50949350505050565b6110866122ec565b6007805460ff1916911515919091179055565b60006110a5838361233d565b9050610b126001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163383611e4d565b6001600160a01b03811660009081526005602090815260408083208054825181850281018501909352808352849383018282801561113857602002820191906000526020600020905b815481526020019060010190808311611124575b505050505090506000805b825181101561117d5761116183828151811061104b5761104b612aef565b61116b9083612b1b565b915061117681612b33565b9050611143565b509392505050565b60006111918383612001565b9050610c7d6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163330866119b7565b6111d06122ec565b60078054911515620100000262ff000019909216919091179055565b6111f46122ec565b600080546001600160a01b0319166001600160a01b0383169081179091556040519081527f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad906020015b60405180910390a150565b3360009081526004602052604081205460ff16611279576040516305bbb11360e01b815260040160405180910390fd5b61128282611b97565b90506112b86001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000168383611e4d565b919050565b600754610100900460ff16156112e6576040516302987ee160e21b815260040160405180910390fd5b3360009081526003602090815260408083208054825181850281018501909352808352919290919083018282801561133d57602002820191906000526020600020905b815481526020019060010190808311611329575b505083519394505050811515905061136857604051631face2f960e21b815260040160405180910390fd5b6000805b828110156113ec5760006002600086848151811061138c5761138c612aef565b6020026020010151815260200190815260200160002090508060020154836113b49190612b1b565b92506113d98583815181106113cb576113cb612aef565b6020026020010151336123f6565b5050806113e590612b33565b905061136c565b5060006113f882611f61565b604051909150819033907f2c13e87212a9869e0b5272de5d2e944f828d0dca3a4200794421708702f92ba590600090a361145c6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163383611e4d565b50505050565b600061146d33611b97565b6040516339f4769360e01b8152336004820152602481018290529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906339f47693906044016020604051808303816000875af11580156114dd573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906107bf9190612b4e565b600061150d838361233d565b6040516339f4769360e01b8152336004820152602481018290529091507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316906339f47693906044015b6020604051808303816000875af115801561157e573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061145c9190612b4e565b6115aa6122ec565b600780549115156101000261ff0019909216919091179055565b600360205281600052604060002081815481106115e057600080fd5b90600052602060002001600091509150505481565b600061160082611f61565b905061160c838261192f565b6116416001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000163330856119b7565b604051635f9bb63d60e11b8152306004820152602481018390527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063bf376c7a9060440161155f565b61169c6122ec565b6007805461ffff191661ff00198315159081169190911761010082021762ff00001916620100008202179091556040519081527fba40372a3a724dca3c57156128ef1e896724b65b37a17f190b1ad5de68f3a4f39060200161123e565b6001600160a01b03811660009081526003602090815260408083208054825181850281018501909352808352849383018282801561175657602002820191906000526020600020905b815481526020019060010190808311611742575b505050505090506000805b82518110156117b7576002600084838151811061178057611780612aef565b6020026020010151815260200190815260200160002060020154826117a59190612b1b565b91506117b081612b33565b9050611761565b506117c181611f61565b949350505050565b600081815260026020819052604082209081015460038201546117ec9190611b83565b9392505050565b600560205281600052604060002081815481106115e057600080fd5b604080516001600160a01b038481166024830152604480830185905283518084039091018152606490920183526020820180516001600160e01b031663095ea7b360e01b179052915160009283929087169161186b9190612b7d565b6000604051808303816000865af19150503d80600081146118a8576040519150601f19603f3d011682016040523d82523d6000602084013e6118ad565b606091505b50915091508180156118d75750805115806118d75750808060200190518101906118d79190612bb8565b6119285760405162461bcd60e51b815260206004820152600e60248201527f415050524f56455f4641494c454400000000000000000000000000000000000060448201526064015b60405180910390fd5b5050505050565b611939828261247e565b1561195757604051631f639df160e01b815260040160405180910390fd5b6119628282336124b7565b6000828152600660209081526040918290205491518381526001600160a01b039092169133917f8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a7910160405180910390a35050565b604080516001600160a01b0385811660248301528481166044830152606480830185905283518084039091018152608490920183526020820180516001600160e01b03166323b872dd60e01b1790529151600092839290881691611a1b9190612b7d565b6000604051808303816000865af19150503d8060008114611a58576040519150601f19603f3d011682016040523d82523d6000602084013e611a5d565b606091505b5091509150818015611a87575080511580611a87575080806020019051810190611a879190612bb8565b611ad35760405162461bcd60e51b815260206004820152601460248201527f5452414e534645525f46524f4d5f4641494c4544000000000000000000000000604482015260640161191f565b505050505050565b60008054906101000a90046001600160a01b03166001600160a01b031663452a93206040518163ffffffff1660e01b8152600401602060405180830381865afa158015611b2c573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190611b509190612bd5565b6001600160a01b0316336001600160a01b031614611b815760405163075fd2b160e01b815260040160405180910390fd5b565b6000611b8e83611f61565b90910392915050565b60075460009062010000900460ff1615611bc4576040516336175ff760e11b815260040160405180910390fd5b6001600160a01b038216600090815260056020526040902080545b8015611e03576000611bf2600183612bf2565b9050600060026000858481548110611c0c57611c0c612aef565b9060005260206000200154815260200190815260200160002060010160009054906101000a90046001600160a01b031690506000611c65858481548110611c5557611c55612aef565b9060005260206000200154612544565b9050611c718187612b1b565b9550866001600160a01b0316826001600160a01b03167f4dfff917e1fbb261a082e98cc7d43029621f6a6eb05ff3fef1510d5f1eb4857c83604051611cb891815260200190565b60405180910390a360026000868581548110611cd657611cd6612aef565b906000526020600020015481526020019081526020016000206002015460001415611ded57611d21858481548110611d1057611d10612aef565b906000526020600020015483612584565b50508454611d3190600190612bf2565b8314611d815784548590611d4790600190612bf2565b81548110611d5757611d57612aef565b9060005260206000200154858481548110611d7457611d74612aef565b6000918252602090912001555b60066000868581548110611d9757611d97612aef565b9060005260206000200154815260200190815260200160002060006101000a8154906001600160a01b03021916905584805480611dd657611dd6612c09565b600190038181906000526020600020016000905590555b5050508080611dfb90612c1f565b915050611bdf565b50826001600160a01b03167f4896181ff8f4543cc00db9fe9b6fb7e6f032b7eb772c72ab1ec1b4d2e03b936983604051611e3f91815260200190565b60405180910390a250919050565b604080516001600160a01b038481166024830152604480830185905283518084039091018152606490920183526020820180516001600160e01b031663a9059cbb60e01b1790529151600092839290871691611ea99190612b7d565b6000604051808303816000865af19150503d8060008114611ee6576040519150601f19603f3d011682016040523d82523d6000602084013e611eeb565b606091505b5091509150818015611f15575080511580611f15575080806020019051810190611f159190612bb8565b6119285760405162461bcd60e51b815260206004820152600f60248201527f5452414e534645525f4641494c45440000000000000000000000000000000000604482015260640161191f565b60007f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316632986c0e56040518163ffffffff1660e01b8152600401602060405180830381865afa158015611fc1573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190611fe59190612b4e565b611ff783670de0b6b3a7640000612c36565b610c7d9190612c55565b600061200d83836126fd565b1561202b576040516301c2b09d60e51b815260040160405180910390fd5b6120353384612725565b6001600160a01b0383166000818152600560209081526040808320805460018101825590845282842001859055848352600682529182902080546001600160a01b031916841790559051868152929350909133917f8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a791015b60405180910390a392915050565b60075460009062010000900460ff16156120e8576040516336175ff760e11b815260040160405180910390fd5b6000838152600660205260409020546001600160a01b03838116911614612122576040516305bbb11360e01b815260040160405180910390fd5b61212b83612544565b600084815260026020819052604090912001549091506122585760008381526002602052604090206001015461216b9084906001600160a01b0316612584565b50506001600160a01b0382166000908152600560205260408120805490915b8181101561223857858382815481106121a5576121a5612aef565b9060005260206000200154141561222857826121c2600184612bf2565b815481106121d2576121d2612aef565b90600052602060002001548382815481106121ef576121ef612aef565b90600052602060002001819055508280548061220d5761220d612c09565b60019003818190600052602060002001600090559055612238565b61223181612b33565b905061218a565b505050600083815260066020526040902080546001600160a01b03191690555b816001600160a01b03167f4896181ff8f4543cc00db9fe9b6fb7e6f032b7eb772c72ab1ec1b4d2e03b93698260405161229391815260200190565b60405180910390a26000838152600260209081526040918290206001015491518381526001600160a01b038581169316917f4dfff917e1fbb261a082e98cc7d43029621f6a6eb05ff3fef1510d5f1eb4857c91016120ad565b60008054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa158015611b2c573d6000803e3d6000fd5b6000612348826127ed565b15612366576040516335b66a0b60e21b815260040160405180910390fd5b6000838152600260208190526040909120015461238290611f61565b82101561239b57612394838333612806565b50806123a8565b6123a583336123f6565b90505b6000838152600660209081526040918290205491518381526001600160a01b039092169133917fd1c19fbcd4551a5edfb66d43d2e337c04837afda3482b42bdf569a8fccdae5fb91016120ad565b6000828152600260205260408120600101546001600160a01b0383811691161461243357604051633c25e1f760e01b815260040160405180910390fd5b60008381526002602081905260409091209081015461245190611f61565b915060008160020181905550818160030160008282546124719190612bf2565b9091555091949350505050565b60075460009060ff1680612490575081155b806117ec575050506000908152600260205260409020600101546001600160a01b03161590565b6000838152600260205260409020600101546001600160a01b038281169116146124f457604051633c25e1f760e01b815260040160405180910390fd5b600083815260026020526040902061250b83612888565b81600201600082825461251e9190612b1b565b92505081905550828160030160008282546125399190612b1b565b909155505050505050565b600081815260026020819052604082209081015460038201546125679190611b83565b91508181600301546125799190612bf2565b600390910155919050565b60008281526002602052604081206001015481906001600160a01b0390811690841681146125c557604051633c25e1f760e01b815260040160405180910390fd5b600085815260026020819052604090912001546125e190611f61565b60008681526002602090815260408083206003908101546001600160a01b03871685529252822092955093505b81548110156126c3578682828154811061262a5761262a612aef565b906000526020600020015414156126b1578154829061264b90600190612bf2565b8154811061265b5761265b612aef565b906000526020600020015482828154811061267857612678612aef565b90600052602060002001819055508180548061269657612696612c09565b600190038181906000526020600020016000905590556126c3565b806126bb81612b33565b91505061260e565b505050600093845260026020819052604085208581556001810180546001600160a01b031916905590810185905560030193909355929050565b60075460009060ff168061270f575082155b806117ec5750506001600160a01b031615919050565b6001600160a01b0382166000818152600360209081526040808320600180548254808301845592865284862090920191909155815160808101835290548152918201939093529091810161277884612888565b8152602090810184905260018054600090815260028084526040808320865181559486015185850180546001600160a01b0319166001600160a01b03909216919091179055850151908401556060909301516003909201919091558054925082916127e283612b33565b919050555092915050565b600754600090610100900460ff1680610c7d5750501590565b6000838152600260205260409020600101546001600160a01b0382811691161461284357604051633c25e1f760e01b815260040160405180910390fd5b600083815260026020526040902061285a83612888565b81600201600082825461286d9190612bf2565b92505081905550828160030160008282546125399190612bf2565b6000670de0b6b3a76400007f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316632986c0e56040518163ffffffff1660e01b8152600401602060405180830381865afa1580156128f1573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906129159190612b4e565b611ff79084612c36565b6001600160a01b038116811461098757600080fd5b60006020828403121561294657600080fd5b81356117ec8161291f565b600081518084526020808501945080840160005b8381101561298157815187529582019590820190600101612965565b509495945050505050565b6020815260006117ec6020830184612951565b600080604083850312156129b257600080fd5b50508035926020909101359150565b600080604083850312156129d457600080fd5b8235915060208301356129e68161291f565b809150509250929050565b600060208284031215612a0357600080fd5b5035919050565b60008060408385031215612a1d57600080fd5b8235612a288161291f565b915060208301356129e68161291f565b604080825283519082018190526000906020906060840190828701845b82811015612a7a5781516001600160a01b031684529284019290840190600101612a55565b50505083810382850152612a8e8186612951565b9695505050505050565b801515811461098757600080fd5b600060208284031215612ab857600080fd5b81356117ec81612a98565b60008060408385031215612ad657600080fd5b8235612ae18161291f565b946020939093013593505050565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b60008219821115612b2e57612b2e612b05565b500190565b6000600019821415612b4757612b47612b05565b5060010190565b600060208284031215612b6057600080fd5b5051919050565b634e487b7160e01b600052604160045260246000fd5b6000825160005b81811015612b9e5760208186018101518583015201612b84565b81811115612bad576000828501525b509190910192915050565b600060208284031215612bca57600080fd5b81516117ec81612a98565b600060208284031215612be757600080fd5b81516117ec8161291f565b600082821015612c0457612c04612b05565b500390565b634e487b7160e01b600052603160045260246000fd5b600081612c2e57612c2e612b05565b506000190190565b6000816000190483118215151615612c5057612c50612b05565b500290565b600082612c7257634e487b7160e01b600052601260045260246000fd5b50049056fea164736f6c634300080a000a",
+  "devdoc": {
+    "details": "Any functions dealing with initial deposits will take an address (because no ID has been assigned). After a user has deposited, all functions dealing with deposits (like withdraw or redeem functions) will take the ID of the deposit. All functions that return aggregated data grouped by user will take an address (iterates across all relevant IDs).",
+    "kind": "dev",
+    "methods": {
+      "addToDeposit(uint256,uint256)": {
+        "params": {
+          "amount_": "Amount of new gOHM debt issued from donor to recipient",
+          "depositId_": "Deposit ID to direct additional gOHM to"
+        }
+      },
+      "addToSohmDeposit(uint256,uint256)": {
+        "params": {
+          "amount_": "Amount of new sOHM debt issued from donor to recipient",
+          "depositId_": "Deposit ID to direct additional gOHM to"
+        }
+      },
+      "deposit(uint256,address)": {
+        "params": {
+          "amount_": "Amount of gOHM debt issued from donor to recipient",
+          "recipient_": "Address to direct staking yield and vault shares to"
+        }
+      },
+      "depositSohm(uint256,address)": {
+        "params": {
+          "amount_": "Amount of sOHM debt issued from donor to recipient",
+          "recipient_": "Address to direct staking yield and vault shares to"
+        }
+      },
+      "depositsTo(address,address)": {
+        "params": {
+          "donor_": "Address of user donating yield",
+          "recipient_": "Address of user receiving donated yield"
+        }
+      },
+      "donatedTo(address,address)": {
+        "params": {
+          "donor_": "Address of user donating yield",
+          "recipient_": "Address of user recieiving donated yield"
+        }
+      },
+      "getAllDeposits(address)": {
+        "params": {
+          "donor_": "Address of user donating yield"
+        }
+      },
+      "getDepositorIds(address)": {
+        "returns": {
+          "_0": "uint256[] array of depositor Id's"
+        }
+      },
+      "givePermissionToRedeem(address)": {
+        "params": {
+          "address_": "Id of the deposit."
+        }
+      },
+      "redeemAllYieldOnBehalfOf(address)": {
+        "params": {
+          "recipient_": "recipient address."
+        }
+      },
+      "redeemYield(uint256)": {
+        "params": {
+          "depositId_": "Deposit ID for this donation"
+        }
+      },
+      "redeemYieldAsSohm(uint256)": {
+        "params": {
+          "depositId_": "Deposit id for this donation"
+        }
+      },
+      "redeemYieldOnBehalfOf(uint256)": {
+        "params": {
+          "id_": "Id of the deposit."
+        }
+      },
+      "redeemableBalance(uint256)": {
+        "params": {
+          "depositId_": "Deposit ID for this donation"
+        }
+      },
+      "revokePermissionToRedeem(address)": {
+        "params": {
+          "address_": "Id of the deposit."
+        }
+      },
+      "totalDeposits(address)": {
+        "params": {
+          "donor_": "Address of user donating yield"
+        }
+      },
+      "totalDonated(address)": {
+        "params": {
+          "donor_": "Address of user donating yield"
+        }
+      },
+      "totalRedeemableBalance(address)": {
+        "params": {
+          "recipient_": "Address of user receiving donated yield"
+        }
+      },
+      "withdrawPrincipal(uint256,uint256)": {
+        "params": {
+          "amount_": "Amount of gOHM deposit to remove and return to donor",
+          "depositId_": "Deposit ID to remove gOHM deposit from"
+        }
+      },
+      "withdrawPrincipalAsSohm(uint256,uint256)": {
+        "params": {
+          "amount_": "Amount of gOHM debt to remove and return to donor as sOHM",
+          "depositId_": "Deposit ID to remove gOHM debt from"
+        }
+      }
+    },
+    "title": "YieldDirector (codename Tyche) ",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "addToDeposit(uint256,uint256)": {
+        "notice": "Deposit additional gOHM, and update deposit record"
+      },
+      "addToSohmDeposit(uint256,uint256)": {
+        "notice": "Deposit additional sOHM, wrap to gOHM, and update deposit record"
+      },
+      "deposit(uint256,address)": {
+        "notice": "Deposit gOHM, records sender address and assign rebases to recipient"
+      },
+      "depositSohm(uint256,address)": {
+        "notice": "Deposit sOHM, wrap to gOHM, and records sender address and assign rebases to recipeint"
+      },
+      "depositsTo(address,address)": {
+        "notice": "Get deposited gOHM amounts for specific recipient (updated to current index based on sOHM equivalent amount deposit)"
+      },
+      "donatedTo(address,address)": {
+        "notice": "Return total amount of gOHM donated to recipient since last full redemption"
+      },
+      "getAllDeposits(address)": {
+        "notice": "Return arrays of donor's recipients and deposit amounts (gOHM value based on sOHM equivalent deposit), matched by index"
+      },
+      "getDepositorIds(address)": {
+        "notice": "Returns the array of deposit id's belonging to the depositor"
+      },
+      "getRecipientIds(address)": {
+        "notice": "Getter function for a recipient's list of IDs. This is needed for the frontend as public state variables that map to arrays only return one element at a time rather than the full array"
+      },
+      "givePermissionToRedeem(address)": {
+        "notice": "Gives a contract permission to redeem yield on behalf of users"
+      },
+      "redeemAllYield()": {
+        "notice": "Redeem recipient's full donated amount of sOHM at current index as gOHM"
+      },
+      "redeemAllYieldAsSohm()": {
+        "notice": "Redeem recipient's full donated amount of sOHM at current index as gOHM"
+      },
+      "redeemAllYieldOnBehalfOf(address)": {
+        "notice": "Redeems all yield tied to a recipient and sends it to the recipient"
+      },
+      "redeemYield(uint256)": {
+        "notice": "Redeem recipient's donated amount of sOHM at current index from one donor as gOHM"
+      },
+      "redeemYieldAsSohm(uint256)": {
+        "notice": "Redeem recipient's donated amount of sOHM at current index"
+      },
+      "redeemYieldOnBehalfOf(uint256)": {
+        "notice": "Redeems yield from a deposit and sends it to the recipient"
+      },
+      "redeemableBalance(uint256)": {
+        "notice": "Get redeemable gOHM balance of a specific deposit"
+      },
+      "revokePermissionToRedeem(address)": {
+        "notice": "Revokes a contract permission to redeem yield on behalf of users"
+      },
+      "totalDeposits(address)": {
+        "notice": "Return total amount of donor's gOHM deposited (updated to current index based on sOHM equivalent amount deposited)"
+      },
+      "totalDonated(address)": {
+        "notice": "Return total amount of gOHM donated from donor since last full redemption"
+      },
+      "totalRedeemableBalance(address)": {
+        "notice": "Get redeemable gOHM balance of a recipient address"
+      },
+      "withdrawAll()": {
+        "notice": "Withdraw all gOHM from all donor positions"
+      },
+      "withdrawPrincipal(uint256,uint256)": {
+        "notice": "Withdraw donor's gOHM from vault"
+      },
+      "withdrawPrincipalAsSohm(uint256,uint256)": {
+        "notice": "Withdraw donor's gOHM from vault, and return it as sOHM"
+      }
+    },
+    "notice": "This contract allows donors to deposit their gOHM and donate their rebases to any address. Donors will be able to withdraw the sOHM equivalent of their principal gOHM at any time. Donation recipients can also redeem accrued rebases at any time.",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 16896,
+        "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+        "label": "authority",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_contract(IOlympusAuthority)5040"
+      },
+      {
+        "astId": 17312,
+        "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+        "label": "idCount",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 17317,
+        "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+        "label": "depositInfo",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_mapping(t_uint256,t_struct(DepositInfo)17310_storage)"
+      },
+      {
+        "astId": 17322,
+        "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+        "label": "depositorIds",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_mapping(t_address,t_array(t_uint256)dyn_storage)"
+      },
+      {
+        "astId": 17326,
+        "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+        "label": "hasPermissionToRedeem",
+        "offset": 0,
+        "slot": "4",
+        "type": "t_mapping(t_address,t_bool)"
+      },
+      {
+        "astId": 8600,
+        "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+        "label": "recipientIds",
+        "offset": 0,
+        "slot": "5",
+        "type": "t_mapping(t_address,t_array(t_uint256)dyn_storage)"
+      },
+      {
+        "astId": 8604,
+        "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+        "label": "recipientLookup",
+        "offset": 0,
+        "slot": "6",
+        "type": "t_mapping(t_uint256,t_address)"
+      },
+      {
+        "astId": 8606,
+        "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+        "label": "depositDisabled",
+        "offset": 0,
+        "slot": "7",
+        "type": "t_bool"
+      },
+      {
+        "astId": 8608,
+        "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+        "label": "withdrawDisabled",
+        "offset": 1,
+        "slot": "7",
+        "type": "t_bool"
+      },
+      {
+        "astId": 8610,
+        "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+        "label": "redeemDisabled",
+        "offset": 2,
+        "slot": "7",
+        "type": "t_bool"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_uint256)dyn_storage": {
+        "base": "t_uint256",
+        "encoding": "dynamic_array",
+        "label": "uint256[]",
+        "numberOfBytes": "32"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_contract(IOlympusAuthority)5040": {
+        "encoding": "inplace",
+        "label": "contract IOlympusAuthority",
+        "numberOfBytes": "20"
+      },
+      "t_mapping(t_address,t_array(t_uint256)dyn_storage)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => uint256[])",
+        "numberOfBytes": "32",
+        "value": "t_array(t_uint256)dyn_storage"
+      },
+      "t_mapping(t_address,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      },
+      "t_mapping(t_uint256,t_address)": {
+        "encoding": "mapping",
+        "key": "t_uint256",
+        "label": "mapping(uint256 => address)",
+        "numberOfBytes": "32",
+        "value": "t_address"
+      },
+      "t_mapping(t_uint256,t_struct(DepositInfo)17310_storage)": {
+        "encoding": "mapping",
+        "key": "t_uint256",
+        "label": "mapping(uint256 => struct YieldSplitter.DepositInfo)",
+        "numberOfBytes": "32",
+        "value": "t_struct(DepositInfo)17310_storage"
+      },
+      "t_struct(DepositInfo)17310_storage": {
+        "encoding": "inplace",
+        "label": "struct YieldSplitter.DepositInfo",
+        "members": [
+          {
+            "astId": 17303,
+            "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+            "label": "id",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 17305,
+            "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+            "label": "depositor",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_address"
+          },
+          {
+            "astId": 17307,
+            "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+            "label": "principalAmount",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 17309,
+            "contract": "contracts/peripheral/YieldDirector.sol:YieldDirector",
+            "label": "agnosticAmount",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "128"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

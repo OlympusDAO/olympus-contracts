@@ -1,11 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import {
-    CONTRACTS,
-    EPOCH_LENGTH_IN_BLOCKS,
-    FIRST_EPOCH_TIME,
-    FIRST_EPOCH_NUMBER,
-} from "../../constants";
+import { CONTRACTS } from "../../constants";
+import { epochLength, firstBlockNumber, firstEpochNumber } from "../../goerli/constants";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts } = hre;
@@ -13,7 +9,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployer } = await getNamedAccounts();
 
     const authorityDeployment = await deployments.get(CONTRACTS.authority);
-    const ohmDeployment = await deployments.get(CONTRACTS.ohm);
+    const ohmDeployment = await deployments.get(CONTRACTS.testnetOHM);
     const sOhmDeployment = await deployments.get(CONTRACTS.sOhm);
     const gOhmDeployment = await deployments.get(CONTRACTS.gOhm);
 
@@ -23,9 +19,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
             ohmDeployment.address,
             sOhmDeployment.address,
             gOhmDeployment.address,
-            EPOCH_LENGTH_IN_BLOCKS,
-            FIRST_EPOCH_NUMBER,
-            FIRST_EPOCH_TIME,
+            epochLength,
+            firstEpochNumber,
+            1686339215,
             authorityDeployment.address,
         ],
         log: true,
@@ -33,6 +29,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 };
 
 func.tags = [CONTRACTS.staking, "staking"];
-func.dependencies = [CONTRACTS.ohm, CONTRACTS.sOhm, CONTRACTS.gOhm];
+func.dependencies = [CONTRACTS.authority, CONTRACTS.testnetOHM, CONTRACTS.sOhm, CONTRACTS.gOhm];
 
 export default func;

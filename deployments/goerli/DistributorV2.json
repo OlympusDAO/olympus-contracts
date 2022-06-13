@@ -1,0 +1,526 @@
+{
+  "address": "0x2b954551307FB929DF8BB96657DB69fB4d72617c",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "contract ITreasury",
+          "name": "_treasury",
+          "type": "address"
+        },
+        {
+          "internalType": "contract IERC20",
+          "name": "_ohm",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_staking",
+          "type": "address"
+        },
+        {
+          "internalType": "contract IOlympusAuthority",
+          "name": "_authority",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_initialRate",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "Adjustment_Limit",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "Adjustment_Underflow",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "No_Rebase_Occurred",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "Not_Permissioned",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "Not_Unlocked",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "Only_Staking",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "Sanity_Check",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "contract IOlympusAuthority",
+          "name": "authority",
+          "type": "address"
+        }
+      ],
+      "name": "AuthorityUpdated",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "index",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "pool",
+          "type": "address"
+        }
+      ],
+      "name": "addPool",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "adjustment",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "add",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "rate",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "target",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "authority",
+      "outputs": [
+        {
+          "internalType": "contract IOlympusAuthority",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "bounty",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "distribute",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "who",
+          "type": "address"
+        }
+      ],
+      "name": "nextRewardFor",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "pools",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "index",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "pool",
+          "type": "address"
+        }
+      ],
+      "name": "removePool",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "retrieveBounty",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "rewardRate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "_add",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_rate",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_target",
+          "type": "uint256"
+        }
+      ],
+      "name": "setAdjustment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IOlympusAuthority",
+          "name": "_newAuthority",
+          "type": "address"
+        }
+      ],
+      "name": "setAuthority",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_bounty",
+          "type": "uint256"
+        }
+      ],
+      "name": "setBounty",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "_pools",
+          "type": "address[]"
+        }
+      ],
+      "name": "setPools",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "triggerRebase",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xe0b327877494d9ad16ea2db6d9822cf37ab59c45fdc6ad97820861fb0ba426e8",
+  "receipt": {
+    "to": null,
+    "from": "0x6e36b2f9f2BcC273f090ff049952Fa4B5Cc67567",
+    "contractAddress": "0x2b954551307FB929DF8BB96657DB69fB4d72617c",
+    "transactionIndex": 3,
+    "gasUsed": "1185532",
+    "logsBloom": "0x00000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000040000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000008000000000020000000000000000000000000000000",
+    "blockHash": "0xe24e635a141ec90ed2ba818ff2cf6c86fc9d060d5850198abcb63f78f4be9922",
+    "transactionHash": "0xe0b327877494d9ad16ea2db6d9822cf37ab59c45fdc6ad97820861fb0ba426e8",
+    "logs": [
+      {
+        "transactionIndex": 3,
+        "blockNumber": 7035427,
+        "transactionHash": "0xe0b327877494d9ad16ea2db6d9822cf37ab59c45fdc6ad97820861fb0ba426e8",
+        "address": "0x2b954551307FB929DF8BB96657DB69fB4d72617c",
+        "topics": [
+          "0x2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad",
+          "0x0000000000000000000000004a8c9502a34962a2c6d73c5d181daaef3dcdc88d"
+        ],
+        "data": "0x",
+        "logIndex": 11,
+        "blockHash": "0xe24e635a141ec90ed2ba818ff2cf6c86fc9d060d5850198abcb63f78f4be9922"
+      }
+    ],
+    "blockNumber": 7035427,
+    "cumulativeGasUsed": "1497266",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0xB3e1dF7951a62fFb5eF7D3b1C9D80CF09325580A",
+    "0x0595328847AF962F951a4f8F8eE9A3Bf261e4f6b",
+    "0x7263372b9ff6E619d8774aEB046cE313677E2Ec7",
+    "0x4A8c9502A34962a2C6d73c5D181dAaeF3dcDc88D",
+    "3000"
+  ],
+  "solcInputHash": "425eb1f5993ee96e475c14c00fa27971",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"contract ITreasury\",\"name\":\"_treasury\",\"type\":\"address\"},{\"internalType\":\"contract IERC20\",\"name\":\"_ohm\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_staking\",\"type\":\"address\"},{\"internalType\":\"contract IOlympusAuthority\",\"name\":\"_authority\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_initialRate\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"Adjustment_Limit\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"Adjustment_Underflow\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"No_Rebase_Occurred\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"Not_Permissioned\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"Not_Unlocked\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"Only_Staking\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"Sanity_Check\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"contract IOlympusAuthority\",\"name\":\"authority\",\"type\":\"address\"}],\"name\":\"AuthorityUpdated\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"pool\",\"type\":\"address\"}],\"name\":\"addPool\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"adjustment\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"add\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"rate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"target\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"authority\",\"outputs\":[{\"internalType\":\"contract IOlympusAuthority\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bounty\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"distribute\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"who\",\"type\":\"address\"}],\"name\":\"nextRewardFor\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"pools\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"pool\",\"type\":\"address\"}],\"name\":\"removePool\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"retrieveBounty\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rewardRate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"_add\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_rate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_target\",\"type\":\"uint256\"}],\"name\":\"setAdjustment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contract IOlympusAuthority\",\"name\":\"_newAuthority\",\"type\":\"address\"}],\"name\":\"setAuthority\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_bounty\",\"type\":\"uint256\"}],\"name\":\"setBounty\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_pools\",\"type\":\"address[]\"}],\"name\":\"setPools\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"triggerRebase\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"addPool(uint256,address)\":{\"details\":\"note you should find an empty slot offchain before callingif there are no empty slots, pass in an occupied index to push\"},\"setPools(address[])\":{\"details\":\"note that this overwrites the entire list (!!)\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"addPool(uint256,address)\":{\"notice\":\"adds a pool to the list\"},\"adjustment()\":{\"notice\":\"Information about adjusting reward rate\"},\"bounty()\":{\"notice\":\"A bounty for keepers to call the triggerRebase() function\"},\"distribute()\":{\"notice\":\"send epoch reward to staking contract\"},\"nextRewardFor(address)\":{\"notice\":\"view function for next reward for an address\"},\"pools(uint256)\":{\"notice\":\"Liquidity pools to receive rewards\"},\"removePool(uint256,address)\":{\"notice\":\"removes a pool from the list\"},\"rewardRate()\":{\"notice\":\"The % to increase balances per epoch\"},\"setAdjustment(bool,uint256,uint256)\":{\"notice\":\"set adjustment info for a collector's reward rate\"},\"setBounty(uint256)\":{\"notice\":\"set bounty to incentivize keepers\"},\"setPools(address[])\":{\"notice\":\"sets the liquidity pools for mint and sync\"}},\"notice\":\"Updated distributor adds the ability to mint and sync         into Uniswap V2-style liquidity pools, removing the         opportunity-cost dilemma of providing liquidity for         OHM, as well as patches a small bug in the staking contract         that pulls forward an amount of the next epoch rewards. Note that         this implementation bases staking reward distributions on staked supply.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/testnet/DistributorV2.sol\":\"DistributorV2\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":800},\"remappings\":[]},\"sources\":{\"contracts/interfaces/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IERC20 {\\n    function totalSupply() external view returns (uint256);\\n\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    function transfer(address recipient, uint256 amount) external returns (bool);\\n\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    function transferFrom(\\n        address sender,\\n        address recipient,\\n        uint256 amount\\n    ) external returns (bool);\\n\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n}\\n\",\"keccak256\":\"0xc379ec1f3a741cc00948003e24687516b8fdb71914cd3b90b10589d74fe1d49f\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IOlympusAuthority.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IOlympusAuthority {\\n    /* ========== EVENTS ========== */\\n\\n    event GovernorPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n    event GuardianPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n    event PolicyPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n    event VaultPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n\\n    event GovernorPulled(address indexed from, address indexed to);\\n    event GuardianPulled(address indexed from, address indexed to);\\n    event PolicyPulled(address indexed from, address indexed to);\\n    event VaultPulled(address indexed from, address indexed to);\\n\\n    /* ========== VIEW ========== */\\n\\n    function governor() external view returns (address);\\n\\n    function guardian() external view returns (address);\\n\\n    function policy() external view returns (address);\\n\\n    function vault() external view returns (address);\\n}\\n\",\"keccak256\":\"0x93c02d36be0a6876183f67e72acf64e0206d0e1e48fb3b9c9ed5614200d9c934\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IStaking.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IStaking {\\n    function stake(\\n        address _to,\\n        uint256 _amount,\\n        bool _rebasing,\\n        bool _claim\\n    ) external returns (uint256);\\n\\n    function claim(address _recipient, bool _rebasing) external returns (uint256);\\n\\n    function forfeit() external returns (uint256);\\n\\n    function toggleLock() external;\\n\\n    function unstake(\\n        address _to,\\n        uint256 _amount,\\n        bool _trigger,\\n        bool _rebasing\\n    ) external returns (uint256);\\n\\n    function wrap(address _to, uint256 _amount) external returns (uint256 gBalance_);\\n\\n    function unwrap(address _to, uint256 _amount) external returns (uint256 sBalance_);\\n\\n    function rebase() external;\\n\\n    function index() external view returns (uint256);\\n\\n    function contractBalance() external view returns (uint256);\\n\\n    function totalStaked() external view returns (uint256);\\n\\n    function supplyInWarmup() external view returns (uint256);\\n}\\n\",\"keccak256\":\"0xc5481248b924479a867d252882a1be9573e4aefe3c7816045e1c0c25daacca70\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/ITreasury.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface ITreasury {\\n    function deposit(\\n        uint256 _amount,\\n        address _token,\\n        uint256 _profit\\n    ) external returns (uint256);\\n\\n    function withdraw(uint256 _amount, address _token) external;\\n\\n    function tokenValue(address _token, uint256 _amount) external view returns (uint256 value_);\\n\\n    function mint(address _recipient, uint256 _amount) external;\\n\\n    function manage(address _token, uint256 _amount) external;\\n\\n    function incurDebt(uint256 amount_, address token_) external;\\n\\n    function repayDebtWithReserve(uint256 amount_, address token_) external;\\n\\n    function excessReserves() external view returns (uint256);\\n\\n    function baseSupply() external view returns (uint256);\\n}\\n\",\"keccak256\":\"0x3a7e171916da6bf9b28904c2adc6ede32896a841e7f7ede0ad60da6804659c56\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IUniswapV2ERC20.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IUniswapV2ERC20 {\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    function name() external pure returns (string memory);\\n\\n    function symbol() external pure returns (string memory);\\n\\n    function decimals() external pure returns (uint8);\\n\\n    function totalSupply() external view returns (uint256);\\n\\n    function balanceOf(address owner) external view returns (uint256);\\n\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    function approve(address spender, uint256 value) external returns (bool);\\n\\n    function transfer(address to, uint256 value) external returns (bool);\\n\\n    function transferFrom(\\n        address from,\\n        address to,\\n        uint256 value\\n    ) external returns (bool);\\n\\n    function DOMAIN_SEPARATOR() external view returns (bytes32);\\n\\n    function PERMIT_TYPEHASH() external pure returns (bytes32);\\n\\n    function nonces(address owner) external view returns (uint256);\\n\\n    function permit(\\n        address owner,\\n        address spender,\\n        uint256 value,\\n        uint256 deadline,\\n        uint8 v,\\n        bytes32 r,\\n        bytes32 s\\n    ) external;\\n}\\n\",\"keccak256\":\"0x4f478f401acdbca66defa898ac651c4cff4de9bf46a8b71e4878e44ce0142f4c\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IUniswapV2Pair.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\nimport \\\"./IUniswapV2ERC20.sol\\\";\\n\\ninterface IUniswapV2Pair is IUniswapV2ERC20 {\\n    function token0() external pure returns (address);\\n\\n    function token1() external pure returns (address);\\n\\n    function swap(\\n        uint256 amount0Out,\\n        uint256 amount1Out,\\n        address to,\\n        bytes calldata data\\n    ) external;\\n\\n    function getReserves()\\n        external\\n        view\\n        returns (\\n            uint112 reserve0,\\n            uint112 reserve1,\\n            uint32 blockTimestampLast\\n        );\\n\\n    function mint(address to) external returns (uint256 liquidity);\\n\\n    function sync() external;\\n}\\n\",\"keccak256\":\"0x41c8bfb3949d62e48feb74a499cb88c7d3e4b94c7f15eabbe0afb884ded9438d\",\"license\":\"AGPL-3.0\"},\"contracts/testnet/DistributorV2.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity ^0.8.10;\\n\\nimport \\\"../interfaces/IERC20.sol\\\";\\nimport \\\"../interfaces/ITreasury.sol\\\";\\nimport \\\"../interfaces/IStaking.sol\\\";\\nimport \\\"../interfaces/IUniswapV2Pair.sol\\\";\\n\\nimport \\\"../types/OlympusAccessControlled.sol\\\";\\n\\n/// @notice Updated distributor adds the ability to mint and sync\\n///         into Uniswap V2-style liquidity pools, removing the\\n///         opportunity-cost dilemma of providing liquidity for\\n///         OHM, as well as patches a small bug in the staking contract\\n///         that pulls forward an amount of the next epoch rewards. Note that\\n///         this implementation bases staking reward distributions on staked supply.\\ncontract DistributorV2 is OlympusAccessControlled {\\n    error No_Rebase_Occurred();\\n    error Only_Staking();\\n    error Not_Unlocked();\\n    error Sanity_Check();\\n    error Adjustment_Limit();\\n    error Adjustment_Underflow();\\n    error Not_Permissioned();\\n\\n    struct Adjust {\\n        bool add; // whether to add or subtract from the reward rate\\n        uint256 rate; // the amount to add or subtract per epoch\\n        uint256 target; // the resulting reward rate\\n    }\\n\\n    /* ====== VARIABLES ====== */\\n\\n    /// The OHM Token\\n    IERC20 private immutable ohm;\\n    /// The Olympus Treasury\\n    ITreasury private immutable treasury;\\n    /// The OHM Staking Contract\\n    address private immutable staking;\\n\\n    /// The % to increase balances per epoch\\n    uint256 public rewardRate;\\n    /// Liquidity pools to receive rewards\\n    address[] public pools;\\n\\n    /// Information about adjusting reward rate\\n    Adjust public adjustment;\\n    /// A bounty for keepers to call the triggerRebase() function\\n    uint256 public bounty;\\n\\n    uint256 private constant DENOMINATOR = 1_000_000;\\n\\n    constructor(\\n        ITreasury _treasury,\\n        IERC20 _ohm,\\n        address _staking,\\n        IOlympusAuthority _authority,\\n        uint256 _initialRate\\n    ) OlympusAccessControlled(_authority) {\\n        treasury = _treasury;\\n        ohm = _ohm;\\n        staking = _staking;\\n        rewardRate = _initialRate;\\n    }\\n\\n    /* ====== PUBLIC FUNCTIONS ====== */\\n\\n    /// @notice Patch to trigger rebases via distributor. There is an error in Staking's\\n    ///         `stake` function which pulls forward part of the rebase for the next epoch.\\n    ///         This patch triggers a rebase by calling unstake (which does not have the issue).\\n    ///         The patch also restricts `distribute` to only be able to be called from a tx\\n    ///         originating this function.\\n\\n    bool private unlockRebase; // restricts distribute() to only this call\\n\\n    function triggerRebase() external {\\n        unlockRebase = true;\\n        IStaking(staking).unstake(msg.sender, 0, true, true); // Give the caller the bounty ohm.\\n        if (unlockRebase) revert No_Rebase_Occurred();\\n    }\\n\\n    /* ====== GUARDED FUNCTIONS ====== */\\n\\n    /// @notice send epoch reward to staking contract\\n    function distribute() external {\\n        if (msg.sender != staking) revert Only_Staking();\\n        if (!unlockRebase) revert Not_Unlocked();\\n\\n        treasury.mint(staking, nextRewardFor(staking));\\n\\n        // mint to pools and sync\\n        //\\n        // this removes opportunity cost for liquidity providers by\\n        // sending rebase rewards directly into the liquidity pool\\n        //\\n        // note that this does not add additional emissions (user could\\n        // be staked instead and get the same tokens)\\n\\n        for (uint256 i = 0; i < pools.length; i++) {\\n            address pool = pools[i];\\n            if (pool != address(0)) {\\n                treasury.mint(pool, nextRewardFor(pool));\\n                IUniswapV2Pair(pool).sync();\\n            }\\n        }\\n\\n        if (adjustment.rate != 0) {\\n            adjust();\\n        }\\n\\n        unlockRebase = false;\\n    }\\n\\n    function retrieveBounty() external returns (uint256) {\\n        if (msg.sender != staking) revert Only_Staking();\\n        // If the distributor bounty is > 0, mint it for the staking contract.\\n        if (bounty > 0) {\\n            treasury.mint(staking, bounty);\\n        }\\n\\n        return bounty;\\n    }\\n\\n    /* ====== INTERNAL FUNCTIONS ====== */\\n\\n    /// @notice increment reward rate for collector\\n    function adjust() internal {\\n        if (adjustment.add) {\\n            // if rate should increase\\n            rewardRate += adjustment.rate; // raise rate\\n            if (rewardRate >= adjustment.target) {\\n                // if target met\\n                adjustment.rate = 0; // turn off adjustment\\n                rewardRate = adjustment.target; // set to target\\n            }\\n        } else {\\n            // if rate should decrease\\n            if (rewardRate > adjustment.rate) {\\n                // protect from underflow\\n                rewardRate -= adjustment.rate; // lower rate\\n            } else {\\n                rewardRate = 0;\\n            }\\n\\n            if (rewardRate <= adjustment.target) {\\n                // if target met\\n                adjustment.rate = 0; // turn off adjustment\\n                rewardRate = adjustment.target; // set to target\\n            }\\n        }\\n    }\\n\\n    /* ====== VIEW FUNCTIONS ====== */\\n\\n    /// @notice view function for next reward for an address\\n    function nextRewardFor(address who) public view returns (uint256) {\\n        return (ohm.balanceOf(who) * rewardRate) / DENOMINATOR;\\n    }\\n\\n    /* ====== POLICY FUNCTIONS ====== */\\n\\n    /// @notice set bounty to incentivize keepers\\n    function setBounty(uint256 _bounty) external onlyGovernor {\\n        bounty = _bounty;\\n    }\\n\\n    /// @notice sets the liquidity pools for mint and sync\\n    /// @dev    note that this overwrites the entire list (!!)\\n    function setPools(address[] calldata _pools) external onlyGovernor {\\n        pools = _pools;\\n    }\\n\\n    /// @notice removes a pool from the list\\n    function removePool(uint256 index, address pool) external onlyGovernor {\\n        if (pools[index] != pool) revert Sanity_Check();\\n        pools[index] = address(0);\\n    }\\n\\n    /// @notice adds a pool to the list\\n    /// @dev    note you should find an empty slot offchain before calling\\n    /// @dev    if there are no empty slots, pass in an occupied index to push\\n    function addPool(uint256 index, address pool) external onlyGovernor {\\n        // we want to overwrite slots where possible\\n        if (pools[index] == address(0)) {\\n            pools[index] = pool;\\n        } else {\\n            // if the passed in slot is not empty, push to the end\\n            pools.push(pool);\\n        }\\n    }\\n\\n    /// @notice set adjustment info for a collector's reward rate\\n    function setAdjustment(\\n        bool _add,\\n        uint256 _rate,\\n        uint256 _target\\n    ) external {\\n        if (msg.sender != authority.governor() && msg.sender != authority.guardian()) revert Not_Permissioned();\\n        if (msg.sender == authority.guardian() && _rate > (rewardRate * 25) / 1000) revert Adjustment_Limit();\\n        if (!_add && _rate > rewardRate) revert Adjustment_Underflow();\\n\\n        adjustment = Adjust({add: _add, rate: _rate, target: _target});\\n    }\\n}\\n\",\"keccak256\":\"0x4749efb473d43513adc2214624c2f7e0fdb027b3b9bd94773a7a56ff1cfd28a5\",\"license\":\"AGPL-3.0\"},\"contracts/types/OlympusAccessControlled.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0-only\\npragma solidity >=0.7.5;\\n\\nimport \\\"../interfaces/IOlympusAuthority.sol\\\";\\n\\nabstract contract OlympusAccessControlled {\\n    /* ========== EVENTS ========== */\\n\\n    event AuthorityUpdated(IOlympusAuthority indexed authority);\\n\\n    string UNAUTHORIZED = \\\"UNAUTHORIZED\\\"; // save gas\\n\\n    /* ========== STATE VARIABLES ========== */\\n\\n    IOlympusAuthority public authority;\\n\\n    /* ========== Constructor ========== */\\n\\n    constructor(IOlympusAuthority _authority) {\\n        authority = _authority;\\n        emit AuthorityUpdated(_authority);\\n    }\\n\\n    /* ========== MODIFIERS ========== */\\n\\n    modifier onlyGovernor() {\\n        require(msg.sender == authority.governor(), UNAUTHORIZED);\\n        _;\\n    }\\n\\n    modifier onlyGuardian() {\\n        require(msg.sender == authority.guardian(), UNAUTHORIZED);\\n        _;\\n    }\\n\\n    modifier onlyPolicy() {\\n        require(msg.sender == authority.policy(), UNAUTHORIZED);\\n        _;\\n    }\\n\\n    modifier onlyVault() {\\n        require(msg.sender == authority.vault(), UNAUTHORIZED);\\n        _;\\n    }\\n\\n    /* ========== GOV ONLY ========== */\\n\\n    function setAuthority(IOlympusAuthority _newAuthority) external onlyGovernor {\\n        authority = _newAuthority;\\n        emit AuthorityUpdated(_newAuthority);\\n    }\\n}\\n\",\"keccak256\":\"0x23457dbe4e9afae578313d2c73ea3880ca58c16d461fdc6ae83eb98e03ea43f7\",\"license\":\"AGPL-3.0-only\"}},\"version\":1}",
+  "bytecode": "0x610120604052600c60e08190526b15539055551213d49256915160a21b610100908152620000319160009190620000d1565b503480156200003f57600080fd5b50604051620015c1380380620015c1833981016040819052620000629162000190565b600180546001600160a01b0319166001600160a01b0384169081179091556040518391907f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad90600090a2506001600160a01b0394851660a0529284166080525090911660c05260025562000241565b828054620000df9062000204565b90600052602060002090601f0160209004810192826200010357600085556200014e565b82601f106200011e57805160ff19168380011785556200014e565b828001600101855582156200014e579182015b828111156200014e57825182559160200191906001019062000131565b506200015c92915062000160565b5090565b5b808211156200015c576000815560010162000161565b6001600160a01b03811681146200018d57600080fd5b50565b600080600080600060a08688031215620001a957600080fd5b8551620001b68162000177565b6020870151909550620001c98162000177565b6040870151909450620001dc8162000177565b6060870151909350620001ef8162000177565b80925050608086015190509295509295909350565b600181811c908216806200021957607f821691505b602082108114156200023b57634e487b7160e01b600052602260045260246000fd5b50919050565b60805160a05160c05161131f620002a260003960008181610271015281816108ff01528181610991015281816109b501528181610bce0152610c5b01526000818161096201528181610a900152610c2e015260006104c3015261131f6000f3fe608060405234801561001057600080fd5b50600436106100f55760003560e01c80638544c53b11610097578063bf7e214f11610066578063bf7e214f146101f8578063e4fc6b6d1461020b578063e7187e8a14610213578063f2dff9681461021b57600080fd5b80638544c53b1461019e578063943dfef1146101b15780639b429108146101ba578063ac4afa38146101cd57600080fd5b8063451ee4a1116100d3578063451ee4a11461013d5780635d87d3631461016f5780637a9e5e4b146101825780637b0a47ee1461019557600080fd5b80630c7d3931146100fa57806333ba88821461010457806336d33f4414610117575b600080fd5b61010261022e565b005b610102610112366004611061565b610305565b61012a610125366004611091565b610497565b6040519081526020015b60405180910390f35b6004546005546006546101529260ff16919083565b604080519315158452602084019290925290820152606001610134565b61010261017d3660046110b5565b610548565b610102610190366004611091565b6105f9565b61012a60025481565b6101026101ac3660046110ce565b6106fc565b61012a60075481565b6101026101c8366004611061565b6107b9565b6101e06101db3660046110b5565b6108ca565b6040516001600160a01b039091168152602001610134565b6001546101e0906001600160a01b031681565b6101026108f4565b61012a610bc1565b610102610229366004611143565b610cd1565b6008805460ff1916600190811790915560405163990966d560e01b8152336004820152600060248201526044810182905260648101919091526001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000169063990966d5906084016020604051808303816000875af11580156102ba573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906102de919061117d565b5060085460ff16156103035760405163c92f022f60e01b815260040160405180910390fd5b565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa158015610358573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061037c9190611196565b6001600160a01b0316336001600160a01b0316146000906103b95760405162461bcd60e51b81526004016103b091906111b3565b60405180910390fd5b5060006001600160a01b0316600383815481106103d8576103d861125b565b6000918252602090912001546001600160a01b031614156104395780600383815481106104075761040761125b565b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b031602179055505050565b600380546001810182556000919091527fc2575a0e9e593c00f959f8c92f12db2869c3395a3b0502d05e2516446f71f85b0180546001600160a01b03831673ffffffffffffffffffffffffffffffffffffffff199091161790555050565b6002546040516370a0823160e01b81526001600160a01b038381166004830152600092620f42409290917f000000000000000000000000000000000000000000000000000000000000000016906370a0823190602401602060405180830381865afa15801561050a573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061052e919061117d565b6105389190611287565b61054291906112a6565b92915050565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa15801561059b573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906105bf9190611196565b6001600160a01b0316336001600160a01b0316146000906105f35760405162461bcd60e51b81526004016103b091906111b3565b50600755565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa15801561064c573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906106709190611196565b6001600160a01b0316336001600160a01b0316146000906106a45760405162461bcd60e51b81526004016103b091906111b3565b506001805473ffffffffffffffffffffffffffffffffffffffff19166001600160a01b0383169081179091556040517f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad90600090a250565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa15801561074f573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906107739190611196565b6001600160a01b0316336001600160a01b0316146000906107a75760405162461bcd60e51b81526004016103b091906111b3565b506107b460038383610fc4565b505050565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa15801561080c573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906108309190611196565b6001600160a01b0316336001600160a01b0316146000906108645760405162461bcd60e51b81526004016103b091906111b3565b50806001600160a01b0316600383815481106108825761088261125b565b6000918252602090912001546001600160a01b0316146108b557604051630a87e13960e01b815260040160405180910390fd5b6000600383815481106104075761040761125b565b600381815481106108da57600080fd5b6000918252602090912001546001600160a01b0316905081565b336001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000161461093d5760405163084df95960e01b815260040160405180910390fd5b60085460ff166109605760405163619171c960e01b815260040160405180910390fd5b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166340c10f197f00000000000000000000000000000000000000000000000000000000000000006109d97f0000000000000000000000000000000000000000000000000000000000000000610497565b6040517fffffffff0000000000000000000000000000000000000000000000000000000060e085901b1681526001600160a01b0390921660048301526024820152604401600060405180830381600087803b158015610a3757600080fd5b505af1158015610a4b573d6000803e3d6000fd5b5050505060005b600354811015610ba457600060038281548110610a7157610a7161125b565b6000918252602090912001546001600160a01b031690508015610b91577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166340c10f1982610ac784610497565b6040517fffffffff0000000000000000000000000000000000000000000000000000000060e085901b1681526001600160a01b0390921660048301526024820152604401600060405180830381600087803b158015610b2557600080fd5b505af1158015610b39573d6000803e3d6000fd5b50505050806001600160a01b031663fff6cae96040518163ffffffff1660e01b8152600401600060405180830381600087803b158015610b7857600080fd5b505af1158015610b8c573d6000803e3d6000fd5b505050505b5080610b9c816112c8565b915050610a52565b5060055415610bb557610bb5610f3d565b6008805460ff19169055565b6000336001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001614610c0c5760405163084df95960e01b815260040160405180910390fd5b60075415610cca576007546040516340c10f1960e01b81526001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016916340c10f1991610c97917f0000000000000000000000000000000000000000000000000000000000000000916004016001600160a01b03929092168252602082015260400190565b600060405180830381600087803b158015610cb157600080fd5b505af1158015610cc5573d6000803e3d6000fd5b505050505b5060075490565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa158015610d24573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610d489190611196565b6001600160a01b0316336001600160a01b031614158015610df15750600160009054906101000a90046001600160a01b03166001600160a01b031663452a93206040518163ffffffff1660e01b8152600401602060405180830381865afa158015610db7573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610ddb9190611196565b6001600160a01b0316336001600160a01b031614155b15610e0f576040516362050a4360e01b815260040160405180910390fd5b600160009054906101000a90046001600160a01b03166001600160a01b031663452a93206040518163ffffffff1660e01b8152600401602060405180830381865afa158015610e62573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610e869190611196565b6001600160a01b0316336001600160a01b0316148015610ec057506103e86002546019610eb39190611287565b610ebd91906112a6565b82115b15610ede57604051639a9a991560e01b815260040160405180910390fd5b82158015610eed575060025482115b15610f0b57604051635c4fae2b60e11b815260040160405180910390fd5b604080516060810182529315158085526020850184905293018190526004805460ff1916909317909255600555600655565b60045460ff1615610f7a5760055460028054600090610f5d9084906112e3565b909155505060065460025410610303576000600555600654600255565b6005546002541115610fa65760055460028054600090610f9b9084906112fb565b90915550610fac9050565b60006002555b60065460025411610303576000600555600654600255565b828054828255906000526020600020908101928215611024579160200282015b8281111561102457815473ffffffffffffffffffffffffffffffffffffffff19166001600160a01b03843516178255602090920191600190910190610fe4565b50611030929150611034565b5090565b5b808211156110305760008155600101611035565b6001600160a01b038116811461105e57600080fd5b50565b6000806040838503121561107457600080fd5b82359150602083013561108681611049565b809150509250929050565b6000602082840312156110a357600080fd5b81356110ae81611049565b9392505050565b6000602082840312156110c757600080fd5b5035919050565b600080602083850312156110e157600080fd5b823567ffffffffffffffff808211156110f957600080fd5b818501915085601f83011261110d57600080fd5b81358181111561111c57600080fd5b8660208260051b850101111561113157600080fd5b60209290920196919550909350505050565b60008060006060848603121561115857600080fd5b8335801515811461116857600080fd5b95602085013595506040909401359392505050565b60006020828403121561118f57600080fd5b5051919050565b6000602082840312156111a857600080fd5b81516110ae81611049565b600060208083526000845481600182811c9150808316806111d557607f831692505b8583108114156111f357634e487b7160e01b85526022600452602485fd5b87860183815260200181801561121057600181146112215761124c565b60ff1986168252878201965061124c565b60008b81526020902060005b868110156112465781548482015290850190890161122d565b83019750505b50949998505050505050505050565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b60008160001904831182151516156112a1576112a1611271565b500290565b6000826112c357634e487b7160e01b600052601260045260246000fd5b500490565b60006000198214156112dc576112dc611271565b5060010190565b600082198211156112f6576112f6611271565b500190565b60008282101561130d5761130d611271565b50039056fea164736f6c634300080a000a",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100f55760003560e01c80638544c53b11610097578063bf7e214f11610066578063bf7e214f146101f8578063e4fc6b6d1461020b578063e7187e8a14610213578063f2dff9681461021b57600080fd5b80638544c53b1461019e578063943dfef1146101b15780639b429108146101ba578063ac4afa38146101cd57600080fd5b8063451ee4a1116100d3578063451ee4a11461013d5780635d87d3631461016f5780637a9e5e4b146101825780637b0a47ee1461019557600080fd5b80630c7d3931146100fa57806333ba88821461010457806336d33f4414610117575b600080fd5b61010261022e565b005b610102610112366004611061565b610305565b61012a610125366004611091565b610497565b6040519081526020015b60405180910390f35b6004546005546006546101529260ff16919083565b604080519315158452602084019290925290820152606001610134565b61010261017d3660046110b5565b610548565b610102610190366004611091565b6105f9565b61012a60025481565b6101026101ac3660046110ce565b6106fc565b61012a60075481565b6101026101c8366004611061565b6107b9565b6101e06101db3660046110b5565b6108ca565b6040516001600160a01b039091168152602001610134565b6001546101e0906001600160a01b031681565b6101026108f4565b61012a610bc1565b610102610229366004611143565b610cd1565b6008805460ff1916600190811790915560405163990966d560e01b8152336004820152600060248201526044810182905260648101919091526001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000169063990966d5906084016020604051808303816000875af11580156102ba573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906102de919061117d565b5060085460ff16156103035760405163c92f022f60e01b815260040160405180910390fd5b565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa158015610358573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061037c9190611196565b6001600160a01b0316336001600160a01b0316146000906103b95760405162461bcd60e51b81526004016103b091906111b3565b60405180910390fd5b5060006001600160a01b0316600383815481106103d8576103d861125b565b6000918252602090912001546001600160a01b031614156104395780600383815481106104075761040761125b565b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b031602179055505050565b600380546001810182556000919091527fc2575a0e9e593c00f959f8c92f12db2869c3395a3b0502d05e2516446f71f85b0180546001600160a01b03831673ffffffffffffffffffffffffffffffffffffffff199091161790555050565b6002546040516370a0823160e01b81526001600160a01b038381166004830152600092620f42409290917f000000000000000000000000000000000000000000000000000000000000000016906370a0823190602401602060405180830381865afa15801561050a573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061052e919061117d565b6105389190611287565b61054291906112a6565b92915050565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa15801561059b573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906105bf9190611196565b6001600160a01b0316336001600160a01b0316146000906105f35760405162461bcd60e51b81526004016103b091906111b3565b50600755565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa15801561064c573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906106709190611196565b6001600160a01b0316336001600160a01b0316146000906106a45760405162461bcd60e51b81526004016103b091906111b3565b506001805473ffffffffffffffffffffffffffffffffffffffff19166001600160a01b0383169081179091556040517f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad90600090a250565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa15801561074f573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906107739190611196565b6001600160a01b0316336001600160a01b0316146000906107a75760405162461bcd60e51b81526004016103b091906111b3565b506107b460038383610fc4565b505050565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa15801561080c573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906108309190611196565b6001600160a01b0316336001600160a01b0316146000906108645760405162461bcd60e51b81526004016103b091906111b3565b50806001600160a01b0316600383815481106108825761088261125b565b6000918252602090912001546001600160a01b0316146108b557604051630a87e13960e01b815260040160405180910390fd5b6000600383815481106104075761040761125b565b600381815481106108da57600080fd5b6000918252602090912001546001600160a01b0316905081565b336001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000161461093d5760405163084df95960e01b815260040160405180910390fd5b60085460ff166109605760405163619171c960e01b815260040160405180910390fd5b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166340c10f197f00000000000000000000000000000000000000000000000000000000000000006109d97f0000000000000000000000000000000000000000000000000000000000000000610497565b6040517fffffffff0000000000000000000000000000000000000000000000000000000060e085901b1681526001600160a01b0390921660048301526024820152604401600060405180830381600087803b158015610a3757600080fd5b505af1158015610a4b573d6000803e3d6000fd5b5050505060005b600354811015610ba457600060038281548110610a7157610a7161125b565b6000918252602090912001546001600160a01b031690508015610b91577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166340c10f1982610ac784610497565b6040517fffffffff0000000000000000000000000000000000000000000000000000000060e085901b1681526001600160a01b0390921660048301526024820152604401600060405180830381600087803b158015610b2557600080fd5b505af1158015610b39573d6000803e3d6000fd5b50505050806001600160a01b031663fff6cae96040518163ffffffff1660e01b8152600401600060405180830381600087803b158015610b7857600080fd5b505af1158015610b8c573d6000803e3d6000fd5b505050505b5080610b9c816112c8565b915050610a52565b5060055415610bb557610bb5610f3d565b6008805460ff19169055565b6000336001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001614610c0c5760405163084df95960e01b815260040160405180910390fd5b60075415610cca576007546040516340c10f1960e01b81526001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016916340c10f1991610c97917f0000000000000000000000000000000000000000000000000000000000000000916004016001600160a01b03929092168252602082015260400190565b600060405180830381600087803b158015610cb157600080fd5b505af1158015610cc5573d6000803e3d6000fd5b505050505b5060075490565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b8152600401602060405180830381865afa158015610d24573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610d489190611196565b6001600160a01b0316336001600160a01b031614158015610df15750600160009054906101000a90046001600160a01b03166001600160a01b031663452a93206040518163ffffffff1660e01b8152600401602060405180830381865afa158015610db7573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610ddb9190611196565b6001600160a01b0316336001600160a01b031614155b15610e0f576040516362050a4360e01b815260040160405180910390fd5b600160009054906101000a90046001600160a01b03166001600160a01b031663452a93206040518163ffffffff1660e01b8152600401602060405180830381865afa158015610e62573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610e869190611196565b6001600160a01b0316336001600160a01b0316148015610ec057506103e86002546019610eb39190611287565b610ebd91906112a6565b82115b15610ede57604051639a9a991560e01b815260040160405180910390fd5b82158015610eed575060025482115b15610f0b57604051635c4fae2b60e11b815260040160405180910390fd5b604080516060810182529315158085526020850184905293018190526004805460ff1916909317909255600555600655565b60045460ff1615610f7a5760055460028054600090610f5d9084906112e3565b909155505060065460025410610303576000600555600654600255565b6005546002541115610fa65760055460028054600090610f9b9084906112fb565b90915550610fac9050565b60006002555b60065460025411610303576000600555600654600255565b828054828255906000526020600020908101928215611024579160200282015b8281111561102457815473ffffffffffffffffffffffffffffffffffffffff19166001600160a01b03843516178255602090920191600190910190610fe4565b50611030929150611034565b5090565b5b808211156110305760008155600101611035565b6001600160a01b038116811461105e57600080fd5b50565b6000806040838503121561107457600080fd5b82359150602083013561108681611049565b809150509250929050565b6000602082840312156110a357600080fd5b81356110ae81611049565b9392505050565b6000602082840312156110c757600080fd5b5035919050565b600080602083850312156110e157600080fd5b823567ffffffffffffffff808211156110f957600080fd5b818501915085601f83011261110d57600080fd5b81358181111561111c57600080fd5b8660208260051b850101111561113157600080fd5b60209290920196919550909350505050565b60008060006060848603121561115857600080fd5b8335801515811461116857600080fd5b95602085013595506040909401359392505050565b60006020828403121561118f57600080fd5b5051919050565b6000602082840312156111a857600080fd5b81516110ae81611049565b600060208083526000845481600182811c9150808316806111d557607f831692505b8583108114156111f357634e487b7160e01b85526022600452602485fd5b87860183815260200181801561121057600181146112215761124c565b60ff1986168252878201965061124c565b60008b81526020902060005b868110156112465781548482015290850190890161122d565b83019750505b50949998505050505050505050565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b60008160001904831182151516156112a1576112a1611271565b500290565b6000826112c357634e487b7160e01b600052601260045260246000fd5b500490565b60006000198214156112dc576112dc611271565b5060010190565b600082198211156112f6576112f6611271565b500190565b60008282101561130d5761130d611271565b50039056fea164736f6c634300080a000a",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "addPool(uint256,address)": {
+        "details": "note you should find an empty slot offchain before callingif there are no empty slots, pass in an occupied index to push"
+      },
+      "setPools(address[])": {
+        "details": "note that this overwrites the entire list (!!)"
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "addPool(uint256,address)": {
+        "notice": "adds a pool to the list"
+      },
+      "adjustment()": {
+        "notice": "Information about adjusting reward rate"
+      },
+      "bounty()": {
+        "notice": "A bounty for keepers to call the triggerRebase() function"
+      },
+      "distribute()": {
+        "notice": "send epoch reward to staking contract"
+      },
+      "nextRewardFor(address)": {
+        "notice": "view function for next reward for an address"
+      },
+      "pools(uint256)": {
+        "notice": "Liquidity pools to receive rewards"
+      },
+      "removePool(uint256,address)": {
+        "notice": "removes a pool from the list"
+      },
+      "rewardRate()": {
+        "notice": "The % to increase balances per epoch"
+      },
+      "setAdjustment(bool,uint256,uint256)": {
+        "notice": "set adjustment info for a collector's reward rate"
+      },
+      "setBounty(uint256)": {
+        "notice": "set bounty to incentivize keepers"
+      },
+      "setPools(address[])": {
+        "notice": "sets the liquidity pools for mint and sync"
+      }
+    },
+    "notice": "Updated distributor adds the ability to mint and sync         into Uniswap V2-style liquidity pools, removing the         opportunity-cost dilemma of providing liquidity for         OHM, as well as patches a small bug in the staking contract         that pulls forward an amount of the next epoch rewards. Note that         this implementation bases staking reward distributions on staked supply.",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 16788,
+        "contract": "contracts/testnet/DistributorV2.sol:DistributorV2",
+        "label": "UNAUTHORIZED",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_string_storage"
+      },
+      {
+        "astId": 16791,
+        "contract": "contracts/testnet/DistributorV2.sol:DistributorV2",
+        "label": "authority",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_contract(IOlympusAuthority)5040"
+      },
+      {
+        "astId": 12230,
+        "contract": "contracts/testnet/DistributorV2.sol:DistributorV2",
+        "label": "rewardRate",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 12234,
+        "contract": "contracts/testnet/DistributorV2.sol:DistributorV2",
+        "label": "pools",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_array(t_address)dyn_storage"
+      },
+      {
+        "astId": 12238,
+        "contract": "contracts/testnet/DistributorV2.sol:DistributorV2",
+        "label": "adjustment",
+        "offset": 0,
+        "slot": "4",
+        "type": "t_struct(Adjust)12216_storage"
+      },
+      {
+        "astId": 12241,
+        "contract": "contracts/testnet/DistributorV2.sol:DistributorV2",
+        "label": "bounty",
+        "offset": 0,
+        "slot": "7",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 12283,
+        "contract": "contracts/testnet/DistributorV2.sol:DistributorV2",
+        "label": "unlockRebase",
+        "offset": 0,
+        "slot": "8",
+        "type": "t_bool"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_address)dyn_storage": {
+        "base": "t_address",
+        "encoding": "dynamic_array",
+        "label": "address[]",
+        "numberOfBytes": "32"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_contract(IOlympusAuthority)5040": {
+        "encoding": "inplace",
+        "label": "contract IOlympusAuthority",
+        "numberOfBytes": "20"
+      },
+      "t_string_storage": {
+        "encoding": "bytes",
+        "label": "string",
+        "numberOfBytes": "32"
+      },
+      "t_struct(Adjust)12216_storage": {
+        "encoding": "inplace",
+        "label": "struct DistributorV2.Adjust",
+        "members": [
+          {
+            "astId": 12211,
+            "contract": "contracts/testnet/DistributorV2.sol:DistributorV2",
+            "label": "add",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bool"
+          },
+          {
+            "astId": 12213,
+            "contract": "contracts/testnet/DistributorV2.sol:DistributorV2",
+            "label": "rate",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 12215,
+            "contract": "contracts/testnet/DistributorV2.sol:DistributorV2",
+            "label": "target",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "96"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

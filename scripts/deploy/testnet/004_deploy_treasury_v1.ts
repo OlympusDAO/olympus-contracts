@@ -8,11 +8,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployer } = await getNamedAccounts();
 
     const ohmDeployment = await deployments.get(CONTRACTS.testnetOHMv1);
-    const authorityDeployment = await deployments.get(CONTRACTS.authority);
+    const daiDeployment = await deployments.get(CONTRACTS.DAI);
 
     await deploy(CONTRACTS.treasuryV1, {
         from: deployer,
-        args: [ohmDeployment.address, TREASURY_TIMELOCK, authorityDeployment.address],
+        args: [ohmDeployment.address, daiDeployment.address, TREASURY_TIMELOCK],
         log: true,
         skipIfAlreadyDeployed: true,
     });

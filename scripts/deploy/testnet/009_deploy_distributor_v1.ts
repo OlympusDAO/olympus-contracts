@@ -2,6 +2,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
 import { CONTRACTS } from "../../constants";
+import { epochLength, firstBlockNumber } from "../../goerli/constants";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts } = hre;
@@ -13,7 +14,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     await deploy(CONTRACTS.distributorV1, {
         from: deployer,
-        args: [treasuryDeployment.address, ohmDeployment.address],
+        args: [treasuryDeployment.address, ohmDeployment.address, epochLength, firstBlockNumber],
         log: true,
         skipIfAlreadyDeployed: true,
     });

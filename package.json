@@ -63,6 +63,7 @@
     "deploy:hardhat": "hardhat --network hardhat deploy",
     "sourcify:mainnet": "hardhat --network mainnet sourcify",
     "sourcify:rinkeby": "hardhat --network rinkeby sourcify",
+    "sourcify:goerli": "hardhat --network goerli sourcify",
     "etherscan:mainnet": "hardhat --network mainnet etherscan-verify",
     "etherscan:rinkeby": "hardhat --network rinkeby etherscan-verify",
     "etherscan:goerli": "hardhat --network goerli etherscan-verify",

@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { CONTRACTS } from "../../constants";
+import { initialRewardRate } from "../../goerli/constants";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts } = hre;
@@ -8,7 +9,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployer } = await getNamedAccounts();
 
     const treasuryDeployment = await deployments.get(CONTRACTS.treasury);
-    const ohmDeployment = await deployments.get(CONTRACTS.ohm);
+    const ohmDeployment = await deployments.get(CONTRACTS.testnetOHM);
     const stakingDeployment = await deployments.get(CONTRACTS.staking);
     const authorityDeployment = await deployments.get(CONTRACTS.authority);
 
@@ -20,6 +21,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
             ohmDeployment.address,
             stakingDeployment.address,
             authorityDeployment.address,
+            initialRewardRate
         ],
         log: true,
     });
@@ -28,9 +30,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 func.tags = [CONTRACTS.distributor, "staking"];
 func.dependencies = [
     CONTRACTS.treasury,
-    CONTRACTS.ohm,
-    CONTRACTS.bondingCalculator,
-    CONTRACTS.olympusAuthority,
+    CONTRACTS.testnetOHM,
+    CONTRACTS.staking,
+    CONTRACTS.authority,
 ];
 
 export default func;
