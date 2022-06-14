@@ -77,8 +77,7 @@ const deployInvestor = async (index: number) => {
   const mintAmount = "1000000000000";
   // some to dao
   await ohm.mint(owner.address, mintAmount);
-  // some to 2 users
-  // await ohm.mint(alice.address, mintAmount);
+  // some to a user
   await ohm.mint(bob.address, (Number(mintAmount)*3).toString());
   const circulatingSupply = Number(mintAmount)*3;
 
@@ -168,7 +167,6 @@ describe("Investor", () => {
       const max = 13000000000 // ohm quantity
       await investor.setTerms(alice.address, percent, claimed, max);
       const claimedOhm = await investor.claimed(alice.address);
-      // NOTE (appleseed): there is a precision issue here... more apparent on line 177
       const redeemable = (circSupply*percent*1000) - Number(claimedOhm.toString())*10**9;
       const returnedTerms = await investor.terms(alice.address);
       const index = await gohm.index();
@@ -176,7 +174,6 @@ describe("Investor", () => {
       expect(returnedTerms.gClaimed).to.equal(claimed);
       expect(returnedTerms.max).to.equal(max);
       expect(await investor.redeemableFor(alice.address)).to.equal(redeemable.toString());
-      // NOTE (appleseed): more apparent logic flaw, all precision on claimed is lost
       expect(claimedOhm).to.equal(Number(claimed)/(10**18)*Number(index.toString()));
     });
 
