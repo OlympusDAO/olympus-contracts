@@ -268,10 +268,8 @@ describe("Investor", () => {
       await investor.setTerms(alice.address, percent, claimed, max);
       const claimedOhm = await investor.claimed(alice.address);
       const redeemableFor = await investor.redeemableFor(alice.address);
-      // NOTE (appleseed): there is a precision issue here... continued on line 177
       const redeemable = (circSupply*percent*1000) - Number(claimedOhm.toString())*10**9;
       expect(redeemableFor).to.equal(redeemable.toString());
-      // NOTE (appleseed): continued logic flaw, all precision on claimed is lost
       expect(claimedOhm).to.equal(BigNumber.from(claimed).mul(index).div(String(10**18)));
     });
 
