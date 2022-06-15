@@ -60,9 +60,8 @@ contract UniSwapStrategy is IStrategy {
             uint256 amountADesired,
             uint256 amountBDesired,
             uint256 amountAMin,
-            uint256 amountBMin,
-            uint256 slippage
-        ) = abi.decode(_data, (address, address, uint256, uint256, uint256, uint256, uint256));
+            uint256 amountBMin
+        ) = abi.decode(_data, (address, address, uint256, uint256, uint256, uint256));
 
         if (tokenA == ohmAddress) {
             if (_ohmAmount != amountADesired) revert UniswapStrategy_AmountDoesNotMatch();
@@ -74,8 +73,8 @@ contract UniSwapStrategy is IStrategy {
             if (_ohmAmount != amountBDesired) revert UniswapStrategy_AmountDoesNotMatch();
 
             IERC20(tokenB).safeTransferFrom(incurDebtAddress, address(this), _ohmAmount);
-            IERC20(tokenA).safeTransferFrom(_user, address(this), amountBDesired);
-            IERC20(tokenA).approve(address(router), amountBDesired);
+            IERC20(tokenA).safeTransferFrom(_user, address(this), amountADesired);
+            IERC20(tokenA).approve(address(router), amountADesired);
         } else {
             revert UniswapStrategy_OhmAddressNotFound();
         }
@@ -88,8 +87,8 @@ contract UniSwapStrategy is IStrategy {
             tokenB,
             amountADesired,
             amountBDesired,
-            (amountAMin * slippage) / 1000,
-            (amountBMin * slippage) / 1000,
+            amountAMin,
+            amountBMin,
             incurDebtAddress,
             block.timestamp
         );
@@ -128,14 +127,10 @@ contract UniSwapStrategy is IStrategy {
         address _user
     ) external returns (uint256 ohmRecieved) {
         if (msg.sender != incurDebtAddress) revert UniswapStrategy_NotIncurDebtAddress();
-        (
-            address tokenA,
-            address tokenB,
-            uint256 liquidity,
-            uint256 amountAMin,
-            uint256 amountBMin,
-            uint256 slippage
-        ) = abi.decode(_data, (address, address, uint256, uint256, uint256, uint256));
+        (address tokenA, address tokenB, uint256 liquidity, uint256 amountAMin, uint256 amountBMin) = abi.decode(
+            _data,
+            (address, address, uint256, uint256, uint256)
+        );
 
         address lpTokenAddress = IUniswapV2Factory(factory).getPair(tokenA, tokenB);
 
@@ -149,8 +144,8 @@ contract UniSwapStrategy is IStrategy {
             tokenA,
             tokenB,
             liquidity,
-            (amountAMin * slippage) / 1000,
-            (amountBMin * slippage) / 1000,
+            amountAMin,
+            amountBMin,
             address(this),
             block.timestamp
         );

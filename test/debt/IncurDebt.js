@@ -725,11 +725,10 @@ describe("IncurDebt", async () => {
         const daiAmount = "1000000000000000000000";
         const token0 = olympus.ohm;
         const token1 = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
-        const slippage = 900;
 
         const data = ethers.utils.defaultAbiCoder.encode(
-            ["address", "address", "uint256", "uint256", "uint256", "uint256", "uint256"],
-            [token0, token1, ohmAmount, daiAmount, ohmAmount, daiAmount, slippage]
+            ["address", "address", "uint256", "uint256", "uint256", "uint256"],
+            [token0, token1, ohmAmount, daiAmount, "30000000000", "100000000000000000000"]
         );
 
         it("Should fail if borrower isNonLpBorrower", async () => {
@@ -1010,17 +1009,14 @@ describe("IncurDebt", async () => {
         const token0 = olympus.ohm;
         const token1 = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
 
-        const slippage = 900;
-        const slippage1 = 900;
-
         const fakeData = ethers.utils.defaultAbiCoder.encode(
-            ["address", "address", "uint256", "uint256", "uint256", "uint256"],
-            [token0, token1, ohmAmount, daiAmount, ohmAmount, slippage]
+            ["address", "address", "uint256", "uint256", "uint256"],
+            [token0, token1, ohmAmount, daiAmount, ohmAmount]
         );
 
         const data1 = ethers.utils.defaultAbiCoder.encode(
-            ["address", "address", "uint256", "uint256", "uint256", "uint256", "uint256"],
-            [token0, token1, ohmAmount, daiAmount, ohmAmount, daiAmount, slippage]
+            ["address", "address", "uint256", "uint256", "uint256", "uint256"],
+            [token0, token1, ohmAmount, daiAmount, "30000000000", "100000000000000000000"]
         );
 
         it("Should fail if borrower isNonLpBorrower", async () => {
@@ -1068,23 +1064,12 @@ describe("IncurDebt", async () => {
             const totalOutstandingGlobalDebtBeforeTx = await incurDebt.totalOutstandingGlobalDebt();
             assert.equal(borrowerInfoBeforeTx.debt, totalOutstandingGlobalDebtBeforeTx.toString());
 
-            const token0PoolBalance = await ohm_token.balanceOf(uniOhmDaiLpAddress);
-            const token1PoolBalance = await daiContract.balanceOf(uniOhmDaiLpAddress);
-            const poolTotalSupply = await uniswapLpContract.totalSupply();
-
-            const amount1Min = (token0PoolBalance * borrowerLpBeforeTx) / poolTotalSupply;
-            const amount2Min = (token1PoolBalance * borrowerLpBeforeTx) / poolTotalSupply;
+            const amount1Min = "30000000000";
+            const amount2Min = "100000000000000000000";
 
             const data = ethers.utils.defaultAbiCoder.encode(
-                ["address", "address", "uint256", "uint256", "uint256", "uint256"],
-                [
-                    token0,
-                    token1,
-                    borrowerLpBeforeTx,
-                    amount1Min.toString(),
-                    amount2Min.toString(),
-                    slippage1,
-                ]
+                ["address", "address", "uint256", "uint256", "uint256"],
+                [token0, token1, borrowerLpBeforeTx, amount1Min, amount2Min]
             );
             await expect(
                 incurDebt
@@ -1240,11 +1225,9 @@ describe("IncurDebt", async () => {
         const token0 = olympus.ohm;
         const token1 = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
 
-        const slippage = 900;
-
         const data = ethers.utils.defaultAbiCoder.encode(
-            ["address", "address", "uint256", "uint256", "uint256", "uint256", "uint256"],
-            [token0, token1, ohmAmount, daiAmount, ohmAmount, daiAmount, slippage]
+            ["address", "address", "uint256", "uint256", "uint256", "uint256"],
+            [token0, token1, ohmAmount, daiAmount, "30000000000", "100000000000000000000"]
         );
 
         it("Should fail if borrower isNonLpBorrower", async () => {
@@ -1387,6 +1370,20 @@ describe("IncurDebt", async () => {
             await expect(await lpTokenContract.balanceOf(gOhmHolder.address)).to.equal(
                 liquidityAmount
             );
+        });
+    });
+
+    describe("Withdraw Tokens as Governor", async () => {
+        it("Should be able to sweep tokens", async () => {
+            await daiContract
+                .connect(daiHolder)
+                .transfer(incurDebt.address, "10000000000000000000");
+            let before = await daiContract.balanceOf(governor.address);
+            await incurDebt
+                .connect(governor)
+                .withdrawToken(daiContract.address, "10000000000000000000");
+            let after = await daiContract.balanceOf(governor.address);
+            await expect(after.sub(before)).to.equal("10000000000000000000");
         });
     });
 

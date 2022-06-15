@@ -116,4 +116,10 @@ interface IIncurDebt {
      * @param _borrower the account to seize
      */
     function seize(address _borrower) external;
+
+    /// @notice lets governor withdraw tokens incase of airdrop or error
+    /// - onlyOwner (or governance)
+    /// @param _tokenAddress the address of the token
+    /// @param _amount amount of tokens to withdraw
+    function withdrawToken(address _tokenAddress, uint256 _amount) external;
 }
