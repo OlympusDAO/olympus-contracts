@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0
+pragma solidity ^0.8.10;
+
 interface ICurvePoolFactory {
     function get_coins(address _pool) external view returns (address[4] memory);
 

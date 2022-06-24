@@ -22,6 +22,7 @@ error IncurDebt_AmountAboveBorrowerBalance(uint256 _amount);
 error IncurDebt_OHMAmountMoreThanAvailableLoan(uint256 _amount);
 error IncurDebt_BorrowerHasNoOutstandingDebt(address _borrower);
 error IncurDebt_BorrowerStillHasOutstandingDebt(address _borrower);
+error IncurDebt_InvalidAddress();
 
 /// @title IncurDebt
 /// @notice Contract that allows users to use the treasury's incurdebt function.
@@ -107,6 +108,13 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         address _treasury,
         address _olympusAuthority
     ) OlympusAccessControlledV2(IOlympusAuthority(_olympusAuthority)) {
+        if (_OHM == address(0)) revert IncurDebt_InvalidAddress();
+        if (_gOHM == address(0)) revert IncurDebt_InvalidAddress();
+        if (_sOHM == address(0)) revert IncurDebt_InvalidAddress();
+        if (_staking == address(0)) revert IncurDebt_InvalidAddress();
+        if (_treasury == address(0)) revert IncurDebt_InvalidAddress();
+        if (_olympusAuthority == address(0)) revert IncurDebt_InvalidAddress();
+
         OHM = _OHM;
         gOHM = _gOHM;
         sOHM = _sOHM;
@@ -151,7 +159,6 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
 
     /// @notice lets a user become a LP borrower
     /// - onlyOwner (or governance)
-    /// - user must not be borrower
     /// @param _borrower the address that will interact with contract
     function allowLPBorrower(address _borrower) external override onlyGovernor {
         if (borrowers[_borrower].isNonLpBorrower) revert IncurDebt_AlreadyBorrower(_borrower);
@@ -163,7 +170,6 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
 
     /// @notice lets a user become a Non LP borrower
     /// - onlyOwner (or governance)
-    /// - user must not be borrower
     /// @param _borrower the address that will interact with contract
     function allowNonLPBorrower(address _borrower) external override onlyGovernor {
         if (borrowers[_borrower].isLpBorrower) revert IncurDebt_AlreadyBorrower(_borrower);
@@ -176,7 +182,6 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     /// @notice sets the maximum debt limit for a borrower
     /// - onlyOwner (or governance)
     /// - limit must be greater than or equal to borrower's outstanding debt
-    /// - limit must be less than or equal to the global debt limit
     /// @param _borrower the address that will interact with contract
     /// @param _limit borrower's debt limit in OHM
     function setBorrowerDebtLimit(address _borrower, uint256 _limit)
@@ -227,7 +232,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     /// - will burn all collateral, including excess of debt
     /// - onlyGovernance
     /// @param _borrower the account to seize collateral
-    function seize(address _borrower) external override onlyGovernor isBorrower(_borrower) {
+    function seize(address _borrower) external override onlyGovernor {
         (uint256 seizedCollateral, uint256 paidDebt) = _repay(_borrower);
         borrowers[_borrower].collateralInGOHM = 0;
 
@@ -235,6 +240,14 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         IOHM(OHM).burn(amountToBurn);
 
         emit DebtPaidWithCollateralAndBurnTheRest(_borrower, paidDebt, totalOutstandingGlobalDebt, seizedCollateral);
+    }
+
+    /// @notice lets governor withdraw tokens incase of airdrop or error
+    /// - onlyOwner (or governance)
+    /// @param _tokenAddress the address of the token
+    /// @param _amount amount of tokens to withdraw
+    function withdrawToken(address _tokenAddress, uint256 _amount) external override onlyGovernor {
+        IERC20(_tokenAddress).safeTransfer(msg.sender, _amount);
     }
 
     /************************
@@ -379,7 +392,6 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
             revert IncurDebt_AmountAboveBorrowerBalance(_amount);
 
         if (_amount > borrower.collateralInGOHM - borrower.unwrappedGOHM) {
-            // Does uint256 > uint128 cause problem?
             uint256 amountGOHMToWrap = borrower.unwrappedGOHM + _amount - borrower.collateralInGOHM;
             borrower.unwrappedGOHM -= uint128(amountGOHMToWrap);
             uint256 amountOHMNeededToWrap = IgOHM(gOHM).balanceFrom(amountGOHMToWrap);
@@ -413,7 +425,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
 
         IERC20(gOHM).transfer(msg.sender, collateralRemaining);
 
-        emit DebtPaidWithCollateralAndWithdrawTheRest( //Change event
+        emit DebtPaidWithCollateralAndWithdrawTheRest(
             msg.sender,
             paidDebt,
             totalOutstandingGlobalDebt,
@@ -430,6 +442,9 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         Borrower storage borrower = borrowers[msg.sender];
 
         if (borrower.debt == 0) revert IncurDebt_BorrowerHasNoOutstandingDebt(msg.sender);
+        if (_ohmAmount > borrower.debt) {
+            _ohmAmount = borrower.debt;
+        }
 
         totalOutstandingGlobalDebt -= _ohmAmount;
         borrower.debt -= uint128(_ohmAmount);
