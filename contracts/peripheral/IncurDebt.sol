@@ -294,7 +294,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         uint256 _ohmAmount,
         address _strategy,
         bytes calldata _strategyParams
-    ) external isStrategyApproved(_strategy) returns (uint256) {
+    ) external override isStrategyApproved(_strategy) returns (uint256) {
         Borrower storage borrower = borrowers[msg.sender];
 
         if (!borrower.isLpBorrower) revert IncurDebt_NotBorrower(msg.sender);
@@ -330,7 +330,7 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         address _strategy,
         address _lpToken,
         bytes calldata _strategyParams
-    ) external isStrategyApproved(_strategy) returns (uint256 ohmRecieved) {
+    ) external override isStrategyApproved(_strategy) returns (uint256 ohmRecieved) {
         Borrower storage borrower = borrowers[msg.sender];
         if (!borrower.isLpBorrower) revert IncurDebt_NotBorrower(msg.sender);
 

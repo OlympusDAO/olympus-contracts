@@ -32,6 +32,38 @@ interface IIncurDebt {
     function withdraw(uint256 _amount) external;
 
     /**
+     * @notice Creates an LP position by borrowing OHM
+     * - msg.sender must be whitelisted
+     * - the strategy must be whitelisted
+     * - the strategy contract must have been approved _pairAmount of _pairToken
+     * - _ohmAmount must be less than or equal to available debt
+     * @param _ohmAmount the desired amount of OHM to borrow
+     * @param _strategy the address of the AMM strategy to use
+     * @param _strategyParams strategy-specific params
+     * @return number of LP tokens created
+     */
+    function createLP(
+        uint256 _ohmAmount,
+        address _strategy,
+        bytes calldata _strategyParams
+    ) external returns (uint256);
+
+    /**
+     * @notice unwinds an LP position and pays off OHM debt. Excess ohm is sent back to caller.
+     * @param _liquidity the amount of LP tokens to remove.
+     * @param _strategy the address of the AMM strategy to use
+     * @param _lpToken address of lp token to remove liquidity from
+     * @param _strategyParams strategy-specific params
+     * @return ohmRecieved of _pair token send to _to and OHM to pay
+     */
+    function removeLP(
+        uint256 _liquidity,
+        address _strategy,
+        address _lpToken,
+        bytes calldata _strategyParams
+    ) external returns (uint256);
+
+    /**
      * @notice repay debt with collateral
      * - msg.sender must be a borrower
      * - borrower must have outstanding debt
