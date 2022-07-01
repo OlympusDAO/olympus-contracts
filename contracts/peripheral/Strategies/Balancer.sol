@@ -48,13 +48,10 @@ contract BalancerStrategy is IStrategy {
         )
     {
         if (msg.sender != incurDebtAddress) revert BalancerStrategy_NotIncurDebtAddress();
-        (
-            bytes32 poolId,
-            address[] memory assets,
-            uint256[] memory maxAmountsIn,
-            uint256 minimumBPT,
-            bool fromInternalBalance
-        ) = abi.decode(_data, (bytes32, address[], uint256[], uint256, bool));
+        (bytes32 poolId, address[] memory assets, uint256[] memory maxAmountsIn, uint256 minimumBPT) = abi.decode(
+            _data,
+            (bytes32, address[], uint256[], uint256)
+        );
 
         uint256 index = type(uint256).max;
         for (uint256 i = 0; i < assets.length; i++) {
@@ -87,7 +84,7 @@ contract BalancerStrategy is IStrategy {
                 assets: assets,
                 maxAmountsIn: maxAmountsIn,
                 userData: userData,
-                fromInternalBalance: fromInternalBalance
+                fromInternalBalance: false
             })
         );
 
@@ -102,9 +99,9 @@ contract BalancerStrategy is IStrategy {
         address _user
     ) external returns (uint256 ohmRecieved) {
         if (msg.sender != incurDebtAddress) revert BalancerStrategy_NotIncurDebtAddress();
-        (bytes32 poolId, address[] memory assets, uint256[] memory minAmountsOut, bool toInternalBalance) = abi.decode(
+        (bytes32 poolId, address[] memory assets, uint256[] memory minAmountsOut) = abi.decode(
             _data,
-            (bytes32, address[], uint256[], bool)
+            (bytes32, address[], uint256[])
         );
 
         (address lpTokenAddress, ) = vault.getPool(poolId);
@@ -120,7 +117,7 @@ contract BalancerStrategy is IStrategy {
                 assets: assets,
                 minAmountsOut: minAmountsOut,
                 userData: userData,
-                toInternalBalance: toInternalBalance
+                toInternalBalance: false
             })
         );
 
