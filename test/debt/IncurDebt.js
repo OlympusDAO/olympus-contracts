@@ -918,8 +918,8 @@ describe("IncurDebt", async () => {
                 .approve(balancerStrategy.address, ethers.utils.parseEther("0.5"));
 
             const balancerParaData = ethers.utils.defaultAbiCoder.encode(
-                ["bytes32", "address[]", "uint256[]", "uint256", "bool"],
-                [poolId, tokens, maxAmountsIn, 0, false]
+                ["bytes32", "address[]", "uint256[]", "uint256"],
+                [poolId, tokens, maxAmountsIn, 0]
             );
 
             await incurDebt
@@ -973,8 +973,8 @@ describe("IncurDebt", async () => {
                 .approve(balancerStrategy.address, ethers.utils.parseEther("0.5"));
 
             let balancerParaData = ethers.utils.defaultAbiCoder.encode(
-                ["bytes32", "address[]", "uint256[]", "uint256", "bool"],
-                [poolId, tokens, maxAmountsIn, 0, false]
+                ["bytes32", "address[]", "uint256[]", "uint256"],
+                [poolId, tokens, maxAmountsIn, 0]
             );
 
             expect(
@@ -990,8 +990,8 @@ describe("IncurDebt", async () => {
             ];
             tokens = [ohm_token.address, daiContract.address, wethContract.address];
             balancerParaData = ethers.utils.defaultAbiCoder.encode(
-                ["bytes32", "address[]", "uint256[]", "uint256", "bool"],
-                [poolId, tokens, maxAmountsIn, 0, false]
+                ["bytes32", "address[]", "uint256[]", "uint256"],
+                [poolId, tokens, maxAmountsIn, 0]
             );
 
             expect(
@@ -1177,8 +1177,8 @@ describe("IncurDebt", async () => {
                 .approve(balancerStrategy.address, ethers.utils.parseEther("0.5"));
 
             const balancerParaData = ethers.utils.defaultAbiCoder.encode(
-                ["bytes32", "address[]", "uint256[]", "uint256", "bool"],
-                [poolId, tokens, maxAmountsIn, 0, false]
+                ["bytes32", "address[]", "uint256[]", "uint256"],
+                [poolId, tokens, maxAmountsIn, 0]
             );
 
             await incurDebt
@@ -1196,8 +1196,8 @@ describe("IncurDebt", async () => {
                 ethers.utils.parseEther("0.1"),
             ];
             const balancerRemoveLPData = ethers.utils.defaultAbiCoder.encode(
-                ["bytes32", "address[]", "uint256[]", "bool"],
-                [poolId, tokens, minAmountsIn, false]
+                ["bytes32", "address[]", "uint256[]"],
+                [poolId, tokens, minAmountsIn]
             );
 
             let daiAmountBeforeRemove = await sohm_token.balanceOf(gOhmHolder.address);
