@@ -513,4 +513,98 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         collateralRemaining = borrower.collateralInGOHM - IgOHM(gOHM).balanceTo(debt);
         paidDebt = debt;
     }
+
+    /// @notice Encodes the necessary parameters to pass as _strategyParams in the createLP function
+    ///         for depositing to a Balancer pool
+    /// @param _poolId The ID for the pool you wish to deploy assets into
+    /// @param _assets A sorted (by address) list of all of the tokens in the relevant pool
+    /// @param _maxAmountsIn The maximum amount of each token in the _assets list you would like to send to the pool
+    ///                      These amounts need to match by index to the assets in _assets
+    /// @param _minimumBPT The minimum number of balancer pool tokens you would like to receive
+    function encodeBalancerCreateParams(
+        bytes32 _poolId,
+        address[] memory _assets,
+        uint256[] memory _maxAmountsIn,
+        uint256 _minimumBPT
+    ) external pure override returns (bytes memory encodedParams) {
+        encodedParams = abi.encode(_poolId, _assets, _maxAmountsIn, _minimumBPT);
+    }
+
+    /// @notice Encodes the necessary parameters to pass as _strategyParams in the removeLP function
+    ///         for removing from a Balancer pool
+    /// @param _poolId The ID for the pool you wish to deploy assets into
+    /// @param _assets A sorted (by address) list of the tokens in the pool
+    /// @param _minAmountsOut The minimum amount of each token in the _assets list you expect to receive
+    ///                       These amounts need to match by index to the assets in _assets
+    function encodeBalancerRemoveParams(
+        bytes32 _poolId,
+        address[] memory _assets,
+        uint256[] memory _minAmountsOut
+    ) external pure override returns (bytes memory encodedParams) {
+        encodedParams = abi.encode(_poolId, _assets, _minAmountsOut);
+    }
+
+    /// @notice Encodes the necessary parameters to pass as _strategyParams in the createLP function
+    ///         for depositing to a Curve pool
+    /// @param _amounts The amount of each token to deposit to the Curve pool
+    /// @param _min_mint_amount The minimum amount of LP tokens to receive. Otherwise revert deposit.
+    /// @param _pairTokenAddress The address for the non-OHM token in the Curve pair
+    /// @param _poolAddress The address of the Curve pool to deposit into
+    function encodeCurveCreateParams(
+        uint256[2] memory _amounts,
+        uint256 _min_mint_amount,
+        address _pairTokenAddress,
+        address _poolAddress
+    ) external pure override returns (bytes memory encodedParams) {
+        encodedParams = abi.encode(_amounts, _min_mint_amount, _pairTokenAddress, _poolAddress);
+    }
+
+    /// @notice Encodes the necessary parameters to pass as _strategyParams in the removeLP function
+    ///         for a Curve pool
+    /// @param _burn_amount Amount of Curve Pool LP tokens to burn and get assets back for
+    /// @param _min_amounts The minimum amounts of each token in the pool to receive back. Otherwise revert.
+    function encodeCurveRemoveParams(uint256 _burn_amount, uint256[2] memory _min_amounts)
+        external
+        pure
+        override
+        returns (bytes memory encodedParams)
+    {
+        encodedParams = abi.encode(_burn_amount, _min_amounts);
+    }
+
+    /// @notice Encodes the necessary parameters to pass as _strategyParams in the createLP function
+    ///         for a Uniswap or Sushiswap pool
+    /// @param _tokenA The first token in the pool
+    /// @param _tokenB The second token in the pool
+    /// @param _amountADesired The amount of token A you wish to deposit into the pool
+    /// @param _amountBDesired The amount of token B you wish to deposit into the pool
+    /// @param _amountAMin The minimum amount of token A you would accept depositing. Otherwise revert.
+    /// @param _amountBMin The minimum amount of token B you would accept depositing. Otherwise revet.
+    function encodeUniswapCreateParams(
+        address _tokenA,
+        address _tokenB,
+        uint256 _amountADesired,
+        uint256 _amountBDesired,
+        uint256 _amountAMin,
+        uint256 _amountBMin
+    ) external pure override returns (bytes memory encodedParams) {
+        encodedParams = abi.encode(_tokenA, _tokenB, _amountADesired, _amountBDesired, _amountAMin, _amountBMin);
+    }
+
+    /// @notice Encodes the necessary parameters to pass as _strategyParams in the removeLP function
+    ///         for a Uniswap or Sushiswap pool
+    /// @param _tokenA The first token in the pool
+    /// @param _tokenB The second token in the pool
+    /// @param _liquidity Amount of liquidity tokens to send back and remove liquidity for
+    /// @param _amountAMin The minimum amount of token A you would accept back for the liquidity tokens you've returned
+    /// @param _amountBMin The minimum amount of token B you would accept back for the liquidity tokens you've returned
+    function encodeUniswapRemoveParams(
+        address _tokenA,
+        address _tokenB,
+        uint256 _liquidity,
+        uint256 _amountAMin,
+        uint256 _amountBMin
+    ) external pure override returns (bytes memory encodedParams) {
+        encodedParams = abi.encode(_tokenA, _tokenB, _liquidity, _amountAMin, _amountBMin);
+    }
 }
