@@ -1,9 +1,37 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { CONTRACTS } from "../../constants";
-import { OlympusTreasury__factory, DAI__factory, OlympusAuthority__factory, TestnetOhmV1__factory, TestnetOhm__factory, SohmV1__factory, SOlympus__factory, WsOHM__factory, GOHM__factory, OlympusTreasuryV1__factory, StakingV1__factory, OlympusStaking__factory, StakingV1Warmup__factory, StakingV1Helper__factory, DistributorV1__factory, DistributorV2__factory, OlympusTokenMigrator__factory, YieldDirector__factory, OlympusBondDepositoryV2__factory, TestnetOPBondDepo__factory, DevFaucet__factory } from "../../../types";
+import {
+    OlympusTreasury__factory,
+    DAI__factory,
+    OlympusAuthority__factory,
+    TestnetOhmV1__factory,
+    TestnetOhm__factory,
+    SohmV1__factory,
+    SOlympus__factory,
+    WsOHM__factory,
+    GOHM__factory,
+    OlympusTreasuryV1__factory,
+    StakingV1__factory,
+    OlympusStaking__factory,
+    StakingV1Warmup__factory,
+    StakingV1Helper__factory,
+    DistributorV1__factory,
+    DistributorV2__factory,
+    OlympusTokenMigrator__factory,
+    YieldDirector__factory,
+    OlympusBondDepositoryV2__factory,
+    TestnetOPBondDepo__factory,
+    DevFaucet__factory,
+} from "../../../types";
 import { waitFor } from "../../txHelper";
-import { initialIndex, initialMint, initialRewardRate, largeApproval, zeroAddress } from "../../goerli/constants";
+import {
+    initialIndex,
+    initialMint,
+    initialRewardRate,
+    largeApproval,
+    zeroAddress,
+} from "../../goerli/constants";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts, network, ethers } = hre;
@@ -12,7 +40,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         console.log("This should not be used on mainnet");
         return;
     }
-    
+
     const { deployer } = await getNamedAccounts();
     const signer = await ethers.provider.getSigner(deployer);
 
@@ -45,7 +73,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const migratorDeployment = await deployments.get(CONTRACTS.migrator);
 
     const yieldDirectorDeployment = await deployments.get(CONTRACTS.yieldDirector);
-    
+
     const bondsDeployment = await deployments.get(CONTRACTS.bondDepositoryV2);
     const inverseBondsDeployment = await deployments.get(CONTRACTS.inverseBonds);
 
@@ -65,28 +93,48 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const wsohm = await WsOHM__factory.connect(wsohmDeployment.address, signer);
     const gohm = await GOHM__factory.connect(gohmDeployment.address, signer);
 
-    const treasuryV1 = await OlympusTreasuryV1__factory.connect(treasuryV1Deployment.address, signer);
+    const treasuryV1 = await OlympusTreasuryV1__factory.connect(
+        treasuryV1Deployment.address,
+        signer
+    );
     const treasury = await OlympusTreasury__factory.connect(treasuryDeployment.address, signer);
 
     const stakingV1 = await StakingV1__factory.connect(stakingV1Deployment.address, signer);
     const staking = await OlympusStaking__factory.connect(stakingDeployment.address, signer);
 
-    const stakingV1Warmup = await StakingV1Warmup__factory.connect(stakingV1WarmupDeployment.address, signer);
-    const stakingV1Helper = await StakingV1Helper__factory.connect(stakingV1HelperDeployment.address, signer);
+    const stakingV1Warmup = await StakingV1Warmup__factory.connect(
+        stakingV1WarmupDeployment.address,
+        signer
+    );
+    const stakingV1Helper = await StakingV1Helper__factory.connect(
+        stakingV1HelperDeployment.address,
+        signer
+    );
 
-    const distributorV1 = await DistributorV1__factory.connect(distributorV1Deployment.address, signer);
+    const distributorV1 = await DistributorV1__factory.connect(
+        distributorV1Deployment.address,
+        signer
+    );
     const distributor = await DistributorV2__factory.connect(distributorDeployment.address, signer);
 
-    const migrator = await OlympusTokenMigrator__factory.connect(migratorDeployment.address, signer);
+    const migrator = await OlympusTokenMigrator__factory.connect(
+        migratorDeployment.address,
+        signer
+    );
 
-    const yieldDirector = await YieldDirector__factory.connect(yieldDirectorDeployment.address, signer);
+    const yieldDirector = await YieldDirector__factory.connect(
+        yieldDirectorDeployment.address,
+        signer
+    );
 
     const bonds = await OlympusBondDepositoryV2__factory.connect(bondsDeployment.address, signer);
-    const inverseBonds = await TestnetOPBondDepo__factory.connect(inverseBondsDeployment.address, signer);
+    const inverseBonds = await TestnetOPBondDepo__factory.connect(
+        inverseBondsDeployment.address,
+        signer
+    );
 
     const faucet = await DevFaucet__factory.connect(faucetDeployment.address, signer);
 
-    
     /// Mint DAI
     const daiAmount = initialMint;
     await waitFor(dai.mint(deployer, daiAmount));
@@ -96,26 +144,15 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await waitFor(treasuryV1.toggle("0", bonds.address, zeroAddress));
 
     /// Initialize DAI Bond
-    await waitFor(bonds.create(
-        dai.address,
-        [
-            "10000000000000000000000000",
-            "60000000000",
-            "1000000"
-        ],
-        [
-            true,
-            true
-        ],
-        [
-            "100",
-            "1686339215"
-        ],
-        [
-            "14400",
-            "86400"
-        ]
-    ));
+    await waitFor(
+        bonds.create(
+            dai.address,
+            ["10000000000000000000000000", "60000000000", "1000000"],
+            [true, true],
+            ["100", "1686339215"],
+            ["14400", "86400"]
+        )
+    );
 
     /// Set Treasury for OHM V1
     await waitFor(ohmV1.setVault(treasuryV1.address));
@@ -159,7 +196,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     /// Stake OHM V1 through helper
     await waitFor(stakingV1Helper.stake("100000000000"));
 
-    
     /// Set gOHM in Migrator
     await waitFor(migrator.setgOHM(gohm.address));
 
@@ -210,13 +246,15 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     /// await waitFor(bonds.deposit(0, "1000000000000000000000", "47954242660", deployer, "0xee1520f94f304e8D551Cbf310Fe214212e3cA34a"));
 
     /// Migrate contracts so Staking V2 can mint gOHM
-    await waitFor(migrator.migrateContracts(
-        treasury.address,
-        staking.address,
-        ohm.address,
-        sohm.address,
-        dai.address
-    ));
+    await waitFor(
+        migrator.migrateContracts(
+            treasury.address,
+            staking.address,
+            ohm.address,
+            sohm.address,
+            dai.address
+        )
+    );
 
     /// Deposit 100,000 DAI to Faucet
     await waitFor(dai.transfer(faucet.address, "100000000000000000000000"));

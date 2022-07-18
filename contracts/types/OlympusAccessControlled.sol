@@ -39,7 +39,15 @@ abstract contract OlympusAccessControlled {
     }
 
     modifier onlyVault() {
-        require(msg.sender == authority.vault(), UNAUTHORIZED);
+        address[] memory vault = authority.getVault();
+        uint256 vaultLength = vault.length;
+        bool isMsgSenderInVault;
+
+        for (uint256 i; i < vaultLength;) {
+            if (vault[i] == msg.sender) isMsgSenderInVault = true;
+        }
+
+        require(isMsgSenderInVault, UNAUTHORIZED);
         _;
     }
 

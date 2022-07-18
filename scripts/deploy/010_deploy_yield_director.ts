@@ -15,7 +15,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     await deploy(CONTRACTS.yieldDirector, {
         from: deployer,
-        args: [sohmDeployment.address, gohmDeployment.address, stakingDeployment.address, authorityDeployment.address],
+        args: [
+            sohmDeployment.address,
+            gohmDeployment.address,
+            stakingDeployment.address,
+            authorityDeployment.address,
+        ],
         log: true,
         skipIfAlreadyDeployed: true,
     });

@@ -7,12 +7,12 @@ interface IOlympusAuthority {
     event GovernorPushed(address indexed from, address indexed to, bool _effectiveImmediately);
     event GuardianPushed(address indexed from, address indexed to, bool _effectiveImmediately);
     event PolicyPushed(address indexed from, address indexed to, bool _effectiveImmediately);
-    event VaultPushed(address indexed from, address indexed to, bool _effectiveImmediately);
+    event VaultPushed(address indexed to, bool _effectiveImmediately);
 
     event GovernorPulled(address indexed from, address indexed to);
     event GuardianPulled(address indexed from, address indexed to);
     event PolicyPulled(address indexed from, address indexed to);
-    event VaultPulled(address indexed from, address indexed to);
+    event VaultPulled(address indexed to);
 
     /* ========== VIEW ========== */
 
@@ -22,5 +22,7 @@ interface IOlympusAuthority {
 
     function policy() external view returns (address);
 
-    function vault() external view returns (address);
+    function vault(uint256 index) external view returns (address);
+
+    function getVault() external view returns (address[] memory);
 }

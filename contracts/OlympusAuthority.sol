@@ -14,7 +14,7 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
 
     address public override policy;
 
-    address public override vault;
+    address[] public override vault;
 
     address public newGovernor;
 
@@ -38,8 +38,8 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
         emit GuardianPushed(address(0), guardian, true);
         policy = _policy;
         emit PolicyPushed(address(0), policy, true);
-        vault = _vault;
-        emit VaultPushed(address(0), vault, true);
+        vault.push(_vault);
+        emit VaultPushed(_vault, true);
     }
 
     /* ========== GOV ONLY ========== */
@@ -63,9 +63,9 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
     }
 
     function pushVault(address _newVault, bool _effectiveImmediately) external onlyGovernor {
-        if (_effectiveImmediately) vault = _newVault;
+        if (_effectiveImmediately) vault.push(_newVault);
         newVault = _newVault;
-        emit VaultPushed(vault, newVault, _effectiveImmediately);
+        emit VaultPushed(newVault, _effectiveImmediately);
     }
 
     /* ========== PENDING ROLE ONLY ========== */
@@ -90,7 +90,20 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
 
     function pullVault() external {
         require(msg.sender == newVault, "!newVault");
-        emit VaultPulled(vault, newVault);
-        vault = newVault;
+        emit VaultPulled(newVault);
+        vault.push(newVault);
+    }
+
+    /* ========== REMOVE VAULT ADDRESS ========== */
+
+    function removeVault(uint256 index) external onlyGovernor {
+        vault[index] = vault[vault.length - 1];
+        vault.pop();
+    }
+
+    /* ========== VAULT GETTER ========== */
+
+    function getVault() external view override returns (address[] memory) {
+        return vault;
     }
 }

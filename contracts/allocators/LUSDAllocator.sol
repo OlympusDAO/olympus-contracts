@@ -120,10 +120,10 @@ contract LUSDAllocator is OlympusAccessControlled {
         frontEndAddress = _frontEndAddress;
     }
 
-    function updateTreasury() public onlyGuardian {
-        require(authority.vault() != address(0), "Zero address: Vault");
-        require(address(authority.vault()) != address(treasury), "No change");
-        treasury = ITreasury(authority.vault());
+    function updateTreasury(address _treasury) public onlyGuardian {
+        require(_treasury != address(0), "Zero address: Vault");
+        require(_treasury != address(treasury), "No change");
+        treasury = ITreasury(_treasury);
     }
 
     /* ======== OPEN FUNCTIONS ======== */

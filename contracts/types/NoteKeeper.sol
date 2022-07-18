@@ -29,14 +29,14 @@ abstract contract NoteKeeper is INoteKeeper, FrontEndRewarder {
     }
 
     // if treasury address changes on authority, update it
-    function updateTreasury() external {
+    function updateTreasury(address _treasury) external {
         require(
             msg.sender == authority.governor() ||
                 msg.sender == authority.guardian() ||
                 msg.sender == authority.policy(),
             "Only authorized"
         );
-        treasury = ITreasury(authority.vault());
+        treasury = ITreasury(_treasury);
     }
 
     /* ========== ADD ========== */

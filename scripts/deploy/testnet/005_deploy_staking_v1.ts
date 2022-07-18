@@ -14,7 +14,13 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     await deploy(CONTRACTS.stakingV1, {
         from: deployer,
-        args: [ohmDeployment.address, sohmDeployment.address, epochLength, firstEpochNumber, firstBlockNumber],
+        args: [
+            ohmDeployment.address,
+            sohmDeployment.address,
+            epochLength,
+            firstEpochNumber,
+            firstBlockNumber,
+        ],
         log: true,
         skipIfAlreadyDeployed: true,
     });

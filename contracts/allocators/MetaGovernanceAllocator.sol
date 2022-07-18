@@ -45,10 +45,10 @@ contract MetaGovernanceAllocator is OlympusAccessControlled {
     /// POLICY FUNCTIONS ///
 
     /// @notice  If vault has been updated through authority contract update treasury address
-    function updateTreasury() external onlyGuardian {
-        require(authority.vault() != address(0), "Zero address: Vault");
-        require(address(authority.vault()) != address(treasury), "No change");
-        treasury = ITreasury(authority.vault());
+    function updateTreasury(address _treasury) external onlyGuardian {
+        require(_treasury != address(0), "Zero address: Vault");
+        require(_treasury != address(treasury), "No change");
+        treasury = ITreasury(_treasury);
     }
 
     /// @notice           Stakes either BTRFLY or LOBI from treasury

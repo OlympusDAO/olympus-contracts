@@ -18,7 +18,15 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     await deploy(CONTRACTS.faucet, {
         from: deployer,
-        args: [daiDeployment.address, ohmV1Deployment.address, ohmDeployment.address, wsohmDeployment.address, stakingV1Deployment.address, stakingDeployment.address, authorityDeployment.address],
+        args: [
+            daiDeployment.address,
+            ohmV1Deployment.address,
+            ohmDeployment.address,
+            wsohmDeployment.address,
+            stakingV1Deployment.address,
+            stakingDeployment.address,
+            authorityDeployment.address,
+        ],
         log: true,
         skipIfAlreadyDeployed: true,
     });
@@ -32,7 +40,7 @@ func.dependencies = [
     CONTRACTS.wsOHM,
     CONTRACTS.stakingV1,
     CONTRACTS.staking,
-    CONTRACTS.authority
+    CONTRACTS.authority,
 ];
 
 export default func;

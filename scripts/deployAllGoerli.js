@@ -236,7 +236,7 @@ async function initV1() {
     await stakingHelperV1.stake("100000000000");
 
     /// Bond 1,000 DAI in its bond
-    await daiBond.deposit("1000000000000000000000", "60000", deployer.address);    
+    await daiBond.deposit("1000000000000000000000", "60000", deployer.address);
 }
 
 async function initV2() {
@@ -335,4 +335,4 @@ deploy()
         console.log("Yield Director: " + yieldDirector.address);
         console.log("Faucet: " + faucet.address);
     })
-    .catch(error => console.log(error));
+    .catch((error) => console.log(error));
