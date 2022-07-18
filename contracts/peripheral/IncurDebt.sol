@@ -23,6 +23,10 @@ error IncurDebt_OHMAmountMoreThanAvailableLoan(uint256 _amount);
 error IncurDebt_BorrowerHasNoOutstandingDebt(address _borrower);
 error IncurDebt_BorrowerStillHasOutstandingDebt(address _borrower);
 error IncurDebt_InvalidAddress();
+error IncurDebt_DepositsDisabled();
+error IncurDebt_WithdrawalsDisabled();
+error IncurDebt_BorrowsDisabled();
+error IncurDebt_RepaysDisabled();
 
 /// @title IncurDebt
 /// @notice Contract that allows users to use the treasury's incurdebt function.
@@ -77,6 +81,13 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     event LpWithdrawn(address indexed _borrower, uint256 _liquidity, address _lpToken);
 
     event Withdrawal(address indexed _borrower, uint256 _amountToWithdraw, uint256 _currentCollateral);
+
+    event EmergencyShutdown(bool active_);
+
+    bool public depositsDisabled;
+    bool public withdrawalsDisabled;
+    bool public borrowsDisabled;
+    bool public repaysDisabled;
 
     uint256 public globalDebtLimit;
     uint256 public totalOutstandingGlobalDebt;
@@ -259,6 +270,8 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     /// - this contract must have been approved _amount
     /// @param _amount amount of gOHM
     function deposit(uint256 _amount) external override isBorrower(msg.sender) {
+        if (depositsDisabled) revert IncurDebt_DepositsDisabled();
+
         borrowers[msg.sender].collateralInGOHM += uint128(_amount);
 
         IERC20(gOHM).safeTransferFrom(msg.sender, address(this), _amount);
@@ -331,6 +344,8 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         address _lpToken,
         bytes calldata _strategyParams
     ) external override isStrategyApproved(_strategy) returns (uint256 ohmRecieved) {
+        if (repaysDisabled) revert IncurDebt_RepaysDisabled();
+
         Borrower storage borrower = borrowers[msg.sender];
         if (!borrower.isLpBorrower) revert IncurDebt_NotBorrower(msg.sender);
 
@@ -367,6 +382,8 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     ///@param _liquidity the amount of LP tokens to withdraw.
     ///@param _lpToken address of lp token to withdraw liquidity from
     function withdrawLP(uint256 _liquidity, address _lpToken) external {
+        if (withdrawalsDisabled) revert IncurDebt_WithdrawalsDisabled();
+
         if (!borrowers[msg.sender].isLpBorrower) revert IncurDebt_NotBorrower(msg.sender);
 
         if (_liquidity > lpTokenOwnership[_lpToken][msg.sender])
@@ -385,6 +402,8 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     /// - _amount (in OHM) must be less than or equal to depositedOhm - debt
     /// @param _amount amount of gOHM to withdraw
     function withdraw(uint256 _amount) external override isBorrower(msg.sender) {
+        if (withdrawalsDisabled) revert IncurDebt_WithdrawalsDisabled();
+
         if (_amount == 0) revert IncurDebt_InvaildNumber(_amount);
         Borrower storage borrower = borrowers[msg.sender];
 
@@ -439,6 +458,8 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     /// - borrower must have outstanding debt
     /// @param _ohmAmount amount of OHM to borrow
     function repayDebtWithOHM(uint256 _ohmAmount) external override isBorrower(msg.sender) {
+        if (repaysDisabled) revert IncurDebt_RepaysDisabled();
+
         Borrower storage borrower = borrowers[msg.sender];
 
         if (borrower.debt == 0) revert IncurDebt_BorrowerHasNoOutstandingDebt(msg.sender);
@@ -466,6 +487,8 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
     /// @dev if user's collateral is in GOHM unwrap it to sOHM to be used as collateral
     /// @param _ohmAmount amount of OHM to borrow
     function _borrow(uint256 _ohmAmount) internal {
+        if (borrowsDisabled) revert IncurDebt_BorrowsDisabled();
+
         Borrower storage borrower = borrowers[msg.sender];
 
         if (_ohmAmount > borrower.limit - borrower.debt) revert IncurDebt_AboveBorrowersDebtLimit(_ohmAmount);
@@ -496,6 +519,8 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         isBorrower(_borrower)
         returns (uint256 collateralRemaining, uint256 paidDebt)
     {
+        if (repaysDisabled) revert IncurDebt_RepaysDisabled();
+
         Borrower storage borrower = borrowers[_borrower];
         if (borrower.debt == 0) revert IncurDebt_BorrowerHasNoOutstandingDebt(_borrower);
 
@@ -513,6 +538,10 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         collateralRemaining = borrower.collateralInGOHM - IgOHM(gOHM).balanceTo(debt);
         paidDebt = debt;
     }
+
+    /************************
+     * Encoding Functions
+     ************************/
 
     /// @notice Encodes the necessary parameters to pass as _strategyParams in the createLP function
     ///         for depositing to a Balancer pool
@@ -606,5 +635,33 @@ contract IncurDebt is OlympusAccessControlledV2, IIncurDebt {
         uint256 _amountBMin
     ) external pure override returns (bytes memory encodedParams) {
         encodedParams = abi.encode(_tokenA, _tokenB, _liquidity, _amountAMin, _amountBMin);
+    }
+
+    /************************
+     * Emergency Functions
+     ************************/
+
+    function emergencyShutdown(bool active_) external onlyGovernor {
+        depositsDisabled = active_;
+        withdrawalsDisabled = active_;
+        borrowsDisabled = active_;
+        repaysDisabled = active_;
+        emit EmergencyShutdown(active_);
+    }
+
+    function toggleDeposits(bool active_) external onlyGovernor {
+        depositsDisabled = active_;
+    }
+
+    function toggleWithdrawals(bool active_) external onlyGovernor {
+        withdrawalsDisabled = active_;
+    }
+
+    function toggleBorrows(bool active_) external onlyGovernor {
+        borrowsDisabled = active_;
+    }
+
+    function toggleRepays(bool active_) external onlyGovernor {
+        repaysDisabled = active_;
     }
 }
