@@ -58,7 +58,7 @@ const config: HardhatUserConfig = {
         // mainnet: getChainConfig("mainnet"),
         // rinkeby: getChainConfig("rinkeby"),
         // ropsten: getChainConfig("ropsten"),
-        goerli: getChainConfig("goerli"),
+        // goerli: getChainConfig("goerli"),
     },
     paths: {
         artifacts: "./artifacts",
