@@ -76,14 +76,6 @@ abstract contract OlympusAccessControlledV2 {
     }
 
     function _onlyVault() internal view {
-        address[] memory vault = authority.getVault();
-        uint256 vaultLength = vault.length;
-        bool isMsgSenderInVault;
-
-        for (uint256 i; i < vaultLength;) {
-            if (vault[i] == msg.sender) isMsgSenderInVault = true;
-        }
-
-        if (!isMsgSenderInVault) revert UNAUTHORIZED();
+        if (msg.sender != authority.vault()) revert UNAUTHORIZED();
     }
 }

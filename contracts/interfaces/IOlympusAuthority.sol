@@ -22,7 +22,7 @@ interface IOlympusAuthority {
 
     function policy() external view returns (address);
 
-    function vault(uint256 index) external view returns (address);
+    function vault() external view returns (address);
 
     function getVault() external view returns (address[] memory);
 }

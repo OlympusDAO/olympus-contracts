@@ -110,10 +110,12 @@ describe("TestnetAuthority", () => {
 
         it("onlyVault works with one address", async () => {
             await expect(testOHM.connect(owner).mint(owner.address, mintAmount)).to.not.be.reverted;
+            await expect(testOHM.connect(alice).mint(owner.address, mintAmount)).to.be.reverted;
         });
 
         it("onlyVault works with multiple addresses", async () => {
             await expect(testOHM.connect(owner).mint(owner.address, mintAmount)).to.not.be.reverted;
+            await expect(testOHM.connect(alice).mint(owner.address, mintAmount)).to.be.reverted;
 
             await authority.pushVault(alice.address, true);
 

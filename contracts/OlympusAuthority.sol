@@ -14,7 +14,7 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
 
     address public override policy;
 
-    address[] public override vault;
+    address[] internal vaultArr;
 
     address public newGovernor;
 
@@ -38,7 +38,7 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
         emit GuardianPushed(address(0), guardian, true);
         policy = _policy;
         emit PolicyPushed(address(0), policy, true);
-        vault.push(_vault);
+        vaultArr.push(_vault);
         emit VaultPushed(_vault, true);
     }
 
@@ -63,7 +63,7 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
     }
 
     function pushVault(address _newVault, bool _effectiveImmediately) external onlyGovernor {
-        if (_effectiveImmediately) vault.push(_newVault);
+        if (_effectiveImmediately) vaultArr.push(_newVault);
         newVault = _newVault;
         emit VaultPushed(newVault, _effectiveImmediately);
     }
@@ -91,19 +91,34 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
     function pullVault() external {
         require(msg.sender == newVault, "!newVault");
         emit VaultPulled(newVault);
-        vault.push(newVault);
+        vaultArr.push(newVault);
     }
 
     /* ========== REMOVE VAULT ADDRESS ========== */
 
     function removeVault(uint256 index) external onlyGovernor {
-        vault[index] = vault[vault.length - 1];
-        vault.pop();
+        vaultArr[index] = vaultArr[vaultArr.length - 1];
+        vaultArr.pop();
     }
 
     /* ========== VAULT GETTER ========== */
 
+    function vault() external view override returns (address) {
+        uint256 vaultLength = vaultArr.length;
+        address sender = tx.origin;
+
+        for (uint256 i; i < vaultLength; ) {
+            if (vaultArr[i] == sender) return sender;
+
+            unchecked {
+                i++;
+            }
+        }
+
+        return address(0);
+    }
+
     function getVault() external view override returns (address[] memory) {
-        return vault;
+        return vaultArr;
     }
 }
