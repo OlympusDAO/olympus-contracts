@@ -55,7 +55,7 @@ const config: HardhatUserConfig = {
             chainId: chainIds.hardhat,
         },
         // Uncomment for testing. Commented due to CI issues
-        // mainnet: getChainConfig("mainnet"),
+        mainnet: getChainConfig("mainnet"),
         // rinkeby: getChainConfig("rinkeby"),
         // ropsten: getChainConfig("ropsten"),
     },

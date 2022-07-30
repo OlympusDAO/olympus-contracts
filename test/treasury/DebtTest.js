@@ -30,7 +30,7 @@ describe("Treasury", async () => {
     // Mine block and rebase. Returns the new index.
     const triggerRebase = async () => {
         mineBlock();
-        await staking.rebase();
+        await distributor.triggerRebase();
 
         return await sOhm.index();
     };
@@ -101,7 +101,7 @@ describe("Treasury", async () => {
             gOhm.address,
             "10",
             "1",
-            "9",
+            "2000997655",
             auth.address
         );
         treasury = await treasuryFactory.deploy(ohm.address, "0", auth.address);
@@ -109,7 +109,8 @@ describe("Treasury", async () => {
             treasury.address,
             ohm.address,
             staking.address,
-            auth.address
+            auth.address,
+            initialRewardRate
         );
 
         // Setup for each component
@@ -151,9 +152,6 @@ describe("Treasury", async () => {
         await treasury
             .connect(deployer)
             .deposit("10000000000000000000000", dai.address, "9000000000000");
-
-        // Add staking as recipient of distributor with a test reward rate
-        await distributor.addRecipient(staking.address, initialRewardRate);
 
         // Get sOHM in deployer wallet
         const sohmAmount = "1000000000000";
