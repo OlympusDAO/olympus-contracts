@@ -18,6 +18,8 @@ const lusd = "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0";
 const agEUR = "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8";
 
 // ANY TOKENS
+const aura = "0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF";
+const bal = "0xba100000625a3754423978a60c9317c58a424e3d";
 const cvx = "0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B";
 const crv = "0xD533a949740bb3306d119CC777fa900bA034cd52";
 const angle = "0x31429d1856ad1377a8a0079410b297e1a9e214c2";
@@ -49,6 +51,8 @@ export const coins = {
     frax,
     lusd,
     agEUR,
+    aura,
+    bal,
     cvx,
     crv,
     angle,
