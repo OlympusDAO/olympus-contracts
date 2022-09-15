@@ -178,7 +178,7 @@ contract AuraAllocator is BaseAllocator {
 
     function utilityTokens() public view override returns (IERC20[] memory) {
         uint256 length = _pools.length;
-        
+
         IERC20[] memory utilTokens = new IERC20[](length);
 
         for (uint256 index; index < length; ) {

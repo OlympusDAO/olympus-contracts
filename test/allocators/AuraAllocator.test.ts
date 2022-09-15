@@ -8,7 +8,7 @@ import {
     OlympusAuthority,
     ERC20,
     AuraAllocator,
-    AuraAllocator__factory
+    AuraAllocator__factory,
 } from "../../types";
 import { auraBoosterABI, auraPoolABI, auraLockerABI } from "../utils/auraAllocatorAbis";
 import { coins } from "../utils/coins";
@@ -47,7 +47,10 @@ describe("AuraAllocator", () => {
     before(async () => {
         await helpers.pinBlock(15539981, url);
 
-        bpt = (await ethers.getContractAt("contracts/types/ERC20.sol:ERC20", "0xc45D42f801105e861e86658648e3678aD7aa70f9")) as ERC20;
+        bpt = (await ethers.getContractAt(
+            "contracts/types/ERC20.sol:ERC20",
+            "0xc45D42f801105e861e86658648e3678aD7aa70f9"
+        )) as ERC20;
 
         aura = await helpers.getCoin(coins.aura);
         bal = await helpers.getCoin(coins.bal);
@@ -112,21 +115,37 @@ describe("AuraAllocator", () => {
 
     describe("Initialization", () => {
         it("should have max approval to lock aura", async () => {
-            expect((await aura.allowance(allocator.address, auraLocker.address))).to.equal(helpers.constants.uint256Max);
+            expect(await aura.allowance(allocator.address, auraLocker.address)).to.equal(
+                helpers.constants.uint256Max
+            );
         });
 
         it("should add deposit info", async () => {
-            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [aura.address, bal.address]);
-            expect((await bpt.allowance(allocator.address, extender.address))).to.equal(helpers.constants.uint256Max);
-            expect((await bpt.allowance(allocator.address, "0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10"))).to.equal(helpers.constants.uint256Max);
-            expect((await aura.allowance(allocator.address, extender.address))).to.equal(helpers.constants.uint256Max);
-            expect((await bal.allowance(allocator.address, extender.address))).to.equal(helpers.constants.uint256Max);
+            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [
+                aura.address,
+                bal.address,
+            ]);
+            expect(await bpt.allowance(allocator.address, extender.address)).to.equal(
+                helpers.constants.uint256Max
+            );
+            expect(
+                await bpt.allowance(allocator.address, "0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10")
+            ).to.equal(helpers.constants.uint256Max);
+            expect(await aura.allowance(allocator.address, extender.address)).to.equal(
+                helpers.constants.uint256Max
+            );
+            expect(await bal.allowance(allocator.address, extender.address)).to.equal(
+                helpers.constants.uint256Max
+            );
         });
     });
 
     describe("Updates correctly", () => {
         beforeEach(async () => {
-            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [aura.address, bal.address]);
+            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [
+                aura.address,
+                bal.address,
+            ]);
 
             await extender.registerDeposit(allocator.address);
 
@@ -150,7 +169,9 @@ describe("AuraAllocator", () => {
 
         it("can lock Aura", async () => {
             /// Setup
-            const auraHolder = await helpers.impersonate("0xe97b3791a03706c58f5c6bc3554213c3e6eb8550");
+            const auraHolder = await helpers.impersonate(
+                "0xe97b3791a03706c58f5c6bc3554213c3e6eb8550"
+            );
             await helpers.addEth("0xe97b3791a03706c58f5c6bc3554213c3e6eb8550", bne(10, 18));
             await aura.connect(auraHolder).transfer(allocator.address, bne(10, 21));
             await allocator.toggleShouldLock();
@@ -177,14 +198,17 @@ describe("AuraAllocator", () => {
             await helpers.tmine(7 * 24 * 60 * 60);
 
             await allocator.update(10);
-            expect((await bal.balanceOf(allocator.address))).to.be.gt(balBalanceBefore);
-            expect((await aura.balanceOf(allocator.address))).to.be.gt(auraBalanceBefore);
+            expect(await bal.balanceOf(allocator.address)).to.be.gt(balBalanceBefore);
+            expect(await aura.balanceOf(allocator.address)).to.be.gt(auraBalanceBefore);
         });
     });
 
     describe("Deallocates", () => {
         beforeEach(async () => {
-            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [aura.address, bal.address]);
+            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [
+                aura.address,
+                bal.address,
+            ]);
 
             await extender.registerDeposit(allocator.address);
 
@@ -211,7 +235,10 @@ describe("AuraAllocator", () => {
 
     describe("Deactivates", () => {
         beforeEach(async () => {
-            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [aura.address, bal.address]);
+            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [
+                aura.address,
+                bal.address,
+            ]);
 
             await extender.registerDeposit(allocator.address);
 
@@ -233,7 +260,7 @@ describe("AuraAllocator", () => {
                 allocator,
                 bne(10, 23)
             );
-            expect((await allocator.status())).to.equal(0);
+            expect(await allocator.status()).to.equal(0);
         });
 
         it("Should withdraw to treasury", async () => {
@@ -242,13 +269,16 @@ describe("AuraAllocator", () => {
                 treasury,
                 bne(10, 23)
             );
-            expect((await allocator.status())).to.equal(0);
+            expect(await allocator.status()).to.equal(0);
         });
     });
 
     describe("Prepares for migration", () => {
         beforeEach(async () => {
-            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [aura.address, bal.address]);
+            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [
+                aura.address,
+                bal.address,
+            ]);
 
             await extender.registerDeposit(allocator.address);
 
@@ -270,7 +300,7 @@ describe("AuraAllocator", () => {
                 allocator,
                 bne(10, 23)
             );
-            expect((await allocator.status())).to.equal(2);
+            expect(await allocator.status()).to.equal(2);
         });
     });
 });
