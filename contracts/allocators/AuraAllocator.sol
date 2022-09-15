@@ -8,6 +8,8 @@ import "../types/BaseAllocator.sol";
 import "../interfaces/IERC20.sol";
 import "./interfaces/ConvexInterfaces.sol";
 
+import "hardhat/console.sol";
+
 /// Define Aura Interface
 interface IAuraRewards {
     function balanceOf(address user_) external view returns (uint256);
@@ -79,7 +81,7 @@ contract AuraAllocator is BaseAllocator {
         AuraPoolData memory poolData = _pools[tokenIndex];
 
         /// Deposit BPT balance to gauge
-        _booster.depositAll(poolData.pid, true);
+        if (poolData.lp.balanceOf(address(this)) > 0) _booster.depositAll(poolData.pid, true);
 
         /// Harvest rewards
         _claimRewards(poolData.pool);
@@ -120,7 +122,7 @@ contract AuraAllocator is BaseAllocator {
 
         for (uint256 index; index < numPools; ) {
             poolData = _pools[index];
-            poolData.pool.withdrawAll(true);
+            poolData.pool.withdraw(poolData.pool.balanceOf(address(this)), address(this), address(this));
 
             if (panic) {
                 lpBalance = poolData.lp.balanceOf(address(this));
@@ -155,7 +157,7 @@ contract AuraAllocator is BaseAllocator {
 
         for (uint256 index; index < numPools; ) {
             poolData = _pools[index];
-            poolData.pool.withdrawAll(true);
+            poolData.pool.withdraw(poolData.pool.balanceOf(address(this)), address(this), address(this));
             _claimRewards(poolData.pool);
 
             unchecked {

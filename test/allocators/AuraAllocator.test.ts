@@ -163,5 +163,114 @@ describe("AuraAllocator", () => {
 
             expect((await auraLocker.lockedBalances(allocator.address))[0]).to.equal(bne(10, 21));
         });
+
+        it("should claim rewards", async () => {
+            await expect(() => allocator.update(10)).to.changeTokenBalance(
+                bpt,
+                allocator,
+                bnn(0).sub(bne(10, 23))
+            );
+
+            const balBalanceBefore = await bal.balanceOf(allocator.address);
+            const auraBalanceBefore = await aura.balanceOf(allocator.address);
+
+            await helpers.tmine(7 * 24 * 60 * 60);
+
+            await allocator.update(10);
+            expect((await bal.balanceOf(allocator.address))).to.be.gt(balBalanceBefore);
+            expect((await aura.balanceOf(allocator.address))).to.be.gt(auraBalanceBefore);
+        });
+    });
+
+    describe("Deallocates", () => {
+        beforeEach(async () => {
+            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [aura.address, bal.address]);
+
+            await extender.registerDeposit(allocator.address);
+
+            await extender.setAllocatorLimits(10, {
+                allocated: bne(10, 23),
+                loss: bne(10, 21),
+            });
+
+            await allocator.activate();
+
+            await extender.requestFundsFromTreasury(10, bne(10, 23));
+
+            await allocator.update(10);
+        });
+
+        it("Should withdraw BPT from Aura", async () => {
+            await expect(() => allocator.deallocate([bne(10, 23)])).to.changeTokenBalance(
+                bpt,
+                allocator,
+                bne(10, 23)
+            );
+        });
+    });
+
+    describe("Deactivates", () => {
+        beforeEach(async () => {
+            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [aura.address, bal.address]);
+
+            await extender.registerDeposit(allocator.address);
+
+            await extender.setAllocatorLimits(10, {
+                allocated: bne(10, 23),
+                loss: bne(10, 21),
+            });
+
+            await allocator.activate();
+
+            await extender.requestFundsFromTreasury(10, bne(10, 23));
+
+            await allocator.update(10);
+        });
+
+        it("Should withdraw to allocator", async () => {
+            await expect(() => allocator.deactivate(false)).to.changeTokenBalance(
+                bpt,
+                allocator,
+                bne(10, 23)
+            );
+            expect((await allocator.status())).to.equal(0);
+        });
+
+        it("Should withdraw to treasury", async () => {
+            await expect(() => allocator.deactivate(true)).to.changeTokenBalance(
+                bpt,
+                treasury,
+                bne(10, 23)
+            );
+            expect((await allocator.status())).to.equal(0);
+        });
+    });
+
+    describe("Prepares for migration", () => {
+        beforeEach(async () => {
+            await allocator.addBPT(bpt.address, "0xF01e29461f1FCEdD82f5258Da006295E23b4Fab3", 30, [aura.address, bal.address]);
+
+            await extender.registerDeposit(allocator.address);
+
+            await extender.setAllocatorLimits(10, {
+                allocated: bne(10, 23),
+                loss: bne(10, 21),
+            });
+
+            await allocator.activate();
+
+            await extender.requestFundsFromTreasury(10, bne(10, 23));
+
+            await allocator.update(10);
+        });
+
+        it("Should withdraw to allocator", async () => {
+            await expect(() => allocator.prepareMigration()).to.changeTokenBalance(
+                bpt,
+                allocator,
+                bne(10, 23)
+            );
+            expect((await allocator.status())).to.equal(2);
+        });
     });
 });
