@@ -1,17 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.8.15;
+pragma solidity 0.7.5;
+pragma abicoder v2;
+
+import {ERC20} from "../types/ERC20.sol";
+import {IBondSDA} from "../interfaces/IBondSDA.sol";
+import {IBondTeller} from "../interfaces/IBondTeller.sol";
+import {IEasyAuction} from "../interfaces/IEasyAuction.sol";
+import {ITreasury} from "../interfaces/ITreasury.sol";
+import {IOlympusAuthority} from "../interfaces/IOlympusAuthority.sol";
+import {OlympusAccessControlled} from "../types/OlympusAccessControlled.sol";
 
 contract OhmBondManager is OlympusAccessControlled {
-    using SafeERC20 for ERC20;
 
     // ========= DATA STRUCTURES ========= //
     struct BondProtocolParameters {
         address callbackAddress;
         uint256 initialPrice;
         uint256 minPrice;
-        uint256 debtBuffer;
+        uint32 debtBuffer;
         uint256 auctionTime;
-        uint256 depositInterval;
+        uint32 depositInterval;
     }
 
     struct GnosisAuctionParameters {
@@ -56,23 +64,22 @@ contract OhmBondManager is OlympusAccessControlled {
     function createBondProtocolMarket(uint256 capacity_, uint256 bondTerm_) external onlyPolicy returns (uint256) {
         _topUpOhm(capacity_);
 
-        bytes createMarketParams = abi.encodeWithSelector(
-            fixedExpiryAuctioneer.createMarket.selector,
-            address(ohm),
-            address(ohm),
-            bondProtocolParameters.callbackAddress,
-            false,
-            capacity_,
-            bondProtocolParameters.initialPrice,
-            bondProtocolParameters.minPrice,
-            bondProtocolParameters.debtBuffer,
-            block.timestamp() + bondTerm_,
-            block.timestamp() + bondProtocolParameters.auctionTime,
-            bondProtocolParameters.depositInterval,
-            0
-        );
+        IBondSDA.MarketParams memory createMarketParams = IBondSDA.MarketParams({
+            payoutToken: ohm,
+            quoteToken: ohm,
+            callbackAddr: bondProtocolParameters.callbackAddress,
+            capacityInQuote: false,
+            capacity: capacity_,
+            formattedInitialPrice: bondProtocolParameters.initialPrice,
+            formattedMinimumPrice: bondProtocolParameters.minPrice,
+            debtBuffer: bondProtocolParameters.debtBuffer,
+            vesting: uint48(block.timestamp + bondTerm_),
+            conclusion: uint48(block.timestamp + bondProtocolParameters.auctionTime),
+            depositInterval: bondProtocolParameters.depositInterval,
+            scaleAdjustment: int8(0)
+        });
 
-        ohm.safeApprove(address(fixedExpiryTeller), capacity_);
+        ohm.approve(address(fixedExpiryTeller), capacity_);
         uint256 marketId = fixedExpiryAuctioneer.createMarket(createMarketParams);
 
         return marketId;
@@ -82,24 +89,24 @@ contract OhmBondManager is OlympusAccessControlled {
         _topUpOhm(capacity_);
 
         /// Create bond token
-        ohm.safeApprove(address(fixedExpiryTeller), capacity_);
-        fixedExpiryTeller.deploy(address(ohm), block.timestamp() + bondTerm_);
-        address bondToken = fixedExpiryTeller.create(address(ohm), block.timestamp() + bondTerm_, capacity_);
+        ohm.approve(address(fixedExpiryTeller), capacity_);
+        fixedExpiryTeller.deploy(address(ohm), block.timestamp + bondTerm_);
+        address bondToken = fixedExpiryTeller.create(address(ohm), block.timestamp + bondTerm_, capacity_);
 
         /// Launch Gnosis Auction
-        ERC20(bondToken).safeApprove(address(gnosisEasyAuction), capacity_);
+        ERC20(bondToken).approve(address(gnosisEasyAuction), capacity_);
         uint256 auctionId = gnosisEasyAuction.initiateAuction(
             bondToken, // auctioningToken
             address(ohm), // biddingToken
-            block.timestamp() + gnosisAuctionParameters.auctionCancelTime, // last order cancellation time
-            block.timestamp() + gnosisAuctionParameters.auctionTime, // auction end time
+            block.timestamp + gnosisAuctionParameters.auctionCancelTime, // last order cancellation time
+            block.timestamp + gnosisAuctionParameters.auctionTime, // auction end time
             capacity_, // auctioned amount
             capacity_ / gnosisAuctionParameters.minRatioSold, // minimum tokens bought for auction to be valid
             gnosisAuctionParameters.minBuyAmount, // minimum purchase size of auctioning token
             gnosisAuctionParameters.minFundingThreshold, // minimum funding threshold
             false, // is atomic closure allowed
             address(0), // access manager contract
-            bytes(0) // access manager contract data
+            new bytes(0) // access manager contract data
         );
 
         return auctionId;
@@ -110,9 +117,9 @@ contract OhmBondManager is OlympusAccessControlled {
         address callbackAddress_,
         uint256 initialPrice_,
         uint256 minPrice_,
-        uint256 debtBuffer_,
+        uint32 debtBuffer_,
         uint256 auctionTime_,
-        uint256 depositInterval_
+        uint32 depositInterval_
     ) external onlyPolicy {
         bondProtocolParameters = BondProtocolParameters({
             callbackAddress: callbackAddress_,
