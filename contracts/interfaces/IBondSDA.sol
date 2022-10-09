@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.7.5;
-pragma abicoder v2;
+pragma solidity 0.8.15;
 
-import {ERC20} from "../types/ERC20.sol";
+import {IERC20} from "./IERC20.sol";
 import {IBondTeller} from "./IBondTeller.sol";
 
 interface IBondSDA {
@@ -42,8 +41,8 @@ interface IBondSDA {
     /// @dev                        Providing a scaling factor adjustment that doesn't follow this formula could lead to under or overflow errors in the market.
     /// @return                 ID of new bond market
     struct MarketParams {
-        ERC20 payoutToken;
-        ERC20 quoteToken;
+        IERC20 payoutToken;
+        IERC20 quoteToken;
         address callbackAddr;
         bool capacityInQuote;
         uint256 capacity;

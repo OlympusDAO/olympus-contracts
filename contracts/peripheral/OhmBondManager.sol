@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
-pragma abicoder v2;
+pragma solidity 0.8.15;
 
-import {ERC20} from "../types/ERC20.sol";
 import {IBondSDA} from "../interfaces/IBondSDA.sol";
 import {IBondTeller} from "../interfaces/IBondTeller.sol";
 import {IEasyAuction} from "../interfaces/IEasyAuction.sol";
+import {IERC20} from "../interfaces/IERC20.sol";
 import {ITreasury} from "../interfaces/ITreasury.sol";
 import {IOlympusAuthority} from "../interfaces/IOlympusAuthority.sol";
 import {OlympusAccessControlled} from "../types/OlympusAccessControlled.sol";
@@ -33,7 +32,7 @@ contract OhmBondManager is OlympusAccessControlled {
     // ========= STATE VARIABLES ========= //
 
     /// Tokens
-    ERC20 public ohm;
+    IERC20 public ohm;
 
     /// Contract Dependencies
     ITreasury public treasury;
@@ -54,7 +53,7 @@ contract OhmBondManager is OlympusAccessControlled {
         address gnosisAuction_,
         address authority_
     ) OlympusAccessControlled(IOlympusAuthority(authority_)) {
-        ohm = ERC20(ohm_);
+        ohm = IERC20(ohm_);
         treasury = ITreasury(treasury_);
         fixedExpiryAuctioneer = IBondSDA(feAuctioneer_);
         gnosisEasyAuction = IEasyAuction(gnosisAuction_);
@@ -94,7 +93,7 @@ contract OhmBondManager is OlympusAccessControlled {
         address bondToken = fixedExpiryTeller.create(address(ohm), block.timestamp + bondTerm_, capacity_);
 
         /// Launch Gnosis Auction
-        ERC20(bondToken).approve(address(gnosisEasyAuction), capacity_);
+        IERC20(bondToken).approve(address(gnosisEasyAuction), capacity_);
         uint256 auctionId = gnosisEasyAuction.initiateAuction(
             bondToken, // auctioningToken
             address(ohm), // biddingToken
