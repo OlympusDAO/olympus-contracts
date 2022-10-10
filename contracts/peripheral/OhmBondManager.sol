@@ -10,7 +10,6 @@ import {IOlympusAuthority} from "../interfaces/IOlympusAuthority.sol";
 import {OlympusAccessControlled} from "../types/OlympusAccessControlled.sol";
 
 contract OhmBondManager is OlympusAccessControlled {
-
     // ========= DATA STRUCTURES ========= //
     struct BondProtocolParameters {
         address callbackAddress;
@@ -24,7 +23,7 @@ contract OhmBondManager is OlympusAccessControlled {
     struct GnosisAuctionParameters {
         uint256 auctionCancelTime;
         uint256 auctionTime;
-        uint256 minRatioSold;
+        uint96 minRatioSold;
         uint256 minBuyAmount;
         uint256 minFundingThreshold;
     }
@@ -46,16 +45,21 @@ contract OhmBondManager is OlympusAccessControlled {
     BondProtocolParameters public bondProtocolParameters;
     GnosisAuctionParameters public gnosisAuctionParameters;
 
+    /// Constants
+    address internal constant DAO_MS = 0x245cc372C84B3645Bf0Ffe6538620B04a217988B;
+
     constructor(
         address ohm_,
         address treasury_,
         address feAuctioneer_,
+        address feTeller_,
         address gnosisAuction_,
         address authority_
     ) OlympusAccessControlled(IOlympusAuthority(authority_)) {
         ohm = IERC20(ohm_);
         treasury = ITreasury(treasury_);
         fixedExpiryAuctioneer = IBondSDA(feAuctioneer_);
+        fixedExpiryTeller = IBondTeller(feTeller_);
         gnosisEasyAuction = IEasyAuction(gnosisAuction_);
     }
 
@@ -63,20 +67,20 @@ contract OhmBondManager is OlympusAccessControlled {
     function createBondProtocolMarket(uint256 capacity_, uint256 bondTerm_) external onlyPolicy returns (uint256) {
         _topUpOhm(capacity_);
 
-        IBondSDA.MarketParams memory createMarketParams = IBondSDA.MarketParams({
-            payoutToken: ohm,
-            quoteToken: ohm,
-            callbackAddr: bondProtocolParameters.callbackAddress,
-            capacityInQuote: false,
-            capacity: capacity_,
-            formattedInitialPrice: bondProtocolParameters.initialPrice,
-            formattedMinimumPrice: bondProtocolParameters.minPrice,
-            debtBuffer: bondProtocolParameters.debtBuffer,
-            vesting: uint48(block.timestamp + bondTerm_),
-            conclusion: uint48(block.timestamp + bondProtocolParameters.auctionTime),
-            depositInterval: bondProtocolParameters.depositInterval,
-            scaleAdjustment: int8(0)
-        });
+        bytes memory createMarketParams = abi.encode(
+            ohm, // payoutToken
+            ohm, // quoteToken
+            bondProtocolParameters.callbackAddress, // callbackAddress
+            false, // capacityInQuote
+            capacity_, // capacity
+            bondProtocolParameters.initialPrice, // formattedInitialPrice
+            bondProtocolParameters.minPrice, // formattedMinimumPrice
+            bondProtocolParameters.debtBuffer, // debtBuffer
+            uint48(block.timestamp + bondTerm_), // vesting
+            uint48(block.timestamp + bondProtocolParameters.auctionTime), // conclusion
+            bondProtocolParameters.depositInterval, // depositInterval
+            int8(0) // scaleAdjustment
+        );
 
         ohm.approve(address(fixedExpiryTeller), capacity_);
         uint256 marketId = fixedExpiryAuctioneer.createMarket(createMarketParams);
@@ -84,13 +88,15 @@ contract OhmBondManager is OlympusAccessControlled {
         return marketId;
     }
 
-    function createGnosisAuction(uint256 capacity_, uint256 bondTerm_) external onlyPolicy returns (uint256) {
+    function createGnosisAuction(uint96 capacity_, uint256 bondTerm_) external onlyPolicy returns (uint256) {
         _topUpOhm(capacity_);
+
+        uint48 expiry = uint48(block.timestamp + bondTerm_);
 
         /// Create bond token
         ohm.approve(address(fixedExpiryTeller), capacity_);
-        fixedExpiryTeller.deploy(address(ohm), block.timestamp + bondTerm_);
-        address bondToken = fixedExpiryTeller.create(address(ohm), block.timestamp + bondTerm_, capacity_);
+        fixedExpiryTeller.deploy(ohm, expiry);
+        address bondToken = fixedExpiryTeller.create(ohm, expiry, capacity_);
 
         /// Launch Gnosis Auction
         IERC20(bondToken).approve(address(gnosisEasyAuction), capacity_);
@@ -133,7 +139,7 @@ contract OhmBondManager is OlympusAccessControlled {
     function setGnosisAuctionParameters(
         uint256 auctionCancelTime_,
         uint256 auctionTime_,
-        uint256 minRatioSold_,
+        uint96 minRatioSold_,
         uint256 minBuyAmount_,
         uint256 minFundingThreshold_
     ) external onlyPolicy {
@@ -154,5 +160,10 @@ contract OhmBondManager is OlympusAccessControlled {
             uint256 amountToMint = amountToDeploy_ - ohmBalance;
             treasury.mint(address(this), amountToMint);
         }
+    }
+
+    // ========= EMERGENCY FUNCTIONS ========= //
+    function emergencyWithdraw(uint256 amount) external onlyPolicy {
+        ohm.transfer(DAO_MS, amount);
     }
 }

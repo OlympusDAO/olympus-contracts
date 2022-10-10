@@ -58,5 +58,5 @@ interface IBondSDA {
     /// @notice                 Creates a new bond market
     /// @param params_          Configuration data needed for market creation
     /// @return id              ID of new bond market
-    function createMarket(MarketParams memory params_) external returns (uint256);
+    function createMarket(bytes calldata params_) external returns (uint256);
 }
