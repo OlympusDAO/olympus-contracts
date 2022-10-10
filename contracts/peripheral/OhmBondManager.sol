@@ -67,6 +67,7 @@ contract OhmBondManager is OlympusAccessControlled {
     function createBondProtocolMarket(uint256 capacity_, uint256 bondTerm_) external onlyPolicy returns (uint256) {
         _topUpOhm(capacity_);
 
+        /// Encodes the information needed for creating a bond market on Bond Protocol
         bytes memory createMarketParams = abi.encode(
             ohm, // payoutToken
             ohm, // quoteToken
