@@ -102,8 +102,8 @@ contract OhmBondManager is OlympusAccessControlled {
         /// Launch Gnosis Auction
         IERC20(bondToken).approve(address(gnosisEasyAuction), capacity_);
         uint256 auctionId = gnosisEasyAuction.initiateAuction(
-            bondToken, // auctioningToken
-            address(ohm), // biddingToken
+            IERC20(bondToken), // auctioningToken
+            ohm, // biddingToken
             block.timestamp + gnosisAuctionParameters.auctionCancelTime, // last order cancellation time
             block.timestamp + gnosisAuctionParameters.auctionTime, // auction end time
             capacity_, // auctioned amount

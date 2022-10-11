@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.15;
 
+import {IERC20} from "./IERC20.sol";
+
 interface IEasyAuction {
     /// @notice                         Initiates an auction through Gnosis Auctions
     /// @param tokenToSell              The token being sold
@@ -15,8 +17,8 @@ interface IEasyAuction {
     /// @param accessManager            The contract to manage an allowlist
     /// @param accessManagerData        The data for managing an allowlist
     function initiateAuction(
-        address tokenToSell,
-        address biddingToken,
+        IERC20 tokenToSell,
+        IERC20 biddingToken,
         uint256 lastCancellation,
         uint256 auctionEnd,
         uint96 auctionAmount,
