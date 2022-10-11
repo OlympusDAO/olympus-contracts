@@ -16,5 +16,5 @@ interface IBondTeller {
         IERC20 payoutToken,
         uint48 expiration,
         uint256 capacity
-    ) external returns (address);
+    ) external returns (IERC20, uint256);
 }

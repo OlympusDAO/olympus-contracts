@@ -97,12 +97,12 @@ contract OhmBondManager is OlympusAccessControlled {
         /// Create bond token
         ohm.approve(address(fixedExpiryTeller), capacity_);
         fixedExpiryTeller.deploy(ohm, expiry);
-        address bondToken = fixedExpiryTeller.create(ohm, expiry, capacity_);
+        (IERC20 bondToken, ) = fixedExpiryTeller.create(ohm, expiry, capacity_);
 
         /// Launch Gnosis Auction
-        IERC20(bondToken).approve(address(gnosisEasyAuction), capacity_);
+        bondToken.approve(address(gnosisEasyAuction), capacity_);
         uint256 auctionId = gnosisEasyAuction.initiateAuction(
-            IERC20(bondToken), // auctioningToken
+            bondToken, // auctioningToken
             ohm, // biddingToken
             block.timestamp + gnosisAuctionParameters.auctionCancelTime, // last order cancellation time
             block.timestamp + gnosisAuctionParameters.auctionTime, // auction end time
