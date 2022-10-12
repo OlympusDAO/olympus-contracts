@@ -12,7 +12,6 @@ import {OlympusAccessControlled} from "../types/OlympusAccessControlled.sol";
 contract OhmBondManager is OlympusAccessControlled {
     // ========= DATA STRUCTURES ========= //
     struct BondProtocolParameters {
-        address callbackAddress;
         uint256 initialPrice;
         uint256 minPrice;
         uint32 debtBuffer;
@@ -68,7 +67,7 @@ contract OhmBondManager is OlympusAccessControlled {
         bytes memory createMarketParams = abi.encode(
             ohm, // payoutToken
             ohm, // quoteToken
-            bondProtocolParameters.callbackAddress, // callbackAddress
+            address(0), // callbackAddress
             false, // capacityInQuote
             capacity_, // capacity
             bondProtocolParameters.initialPrice, // formattedInitialPrice
@@ -117,7 +116,6 @@ contract OhmBondManager is OlympusAccessControlled {
 
     // ========= PARAMETER ADJUSTMENT ========= //
     function setBondProtocolParameters(
-        address callbackAddress_,
         uint256 initialPrice_,
         uint256 minPrice_,
         uint32 debtBuffer_,
@@ -125,7 +123,6 @@ contract OhmBondManager is OlympusAccessControlled {
         uint32 depositInterval_
     ) external onlyPolicy {
         bondProtocolParameters = BondProtocolParameters({
-            callbackAddress: callbackAddress_,
             initialPrice: initialPrice_,
             minPrice: minPrice_,
             debtBuffer: debtBuffer_,

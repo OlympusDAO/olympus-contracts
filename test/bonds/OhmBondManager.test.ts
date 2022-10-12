@@ -41,7 +41,7 @@ describe.only("OhmBondManager", () => {
     let ohm: MockERC20;
 
     before(async () => {
-        await pinBlock(15718242, url);
+        await pinBlock(15732752, url);
     });
 
     beforeEach(async () => {
@@ -65,7 +65,7 @@ describe.only("OhmBondManager", () => {
         ohmBondManager = await new OhmBondManager__factory(owner).deploy(
             ohm.address,
             olympus.treasury,
-            "0x007FEA7A23da99F3Ce7eA34F976f32BF79A09C43", // Fixed Expiry Auctioneer
+            "0x007FEA2a31644F20b0fE18f69643890b6F878AA6", // Fixed Expiry Auctioneer
             "0x007FE7c498A2Cf30971ad8f2cbC36bd14Ac51156", // Fixed Expiry Teller
             "0x0b7fFc1f4AD541A4Ed16b40D8c37f0929158D101", // Gnosis Easy Auction
             authority.address
@@ -73,7 +73,7 @@ describe.only("OhmBondManager", () => {
 
         feAuctioneer = await ethers.getContractAt(
             feAuctioneerAbi,
-            "0x007FEA7A23da99F3Ce7eA34F976f32BF79A09C43"
+            "0x007FEA2a31644F20b0fE18f69643890b6F878AA6"
         );
 
         feTeller = await ethers.getContractAt(
@@ -103,7 +103,6 @@ describe.only("OhmBondManager", () => {
         it("can only be called by policy", async () => {
             await expect(
                 ohmBondManager.connect(policy).setBondProtocolParameters(
-                    addressZero,
                     "1000000000000000000000000000000000000", // 1e36
                     "500000000000000000000000000000000000", // 5e35
                     100_000,
@@ -114,7 +113,6 @@ describe.only("OhmBondManager", () => {
 
             await expect(
                 ohmBondManager.connect(other).setBondProtocolParameters(
-                    addressZero,
                     "1000000000000000000000000000000000000", // 1e36
                     "500000000000000000000000000000000000", // 5e35
                     100_000,
@@ -125,7 +123,6 @@ describe.only("OhmBondManager", () => {
 
             await expect(
                 ohmBondManager.connect(owner).setBondProtocolParameters(
-                    addressZero,
                     "1000000000000000000000000000000000000", // 1e36
                     "500000000000000000000000000000000000", // 5e35
                     100_000,
@@ -138,7 +135,6 @@ describe.only("OhmBondManager", () => {
         it("correctly sets parameters", async () => {
             // Verify initial state
             const params = await ohmBondManager.bondProtocolParameters();
-            expect(params.callbackAddress).to.equal(addressZero);
             expect(params.initialPrice).to.equal(BigNumber.from("0"));
             expect(params.minPrice).to.equal(BigNumber.from("0"));
             expect(params.debtBuffer).to.equal(BigNumber.from("0"));
@@ -147,7 +143,6 @@ describe.only("OhmBondManager", () => {
 
             // Set params
             await ohmBondManager.connect(policy).setBondProtocolParameters(
-                addressZero,
                 "1000000000000000000000000000000000000", // 1e36
                 "500000000000000000000000000000000000", // 5e35
                 100_000,
@@ -157,7 +152,6 @@ describe.only("OhmBondManager", () => {
 
             // Verify end state
             const paramsAfter = await ohmBondManager.bondProtocolParameters();
-            expect(paramsAfter.callbackAddress).to.equal(addressZero);
             expect(paramsAfter.initialPrice).to.equal(
                 BigNumber.from("1000000000000000000000000000000000000")
             );
@@ -218,7 +212,6 @@ describe.only("OhmBondManager", () => {
     describe("createBondProtocolMarket", () => {
         beforeEach(async () => {
             await ohmBondManager.connect(policy).setBondProtocolParameters(
-                addressZero,
                 "1000000000000000000000000000000000000", // 1e36
                 "500000000000000000000000000000000000", // 5e35
                 100_000,
@@ -326,7 +319,9 @@ describe.only("OhmBondManager", () => {
             // Verify end state
             const treasuryBalAfter = await ohm.balanceOf(treasury.address);
             expect(await ohm.balanceOf(ohmBondManager.address)).to.equal(BigNumber.from("0"));
-            expect(treasuryBalAfter.sub(treasuryBalBefore)).to.equal(BigNumber.from("1000000000000"));
+            expect(treasuryBalAfter.sub(treasuryBalBefore)).to.equal(
+                BigNumber.from("1000000000000")
+            );
         });
     });
 });
