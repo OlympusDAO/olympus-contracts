@@ -45,9 +45,6 @@ contract OhmBondManager is OlympusAccessControlled {
     BondProtocolParameters public bondProtocolParameters;
     GnosisAuctionParameters public gnosisAuctionParameters;
 
-    /// Constants
-    address internal constant DAO_MS = 0x245cc372C84B3645Bf0Ffe6538620B04a217988B;
-
     constructor(
         address ohm_,
         address treasury_,
@@ -165,6 +162,6 @@ contract OhmBondManager is OlympusAccessControlled {
 
     // ========= EMERGENCY FUNCTIONS ========= //
     function emergencyWithdraw(uint256 amount) external onlyPolicy {
-        ohm.transfer(DAO_MS, amount);
+        ohm.transfer(address(treasury), amount);
     }
 }

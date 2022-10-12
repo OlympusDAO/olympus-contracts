@@ -313,9 +313,9 @@ describe.only("OhmBondManager", () => {
                 .reverted;
         });
 
-        it("should send OHM to DAO MS", async () => {
+        it("should send OHM to Treasury", async () => {
             // Verify initial state
-            const msBalBefore = await ohm.balanceOf(guardian.address);
+            const treasuryBalBefore = await ohm.balanceOf(treasury.address);
             expect(await ohm.balanceOf(ohmBondManager.address)).to.equal(
                 BigNumber.from("1000000000000")
             );
@@ -324,9 +324,9 @@ describe.only("OhmBondManager", () => {
             await ohmBondManager.connect(policy).emergencyWithdraw("1000000000000");
 
             // Verify end state
-            const msBalAfter = await ohm.balanceOf(guardian.address);
+            const treasuryBalAfter = await ohm.balanceOf(treasury.address);
             expect(await ohm.balanceOf(ohmBondManager.address)).to.equal(BigNumber.from("0"));
-            expect(msBalAfter.sub(msBalBefore)).to.equal(BigNumber.from("1000000000000"));
+            expect(treasuryBalAfter.sub(treasuryBalBefore)).to.equal(BigNumber.from("1000000000000"));
         });
     });
 });
