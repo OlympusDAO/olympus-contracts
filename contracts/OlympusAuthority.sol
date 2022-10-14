@@ -33,13 +33,13 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
         address _vault
     ) OlympusAccessControlled(IOlympusAuthority(address(this))) {
         governor = _governor;
-        emit GovernorPushed(address(0), governor, true);
+        emit GovernorPushed(address(0), _governor, true);
         guardian = _guardian;
-        emit GuardianPushed(address(0), guardian, true);
+        emit GuardianPushed(address(0), _guardian, true);
         policy = _policy;
-        emit PolicyPushed(address(0), policy, true);
+        emit PolicyPushed(address(0), _policy, true);
         vault = _vault;
-        emit VaultPushed(address(0), vault, true);
+        emit VaultPushed(address(0), _vault, true);
     }
 
     /* ========== GOV ONLY ========== */
@@ -47,25 +47,25 @@ contract OlympusAuthority is IOlympusAuthority, OlympusAccessControlled {
     function pushGovernor(address _newGovernor, bool _effectiveImmediately) external onlyGovernor {
         if (_effectiveImmediately) governor = _newGovernor;
         newGovernor = _newGovernor;
-        emit GovernorPushed(governor, newGovernor, _effectiveImmediately);
+        emit GovernorPushed(governor, _newGovernor, _effectiveImmediately);
     }
 
     function pushGuardian(address _newGuardian, bool _effectiveImmediately) external onlyGovernor {
         if (_effectiveImmediately) guardian = _newGuardian;
         newGuardian = _newGuardian;
-        emit GuardianPushed(guardian, newGuardian, _effectiveImmediately);
+        emit GuardianPushed(guardian, _newGuardian, _effectiveImmediately);
     }
 
     function pushPolicy(address _newPolicy, bool _effectiveImmediately) external onlyGovernor {
         if (_effectiveImmediately) policy = _newPolicy;
         newPolicy = _newPolicy;
-        emit PolicyPushed(policy, newPolicy, _effectiveImmediately);
+        emit PolicyPushed(policy, _newPolicy, _effectiveImmediately);
     }
 
     function pushVault(address _newVault, bool _effectiveImmediately) external onlyGovernor {
         if (_effectiveImmediately) vault = _newVault;
         newVault = _newVault;
-        emit VaultPushed(vault, newVault, _effectiveImmediately);
+        emit VaultPushed(vault, _newVault, _effectiveImmediately);
     }
 
     /* ========== PENDING ROLE ONLY ========== */

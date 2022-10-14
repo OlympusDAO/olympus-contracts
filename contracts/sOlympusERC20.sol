@@ -103,8 +103,8 @@ contract sOlympus is IsOHM, ERC20Permit {
         require(_treasury != address(0), "Zero address: Treasury");
         treasury = _treasury;
 
-        emit Transfer(address(0x0), stakingContract, _totalSupply);
-        emit LogStakingContractUpdated(stakingContract);
+        emit Transfer(address(0x0), _stakingContract, _totalSupply);
+        emit LogStakingContractUpdated(_stakingContract);
 
         initializer = address(0);
     }
