@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.7.5;
+pragma solidity 0.8.15;
 
-import {IERC20} from "./IERC20.sol";
+import {IERC20} from "./IERC20.v2.sol";
 
 interface IBondSDA {
     /// @notice                 Creates a new bond market

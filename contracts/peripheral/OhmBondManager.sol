@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity 0.8.15;
 
 import {IBondSDA} from "../interfaces/IBondSDA.sol";
 import {IBondTeller} from "../interfaces/IBondTeller.sol";
 import {IEasyAuction} from "../interfaces/IEasyAuction.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
+import {IERC20} from "../interfaces/IERC20.v2.sol";
 import {ITreasury} from "../interfaces/ITreasury.sol";
 import {IOlympusAuthority} from "../interfaces/IOlympusAuthority.sol";
 import {OlympusAccessControlled} from "../types/OlympusAccessControlled.sol";
-import "../types/ERC20Permit.sol";
 
 contract OhmBondManager is OlympusAccessControlled {
     // ========= DATA STRUCTURES ========= //
@@ -31,7 +30,7 @@ contract OhmBondManager is OlympusAccessControlled {
     // ========= STATE VARIABLES ========= //
 
     /// Tokens
-    ERC20Permit public ohm;
+    IERC20 public ohm;
 
     /// Contract Dependencies
     ITreasury public treasury;
@@ -53,7 +52,7 @@ contract OhmBondManager is OlympusAccessControlled {
         address gnosisAuction_,
         address authority_
     ) OlympusAccessControlled(IOlympusAuthority(authority_)) {
-        ohm = ERC20Permit(ohm_);
+        ohm = IERC20(ohm_);
         treasury = ITreasury(treasury_);
         fixedExpiryAuctioneer = IBondSDA(feAuctioneer_);
         fixedExpiryTeller = IBondTeller(feTeller_);
