@@ -23,4 +23,6 @@ interface ITreasury {
     function excessReserves() external view returns (uint256);
 
     function baseSupply() external view returns (uint256);
+
+    function repayDebtWithOHM(uint256 _amount) external;
 }
