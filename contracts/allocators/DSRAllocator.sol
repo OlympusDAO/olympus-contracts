@@ -17,11 +17,7 @@ interface IDSProxyFactory {
 
 // Define DS Proxy Interface
 interface IDSProxy {
-    function execute(
-        address _target,
-        bytes calldata _data
-    ) external payable returns (bytes32 response);
-
+    function execute(address _target, bytes calldata _data) external payable returns (bytes32 response);
 }
 
 // Define DSR Interface
@@ -99,7 +95,7 @@ contract DSRAllocator is BaseAllocator {
     }
 
     function amountAllocated(uint256 id) public view override returns (uint256) {
-        uint256 amount = _dsr.pie(address(proxy)) * _dsr.chi() / 1e27;
+        uint256 amount = (_dsr.pie(address(proxy)) * _dsr.chi()) / 1e27;
         return amount;
     }
 
@@ -123,35 +119,21 @@ contract DSRAllocator is BaseAllocator {
     function _join(uint256 amount_) internal {
         proxy.execute(
             _dsrProxyActions,
-            abi.encodeWithSignature(
-                "join(address,address,uint256)",
-                _mcdJoinDai,
-                address(_dsr),
-                amount_
-            )
+            abi.encodeWithSignature("join(address,address,uint256)", _mcdJoinDai, address(_dsr), amount_)
         );
     }
 
     function _exit(uint256 amount_) internal {
         proxy.execute(
             _dsrProxyActions,
-            abi.encodeWithSignature(
-               "exit(address,address,uint256)",
-                _mcdJoinDai,
-                address(_dsr),
-                amount_
-            )
+            abi.encodeWithSignature("exit(address,address,uint256)", _mcdJoinDai, address(_dsr), amount_)
         );
     }
 
     function _exitAll() internal {
         proxy.execute(
             _dsrProxyActions,
-            abi.encodeWithSignature(
-                "exitAll(address,address)",
-                _mcdJoinDai,
-                address(_dsr)
-            )
+            abi.encodeWithSignature("exitAll(address,address)", _mcdJoinDai, address(_dsr))
         );
     }
 }

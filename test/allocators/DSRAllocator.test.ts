@@ -2,7 +2,14 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { config, ethers } from "hardhat";
-import { DSRAllocator, DSRAllocator__factory, ERC20, OlympusAuthority, OlympusTreasury, TreasuryExtender } from "../../types";
+import {
+    DSRAllocator,
+    DSRAllocator__factory,
+    ERC20,
+    OlympusAuthority,
+    OlympusTreasury,
+    TreasuryExtender,
+} from "../../types";
 import { dsrAbi } from "../utils/abi";
 import { coins } from "../utils/coins";
 import { helpers } from "../utils/helpers";
@@ -52,10 +59,7 @@ describe("DSRAllocator", () => {
             olympus.authority
         )) as OlympusAuthority;
 
-        dsr = await ethers.getContractAt(
-            dsrAbi,
-            "0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7"
-        );
+        dsr = await ethers.getContractAt(dsrAbi, "0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7");
 
         guardian = await helpers.impersonate(await authority.guardian());
         governor = await helpers.impersonate(await authority.governor());
@@ -95,7 +99,9 @@ describe("DSRAllocator", () => {
 
         it("should set DAI approval for proxy", async () => {
             const proxyAddress = await allocator.proxy();
-            expect(await dai.allowance(allocator.address, proxyAddress)).to.eq(helpers.constants.uint256Max);
+            expect(await dai.allowance(allocator.address, proxyAddress)).to.eq(
+                helpers.constants.uint256Max
+            );
         });
     });
 
@@ -124,7 +130,9 @@ describe("DSRAllocator", () => {
             const chi = await dsr.chi();
 
             // Make sure deposit is correct, 10^23 DAI but will have slight precision loss
-            expect(BigNumber.from(pie).mul(chi).div("1000000000000000000000000000")).to.eq("999999999999999999999999");
+            expect(BigNumber.from(pie).mul(chi).div("1000000000000000000000000000")).to.eq(
+                "999999999999999999999999"
+            );
         });
     });
 
@@ -219,5 +227,5 @@ describe("DSRAllocator", () => {
             expect(await dsr.pie(proxyAddress)).to.eq(0);
             expect(daiBalAfter).to.be.gt(daiBalBefore);
         });
-    })
+    });
 });
