@@ -8,8 +8,6 @@ import "../types/BaseAllocator.sol";
 import "../interfaces/IERC20.sol";
 import "./interfaces/ConvexInterfaces.sol";
 
-import "hardhat/console.sol";
-
 /// Define Aura Interface
 interface IAuraRewards {
     function balanceOf(address user_) external view returns (uint256);
