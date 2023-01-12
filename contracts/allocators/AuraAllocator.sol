@@ -32,9 +32,13 @@ interface IAuraRewards {
 }
 
 interface IAuraLocker {
+    function delegate(address _delegatee) external;
+
     function lock(address _account, uint256 _amount) external;
 
     function getReward(address _account) external;
+
+    function processExpiredLocks(bool _relock) external;
 }
 
 contract AuraAllocator is BaseAllocator {
@@ -87,7 +91,10 @@ contract AuraAllocator is BaseAllocator {
 
         /// Get Aura balance
         uint256 auraBalance = _aura.balanceOf(address(this));
-        if (_shouldLock) _locker.lock(address(this), auraBalance);
+        if (_shouldLock) {
+            _locker.processExpiredLocks(true);
+            _locker.lock(address(this), auraBalance);
+        }
 
         uint256 received = _amountAllocated(poolData.pool);
         uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
@@ -211,6 +218,15 @@ contract AuraAllocator is BaseAllocator {
         _pools.push(poolData);
 
         _addRewardTokens(rewardTokens_);
+    }
+
+    function sweepToTreasury(address token_) external onlyGuardian {
+        uint256 tokenBalance = IERC20(token_).balanceOf(address(this));
+        IERC20(token_).transfer(treasury, tokenBalance);
+    }
+
+    function delegateVote(address delegatee_) external onlyGuardian {
+        _locker.delegate(delegatee_);
     }
 
     function toggleShouldLock() external onlyGuardian {
