@@ -19,6 +19,7 @@ const agEUR = "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8";
 
 // ANY TOKENS
 const aura = "0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF";
+const auraBal = "0x616e8BfA43F920657B3497DBf40D6b1A02D4608d";
 const bal = "0xba100000625a3754423978a60c9317c58a424e3d";
 const cvx = "0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B";
 const crv = "0xD533a949740bb3306d119CC777fa900bA034cd52";
@@ -52,6 +53,7 @@ export const coins = {
     lusd,
     agEUR,
     aura,
+    auraBal,
     bal,
     cvx,
     crv,

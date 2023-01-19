@@ -2,24 +2,44 @@
 pragma solidity 0.8.15;
 
 // Import types
-import {BaseAllocator} from "../types/BaseAllocator.sol";
+import {BaseAllocator, AllocatorInitData} from "../types/BaseAllocator.sol";
 
 // Import interfaces
 import {IERC20} from "../interfaces/IERC20.sol";
 
+import "hardhat/console.sol";
+
 
 // Define Aura interfaces
 interface IAuraLocker {
+    struct EarnedData {
+        address token;
+        uint256 amount;
+    }
+
+    struct LockedBalance {
+        uint112 amount;
+        uint32 unlockTime;
+    }
+
+    function balanceOf(address _account) external view returns (uint256);
+
     function delegate(address _delegatee) external;
+
+    function claimableRewards(address _account) external view returns (EarnedData[] memory);
 
     function lock(address _account, uint256 _amount) external;
 
-    function getReward(address _account) external;
+    function lockedBalances(address _account) external view returns (uint256, uint256, uint256, LockedBalance[] memory);
+
+    function getReward(address _account, bool _stake) external;
 
     function processExpiredLocks(bool _relock) external;
 }
 
 interface IAuraBalStaking {
+    function balanceOf(address _account) external view returns (uint256);
+
     function earned(address _account) external view returns (uint256);
 
     function getReward(address _account, bool _claimExtras) external;
@@ -40,11 +60,12 @@ contract AuraAllocatorV2 is BaseAllocator {
 
     IAuraBalStaking internal immutable _abStaking = IAuraBalStaking(0x00A7BA8Ae7bca0B10A32Ea1f8e2a1Da980c6CAd2);
 
-    bool internal _shouldLock;
+    bool public shouldLock;
 
     constructor(AllocatorInitData memory data, address treasury_) BaseAllocator(data) {
         treasury = treasury_;
         _aura.approve(address(_locker), type(uint256).max);
+        _auraBal.approve(address(_abStaking), type(uint256).max);
     }
 
     // ========= BASE OVERRIDES ========= //
@@ -52,18 +73,18 @@ contract AuraAllocatorV2 is BaseAllocator {
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
         uint256 tokenIndex = tokenIds[id];
 
-        if (_unlockable() > 0) _locker.processExpiredLocks(_shouldLock);
-        if (_checkClaimableRewards(_locker)) _locker.getReward(address(this), true);
+        if (_unlockable() > 0) _locker.processExpiredLocks(shouldLock);
+        if (_checkClaimableRewards()) _locker.getReward(address(this), false);
         if (_abStaking.earned(address(this)) > 0) _abStaking.getReward(address(this), true);
 
         uint256 _auraBalance = _aura.balanceOf(address(this));
-        if (_auraBalance > 0 && _shouldLock) _locker.lock(address(this), _auraBalance);
+        if (_auraBalance > 0 && shouldLock) _locker.lock(address(this), _auraBalance);
 
         uint256 _auraBalBalance = _auraBal.balanceOf(address(this));
         if (_auraBalBalance > 0) _abStaking.stake(_auraBalBalance);
 
-        uint256 received = _amountAllocated(id);
-        uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id);
+        uint256 received = _amountAllocated(tokenIndex);
+        uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
 
         if (received >= last) gain = uint128(received - last);
         else loss = uint128(last - received);
@@ -122,6 +143,10 @@ contract AuraAllocatorV2 is BaseAllocator {
         _locker.delegate(delegatee_);
     }
 
+    function setShouldLock(bool shouldLock_) external onlyGuardian {
+        shouldLock = shouldLock_;
+    }
+
     // ========= INTERNAL FUNCTIONS ========= //
 
     function _unlockable() internal view returns (uint256) {
@@ -145,7 +170,11 @@ contract AuraAllocatorV2 is BaseAllocator {
     }
 
     function _amountAllocated(uint256 id) internal view returns (uint256) {
-        if (id == 0) return _locker.lockedBalanceOf(address(this));
-        else return _abStaking.balanceOf(address(this));
+        if (id == 0) {
+            (uint256 total, , , ) = _locker.lockedBalances(address(this));
+            return total;
+        } else {
+            return _abStaking.balanceOf(address(this));
+        }
     }
 }

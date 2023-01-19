@@ -2,7 +2,7 @@
 pragma solidity 0.8.15;
 
 // Import types
-import {BaseAllocator} from "../types/BaseAllocator.sol";
+import {BaseAllocator, AllocatorInitData} from "../types/BaseAllocator.sol";
 
 // Import interfaces
 import {IERC20} from "../interfaces/IERC20.sol";
@@ -26,19 +26,15 @@ interface IAuraRewards {
 
     function withdrawAllAndUnwrap(bool claim) external;
 
-    function getReward(address _account, bool _claimExtras) external returns (bool);
+    function getReward() external;
+
+    function getReward(address _account, bool _claimExtras) external;
 
     function earned(address _account) external view returns (uint256);
-}
 
-interface IAuraLocker {
-    function delegate(address _delegatee) external;
+    function extraRewards(uint256 _id) external view returns (address);
 
-    function lock(address _account, uint256 _amount) external;
-
-    function getReward(address _account) external;
-
-    function processExpiredLocks(bool _relock) external;
+    function extraRewardsLength() external view returns (uint256);
 }
 
 contract BalancerAuraAllocator is BaseAllocator {
@@ -116,9 +112,9 @@ contract BalancerAuraAllocator is BaseAllocator {
         // Loop through all Aura pools
         for (uint256 index; index < numPools; ) {
             auraPool = _auraPools[index];
-            poolData.pool.withdraw(poolData.pool.balanceOf(address(this)), address(this), address(this)); // does this need to be withdrawAndUnwrap
+            auraPool.pool.withdraw(auraPool.pool.balanceOf(address(this)), address(this), address(this)); // does this need to be withdrawAndUnwrap
 
-            if (panic) poolData.lp.transfer(treasury, poolData.lp.balanceOf(address(this)));
+            if (panic) auraPool.lp.transfer(treasury, auraPool.lp.balanceOf(address(this)));
 
             unchecked {
                 ++index;
