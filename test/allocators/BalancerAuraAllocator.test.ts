@@ -1,6 +1,13 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { config, ethers } from "hardhat";
-import { BalancerAuraAllocator, BalancerAuraAllocator__factory, ERC20, OlympusAuthority, OlympusTreasury, TreasuryExtender } from "../../types";
+import {
+    BalancerAuraAllocator,
+    BalancerAuraAllocator__factory,
+    ERC20,
+    OlympusAuthority,
+    OlympusTreasury,
+    TreasuryExtender,
+} from "../../types";
 import { auraBoosterABI } from "../utils/auraAllocatorAbis";
 import { helpers } from "../utils/helpers";
 import { olympus } from "../utils/olympus";
@@ -54,7 +61,5 @@ describe("BalancerAuraAllocator", () => {
             auraBoosterABI,
             "0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10"
         );
-
-        
-    })
+    });
 });

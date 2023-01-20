@@ -9,7 +9,6 @@ import {IERC20} from "../interfaces/IERC20.sol";
 
 import "hardhat/console.sol";
 
-
 // Define Aura interfaces
 interface IAuraLocker {
     struct EarnedData {
@@ -30,7 +29,15 @@ interface IAuraLocker {
 
     function lock(address _account, uint256 _amount) external;
 
-    function lockedBalances(address _account) external view returns (uint256, uint256, uint256, LockedBalance[] memory);
+    function lockedBalances(address _account)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            LockedBalance[] memory
+        );
 
     function getReward(address _account, bool _stake) external;
 
@@ -171,14 +178,14 @@ contract AuraAllocatorV2 is BaseAllocator {
         shouldLock = shouldLock_;
     }
 
-    function setLocker(address locker_) external onlyGuardian() {
+    function setLocker(address locker_) external onlyGuardian {
         aura.approve(address(locker), 0);
         aura.approve(address(locker_), type(uint256).max);
 
         locker = IAuraLocker(locker_);
     }
 
-    function setAbStaking(address abStaking_) external onlyGuardian() {
+    function setAbStaking(address abStaking_) external onlyGuardian {
         auraBal.approve(address(abStaking), 0);
         auraBal.approve(address(abStaking_), type(uint256).max);
 
@@ -198,7 +205,7 @@ contract AuraAllocatorV2 is BaseAllocator {
 
         for (uint256 i; i < numRewards; ) {
             if (rewards[i].amount > 0) return true;
-            
+
             unchecked {
                 ++i;
             }

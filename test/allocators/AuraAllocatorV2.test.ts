@@ -1,7 +1,14 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { config, ethers } from "hardhat";
-import { AuraAllocatorV2, AuraAllocatorV2__factory, ERC20, OlympusAuthority, OlympusTreasury, TreasuryExtender } from "../../types";
+import {
+    AuraAllocatorV2,
+    AuraAllocatorV2__factory,
+    ERC20,
+    OlympusAuthority,
+    OlympusTreasury,
+    TreasuryExtender,
+} from "../../types";
 import { auraBalStakingABI } from "../utils/abi";
 import { auraLockerABI } from "../utils/auraAllocatorAbis";
 import { coins } from "../utils/coins";
@@ -173,8 +180,12 @@ describe("AuraAllocatorV2", () => {
             await helpers.tmine(30 * 24 * 60 * 60); // 30 days
 
             await allocator.update(11);
-            expect(await auraBal.balanceOf(auraBalStaking.address)).to.be.gt(auraBalStakingBalanceBefore);
-            expect(await auraBalStaking.balanceOf(allocator.address)).to.be.gt(allocatorStakedBalanceBefore);
+            expect(await auraBal.balanceOf(auraBalStaking.address)).to.be.gt(
+                auraBalStakingBalanceBefore
+            );
+            expect(await auraBalStaking.balanceOf(allocator.address)).to.be.gt(
+                allocatorStakedBalanceBefore
+            );
         });
     });
 
@@ -197,7 +208,7 @@ describe("AuraAllocatorV2", () => {
 
         it("Should withdraw expired Aura from vlAura", async () => {
             await helpers.tmine(120 * 24 * 60 * 60); // 120 days
-            
+
             const auraBalanceBefore = await aura.balanceOf(allocator.address);
 
             await allocator.deallocate([bne(10, 22), 0]);
@@ -243,7 +254,7 @@ describe("AuraAllocatorV2", () => {
 
         it("Should withdraw expired Aura from vlAura to allocator", async () => {
             await helpers.tmine(120 * 24 * 60 * 60); // 120 days
-            
+
             const auraBalanceBefore = await aura.balanceOf(allocator.address);
 
             await allocator.deactivate(false);
@@ -271,7 +282,7 @@ describe("AuraAllocatorV2", () => {
 
         it("Should withdraw expired Aura from vlAura to treasury", async () => {
             await helpers.tmine(120 * 24 * 60 * 60); // 120 days
-            
+
             const auraBalanceBefore = await aura.balanceOf(treasury.address);
 
             await allocator.deactivate(true);
@@ -323,7 +334,7 @@ describe("AuraAllocatorV2", () => {
 
         it("Should withdraw expired Aura from vlAura to allocator", async () => {
             await helpers.tmine(120 * 24 * 60 * 60); // 120 days
-            
+
             const auraBalanceBefore = await aura.balanceOf(allocator.address);
 
             await allocator.prepareMigration();
@@ -403,7 +414,9 @@ describe("AuraAllocatorV2", () => {
 
         it("Should delegate voting power to DAO MS", async () => {
             await allocator.delegate("0x245cc372c84b3645bf0ffe6538620b04a217988b");
-            expect(await auraLocker.delegates(allocator.address)).to.eq("0x245cc372C84B3645Bf0Ffe6538620B04a217988B");
+            expect(await auraLocker.delegates(allocator.address)).to.eq(
+                "0x245cc372C84B3645Bf0Ffe6538620B04a217988B"
+            );
         });
     });
 

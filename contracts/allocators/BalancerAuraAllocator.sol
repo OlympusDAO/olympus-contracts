@@ -39,7 +39,7 @@ interface IAuraRewards {
 
 contract BalancerAuraAllocator is BaseAllocator {
     // ========= DATA STRUCTURES ========= //
-    
+
     struct AuraPoolData {
         IAuraRewards pool;
         IERC20 lp;
@@ -96,7 +96,7 @@ contract BalancerAuraAllocator is BaseAllocator {
         for (uint256 index; index < amountsLength; ) {
             auraPool = _auraPools[index];
             amount = amounts[index];
-            
+
             auraPool.pool.withdraw(amount, address(this), address(this)); // does this need to be withdrawAndUnwrap
 
             unchecked {
@@ -145,7 +145,7 @@ contract BalancerAuraAllocator is BaseAllocator {
             // Withdraw all Balancer pool tokens from Aura
             auraPool = _auraPools[index];
             auraPool.pool.withdraw(auraPool.pool.balanceOf(address(this)), address(this), address(this)); // does this need to be withdrawAndUnwrap
-            
+
             // Claim any rewards from Aura
             _claimRewards(auraPool.pool);
 
