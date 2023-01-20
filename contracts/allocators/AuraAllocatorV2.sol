@@ -57,6 +57,12 @@ interface IAuraBalStaking {
 }
 
 contract AuraAllocatorV2 is BaseAllocator {
+    // ========= ERRORS ========= //
+
+    error AuraAllocator_LockerStillActive();
+
+    // ========= STATE ========= //
+
     address public immutable treasury;
 
     IERC20 public immutable aura;
@@ -190,6 +196,13 @@ contract AuraAllocatorV2 is BaseAllocator {
     }
 
     function setLocker(address locker_) external onlyGuardian {
+        // Make sure there is not still Aura locked
+        (, , uint256 locked, ) = locker.lockedBalances(address(this));
+        if (locked > 0) revert AuraAllocator_LockerStillActive();
+
+        // Claim unlockeable Aura
+        if (_unlockable() > 0) locker.processExpiredLocks(false);
+
         aura.approve(address(locker), 0);
         aura.approve(address(locker_), type(uint256).max);
 
@@ -197,6 +210,9 @@ contract AuraAllocatorV2 is BaseAllocator {
     }
 
     function setAbStaking(address abStaking_) external onlyGuardian {
+        // Withdraw staked AuraBal
+        if (abStaking.balanceOf(address(this)) > 0) abStaking.withdraw(abStaking.balanceOf(address(this)), true);
+
         auraBal.approve(address(abStaking), 0);
         auraBal.approve(address(abStaking_), type(uint256).max);
 
