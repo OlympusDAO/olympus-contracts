@@ -38,6 +38,9 @@ describe("AuraAllocatorV2", () => {
     let bal: ERC20;
     let bbAUsd: ERC20;
 
+    // General
+    let depositId: number;
+
     // Network
     let url: string = config.networks.hardhat.forking!.url;
     let snapshotId: number = 0;
@@ -109,6 +112,9 @@ describe("AuraAllocatorV2", () => {
         // Add BAL and bb-a-USD as reward tokens
         await allocator.addRewardToken(bal.address);
         await allocator.addRewardToken(bbAUsd.address);
+
+        // Get deposit ID
+        depositId = (await extender.getTotalAllocatorCount()).toNumber();
     });
 
     beforeEach(async () => {
@@ -161,7 +167,7 @@ describe("AuraAllocatorV2", () => {
         it("should lock AURA in vlAura", async () => {
             const auraLockerBalanceBefore = await aura.balanceOf(auraLocker.address);
 
-            await expect(() => allocator.update(11)).to.changeTokenBalance(
+            await expect(() => allocator.update(depositId)).to.changeTokenBalance(
                 aura,
                 allocator,
                 bnn(0).sub(bne(10, 22))
@@ -172,14 +178,14 @@ describe("AuraAllocatorV2", () => {
         });
 
         it("should claim auraBal rewards", async () => {
-            await allocator.update(11);
+            await allocator.update(depositId);
 
             const auraBalStakingBalanceBefore = await auraBal.balanceOf(auraBalStaking.address);
             const allocatorStakedBalanceBefore = await auraBalStaking.balanceOf(allocator.address);
 
             await helpers.tmine(30 * 24 * 60 * 60); // 30 days
 
-            await allocator.update(11);
+            await allocator.update(depositId);
             expect(await auraBal.balanceOf(auraBalStaking.address)).to.be.gt(
                 auraBalStakingBalanceBefore
             );
@@ -203,7 +209,7 @@ describe("AuraAllocatorV2", () => {
 
             await extender.requestFundsFromTreasury(11, bne(10, 22));
 
-            await allocator.update(11);
+            await allocator.update(depositId);
         });
 
         it("Should withdraw expired Aura from vlAura", async () => {
@@ -221,7 +227,7 @@ describe("AuraAllocatorV2", () => {
         it("Should withdraw auraBal from auraBal staking", async () => {
             // Stake auraBal
             await helpers.tmine(30 * 24 * 60 * 60); // 30 days
-            await allocator.update(11);
+            await allocator.update(depositId);
 
             const stakedAuraBalBefore = await auraBalStaking.balanceOf(allocator.address);
 
@@ -249,7 +255,7 @@ describe("AuraAllocatorV2", () => {
 
             await extender.requestFundsFromTreasury(11, bne(10, 22));
 
-            await allocator.update(11);
+            await allocator.update(depositId);
         });
 
         it("Should withdraw expired Aura from vlAura to allocator", async () => {
@@ -267,7 +273,7 @@ describe("AuraAllocatorV2", () => {
         it("Should withdraw staked auraBal to allocator", async () => {
             // Stake auraBal
             await helpers.tmine(30 * 24 * 60 * 60); // 30 days
-            await allocator.update(11);
+            await allocator.update(depositId);
 
             const stakedAuraBalBefore = await auraBalStaking.balanceOf(allocator.address);
 
@@ -295,7 +301,7 @@ describe("AuraAllocatorV2", () => {
         it("Should withdraw staked auraBal to treasury", async () => {
             // Stake auraBal
             await helpers.tmine(30 * 24 * 60 * 60); // 30 days
-            await allocator.update(11);
+            await allocator.update(depositId);
 
             const stakedAuraBalBefore = await auraBalStaking.balanceOf(allocator.address);
 
@@ -329,7 +335,7 @@ describe("AuraAllocatorV2", () => {
 
             await extender.requestFundsFromTreasury(11, bne(10, 22));
 
-            await allocator.update(11);
+            await allocator.update(depositId);
         });
 
         it("Should withdraw expired Aura from vlAura to allocator", async () => {
@@ -347,7 +353,7 @@ describe("AuraAllocatorV2", () => {
         it("Should withdraw staked auraBal to allocator", async () => {
             // Stake auraBal
             await helpers.tmine(30 * 24 * 60 * 60); // 30 days
-            await allocator.update(11);
+            await allocator.update(depositId);
 
             // Make locks expire
             await helpers.tmine(120 * 24 * 60 * 60); // 120 days
@@ -387,7 +393,7 @@ describe("AuraAllocatorV2", () => {
 
             await extender.requestFundsFromTreasury(11, bne(10, 22));
 
-            await allocator.update(11);
+            await allocator.update(depositId);
         });
 
         it("Should report allocated Aura", async () => {
@@ -409,7 +415,7 @@ describe("AuraAllocatorV2", () => {
 
             await extender.requestFundsFromTreasury(11, bne(10, 22));
 
-            await allocator.update(11);
+            await allocator.update(depositId);
         });
 
         it("Should delegate voting power to DAO MS", async () => {
