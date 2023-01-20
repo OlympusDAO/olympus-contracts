@@ -28,6 +28,8 @@ describe("AuraAllocatorV2", () => {
     // Tokens
     let aura: ERC20;
     let auraBal: ERC20;
+    let bal: ERC20;
+    let bbAUsd: ERC20;
 
     // Network
     let url: string = config.networks.hardhat.forking!.url;
@@ -39,6 +41,8 @@ describe("AuraAllocatorV2", () => {
         // Get tokens
         aura = await helpers.getCoin(coins.aura);
         auraBal = await helpers.getCoin(coins.auraBal);
+        bal = await helpers.getCoin(coins.bal);
+        bbAUsd = await helpers.getCoin(coins.bbAUsd);
 
         // Get deployed contracts
         treasury = (await ethers.getContractAt(
@@ -80,7 +84,11 @@ describe("AuraAllocatorV2", () => {
                 tokens: [aura.address],
                 extender: extender.address,
             },
-            treasury.address
+            treasury.address,
+            aura.address,
+            auraBal.address,
+            auraLocker.address,
+            auraBalStaking.address
         );
 
         // Connect contracts to signers
@@ -90,6 +98,10 @@ describe("AuraAllocatorV2", () => {
 
         // Transfer AURA from governor to treasury
         await aura.connect(governor).transfer(treasury.address, bne(10, 22));
+
+        // Add BAL and bb-a-USD as reward tokens
+        await allocator.addRewardToken(bal.address);
+        await allocator.addRewardToken(bbAUsd.address);
     });
 
     beforeEach(async () => {
@@ -109,6 +121,12 @@ describe("AuraAllocatorV2", () => {
 
         it("should have max approval to stake auraBal into Aura Bal Staking contract", async () => {
             expect(await auraBal.allowance(allocator.address, auraBalStaking.address)).to.equal(
+                helpers.constants.uint256Max
+            );
+        });
+
+        it("should have max approval for the extender to take auraBal", async () => {
+            expect(await auraBal.allowance(allocator.address, extender.address)).to.equal(
                 helpers.constants.uint256Max
             );
         });

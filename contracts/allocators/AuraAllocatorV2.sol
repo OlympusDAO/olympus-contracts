@@ -52,20 +52,37 @@ interface IAuraBalStaking {
 contract AuraAllocatorV2 is BaseAllocator {
     address public immutable treasury;
 
-    IERC20 internal immutable _aura = IERC20(0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF);
+    IERC20 public immutable aura;
 
-    IERC20 internal immutable _auraBal = IERC20(0x616e8BfA43F920657B3497DBf40D6b1A02D4608d);
+    IERC20 public immutable auraBal;
 
-    IAuraLocker internal immutable _locker = IAuraLocker(0x3Fa73f1E5d8A792C80F426fc8F84FBF7Ce9bBCAC);
+    IERC20[] internal _rewardTokens;
 
-    IAuraBalStaking internal immutable _abStaking = IAuraBalStaking(0x00A7BA8Ae7bca0B10A32Ea1f8e2a1Da980c6CAd2);
+    IAuraLocker public locker;
+
+    IAuraBalStaking public abStaking;
 
     bool public shouldLock;
 
-    constructor(AllocatorInitData memory data, address treasury_) BaseAllocator(data) {
+    constructor(
+        AllocatorInitData memory data,
+        address treasury_,
+        address aura_,
+        address auraBal_,
+        address locker_,
+        address abStaking_
+    ) BaseAllocator(data) {
         treasury = treasury_;
-        _aura.approve(address(_locker), type(uint256).max);
-        _auraBal.approve(address(_abStaking), type(uint256).max);
+        aura = IERC20(aura_);
+        auraBal = IERC20(auraBal_);
+        locker = IAuraLocker(locker_);
+        abStaking = IAuraBalStaking(abStaking_);
+
+        aura.approve(address(locker), type(uint256).max);
+        auraBal.approve(address(abStaking), type(uint256).max);
+        auraBal.approve(address(extender), type(uint256).max);
+
+        _rewardTokens.push(auraBal);
     }
 
     // ========= BASE OVERRIDES ========= //
@@ -73,15 +90,15 @@ contract AuraAllocatorV2 is BaseAllocator {
     function _update(uint256 id) internal override returns (uint128 gain, uint128 loss) {
         uint256 tokenIndex = tokenIds[id];
 
-        if (_unlockable() > 0) _locker.processExpiredLocks(shouldLock);
-        if (_checkClaimableRewards()) _locker.getReward(address(this), false);
-        if (_abStaking.earned(address(this)) > 0) _abStaking.getReward(address(this), true);
+        if (_unlockable() > 0) locker.processExpiredLocks(shouldLock);
+        if (_checkClaimableRewards()) locker.getReward(address(this), false);
+        if (abStaking.earned(address(this)) > 0) abStaking.getReward(address(this), true);
 
-        uint256 _auraBalance = _aura.balanceOf(address(this));
-        if (_auraBalance > 0 && shouldLock) _locker.lock(address(this), _auraBalance);
+        uint256 auraBalance = aura.balanceOf(address(this));
+        if (auraBalance > 0 && shouldLock) locker.lock(address(this), auraBalance);
 
-        uint256 _auraBalBalance = _auraBal.balanceOf(address(this));
-        if (_auraBalBalance > 0) _abStaking.stake(_auraBalBalance);
+        uint256 auraBalBalance = auraBal.balanceOf(address(this));
+        if (auraBalBalance > 0) abStaking.stake(auraBalBalance);
 
         uint256 received = _amountAllocated(tokenIndex);
         uint256 last = extender.getAllocatorAllocated(id) + extender.getAllocatorPerformance(id).gain;
@@ -91,28 +108,28 @@ contract AuraAllocatorV2 is BaseAllocator {
     }
 
     function deallocate(uint256[] memory amounts) public override onlyGuardian {
-        if (amounts[0] > 0) _locker.processExpiredLocks(false);
-        if (amounts[1] > 0) _abStaking.withdraw(amounts[1], true); // does this need to be withdrawAndUnwrap?
+        if (amounts[0] > 0) locker.processExpiredLocks(false);
+        if (amounts[1] > 0) abStaking.withdraw(amounts[1], true); // does this need to be withdrawAndUnwrap?
     }
 
     function _deactivate(bool panic) internal override {
         uint256[] memory amounts = new uint256[](2);
 
         if (_unlockable() > 0) amounts[0] = 1;
-        if (_abStaking.balanceOf(address(this)) > 0) amounts[1] = _abStaking.balanceOf(address(this));
+        if (abStaking.balanceOf(address(this)) > 0) amounts[1] = abStaking.balanceOf(address(this));
 
         deallocate(amounts);
 
         if (panic) {
-            _aura.transfer(treasury, _aura.balanceOf(address(this)));
-            _auraBal.transfer(treasury, _auraBal.balanceOf(address(this)));
+            aura.transfer(treasury, aura.balanceOf(address(this)));
+            auraBal.transfer(treasury, auraBal.balanceOf(address(this)));
         }
     }
 
     function _prepareMigration() internal override {
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = 1;
-        amounts[1] = _abStaking.balanceOf(address(this));
+        amounts[1] = abStaking.balanceOf(address(this));
         deallocate(amounts);
     }
 
@@ -123,13 +140,13 @@ contract AuraAllocatorV2 is BaseAllocator {
 
     function rewardTokens() public view override returns (IERC20[] memory) {
         IERC20[] memory tokens = new IERC20[](1);
-        tokens[0] = _auraBal;
+        tokens[0] = auraBal;
         return tokens;
     }
 
     function utilityTokens() public view override returns (IERC20[] memory) {
         IERC20[] memory tokens = new IERC20[](1);
-        tokens[0] = _auraBal;
+        tokens[0] = auraBal;
         return tokens;
     }
 
@@ -139,23 +156,44 @@ contract AuraAllocatorV2 is BaseAllocator {
 
     // ========= ALLOCATOR SPECIFIC FUNCTIONS ========= //
 
+    function addRewardToken(address token_) external onlyGuardian {
+        IERC20 token = IERC20(token_);
+        token.approve(address(extender), type(uint256).max);
+
+        _rewardTokens.push(token);
+    }
+
     function delegate(address delegatee_) external onlyGuardian {
-        _locker.delegate(delegatee_);
+        locker.delegate(delegatee_);
     }
 
     function setShouldLock(bool shouldLock_) external onlyGuardian {
         shouldLock = shouldLock_;
     }
 
+    function setLocker(address locker_) external onlyGuardian() {
+        aura.approve(address(locker), 0);
+        aura.approve(address(locker_), type(uint256).max);
+
+        locker = IAuraLocker(locker_);
+    }
+
+    function setAbStaking(address abStaking_) external onlyGuardian() {
+        auraBal.approve(address(abStaking), 0);
+        auraBal.approve(address(abStaking_), type(uint256).max);
+
+        abStaking = IAuraBalStaking(abStaking_);
+    }
+
     // ========= INTERNAL FUNCTIONS ========= //
 
     function _unlockable() internal view returns (uint256) {
-        (, uint256 unlockable, , ) = _locker.lockedBalances(address(this));
+        (, uint256 unlockable, , ) = locker.lockedBalances(address(this));
         return unlockable;
     }
 
     function _checkClaimableRewards() internal view returns (bool) {
-        IAuraLocker.EarnedData[] memory rewards = _locker.claimableRewards(address(this));
+        IAuraLocker.EarnedData[] memory rewards = locker.claimableRewards(address(this));
         uint256 numRewards = rewards.length;
 
         for (uint256 i; i < numRewards; ) {
@@ -171,10 +209,10 @@ contract AuraAllocatorV2 is BaseAllocator {
 
     function _amountAllocated(uint256 id) internal view returns (uint256) {
         if (id == 0) {
-            (uint256 total, , , ) = _locker.lockedBalances(address(this));
+            (uint256 total, , , ) = locker.lockedBalances(address(this));
             return total;
         } else {
-            return _abStaking.balanceOf(address(this));
+            return abStaking.balanceOf(address(this));
         }
     }
 }
