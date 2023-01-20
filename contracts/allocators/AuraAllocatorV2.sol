@@ -129,7 +129,17 @@ contract AuraAllocatorV2 is BaseAllocator {
 
         if (panic) {
             aura.transfer(treasury, aura.balanceOf(address(this)));
-            auraBal.transfer(treasury, auraBal.balanceOf(address(this)));
+
+            // auraBal should be included in the reward tokens
+            uint256 numRewardTokens = _rewardTokens.length;
+            for (uint256 i; i < numRewardTokens; ) {
+                IERC20 token = _rewardTokens[i];
+                token.transfer(treasury, token.balanceOf(address(this)));
+
+                unchecked {
+                    ++i;
+                }
+            }
         }
     }
 
