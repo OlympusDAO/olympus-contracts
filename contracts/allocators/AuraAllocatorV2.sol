@@ -134,7 +134,8 @@ contract AuraAllocatorV2 is BaseAllocator {
             uint256 numRewardTokens = _rewardTokens.length;
             for (uint256 i; i < numRewardTokens; ) {
                 IERC20 token = _rewardTokens[i];
-                token.transfer(treasury, token.balanceOf(address(this)));
+                uint256 tokenBalance = token.balanceOf(address(this));
+                if (tokenBalance > 0) token.transfer(treasury, tokenBalance);
 
                 unchecked {
                     ++i;
