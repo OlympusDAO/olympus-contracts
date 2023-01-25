@@ -163,9 +163,7 @@ contract AuraAllocatorV2 is BaseAllocator {
     }
 
     function rewardTokens() public view override returns (IERC20[] memory) {
-        IERC20[] memory tokens = new IERC20[](1);
-        tokens[0] = auraBal;
-        return tokens;
+        return _rewardTokens;
     }
 
     function utilityTokens() public view override returns (IERC20[] memory) {
