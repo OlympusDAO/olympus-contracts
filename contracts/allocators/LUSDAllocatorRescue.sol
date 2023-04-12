@@ -29,7 +29,7 @@ contract LUSDAllocatorV2R is BaseAllocator {
     function sendETH(address to_) external {
         _onlyGuardian();
 
-        payable(to_).transfer(address(this).balance);
+        payable(to_).call{value: address(this).balance}("");
     }
 
     // Send token to an address
