@@ -95,7 +95,6 @@ contract FraxSharesAllocator is Initializable, OwnableUpgradeable {
 
     /* ======== INITIALIZER ======== */
     function initialize(
-        address _treasury,
         address _fxs,
         address _veFXS,
         address _veFXSYieldDistributorV4
@@ -103,8 +102,7 @@ contract FraxSharesAllocator is Initializable, OwnableUpgradeable {
         __Context_init_unchained();
         __Ownable_init_unchained();
 
-        require(_treasury != address(0), "zero treasury address");
-        treasury = ITreasury(_treasury);
+        treasury = ITreasury(address(0));
 
         require(_fxs != address(0), "zero FXS address");
         fxs = IERC20(_fxs);
@@ -143,27 +141,11 @@ contract FraxSharesAllocator is Initializable, OwnableUpgradeable {
      *  @param _amount uint
      */
     function deposit(uint256 _amount) external onlyOwner {
-        treasury.manage(address(fxs), _amount);
-
-        uint256 prevAmount = totalAmountDeployed;
-        totalAmountDeployed = totalAmountDeployed.add(_amount);
-
-        fxs.safeApprove(address(veFXS), _amount);
-        if (prevAmount == 0) {
-            lockEnd = block.timestamp + MAX_TIME;
-            veFXS.create_lock(_amount, lockEnd);
-        } else {
-            veFXS.increase_amount(_amount);
-            if (_canExtendLock()) {
-                lockEnd = block.timestamp + MAX_TIME;
-                veFXS.increase_unlock_time(block.timestamp + MAX_TIME);
-            }
-        }
+        // No-op, this is for withdrawal to a seller only
     }
 
     function setTreasury(address _treasury) external onlyOwner {
-        require(_treasury != address(0), "zero treasury address");
-        treasury = ITreasury(_treasury);
+        // No-op, treasury is un-needed in sale of allocator
     }
 
     /* ======== VIEW FUNCTIONS ======== */
