@@ -95,6 +95,7 @@ contract FraxSharesAllocator is Initializable, OwnableUpgradeable {
 
     /* ======== INITIALIZER ======== */
     function initialize(
+        address _treasury,
         address _fxs,
         address _veFXS,
         address _veFXSYieldDistributorV4
