@@ -14,6 +14,7 @@ import { coins } from "../utils/coins";
 import { olympus } from "../utils/olympus";
 import { helpers } from "../utils/helpers";
 import { vefxsAbi, wlContractAbi } from "../utils/fxsAllocatorAbis";
+import { proxyAdminAbi, transparentUpgradeableProxyAbi } from "../utils/abi";
 
 const ZERO_ADDRESS = ethers.utils.getAddress("0x0000000000000000000000000000000000000000");
 const MAX_TIME = 4 * 365 * 86400 + 1;
@@ -30,6 +31,8 @@ describe("FraxSharesAllocatorVotingV2", () => {
         // contracts
         let treasury: OlympusTreasury;
         let factory: FraxSharesAllocatorVoting__factory;
+        let proxyAdmin: any;
+        let proxy: any;
         let allocator: FraxSharesAllocatorVoting;
 
         // tokens
@@ -45,8 +48,9 @@ describe("FraxSharesAllocatorVotingV2", () => {
         before(async () => {
             await helpers.pinBlock(17935468, url);
 
-            [owner, other, newOwner] = await ethers.getSigners();
+            [other, newOwner] = await ethers.getSigners();
 
+            owner = await helpers.impersonate("0x245cc372C84B3645Bf0Ffe6538620B04a217988B");
             fxsWallet = await helpers.impersonate("0xF977814e90dA44bFA03b6295A0616a897441aceC");
             wlOwner = await helpers.impersonate("0xb1748c79709f4ba2dd82834b8c82d4a505003f27");
 
@@ -60,6 +64,14 @@ describe("FraxSharesAllocatorVotingV2", () => {
 
             factory = (await ethers.getContractFactory("FraxSharesAllocatorVoting")) as FraxSharesAllocatorVoting__factory;
             factory = factory.connect(owner);
+            proxyAdmin = (await ethers.getContractAt(
+                proxyAdminAbi,
+                "0xC8D6043061Bc0A13587E92d762386F4EC29Deb8F"
+            )) as any;
+            proxy = (await ethers.getContractAt(
+                transparentUpgradeableProxyAbi,
+                "0xde7b85f52577B113181921A7aa8Fc0C22e309475"
+            )) as any;
             allocator = (await upgrades.deployProxy(factory, [
                 treasury.address,
                 fxs.address,
@@ -74,6 +86,14 @@ describe("FraxSharesAllocatorVotingV2", () => {
     
         afterEach(async () => {
             await helpers.revert(snapshotId);
+        });
+
+        describe("upgrade", () => {
+            it("should upgrade", async () => {
+                await proxyAdmin.connect(owner).upgrade(proxy.address, allocator.address);
+                expect(await proxyAdmin.getProxyImplementation(proxy.address)).to.eq(allocator.address);
+                expect(await proxy.implementation()).to.eq(allocator.address);
+            });
         });
 
         describe("deposit", () => {
