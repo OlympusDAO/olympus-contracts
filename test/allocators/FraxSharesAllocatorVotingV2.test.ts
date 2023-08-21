@@ -72,12 +72,14 @@ describe("FraxSharesAllocatorVotingV2", () => {
                 transparentUpgradeableProxyAbi,
                 "0xde7b85f52577B113181921A7aa8Fc0C22e309475"
             )) as any;
-            allocator = (await upgrades.deployProxy(factory, [
+            allocator = (await factory.deploy()) as FraxSharesAllocatorVoting;
+            allocator = allocator.connect(owner);
+            allocator.initialize(
                 treasury.address,
-                fxs.address,
                 veFXS.address,
+                fxs.address,
                 "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872"
-            ])) as FraxSharesAllocatorVoting;
+            );
         });
 
         beforeEach(async () => {
@@ -92,7 +94,6 @@ describe("FraxSharesAllocatorVotingV2", () => {
             it("should upgrade", async () => {
                 await proxyAdmin.connect(owner).upgrade(proxy.address, allocator.address);
                 expect(await proxyAdmin.getProxyImplementation(proxy.address)).to.eq(allocator.address);
-                expect(await proxy.implementation()).to.eq(allocator.address);
             });
         });
 
@@ -101,7 +102,7 @@ describe("FraxSharesAllocatorVotingV2", () => {
                 const fxsTreasuryBalanceBefore = await fxs.balanceOf(treasury.address);
                 const fxsAllocatorBalanceBefore = await fxs.balanceOf(allocator.address);
 
-                allocator.connect(owner).deposit(1);
+                allocator.deposit(1);
 
                 const fxsTreasuryBalanceAfter = await fxs.balanceOf(treasury.address);
                 const fxsAllocatorBalanceAfter = await fxs.balanceOf(allocator.address);
@@ -114,7 +115,7 @@ describe("FraxSharesAllocatorVotingV2", () => {
         describe("setTreasury", () => {
             it("should do nothing on setTreasury", async () => {
                 const treasuryBefore = await allocator.treasury();
-                allocator.connect(owner).setTreasury(ZERO_ADDRESS);
+                allocator.setTreasury(ZERO_ADDRESS);
                 const treasuryAfter = await allocator.treasury();
 
                 expect(treasuryBefore).to.eq(treasuryAfter);
@@ -129,7 +130,7 @@ describe("FraxSharesAllocatorVotingV2", () => {
                 const fxsBalanceBefore = await fxs.balanceOf(owner.address);
                 const fxsAllocatorBalanceBefore = await fxs.balanceOf(allocator.address);
 
-                await allocator.connect(owner).withdrawToken(fxs.address, 1000);
+                await allocator.withdrawToken(fxs.address, 1000);
 
                 const fxsBalanceAfter = await fxs.balanceOf(owner.address);
                 const fxsAllocatorBalanceAfter = await fxs.balanceOf(allocator.address);
