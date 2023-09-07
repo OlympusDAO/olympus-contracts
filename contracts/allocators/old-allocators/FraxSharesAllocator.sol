@@ -120,20 +120,21 @@ contract FraxSharesAllocator is Initializable, OwnableUpgradeable {
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     * @notice harvest FXS rewards, will relock all veFXS for the maximum amount of time (4 years)
+     * @notice harvest FXS rewards
      */
     function harvest() external {
         uint256 amount = veFXSYieldDistributorV4.getYield();
 
         if (amount > 0) {
-            totalAmountDeployed = totalAmountDeployed.add(amount);
+            fxs.transfer(owner(), amount);
 
-            fxs.safeApprove(address(veFXS), amount);
-            veFXS.increase_amount(amount);
-            if (_canExtendLock()) {
-                lockEnd = block.timestamp + MAX_TIME;
-                veFXS.increase_unlock_time(block.timestamp + MAX_TIME);
-            }
+            // Do not extend lock
+            // fxs.safeApprove(address(veFXS), amount);
+            // veFXS.increase_amount(amount);
+            // if (_canExtendLock()) {
+            //     lockEnd = block.timestamp + MAX_TIME;
+            //     veFXS.increase_unlock_time(block.timestamp + MAX_TIME);
+            // }
         }
     }
 

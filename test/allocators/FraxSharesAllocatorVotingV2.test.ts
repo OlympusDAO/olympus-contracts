@@ -34,6 +34,7 @@ describe("FraxSharesAllocatorVotingV2", () => {
         let proxyAdmin: any;
         let proxy: any;
         let allocator: FraxSharesAllocatorVoting;
+        let proxiedAllocator: any;
 
         // tokens
         let fxs: ERC20;
@@ -80,6 +81,9 @@ describe("FraxSharesAllocatorVotingV2", () => {
                 fxs.address,
                 "0xc6764e58b36e26b08Fd1d2AeD4538c02171fA872"
             );
+
+            proxiedAllocator = await allocator.attach(proxy.address);
+            proxiedAllocator = proxiedAllocator.connect(owner);
         });
 
         beforeEach(async () => {
@@ -98,14 +102,18 @@ describe("FraxSharesAllocatorVotingV2", () => {
         });
 
         describe("deposit", () => {
+            before(async () => {
+                await proxyAdmin.connect(owner).upgrade(proxy.address, allocator.address);
+            });
+
             it("should do nothing on deposit", async () => {
                 const fxsTreasuryBalanceBefore = await fxs.balanceOf(treasury.address);
-                const fxsAllocatorBalanceBefore = await fxs.balanceOf(allocator.address);
+                const fxsAllocatorBalanceBefore = await fxs.balanceOf(proxiedAllocator.address);
 
-                allocator.deposit(1);
+                proxiedAllocator.deposit(1);
 
                 const fxsTreasuryBalanceAfter = await fxs.balanceOf(treasury.address);
-                const fxsAllocatorBalanceAfter = await fxs.balanceOf(allocator.address);
+                const fxsAllocatorBalanceAfter = await fxs.balanceOf(proxiedAllocator.address);
 
                 expect(fxsTreasuryBalanceAfter).to.eq(fxsTreasuryBalanceBefore);
                 expect(fxsAllocatorBalanceAfter).to.eq(fxsAllocatorBalanceBefore);
@@ -113,30 +121,54 @@ describe("FraxSharesAllocatorVotingV2", () => {
         });
 
         describe("setTreasury", () => {
+            before(async () => {
+                await proxyAdmin.connect(owner).upgrade(proxy.address, allocator.address);
+            });
+
             it("should do nothing on setTreasury", async () => {
-                const treasuryBefore = await allocator.treasury();
-                allocator.setTreasury(ZERO_ADDRESS);
-                const treasuryAfter = await allocator.treasury();
+                const treasuryBefore = await proxiedAllocator.treasury();
+                proxiedAllocator.setTreasury(ZERO_ADDRESS);
+                const treasuryAfter = await proxiedAllocator.treasury();
 
                 expect(treasuryBefore).to.eq(treasuryAfter);
             });
         });
 
         describe("withdrawToken", () => {
+            before(async () => {
+                await proxyAdmin.connect(owner).upgrade(proxy.address, allocator.address);
+            });
+
             it("should send tokens to owner on withdraw", async () => {
                 // transfer fxs in
-                await fxs.connect(fxsWallet).transfer(allocator.address, 1000);
+                await fxs.connect(fxsWallet).transfer(proxy.address, 1000);
 
                 const fxsBalanceBefore = await fxs.balanceOf(owner.address);
-                const fxsAllocatorBalanceBefore = await fxs.balanceOf(allocator.address);
+                const fxsAllocatorBalanceBefore = await fxs.balanceOf(proxy.address);
 
-                await allocator.withdrawToken(fxs.address, 1000);
+                await proxiedAllocator.withdrawToken(fxs.address, 1000);
 
                 const fxsBalanceAfter = await fxs.balanceOf(owner.address);
-                const fxsAllocatorBalanceAfter = await fxs.balanceOf(allocator.address);
+                const fxsAllocatorBalanceAfter = await fxs.balanceOf(proxy.address);
 
                 expect(fxsBalanceAfter).to.eq(fxsBalanceBefore.add(1000));
                 expect(fxsAllocatorBalanceAfter).to.eq(fxsAllocatorBalanceBefore.sub(1000));
+            });
+        });
+
+        describe("harvest", () => {
+            before(async () => {
+                await proxyAdmin.connect(owner).upgrade(proxy.address, allocator.address);
+            });
+
+            it("should get yield", async () => {
+                const fxsBalanceBefore = await fxs.balanceOf(owner.address);
+
+                await proxiedAllocator.harvest();
+
+                const fxsBalanceAfter = await fxs.balanceOf(owner.address);
+
+                expect(fxsBalanceAfter).to.be.gt(fxsBalanceBefore);
             });
         });
     });
