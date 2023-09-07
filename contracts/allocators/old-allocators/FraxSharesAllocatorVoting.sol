@@ -19,6 +19,6 @@ contract FraxSharesAllocatorVoting is FraxSharesAllocator {
     }
 
     function withdrawToken(address token, uint256 amount) external onlyOwner {
-        IERC20(token).transfer(address(treasury), amount);
+        IERC20(token).transfer(msg.sender, amount);
     }
 }
