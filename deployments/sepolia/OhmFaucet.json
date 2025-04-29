@@ -1,0 +1,215 @@
+{
+  "address": "0xfa6da59f5578dD061B8a106b55288A1fa1C52b88",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_ohm",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipPulled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipPushed",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "dispense",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ohm",
+      "outputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pullManagement",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner_",
+          "type": "address"
+        }
+      ],
+      "name": "pushManagement",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceManagement",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_ohm",
+          "type": "address"
+        }
+      ],
+      "name": "setOhm",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xacbe95cd722d51a2f13653316d5f0d16ad1c6972ea0ae2d088a32f3c4ec2a49d",
+  "receipt": {
+    "to": null,
+    "from": "0x1A5309F208f161a393E8b5A253de8Ab894A67188",
+    "contractAddress": "0xfa6da59f5578dD061B8a106b55288A1fa1C52b88",
+    "transactionIndex": 125,
+    "gasUsed": "351310",
+    "logsBloom": "0x00000000000000000000000000002000000000000000000800000000000000000000400000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000a00000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000020000000000020000000000000000000000000000000000000000000002000000000000000000000",
+    "blockHash": "0x99085662ffdaf04a2addc9bbf122400f17d6d1fa3cf10fa23df3bb435bdb5874",
+    "transactionHash": "0xacbe95cd722d51a2f13653316d5f0d16ad1c6972ea0ae2d088a32f3c4ec2a49d",
+    "logs": [
+      {
+        "transactionIndex": 125,
+        "blockNumber": 8218548,
+        "transactionHash": "0xacbe95cd722d51a2f13653316d5f0d16ad1c6972ea0ae2d088a32f3c4ec2a49d",
+        "address": "0xfa6da59f5578dD061B8a106b55288A1fa1C52b88",
+        "topics": [
+          "0xea8258f2d9ddb679928cf34b78cf645b7feda9acc828e4dd82d014eaae270eba",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x0000000000000000000000001a5309f208f161a393e8b5a253de8ab894a67188"
+        ],
+        "data": "0x",
+        "logIndex": 382,
+        "blockHash": "0x99085662ffdaf04a2addc9bbf122400f17d6d1fa3cf10fa23df3bb435bdb5874"
+      }
+    ],
+    "blockNumber": 8218548,
+    "cumulativeGasUsed": "18994388",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0x28fC133103a282D0E9Bec1eB173a2cF76A8B8806"
+  ],
+  "solcInputHash": "bb8f6dab6be99867f66df1a2300057d0",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.5+commit.eb77ed08\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_ohm\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipPulled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipPushed\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"dispense\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ohm\",\"outputs\":[{\"internalType\":\"contract IERC20\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pullManagement\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner_\",\"type\":\"address\"}],\"name\":\"pushManagement\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceManagement\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_ohm\",\"type\":\"address\"}],\"name\":\"setOhm\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/testnet/OhmFaucet.sol\":\"OhmFaucet\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":800},\"remappings\":[]},\"sources\":{\"contracts/interfaces/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IERC20 {\\n    function totalSupply() external view returns (uint256);\\n\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    function transfer(address recipient, uint256 amount) external returns (bool);\\n\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    function transferFrom(\\n        address sender,\\n        address recipient,\\n        uint256 amount\\n    ) external returns (bool);\\n\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n}\\n\",\"keccak256\":\"0xc379ec1f3a741cc00948003e24687516b8fdb71914cd3b90b10589d74fe1d49f\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IOwnable.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IOwnable {\\n    function owner() external view returns (address);\\n\\n    function renounceManagement() external;\\n\\n    function pushManagement(address newOwner_) external;\\n\\n    function pullManagement() external;\\n}\\n\",\"keccak256\":\"0x29d92f94f4517d948d3a314e89008ae96e189cc21d410d477ddfe3766e5d665a\",\"license\":\"AGPL-3.0\"},\"contracts/testnet/OhmFaucet.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity 0.7.5;\\n\\nimport \\\"../interfaces/IERC20.sol\\\";\\nimport \\\"../types/Ownable.sol\\\";\\n\\ncontract OhmFaucet is Ownable {\\n    IERC20 public ohm;\\n\\n    constructor(address _ohm) {\\n        ohm = IERC20(_ohm);\\n    }\\n\\n    function setOhm(address _ohm) external onlyOwner {\\n        ohm = IERC20(_ohm);\\n    }\\n\\n    function dispense() external {\\n        ohm.transfer(msg.sender, 1e9);\\n    }\\n}\\n\",\"keccak256\":\"0x2fc2a0dc684d12dd5d7c900088776d0ff7aec7fc3747e15d318baba291b9cb52\",\"license\":\"AGPL-3.0\"},\"contracts/types/Ownable.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0-or-later\\npragma solidity >=0.7.5;\\n\\nimport \\\"../interfaces/IOwnable.sol\\\";\\n\\nabstract contract Ownable is IOwnable {\\n    address internal _owner;\\n    address internal _newOwner;\\n\\n    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);\\n    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);\\n\\n    constructor() {\\n        _owner = msg.sender;\\n        emit OwnershipPushed(address(0), _owner);\\n    }\\n\\n    function owner() public view override returns (address) {\\n        return _owner;\\n    }\\n\\n    modifier onlyOwner() {\\n        require(_owner == msg.sender, \\\"Ownable: caller is not the owner\\\");\\n        _;\\n    }\\n\\n    function renounceManagement() public virtual override onlyOwner {\\n        emit OwnershipPulled(_owner, address(0));\\n        _owner = address(0);\\n        _newOwner = address(0);\\n    }\\n\\n    function pushManagement(address newOwner_) public virtual override onlyOwner {\\n        emit OwnershipPushed(_owner, newOwner_);\\n        _newOwner = newOwner_;\\n    }\\n\\n    function pullManagement() public virtual override {\\n        require(msg.sender == _newOwner, \\\"Ownable: must be new owner to pull\\\");\\n        emit OwnershipPulled(_owner, _newOwner);\\n        _owner = _newOwner;\\n        _newOwner = address(0);\\n    }\\n}\\n\",\"keccak256\":\"0xdc15639cf43a8a2a8b57e254bdf685527c257a2f94097ffd6ca041ffa483c6cc\",\"license\":\"AGPL-3.0-or-later\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b506040516105303803806105308339818101604052602081101561003357600080fd5b5051600080546001600160a01b03191633178082556040516001600160a01b039190911691907fea8258f2d9ddb679928cf34b78cf645b7feda9acc828e4dd82d014eaae270eba908290a3600280546001600160a01b0319166001600160a01b0392909216919091179055610483806100ad6000396000f3fe608060405234801561001057600080fd5b506004361061007d5760003560e01c806346f68ee91161005b57806346f68ee9146100b85780635a96ac0a146100de5780638da5cb5b146100e6578063f9224d3c146100ee5761007d565b806302b1d23914610082578063089208d8146100a65780630adb1a9a146100b0575b600080fd5b61008a610114565b604080516001600160a01b039092168252519081900360200190f35b6100ae610123565b005b6100ae6101d8565b6100ae600480360360208110156100ce57600080fd5b50356001600160a01b031661025d565b6100ae610317565b61008a6103c4565b6100ae6004803603602081101561010457600080fd5b50356001600160a01b03166103d3565b6002546001600160a01b031681565b6000546001600160a01b03163314610182576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600080546040516001600160a01b03909116907faa151555690c956fc3ea32f106bb9f119b5237a061eaa8557cff3e51e3792c8d908390a3600080546001600160a01b0319908116909155600180549091169055565b6002546040805163a9059cbb60e01b8152336004820152633b9aca00602482015290516001600160a01b039092169163a9059cbb916044808201926020929091908290030181600087803b15801561022f57600080fd5b505af1158015610243573d6000803e3d6000fd5b505050506040513d602081101561025957600080fd5b5050565b6000546001600160a01b031633146102bc576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600080546040516001600160a01b03808516939216917fea8258f2d9ddb679928cf34b78cf645b7feda9acc828e4dd82d014eaae270eba91a3600180546001600160a01b0319166001600160a01b0392909216919091179055565b6001546001600160a01b031633146103605760405162461bcd60e51b81526004018080602001828103825260228152602001806104556022913960400191505060405180910390fd5b600154600080546040516001600160a01b0393841693909116917faa151555690c956fc3ea32f106bb9f119b5237a061eaa8557cff3e51e3792c8d91a360018054600080546001600160a01b03199081166001600160a01b03841617909155169055565b6000546001600160a01b031690565b6000546001600160a01b03163314610432576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600280546001600160a01b0319166001600160a01b039290921691909117905556fe4f776e61626c653a206d757374206265206e6577206f776e657220746f2070756c6ca164736f6c6343000705000a",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b506004361061007d5760003560e01c806346f68ee91161005b57806346f68ee9146100b85780635a96ac0a146100de5780638da5cb5b146100e6578063f9224d3c146100ee5761007d565b806302b1d23914610082578063089208d8146100a65780630adb1a9a146100b0575b600080fd5b61008a610114565b604080516001600160a01b039092168252519081900360200190f35b6100ae610123565b005b6100ae6101d8565b6100ae600480360360208110156100ce57600080fd5b50356001600160a01b031661025d565b6100ae610317565b61008a6103c4565b6100ae6004803603602081101561010457600080fd5b50356001600160a01b03166103d3565b6002546001600160a01b031681565b6000546001600160a01b03163314610182576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600080546040516001600160a01b03909116907faa151555690c956fc3ea32f106bb9f119b5237a061eaa8557cff3e51e3792c8d908390a3600080546001600160a01b0319908116909155600180549091169055565b6002546040805163a9059cbb60e01b8152336004820152633b9aca00602482015290516001600160a01b039092169163a9059cbb916044808201926020929091908290030181600087803b15801561022f57600080fd5b505af1158015610243573d6000803e3d6000fd5b505050506040513d602081101561025957600080fd5b5050565b6000546001600160a01b031633146102bc576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600080546040516001600160a01b03808516939216917fea8258f2d9ddb679928cf34b78cf645b7feda9acc828e4dd82d014eaae270eba91a3600180546001600160a01b0319166001600160a01b0392909216919091179055565b6001546001600160a01b031633146103605760405162461bcd60e51b81526004018080602001828103825260228152602001806104556022913960400191505060405180910390fd5b600154600080546040516001600160a01b0393841693909116917faa151555690c956fc3ea32f106bb9f119b5237a061eaa8557cff3e51e3792c8d91a360018054600080546001600160a01b03199081166001600160a01b03841617909155169055565b6000546001600160a01b031690565b6000546001600160a01b03163314610432576040805162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604482015290519081900360640190fd5b600280546001600160a01b0319166001600160a01b039290921691909117905556fe4f776e61626c653a206d757374206265206e6577206f776e657220746f2070756c6ca164736f6c6343000705000a",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 15424,
+        "contract": "contracts/testnet/OhmFaucet.sol:OhmFaucet",
+        "label": "_owner",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_address"
+      },
+      {
+        "astId": 15426,
+        "contract": "contracts/testnet/OhmFaucet.sol:OhmFaucet",
+        "label": "_newOwner",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_address"
+      },
+      {
+        "astId": 14635,
+        "contract": "contracts/testnet/OhmFaucet.sol:OhmFaucet",
+        "label": "ohm",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_contract(IERC20)9551"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_contract(IERC20)9551": {
+        "encoding": "inplace",
+        "label": "contract IERC20",
+        "numberOfBytes": "20"
+      }
+    }
+  }
+}
