@@ -60,10 +60,12 @@
     "deploy:rinkeby": "hardhat --network rinkeby deploy",
     "deploy:ropsten": "hardhat --network ropsten deploy",
     "deploy:hardhat": "hardhat --network hardhat deploy",
+    "deploy:sepolia": "hardhat --network sepolia deploy",
     "sourcify:mainnet": "hardhat --network mainnet sourcify",
     "sourcify:rinkeby": "hardhat --network rinkeby sourcify",
     "etherscan:mainnet": "hardhat --network mainnet etherscan-verify",
     "etherscan:rinkeby": "hardhat --network rinkeby etherscan-verify",
+    "etherscan:sepolia": "hardhat --network sepolia etherscan-verify",
     "prestart": "yarn run typechain",
     "start": "hardhat node --network hardhat"
   },

@@ -62,7 +62,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     // Step 5: Set up distributor with bounty and recipient
     await waitFor(distributor.setBounty(BOUNTY_AMOUNT));
-    await waitFor(distributor.addRecipient(staking.address, INITIAL_REWARD_RATE));
+    // await waitFor(distributor.addRecipient(staking.address, INITIAL_REWARD_RATE));
     console.log("Setup -- distributor.setBounty && distributor.addRecipient");
 
     // Approve staking contact to spend deployer's OHM

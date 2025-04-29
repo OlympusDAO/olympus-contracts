@@ -23,6 +23,7 @@ const chainIds = {
     mainnet: 1,
     rinkeby: 4,
     ropsten: 3,
+    sepolia: 11155111,
 };
 
 // Ensure that we have all the environment variables we need.
@@ -31,7 +32,7 @@ const privateKey = process.env.PRIVATE_KEY ?? "NO_PRIVATE_KEY";
 const alchemyApiKey = process.env.ALCHEMY_API_KEY ?? "NO_ALCHEMY_API_KEY";
 
 function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
-    const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
+    const url = `https://eth-${network}.g.alchemy.com/v2/${alchemyApiKey}`;
     return {
         accounts: [`${privateKey}`],
         chainId: chainIds[network],
@@ -56,6 +57,7 @@ const config: HardhatUserConfig = {
         },
         // Uncomment for testing. Commented due to CI issues
         mainnet: getChainConfig("mainnet"),
+        sepolia: getChainConfig("sepolia"),
         // rinkeby: getChainConfig("rinkeby"),
         // ropsten: getChainConfig("ropsten"),
     },
