@@ -11,9 +11,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     await deploy(CONTRACTS.migrator, {
         from: deployer,
-        args: [
-            authorityDeployment.address,
-        ],
+        args: [authorityDeployment.address],
         log: true,
         skipIfAlreadyDeployed: true,
     });

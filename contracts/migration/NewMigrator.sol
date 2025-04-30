@@ -8,12 +8,13 @@ contract NewMigrator is OlympusAccessControlled {
     bool public ohmMigrated;
     bool public shutdown;
 
-    constructor(
-        address _authority
-    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
-    }
+    constructor(address _authority) OlympusAccessControlled(IOlympusAuthority(_authority)) {}
 
-    function migrateContracts(address _staking, address _gOHM, address _sOHM) external onlyGovernor {
+    function migrateContracts(
+        address _staking,
+        address _gOHM,
+        address _sOHM
+    ) external onlyGovernor {
         require(!ohmMigrated, "Already migrated");
         ohmMigrated = true;
         shutdown = false;
