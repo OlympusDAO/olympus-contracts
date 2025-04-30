@@ -49,7 +49,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     console.log("Setup -- treasury.enable(8):  distributor enabled to mint ohm on treasury");
 
     // Step 3: Set distributor on staking
-    await waitFor(staking.setDistributor(distributor.address));
+    await waitFor(staking.setDistributor("0x0000000000000000000000000000000000000000"));
     console.log("Setup -- staking.setDistributor:  distributor set on staking");
 
     // Step 4: Initialize sOHM and set the index
