@@ -9,7 +9,7 @@ export const CONTRACTS: Record<string, string> = {
     teller: "BondTeller",
     bondingCalculator: "OlympusBondingCalculator",
     authority: "OlympusAuthority",
-    migrator: "OlympusTokenMigrator",
+    migrator: "NewMigrator",
     FRAX: "Frax",
     DAI: "DAI",
     lusdAllocator: "LUSDAllocator",
