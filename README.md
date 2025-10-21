@@ -75,3 +75,4 @@ make run
 ### Testing
 - [Hardhat testing guide](./docs/guides/hardhat_testing.md)
 - [Dapptools testing guide](./docs/guides/dapptools.md)
+<br>## Welcome to OHM Bonding<br>OlympusDAO's bonding curve stabilizes OHM - New contributor, start your first bond with the DPS tutorial. Tip: Use Treasury for rebase! <br>
