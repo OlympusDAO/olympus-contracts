@@ -58,6 +58,10 @@ const config: HardhatUserConfig = {
         // Uncomment for testing. Commented due to CI issues
         mainnet: getChainConfig("mainnet"),
         sepolia: getChainConfig("sepolia"),
+        sepoliaAnvil: {
+            url: "http://127.0.0.1:8545",
+            chainId: chainIds.sepolia,
+        },
         // rinkeby: getChainConfig("rinkeby"),
         // ropsten: getChainConfig("ropsten"),
     },
