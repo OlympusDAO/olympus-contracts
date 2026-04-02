@@ -33,4 +33,4 @@ jobs:
             - run: yarn format
             - run: yarn compile
             - run: cp .env.example .env
-            - run: yarn test
+            - run: pnpm test

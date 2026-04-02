@@ -1,0 +1,36 @@
+name: Dependency Audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit pnpm dependencies (fail on moderate+)
+        uses: JamesRobertWiseman/pnpm-audit@v3
+        with:
+          package_json_path: ./
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          level: moderate
+          fails: true
+          single_comment: true
