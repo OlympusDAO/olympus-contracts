@@ -27,14 +27,27 @@ const chainIds = {
 };
 
 // Ensure that we have all the environment variables we need.
-const privateKey = process.env.PRIVATE_KEY ?? "NO_PRIVATE_KEY";
+const privateKey = process.env.PRIVATE_KEY;
 // Make sure node is setup on Alchemy website
 const alchemyApiKey = process.env.ALCHEMY_API_KEY ?? "NO_ALCHEMY_API_KEY";
+const mainnetForkUrl =
+    alchemyApiKey === "NO_ALCHEMY_API_KEY"
+        ? "https://ethereum-rpc.publicnode.com"
+        : `https://eth-mainnet.g.alchemy.com/v2/${alchemyApiKey}`;
+
+function getConfiguredAccounts(): string[] {
+    if (!privateKey) {
+        return [];
+    }
+
+    const normalizedPrivateKey = privateKey.startsWith("0x") ? privateKey : `0x${privateKey}`;
+    return /^0x[0-9a-fA-F]{64}$/.test(normalizedPrivateKey) ? [normalizedPrivateKey] : [];
+}
 
 function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
     const url = `https://eth-${network}.g.alchemy.com/v2/${alchemyApiKey}`;
     return {
-        accounts: [`${privateKey}`],
+        accounts: getConfiguredAccounts(),
         chainId: chainIds[network],
         url,
     };
@@ -51,7 +64,7 @@ const config: HardhatUserConfig = {
     networks: {
         hardhat: {
             forking: {
-                url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`,
+                url: mainnetForkUrl,
             },
             chainId: chainIds.hardhat,
         },

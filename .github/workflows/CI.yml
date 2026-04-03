@@ -26,5 +26,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Detect test secrets
+        id: detect_secrets
+        run: |
+          if [ -n "${{ secrets.ALCHEMY_API_KEY }}" ]; then
+            echo "has_alchemy_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_alchemy_key=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run test
+        if: steps.detect_secrets.outputs.has_alchemy_key == 'true'
+        env:
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
         run: pnpm run test
+
+      - name: Run compile fallback
+        if: steps.detect_secrets.outputs.has_alchemy_key != 'true'
+        run: pnpm run compile

@@ -1,13 +1,18 @@
 const { network } = require("hardhat");
 
 async function fork_network(blockNumber = 13377190) {
+    const alchemyApiKey = process.env.ALCHEMY_API_KEY;
+    const rpcUrl = alchemyApiKey
+        ? `https://eth-mainnet.g.alchemy.com/v2/${alchemyApiKey}`
+        : "https://ethereum-rpc.publicnode.com";
+
     /// Use mainnet fork as provider
     return network.provider.request({
         method: "hardhat_reset",
         params: [
             {
                 forking: {
-                    jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+                    jsonRpcUrl: rpcUrl,
                     blockNumber: blockNumber,
                 },
             },

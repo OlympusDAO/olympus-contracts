@@ -32,5 +32,6 @@ jobs:
           package_json_path: ./
           github_token: ${{ secrets.GITHUB_TOKEN }}
           level: moderate
+          prod: true
           fails: true
           single_comment: true
