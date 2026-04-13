@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This repository is part of the OlympusDAO organization.
+This repository contains the core Olympus smart contracts, deployment tooling, and Solidity source used by the protocol.
 
 ## Node and Tooling
 
@@ -16,3 +16,4 @@ This repository is part of the OlympusDAO organization.
 - `pnpm run lint` or repository lint equivalent: run project lint checks
 - `pnpm run build` or repository build equivalent: validate builds succeed
 - `pnpm test` or repository test equivalent: validate behavior changes
+
