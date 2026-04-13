@@ -7,7 +7,7 @@ This is the main Olympus smart contract development repository.
 
 ### Requirements
 
--   [node v14](https://nodejs.org/download/release/latest-v14.x/)
+-   [Node.js 24+](https://nodejs.org/)
 -   [git](https://git-scm.com/downloads)
 
 ### Local Setup Steps

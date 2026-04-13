@@ -13,18 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v5
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
+      - name: Bootstrap
+        uses: ./.github/actions/bootstrap
       - name: Audit pnpm production dependencies (fail on moderate+)
         run: pnpm audit --prod --audit-level=moderate
