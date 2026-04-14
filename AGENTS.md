@@ -14,5 +14,5 @@ This repository contains the core Olympus smart contracts, deployment tooling, a
 
 - `pnpm install --frozen-lockfile`: install dependencies
 - `pnpm run lint` or repository lint equivalent: run project lint checks
-- `pnpm run build` or repository build equivalent: validate builds succeed
+- `pnpm run compile` (or `pnpm run build`, which aliases compile) : validate builds succeed
 - `pnpm test` or repository test equivalent: validate behavior changes
