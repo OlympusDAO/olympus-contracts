@@ -1,0 +1,6 @@
+auditConfig:
+    # Deferred until planned OpenZeppelin Contracts Upgradeable 4.x migration.
+    ignoreGhsas:
+        - GHSA-7grf-83vw-6f5x
+        - GHSA-9c22-pwxw-p6hx
+        - GHSA-mx2q-35m2-x2rh

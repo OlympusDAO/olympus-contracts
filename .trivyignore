@@ -1,0 +1,8 @@
+# Trivy vulnerability exceptions for this repository.
+# Keep entries minimal and time-bound by project constraints.
+
+# OpenZeppelin upgradeable contracts are pinned to 3.4.2 for now.
+# These CVEs are fixed in OZ 4.x, but OZ 4.x migration is currently out of scope.
+CVE-2022-35915
+CVE-2022-39384
+CVE-2023-30541

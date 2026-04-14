@@ -2,7 +2,7 @@
 
 !hardhat.config.ts
 !package.json
-!yarn.lock
+!pnpm-lock.yaml
 !contracts
 !scripts
 !deployment/localhost
