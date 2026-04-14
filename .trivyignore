@@ -2,7 +2,10 @@
 # Keep entries minimal and time-bound by project constraints.
 
 # OpenZeppelin upgradeable contracts are pinned to 3.4.2 for now.
-# These CVEs are fixed in OZ 4.x, but OZ 4.x migration is currently out of scope.
+# GHSA-7grf-83vw-6f5x / CVE-2022-35915
+# GHSA-9c22-pwxw-p6hx / CVE-2022-39384
+# GHSA-mx2q-35m2-x2rh / CVE-2023-30541
+# Deferred until planned OpenZeppelin Contracts Upgradeable 4.x migration.
 CVE-2022-35915
 CVE-2022-39384
 CVE-2023-30541
