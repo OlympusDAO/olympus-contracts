@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS builder
+FROM node:22-bookworm-slim AS builder
 
 # Needed for npm dependencies
 RUN apt-get update && \
@@ -29,7 +29,7 @@ COPY contracts contracts
 COPY scripts scripts
 COPY deployments/localhost deployments/localhost
 
-FROM node:24-bookworm-slim
+FROM node:22-bookworm-slim
 
 WORKDIR /opt
 

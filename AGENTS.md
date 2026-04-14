@@ -6,7 +6,7 @@ This repository contains the core Olympus smart contracts, deployment tooling, a
 
 ## Node and Tooling
 
-- Node.js must use version 24+.
+- Node.js must use version 22+.
 - Use `.nvmrc` and `.node-version` files for version alignment.
 - Run `pnpm install --frozen-lockfile` before dependency-dependent work.
 
@@ -16,4 +16,3 @@ This repository contains the core Olympus smart contracts, deployment tooling, a
 - `pnpm run lint` or repository lint equivalent: run project lint checks
 - `pnpm run build` or repository build equivalent: validate builds succeed
 - `pnpm test` or repository test equivalent: validate behavior changes
-

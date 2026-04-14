@@ -8,7 +8,7 @@ This is the main Olympus smart contract development repository.
 
 ### Requirements
 
-- [Node.js 24+](https://nodejs.org/)
+- [Node.js 22+](https://nodejs.org/)
 - [git](https://git-scm.com/downloads)
 
 ### Local Setup Steps
@@ -86,4 +86,8 @@ make run
 Current unresolved findings are tracked inline in `.trivyignore`.
 
 - `@openzeppelin/contracts-upgradeable@3.4.2` advisories are ignored for now because remediation requires migration to OpenZeppelin 4.x, which is currently out of scope.
-- Remaining Docker image OS findings come from upstream `node:24-bookworm-slim` Debian packages. These should be revisited as upstream base-image patches are published.
+- Remaining Docker image OS findings come from upstream `node:22-bookworm-slim` Debian packages. These should be revisited as upstream base-image patches are published.
+
+## Node Version Note
+
+The repository currently targets Node.js 22 in CI and local tooling. This is a temporary compatibility measure while resolving Hardhat compiler-download failures observed under Node.js 24.
