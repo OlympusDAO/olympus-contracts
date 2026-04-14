@@ -1,38 +1,30 @@
 name: pnpm CI
 
 on:
-  pull_request:
-  workflow_dispatch:
+    pull_request:
+    workflow_dispatch:
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-
-      - name: Bootstrap
-        uses: ./.github/actions/bootstrap
-      - name: Detect test secrets
-        id: detect_secrets
-        run: |
-          if [ -n "${{ secrets.ALCHEMY_API_KEY }}" ]; then
-            echo "has_alchemy_key=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_alchemy_key=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Run test
-        if: steps.detect_secrets.outputs.has_alchemy_key == 'true'
-        env:
-          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
-        run: pnpm run test
-
-      - name: Run compile fallback
-        if: steps.detect_secrets.outputs.has_alchemy_key != 'true'
-        run: pnpm run compile
+            - name: Bootstrap
+              uses: ./.github/actions/bootstrap
+            - name: Run format
+              run: pnpm run format
+            - name: Run compile
+              env:
+                  PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+                  ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+              run: pnpm run compile
+            - name: Run test
+              env:
+                  PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+                  ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+              run: pnpm run test
