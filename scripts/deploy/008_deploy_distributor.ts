@@ -20,6 +20,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
             ohmDeployment.address,
             stakingDeployment.address,
             authorityDeployment.address,
+            0, // Reward rate
         ],
         log: true,
     });

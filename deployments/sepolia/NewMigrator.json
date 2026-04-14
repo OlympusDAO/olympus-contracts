@@ -1,0 +1,205 @@
+{
+  "address": "0x69a3E97027d21a5984B6a543b36603fFbC6543a4",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_authority",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "contract IOlympusAuthority",
+          "name": "authority",
+          "type": "address"
+        }
+      ],
+      "name": "AuthorityUpdated",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "authority",
+      "outputs": [
+        {
+          "internalType": "contract IOlympusAuthority",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_staking",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_gOHM",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_sOHM",
+          "type": "address"
+        }
+      ],
+      "name": "migrateContracts",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ohmMigrated",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IOlympusAuthority",
+          "name": "_newAuthority",
+          "type": "address"
+        }
+      ],
+      "name": "setAuthority",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "shutdown",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x1ef1e2beb83576dfbfa113be9118caa5d6d1ef430da2dccfede39b478daaef94",
+  "receipt": {
+    "to": null,
+    "from": "0x1A5309F208f161a393E8b5A253de8Ab894A67188",
+    "contractAddress": "0x69a3E97027d21a5984B6a543b36603fFbC6543a4",
+    "transactionIndex": 64,
+    "gasUsed": "420137",
+    "logsBloom": "0x00200000000000000000000000000000000000000000000000000000000000000000000008000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001008000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000",
+    "blockHash": "0x766b3d8a82ad8c112cd6f8ddcefd5c1b960ec22cdbdca8e812275e41736709b3",
+    "transactionHash": "0x1ef1e2beb83576dfbfa113be9118caa5d6d1ef430da2dccfede39b478daaef94",
+    "logs": [
+      {
+        "transactionIndex": 64,
+        "blockNumber": 8226229,
+        "transactionHash": "0x1ef1e2beb83576dfbfa113be9118caa5d6d1ef430da2dccfede39b478daaef94",
+        "address": "0x69a3E97027d21a5984B6a543b36603fFbC6543a4",
+        "topics": [
+          "0x2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad",
+          "0x00000000000000000000000081057bef097462957b9388d8dcb7d4ab0699cadb"
+        ],
+        "data": "0x",
+        "logIndex": 126,
+        "blockHash": "0x766b3d8a82ad8c112cd6f8ddcefd5c1b960ec22cdbdca8e812275e41736709b3"
+      }
+    ],
+    "blockNumber": 8226229,
+    "cumulativeGasUsed": "6383169",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0x81057Bef097462957B9388D8DCB7D4AB0699cADB"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "b53161b8019dfcfa4c31430f9e3c4ffe",
+  "metadata": "{\"compiler\":{\"version\":\"0.7.5+commit.eb77ed08\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_authority\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"contract IOlympusAuthority\",\"name\":\"authority\",\"type\":\"address\"}],\"name\":\"AuthorityUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"authority\",\"outputs\":[{\"internalType\":\"contract IOlympusAuthority\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_staking\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_gOHM\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_sOHM\",\"type\":\"address\"}],\"name\":\"migrateContracts\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ohmMigrated\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contract IOlympusAuthority\",\"name\":\"_newAuthority\",\"type\":\"address\"}],\"name\":\"setAuthority\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"shutdown\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/migration/NewMigrator.sol\":\"NewMigrator\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":800},\"remappings\":[]},\"sources\":{\"contracts/interfaces/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IERC20 {\\n    function totalSupply() external view returns (uint256);\\n\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    function transfer(address recipient, uint256 amount) external returns (bool);\\n\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    function transferFrom(\\n        address sender,\\n        address recipient,\\n        uint256 amount\\n    ) external returns (bool);\\n\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n}\\n\",\"keccak256\":\"0xc379ec1f3a741cc00948003e24687516b8fdb71914cd3b90b10589d74fe1d49f\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IOlympusAuthority.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\ninterface IOlympusAuthority {\\n    /* ========== EVENTS ========== */\\n\\n    event GovernorPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n    event GuardianPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n    event PolicyPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n    event VaultPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\n\\n    event GovernorPulled(address indexed from, address indexed to);\\n    event GuardianPulled(address indexed from, address indexed to);\\n    event PolicyPulled(address indexed from, address indexed to);\\n    event VaultPulled(address indexed from, address indexed to);\\n\\n    /* ========== VIEW ========== */\\n\\n    function governor() external view returns (address);\\n\\n    function guardian() external view returns (address);\\n\\n    function policy() external view returns (address);\\n\\n    function vault() external view returns (address);\\n}\\n\",\"keccak256\":\"0x93c02d36be0a6876183f67e72acf64e0206d0e1e48fb3b9c9ed5614200d9c934\",\"license\":\"AGPL-3.0\"},\"contracts/interfaces/IgOHM.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity >=0.7.5;\\n\\nimport \\\"./IERC20.sol\\\";\\n\\ninterface IgOHM is IERC20 {\\n    function mint(address _to, uint256 _amount) external;\\n\\n    function burn(address _from, uint256 _amount) external;\\n\\n    function index() external view returns (uint256);\\n\\n    function balanceFrom(uint256 _amount) external view returns (uint256);\\n\\n    function balanceTo(uint256 _amount) external view returns (uint256);\\n\\n    function migrate(address _staking, address _sOHM) external;\\n}\\n\",\"keccak256\":\"0x0e61aa62110e1fa27c32948b2fea2aa7a4805e1c2bdffc489bb39bf7bfb121b1\",\"license\":\"AGPL-3.0\"},\"contracts/migration/NewMigrator.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\npragma solidity 0.7.5;\\n\\nimport \\\"../types/OlympusAccessControlled.sol\\\";\\nimport \\\"../interfaces/IgOHM.sol\\\";\\n\\ncontract NewMigrator is OlympusAccessControlled {\\n    bool public ohmMigrated;\\n    bool public shutdown;\\n\\n    constructor(\\n        address _authority\\n    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {\\n    }\\n\\n    function migrateContracts(address _staking, address _gOHM, address _sOHM) external onlyGovernor {\\n        require(!ohmMigrated, \\\"Already migrated\\\");\\n        ohmMigrated = true;\\n        shutdown = false;\\n\\n        require(_staking != address(0), \\\"Zero address: staking\\\");\\n        require(_gOHM != address(0), \\\"Zero address: gOHM\\\");\\n\\n        IgOHM(_gOHM).migrate(_staking, _sOHM); // change gOHM minter\\n    }\\n}\\n\",\"keccak256\":\"0xd310ceb0a3a63953ee87f535c59c70525893aca4200a8b8b427e471484f50b51\",\"license\":\"AGPL-3.0\"},\"contracts/types/OlympusAccessControlled.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0-only\\npragma solidity >=0.7.5;\\n\\nimport \\\"../interfaces/IOlympusAuthority.sol\\\";\\n\\nabstract contract OlympusAccessControlled {\\n    /* ========== EVENTS ========== */\\n\\n    event AuthorityUpdated(IOlympusAuthority indexed authority);\\n\\n    string UNAUTHORIZED = \\\"UNAUTHORIZED\\\"; // save gas\\n\\n    /* ========== STATE VARIABLES ========== */\\n\\n    IOlympusAuthority public authority;\\n\\n    /* ========== Constructor ========== */\\n\\n    constructor(IOlympusAuthority _authority) {\\n        authority = _authority;\\n        emit AuthorityUpdated(_authority);\\n    }\\n\\n    /* ========== MODIFIERS ========== */\\n\\n    modifier onlyGovernor() {\\n        require(msg.sender == authority.governor(), UNAUTHORIZED);\\n        _;\\n    }\\n\\n    modifier onlyGuardian() {\\n        require(msg.sender == authority.guardian(), UNAUTHORIZED);\\n        _;\\n    }\\n\\n    modifier onlyPolicy() {\\n        require(msg.sender == authority.policy(), UNAUTHORIZED);\\n        _;\\n    }\\n\\n    modifier onlyVault() {\\n        require(msg.sender == authority.vault(), UNAUTHORIZED);\\n        _;\\n    }\\n\\n    /* ========== GOV ONLY ========== */\\n\\n    function setAuthority(IOlympusAuthority _newAuthority) external onlyGovernor {\\n        authority = _newAuthority;\\n        emit AuthorityUpdated(_newAuthority);\\n    }\\n}\\n\",\"keccak256\":\"0x23457dbe4e9afae578313d2c73ea3880ca58c16d461fdc6ae83eb98e03ea43f7\",\"license\":\"AGPL-3.0-only\"}},\"version\":1}",
+  "bytecode": "0x60c0604052600c60808190526b15539055551213d49256915160a21b60a090815261002d91600091906100b0565b5034801561003a57600080fd5b5060405161071a38038061071a8339818101604052602081101561005d57600080fd5b5051600180546001600160a01b0319166001600160a01b0383169081179091556040518291907f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad90600090a25050610151565b828054600181600116156101000203166002900490600052602060002090601f0160209004810192826100e6576000855561012c565b82601f106100ff57805160ff191683800117855561012c565b8280016001018555821561012c579182015b8281111561012c578251825591602001919060010190610111565b5061013892915061013c565b5090565b5b80821115610138576000815560010161013d565b6105ba806101606000396000f3fe608060405234801561001057600080fd5b50600436106100675760003560e01c8063bf7e214f11610050578063bf7e214f146100cc578063e7a1705c146100f0578063fc0e74d11461010c57610067565b806302c335151461006c5780637a9e5e4b146100a6575b600080fd5b6100a46004803603606081101561008257600080fd5b506001600160a01b038135811691602081013582169160409091013516610114565b005b6100a4600480360360208110156100bc57600080fd5b50356001600160a01b031661041e565b6100d461056c565b604080516001600160a01b039092168252519081900360200190f35b6100f861057b565b604080519115158252519081900360200190f35b6100f861058b565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b815260040160206040518083038186803b15801561016257600080fd5b505afa158015610176573d6000803e3d6000fd5b505050506040513d602081101561018c57600080fd5b50516000906001600160a01b031633146102395760405162461bcd60e51b815260206004820190815282546002600019610100600184161502019091160460248301819052909182916044909101908490801561022a5780601f106101ff5761010080835404028352916020019161022a565b820191906000526020600020905b81548152906001019060200180831161020d57829003601f168201915b50509250505060405180910390fd5b50600154600160a01b900460ff1615610299576040805162461bcd60e51b815260206004820152601060248201527f416c7265616479206d6967726174656400000000000000000000000000000000604482015290519081900360640190fd5b600180547fffffffffffffffffffff00ffffffffffffffffffffffffffffffffffffffffff7fffffffffffffffffffffff00ffffffffffffffffffffffffffffffffffffffff909116600160a01b171690556001600160a01b038316610346576040805162461bcd60e51b815260206004820152601560248201527f5a65726f20616464726573733a207374616b696e670000000000000000000000604482015290519081900360640190fd5b6001600160a01b0382166103a1576040805162461bcd60e51b815260206004820152601260248201527f5a65726f20616464726573733a20674f484d0000000000000000000000000000604482015290519081900360640190fd5b816001600160a01b0316631068361f84836040518363ffffffff1660e01b815260040180836001600160a01b03168152602001826001600160a01b0316815260200192505050600060405180830381600087803b15801561040157600080fd5b505af1158015610415573d6000803e3d6000fd5b50505050505050565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b815260040160206040518083038186803b15801561046c57600080fd5b505afa158015610480573d6000803e3d6000fd5b505050506040513d602081101561049657600080fd5b50516000906001600160a01b031633146105095760405162461bcd60e51b815260206004820190815282546002600019610100600184161502019091160460248301819052909182916044909101908490801561022a5780601f106101ff5761010080835404028352916020019161022a565b50600180547fffffffffffffffffffffffff0000000000000000000000000000000000000000166001600160a01b0383169081179091556040517f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad90600090a250565b6001546001600160a01b031681565b600154600160a01b900460ff1681565b6001547501000000000000000000000000000000000000000000900460ff168156fea164736f6c6343000705000a",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100675760003560e01c8063bf7e214f11610050578063bf7e214f146100cc578063e7a1705c146100f0578063fc0e74d11461010c57610067565b806302c335151461006c5780637a9e5e4b146100a6575b600080fd5b6100a46004803603606081101561008257600080fd5b506001600160a01b038135811691602081013582169160409091013516610114565b005b6100a4600480360360208110156100bc57600080fd5b50356001600160a01b031661041e565b6100d461056c565b604080516001600160a01b039092168252519081900360200190f35b6100f861057b565b604080519115158252519081900360200190f35b6100f861058b565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b815260040160206040518083038186803b15801561016257600080fd5b505afa158015610176573d6000803e3d6000fd5b505050506040513d602081101561018c57600080fd5b50516000906001600160a01b031633146102395760405162461bcd60e51b815260206004820190815282546002600019610100600184161502019091160460248301819052909182916044909101908490801561022a5780601f106101ff5761010080835404028352916020019161022a565b820191906000526020600020905b81548152906001019060200180831161020d57829003601f168201915b50509250505060405180910390fd5b50600154600160a01b900460ff1615610299576040805162461bcd60e51b815260206004820152601060248201527f416c7265616479206d6967726174656400000000000000000000000000000000604482015290519081900360640190fd5b600180547fffffffffffffffffffff00ffffffffffffffffffffffffffffffffffffffffff7fffffffffffffffffffffff00ffffffffffffffffffffffffffffffffffffffff909116600160a01b171690556001600160a01b038316610346576040805162461bcd60e51b815260206004820152601560248201527f5a65726f20616464726573733a207374616b696e670000000000000000000000604482015290519081900360640190fd5b6001600160a01b0382166103a1576040805162461bcd60e51b815260206004820152601260248201527f5a65726f20616464726573733a20674f484d0000000000000000000000000000604482015290519081900360640190fd5b816001600160a01b0316631068361f84836040518363ffffffff1660e01b815260040180836001600160a01b03168152602001826001600160a01b0316815260200192505050600060405180830381600087803b15801561040157600080fd5b505af1158015610415573d6000803e3d6000fd5b50505050505050565b600160009054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b815260040160206040518083038186803b15801561046c57600080fd5b505afa158015610480573d6000803e3d6000fd5b505050506040513d602081101561049657600080fd5b50516000906001600160a01b031633146105095760405162461bcd60e51b815260206004820190815282546002600019610100600184161502019091160460248301819052909182916044909101908490801561022a5780601f106101ff5761010080835404028352916020019161022a565b50600180547fffffffffffffffffffffffff0000000000000000000000000000000000000000166001600160a01b0383169081179091556040517f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad90600090a250565b6001546001600160a01b031681565b600154600160a01b900460ff1681565b6001547501000000000000000000000000000000000000000000900460ff168156fea164736f6c6343000705000a",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 15404,
+        "contract": "contracts/migration/NewMigrator.sol:NewMigrator",
+        "label": "UNAUTHORIZED",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_string_storage"
+      },
+      {
+        "astId": 15406,
+        "contract": "contracts/migration/NewMigrator.sol:NewMigrator",
+        "label": "authority",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_contract(IOlympusAuthority)9712"
+      },
+      {
+        "astId": 12327,
+        "contract": "contracts/migration/NewMigrator.sol:NewMigrator",
+        "label": "ohmMigrated",
+        "offset": 20,
+        "slot": "1",
+        "type": "t_bool"
+      },
+      {
+        "astId": 12329,
+        "contract": "contracts/migration/NewMigrator.sol:NewMigrator",
+        "label": "shutdown",
+        "offset": 21,
+        "slot": "1",
+        "type": "t_bool"
+      }
+    ],
+    "types": {
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_contract(IOlympusAuthority)9712": {
+        "encoding": "inplace",
+        "label": "contract IOlympusAuthority",
+        "numberOfBytes": "20"
+      },
+      "t_string_storage": {
+        "encoding": "bytes",
+        "label": "string",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}
