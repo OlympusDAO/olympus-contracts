@@ -66,12 +66,12 @@ describe.only("Distributor", () => {
 
         treasury = (await ethers.getContractAt(
             "OlympusTreasury",
-            olympus.treasury
+            olympus.treasury,
         )) as OlympusTreasury;
 
         authority = (await ethers.getContractAt(
             "OlympusAuthority",
-            olympus.authority
+            olympus.authority,
         )) as OlympusAuthority;
 
         staking = (await ethers.getContractAt("OlympusStaking", olympus.staking)) as OlympusStaking;
@@ -83,17 +83,17 @@ describe.only("Distributor", () => {
 
         ohmDai = await ethers.getContractAt(
             uniPairAbi,
-            "0x055475920a8c93cffb64d039a8205f7acc7722d3"
+            "0x055475920a8c93cffb64d039a8205f7acc7722d3",
         );
 
         ohmWeth = await ethers.getContractAt(
             uniPairAbi,
-            "0x69b81152c5a8d35a67b32a4d3772795d96cae4da"
+            "0x69b81152c5a8d35a67b32a4d3772795d96cae4da",
         );
 
         ohmBtrfly = await ethers.getContractAt(
             uniPairAbi,
-            "0xe9ab8038ee6dd4fcc7612997fe28d4e22019c4b4"
+            "0xe9ab8038ee6dd4fcc7612997fe28d4e22019c4b4",
         );
     });
 
@@ -104,7 +104,7 @@ describe.only("Distributor", () => {
                 ohm.address,
                 staking.address,
                 authority.address,
-                "2000"
+                "2000",
             );
         });
     });
@@ -118,7 +118,7 @@ describe.only("Distributor", () => {
                 ohm.address,
                 staking.address,
                 authority.address,
-                "2000"
+                "2000",
             );
 
             await treasury.connect(governor).enable("8", distributor.address, addressZero);
@@ -152,7 +152,7 @@ describe.only("Distributor", () => {
                 const priceBefore = reserve1 / (reserve0 * 1000000000);
                 const balanceBefore = await ohm.balanceOf(pools[0]);
                 const expectedBalanceAfter = balanceBefore.add(
-                    balanceBefore.mul(rewardRate).div(1000000)
+                    balanceBefore.mul(rewardRate).div(1000000),
                 );
 
                 await distributor.triggerRebase();
@@ -188,21 +188,21 @@ describe.only("Distributor", () => {
                 const odPriceBefore = odReserve1 / (odReserve0 * 1000000000);
                 const odBalanceBefore = await ohm.balanceOf(pools[0]);
                 const expectedOdBalanceAfter = odBalanceBefore.add(
-                    odBalanceBefore.mul(rewardRate).div(1000000)
+                    odBalanceBefore.mul(rewardRate).div(1000000),
                 );
 
                 let [owReserve0, owReserve1, owTimestamp] = await ohmWeth.getReserves();
                 const owPriceBefore = owReserve1 / (owReserve0 * 1000000000);
                 const owBalanceBefore = await ohm.balanceOf(pools[1]);
                 const expectedOwBalanceAfter = owBalanceBefore.add(
-                    owBalanceBefore.mul(rewardRate).div(1000000)
+                    owBalanceBefore.mul(rewardRate).div(1000000),
                 );
 
                 let [obReserve0, obReserve1, obTimestamp] = await ohmBtrfly.getReserves();
                 const obPriceBefore = obReserve1 / (obReserve0 * 1000000000);
                 const obBalanceBefore = await ohm.balanceOf(pools[2]);
                 const expectedObBalanceAfter = obBalanceBefore.add(
-                    obBalanceBefore.mul(rewardRate).div(1000000)
+                    obBalanceBefore.mul(rewardRate).div(1000000),
                 );
 
                 await distributor.triggerRebase();
@@ -256,15 +256,15 @@ describe.only("Distributor", () => {
         describe("distribute", () => {
             it("cannot be called when rebases are locked", async () => {
                 await expect(distributor.connect(governor).distribute()).to.be.revertedWith(
-                    "Only_Staking()"
+                    "Only_Staking",
                 );
 
                 await expect(distributor.connect(guardian).distribute()).to.be.revertedWith(
-                    "Only_Staking()"
+                    "Only_Staking",
                 );
 
                 await expect(distributor.connect(owner).distribute()).to.be.revertedWith(
-                    "Only_Staking()"
+                    "Only_Staking",
                 );
 
                 await expect(staking.rebase());
@@ -274,19 +274,19 @@ describe.only("Distributor", () => {
         describe("retrieveBounty", () => {
             it("can only be called by staking", async () => {
                 await expect(distributor.connect(governor).retrieveBounty()).to.be.revertedWith(
-                    "Only_Staking()"
+                    "Only_Staking",
                 );
 
                 await expect(distributor.connect(guardian).retrieveBounty()).to.be.revertedWith(
-                    "Only_Staking()"
+                    "Only_Staking",
                 );
 
                 await expect(distributor.connect(owner).retrieveBounty()).to.be.revertedWith(
-                    "Only_Staking()"
+                    "Only_Staking",
                 );
 
                 await expect(distributor.connect(other).retrieveBounty()).to.be.revertedWith(
-                    "Only_Staking()"
+                    "Only_Staking",
                 );
 
                 await expect(staking.rebase()).to.not.be.reverted;
@@ -378,12 +378,12 @@ describe.only("Distributor", () => {
 
             it("should revert with sanity check if pool doesn't match", async () => {
                 await expect(
-                    distributor.connect(governor).removePool(0, pools[1])
-                ).to.be.revertedWith("Sanity_Check()");
+                    distributor.connect(governor).removePool(0, pools[1]),
+                ).to.be.revertedWith("Sanity_Check");
 
                 await expect(
-                    distributor.connect(governor).removePool(1, pools[0])
-                ).to.be.revertedWith("Sanity_Check()");
+                    distributor.connect(governor).removePool(1, pools[0]),
+                ).to.be.revertedWith("Sanity_Check");
             });
 
             it("should remove pool", async () => {
@@ -447,12 +447,12 @@ describe.only("Distributor", () => {
 
             it("should revert if not called by governor", async () => {
                 await expect(
-                    distributor.connect(owner).setAdjustment(add, rate, target)
-                ).to.be.revertedWith("Not_Permissioned()");
+                    distributor.connect(owner).setAdjustment(add, rate, target),
+                ).to.be.revertedWith("Not_Permissioned");
 
                 await expect(
-                    distributor.connect(other).setAdjustment(add, rate, target)
-                ).to.be.revertedWith("Not_Permissioned()");
+                    distributor.connect(other).setAdjustment(add, rate, target),
+                ).to.be.revertedWith("Not_Permissioned");
             });
 
             it("should set an increase adjustment", async () => {
