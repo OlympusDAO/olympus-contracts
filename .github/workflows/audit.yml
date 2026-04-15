@@ -1,0 +1,31 @@
+name: Dependency Audit
+
+on:
+    pull_request:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pull-requests: write
+
+jobs:
+    audit:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+            - name: Bootstrap
+              uses: ./.github/actions/bootstrap
+            - name: Audit pnpm production dependencies (fail on moderate+)
+              run: pnpm audit --prod --audit-level=moderate
+            - name: Trivy filesystem scan (fail on medium+)
+              run: |
+                  docker run --rm \
+                    -v "${{ github.workspace }}:/src" \
+                    ghcr.io/aquasecurity/trivy:latest fs \
+                    --scanners vuln \
+                    --include-dev-deps \
+                    --severity MEDIUM,HIGH,CRITICAL \
+                    --ignorefile /src/.trivyignore \
+                    /src

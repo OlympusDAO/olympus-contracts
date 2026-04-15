@@ -1,6 +1,6 @@
 // scripts/deploy-staking-only.js
 // Deploys only sOHM, gOHM, and Staking contracts (no other legacy contracts)
-const {ethers} = require("hardhat");
+const { ethers } = require("hardhat");
 
 async function main() {
     const INDEX = 269238508004; // Exact mainnet index
@@ -42,7 +42,7 @@ async function main() {
         EPOCH_LENGTH,
         0,
         Math.floor(Date.now() / 1000),
-        AUTHORITY,
+        AUTHORITY
     );
     await staking.deployed();
     console.log("Staking deployed:", staking.address);
