@@ -1,0 +1,21 @@
+name: Slither Analysis
+on: [pull_request]
+jobs:
+    analyze:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            # We receive an EACCESS permission denied error if we leave dependency installation
+            # to the slither action
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
+            - uses: crytic/slither-action@v0.1.1
+              name: Perform Slither Analysis
+              id: slither
+              continue-on-error: true
+              with:
+                  sarif: results.sarif
+            - name: Upload SARIF file
+              uses: github/codeql-action/upload-sarif@v1
+              with:
+                  sarif_file: ${{ steps.slither.outputs.sarif }}
