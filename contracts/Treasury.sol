@@ -246,7 +246,7 @@ contract OlympusTreasury is OlympusAccessControlled, ITreasury {
      * @notice allow approved address to repay borrowed reserves with OHM
      * @param _amount uint256
      */
-    function repayDebtWithOHM(uint256 _amount) external {
+    function repayDebtWithOHM(uint256 _amount) external override {
         require(
             permissions[STATUS.RESERVEDEBTOR][msg.sender] || permissions[STATUS.OHMDEBTOR][msg.sender],
             notApproved
