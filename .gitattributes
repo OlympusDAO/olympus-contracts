@@ -1,2 +1,5 @@
+# -*- mode: gitattributes; -*-
+justfile linguist-language=Make
+*.t.sol linguist-language=Solidity
 .dapprc linguist-language=Shell
 * text=auto eol=lf
