@@ -1,3 +1,8 @@
+minimumReleaseAge: 10080
+preferFrozenLockfile: true
+engineStrict: true
+strictDepBuilds: true
+blockExoticSubdeps: true
 auditConfig:
     # Deferred until planned OpenZeppelin Contracts Upgradeable 4.x migration.
     ignoreGhsas:
