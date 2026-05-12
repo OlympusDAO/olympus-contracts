@@ -17,6 +17,8 @@ runs:
 
     - name: Install pnpm
       uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+      with:
+        version: 10.33.0
 
     - name: Install Foundry
       if: ${{ inputs.install-foundry == 'true' }}
