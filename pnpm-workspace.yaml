@@ -1,4 +1,6 @@
 minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  - "axios"
 preferFrozenLockfile: true
 engineStrict: true
 strictDepBuilds: true
