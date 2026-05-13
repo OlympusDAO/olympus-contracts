@@ -1,10 +1,20 @@
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
-  - "axios"
+  - "axios@1.16.0"
 preferFrozenLockfile: true
 engineStrict: true
 strictDepBuilds: true
 blockExoticSubdeps: true
+onlyBuiltDependencies:
+    - "@trufflesuite/bigint-buffer@1.1.9"
+    - "bufferutil@4.0.5"
+    - "core-js-pure@3.19.0"
+    - "es5-ext@0.10.64"
+    - "keccak@2.1.0"
+    - "keccak@3.0.1"
+    - "keccak@3.0.4"
+    - "secp256k1@3.8.1"
+    - "secp256k1@4.0.4"
 auditConfig:
     # Deferred until planned OpenZeppelin Contracts Upgradeable 4.x migration.
     ignoreGhsas:
