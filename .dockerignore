@@ -3,6 +3,7 @@
 !hardhat.config.ts
 !package.json
 !pnpm-lock.yaml
+!pnpm-workspace.yaml
 !contracts
 !scripts
 !deployment/localhost
