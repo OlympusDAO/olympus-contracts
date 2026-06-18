@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.15;
 
-import {IERC20} from "./IERC20.sol";
+import {IERC20} from "./IERC20.v2.sol";
 
 interface IEasyAuction {
     /// @notice                         Initiates an auction through Gnosis Auctions
@@ -29,4 +29,8 @@ interface IEasyAuction {
         address accessManager,
         bytes calldata accessManagerData
     ) external returns (uint256);
+
+    /// @notice             Settles an auction and identifies the clearing price
+    /// @param auctionId    The ID of the auction to settle
+    function settleAuction(uint256 auctionId) external returns (bytes32 clearingOrder);
 }
