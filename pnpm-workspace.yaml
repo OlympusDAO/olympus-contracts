@@ -1,12 +1,16 @@
+auditConfig:
+    # Deferred until planned OpenZeppelin Contracts Upgradeable 4.x migration.
+    ignoreGhsas:
+        - GHSA-7grf-83vw-6f5x
+        - GHSA-9c22-pwxw-p6hx
+        - GHSA-mx2q-35m2-x2rh
+blockExoticSubdeps: true
+engineStrict: true
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - "axios@1.16.0"
   - "form-data@4.0.6"
   - "ws@8.21.0"
-preferFrozenLockfile: true
-engineStrict: true
-strictDepBuilds: true
-blockExoticSubdeps: true
 onlyBuiltDependencies:
   - "@trufflesuite/bigint-buffer@1.1.9"
   - "bufferutil@4.0.5"
@@ -21,12 +25,6 @@ onlyBuiltDependencies:
   - "web3-bzz@1.5.3"
   - "web3-shh@1.5.3"
   - "web3@1.5.3"
-auditConfig:
-    # Deferred until planned OpenZeppelin Contracts Upgradeable 4.x migration.
-    ignoreGhsas:
-        - GHSA-7grf-83vw-6f5x
-        - GHSA-9c22-pwxw-p6hx
-        - GHSA-mx2q-35m2-x2rh
 overrides:
   "ajv@<6.12.6": "^6.12.6"
   "ansi-regex@<4.1.1": "^4.1.1"
@@ -92,3 +90,5 @@ overrides:
   "ws@>=7.0.0 <7.5.11": "^7.5.11"
   "ws@>=8.0.0 <8.21.0": "^8.21.0"
   "yargs-parser@<5.0.1": "^5.0.1"
+preferFrozenLockfile: true
+strictDepBuilds: true

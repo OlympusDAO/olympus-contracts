@@ -21,6 +21,8 @@ jobs:
         runs-on: ${{ matrix.os }}
         steps:
             - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+              with:
+                  persist-credentials: false
             - name: Checkout submodules
               run: git submodule update --init --recursive
             - uses: cachix/install-nix-action@11e5400eccd6f89582f7da71e36b86e2b0924252 # v14
