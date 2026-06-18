@@ -68,7 +68,6 @@
     "etherscan:sepolia": "hardhat --network sepolia etherscan-verify",
     "prestart": "pnpm run typechain",
     "start": "hardhat node --network hardhat",
-    "preinstall": "npx only-allow@1.2.2 pnpm",
     "build": "pnpm run compile"
   },
   "repository": {
