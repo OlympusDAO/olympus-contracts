@@ -11,6 +11,7 @@ import {
     GOHM__factory,
     OlympusTreasury__factory,
     LUSDAllocator__factory,
+    NewMigrator__factory,
 } from "../../types";
 
 // TODO: Shouldn't run setup methods if the contracts weren't redeployed.
@@ -27,6 +28,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const treasuryDeployment = await deployments.get(CONTRACTS.treasury);
     const stakingDeployment = await deployments.get(CONTRACTS.staking);
     const lusdAllocatorDeployment = await deployments.get(CONTRACTS.lusdAllocator);
+    const migratorDeployment = await deployments.get(CONTRACTS.migrator);
 
     const authorityContract = await OlympusAuthority__factory.connect(
         authorityDeployment.address,
@@ -39,6 +41,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const staking = OlympusStaking__factory.connect(stakingDeployment.address, signer);
     const treasury = OlympusTreasury__factory.connect(treasuryDeployment.address, signer);
     const lusdAllocator = LUSDAllocator__factory.connect(lusdAllocatorDeployment.address, signer);
+    const migrator = NewMigrator__factory.connect(migratorDeployment.address, signer);
 
     // Step 1: Set treasury as vault on authority
     await waitFor(authorityContract.pushVault(treasury.address, true));
@@ -49,7 +52,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     console.log("Setup -- treasury.enable(8):  distributor enabled to mint ohm on treasury");
 
     // Step 3: Set distributor on staking
-    await waitFor(staking.setDistributor(distributor.address));
+    await waitFor(staking.setDistributor("0x0000000000000000000000000000000000000000"));
     console.log("Setup -- staking.setDistributor:  distributor set on staking");
 
     // Step 4: Initialize sOHM and set the index
@@ -62,12 +65,16 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     // Step 5: Set up distributor with bounty and recipient
     await waitFor(distributor.setBounty(BOUNTY_AMOUNT));
-    await waitFor(distributor.addRecipient(staking.address, INITIAL_REWARD_RATE));
+    // await waitFor(distributor.addRecipient(staking.address, INITIAL_REWARD_RATE));
     console.log("Setup -- distributor.setBounty && distributor.addRecipient");
 
     // Approve staking contact to spend deployer's OHM
     // TODO: Is this needed?
     // await ohm.approve(staking.address, LARGE_APPROVAL);
+
+    // Step 6: Migrate contracts from migrator to staking
+    await waitFor(migrator.migrateContracts(staking.address, gOhm.address, sOhm.address));
+    console.log("Setup -- migrator.migrateContracts");
 };
 
 func.tags = ["setup"];

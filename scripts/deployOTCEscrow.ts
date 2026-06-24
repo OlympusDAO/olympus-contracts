@@ -20,7 +20,7 @@ async function main() {
         externalToken,
         olympusAmount,
         externalAmount
-    )
+    );
 
     console.log("OTC Escrow deployed at: ", otcEscrow.address);
 }

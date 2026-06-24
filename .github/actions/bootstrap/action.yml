@@ -1,0 +1,27 @@
+name: Bootstrap CI environment
+description: Standardized repository setup for CI.
+
+inputs:
+  install-foundry:
+    description: Install foundry toolchain if required by the project.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      with:
+        node-version-file: .nvmrc
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+
+    - name: Install Foundry
+      if: ${{ inputs.install-foundry == 'true' }}
+      uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1.7.0
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      shell: bash

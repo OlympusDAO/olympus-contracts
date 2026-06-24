@@ -27,3 +27,5 @@ deployments/**/solcinputs
 # OpenZeppelin upgradeable files
 .openzeppelin/unknown-*.json
 /flatten
+
+.pnpm-store/

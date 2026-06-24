@@ -8,14 +8,14 @@
   "devDependencies": {
     "@defi-wonderland/smock": "^2.0.7",
     "@nomiclabs/hardhat-ethers": "2.0.4",
-    "@nomiclabs/hardhat-etherscan": "^2.1.7",
-    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@nomiclabs/hardhat-etherscan": "^3.1.8",
+    "@nomiclabs/hardhat-waffle": "^2.0.6",
     "@openzeppelin/contracts": "^4.4.2",
     "@openzeppelin/contracts-upgradeable": "^3.4.2",
     "@openzeppelin/hardhat-upgrades": "^1.12.0",
     "@rari-capital/solmate": "^6.2.0",
-    "@typechain/ethers-v5": "^7.1.2",
-    "@typechain/hardhat": "^2.3.0",
+    "@typechain/ethers-v5": "^10.2.1",
+    "@typechain/hardhat": "^6.1.6",
     "@types/chai": "^4.2.22",
     "@types/mocha": "^9.0.0",
     "@types/node": "^16.10.2",
@@ -26,10 +26,10 @@
     "dotenv": "^10.0.0",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
-    "ethereum-waffle": "^3.4.0",
+    "ethereum-waffle": "^4.0.10",
     "ethers": "^5.4.7",
-    "hardhat": "^2.6.4",
-    "hardhat-deploy": "^0.9.3",
+    "hardhat": "^2.23.0",
+    "hardhat-deploy": "^1.0.2",
     "hardhat-gas-reporter": "^1.0.4",
     "husky": "^7.0.4",
     "prettier": "^2.4.1",
@@ -39,15 +39,15 @@
     "solidity-coverage": "^0.7.17",
     "ts-generator": "^0.1.1",
     "ts-node": "^10.2.1",
-    "typechain": "^5.1.2",
+    "typechain": "^8.3.2",
     "typescript": "^4.4.3"
   },
   "scripts": {
     "lint": "eslint \"**/*.{js,ts}\" && solhint src/**/*.sol",
     "lint:fix": "eslint --fix \"**/*.{js,ts}\" && solhint --fix src/**/*.sol",
     "lint:sol": "solhint -f table contracts/**/*.sol",
-    "format": "prettier --check \"**/*.{ts,js,sol}\"",
-    "format:fix": "prettier --write \"**/*.{ts,js,sol}\"",
+    "format": "prettier --check \"**/*.{ts,js,sol}\" --plugin=prettier-plugin-solidity",
+    "format:fix": "prettier --write \"**/*.{ts,js,sol}\" --plugin=prettier-plugin-solidity",
     "compile": "hardhat compile",
     "clean": "hardhat clean",
     "void:deploy": "hardhat deploy",
@@ -60,12 +60,15 @@
     "deploy:rinkeby": "hardhat --network rinkeby deploy",
     "deploy:ropsten": "hardhat --network ropsten deploy",
     "deploy:hardhat": "hardhat --network hardhat deploy",
+    "deploy:sepolia": "hardhat --network sepolia deploy",
     "sourcify:mainnet": "hardhat --network mainnet sourcify",
     "sourcify:rinkeby": "hardhat --network rinkeby sourcify",
     "etherscan:mainnet": "hardhat --network mainnet etherscan-verify",
     "etherscan:rinkeby": "hardhat --network rinkeby etherscan-verify",
-    "prestart": "yarn run typechain",
-    "start": "hardhat node --network hardhat"
+    "etherscan:sepolia": "hardhat --network sepolia etherscan-verify",
+    "prestart": "pnpm run typechain",
+    "start": "hardhat node --network hardhat",
+    "build": "pnpm run compile"
   },
   "repository": {
     "type": "git",
@@ -75,5 +78,12 @@
   "bugs": {
     "url": "https://github.com/OlympusDAO/olympus-contracts/issues"
   },
-  "homepage": "https://github.com/OlympusDAO/olympus-contracts#readme"
+  "homepage": "https://github.com/OlympusDAO/olympus-contracts#readme",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10.33.0",
+    "npm": "use-pnpm",
+    "yarn": "use-pnpm"
+  },
+  "packageManager": "pnpm@10.33.0"
 }

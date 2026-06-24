@@ -8,13 +8,7 @@ async function main() {
     const authority = "0x1c21F8EA7e39E2BA00BC12d2968D63F4acb38b7A";
 
     const distFactory = await ethers.getContractFactory("Distributor");
-    const distributor = await distFactory.deploy(
-        treasury,
-        ohm,
-        staking,
-        authority,
-        1587
-    );
+    const distributor = await distFactory.deploy(treasury, ohm, staking, authority, 1587);
 
     console.log("Mint&Sync Distributor deployed at: ", distributor.address);
 }

@@ -76,7 +76,7 @@ contract Distributor is OlympusAccessControlled {
     function triggerRebase() external {
         unlockRebase = true;
         IStaking(staking).unstake(msg.sender, 0, true, true); // Give the caller the bounty ohm.
-        if(unlockRebase) revert No_Rebase_Occurred();
+        if (unlockRebase) revert No_Rebase_Occurred();
     }
 
     /* ====== GUARDED FUNCTIONS ====== */
