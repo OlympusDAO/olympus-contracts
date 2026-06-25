@@ -159,12 +159,12 @@ describe("Bond Depository", async () => {
         );
         // close the first bond
         await depository.close(0);
-        [first] = await depository.liveMarkets();
+        let [first] = await depository.liveMarkets();
         expect(Number(first)).to.equal(1);
     });
 
     it("should include ID in live markets for quote token", async () => {
-        [id] = await depository.liveMarketsFor(dai.address);
+        let [id] = await depository.liveMarketsFor(dai.address);
         expect(Number(id)).to.equal(bid);
     });
 
@@ -256,7 +256,7 @@ describe("Bond Depository", async () => {
 
     it("adjustment should continue lowering over multiple deposits in same tune interval", async () => {
         await network.provider.send("evm_increaseTime", [tuneInterval]);
-        [, controlVariable, , ,] = await depository.terms(bid);
+        let [, controlVariable, , ,] = await depository.terms(bid);
         let amount = "10000000000000000000000"; // 10,000
         await depository
             .connect(bob)
