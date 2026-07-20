@@ -8,25 +8,26 @@ blockExoticSubdeps: true
 engineStrict: true
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
+  - "adm-zip@0.6.0"
   - "axios@1.16.0"
   - "form-data@4.0.6"
   - "undici@6.27.0"
   - "ws@8.21.0"
-onlyBuiltDependencies:
-  - "@trufflesuite/bigint-buffer@1.1.9"
-  - "bufferutil@4.0.5"
-  - "core-js-pure@3.19.0"
-  - "es5-ext@0.10.64"
-  - "keccak@2.1.0"
-  - "keccak@3.0.1"
-  - "keccak@3.0.4"
-  - "secp256k1@3.8.1"
-  - "secp256k1@4.0.4"
-  - "utf-8-validate@5.0.7"
-  - "web3-bzz@1.5.3"
-  - "web3-shh@1.5.3"
-  - "web3@1.5.3"
+allowBuilds:
+  "@trufflesuite/bigint-buffer@1.1.9": true
+  "bufferutil@4.0.5": true
+  "core-js-pure@3.19.0": true
+  "es5-ext@0.10.64": true
+  "keccak@2.1.0": true
+  "keccak@3.0.1": true
+  "keccak@3.0.4": true
+  "secp256k1@4.0.4": true
+  "utf-8-validate@5.0.7": true
+  "web3-bzz@1.5.3": true
+  "web3-shh@1.5.3": true
+  "web3@1.5.3": true
 overrides:
+  "adm-zip@<0.6.0": "0.6.0"
   "ajv@<6.12.6": "^6.12.6"
   "ansi-regex@<4.1.1": "^4.1.1"
   "async@<2.6.4": "^2.6.4"
