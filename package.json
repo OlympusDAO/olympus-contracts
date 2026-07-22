@@ -74,9 +74,9 @@
   "homepage": "https://github.com/OlympusDAO/olympus-contracts#readme",
   "engines": {
     "node": ">=22",
-    "pnpm": ">=10.33.0",
+    "pnpm": ">=11.13.0",
     "npm": "use-pnpm",
     "yarn": "use-pnpm"
   },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@11.13.0"
 }
