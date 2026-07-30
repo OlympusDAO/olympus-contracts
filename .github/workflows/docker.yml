@@ -9,8 +9,14 @@ on:
 env:
     REGISTRY: ghcr.io
 
+permissions:
+    contents: read
+
 jobs:
     docker:
+        permissions:
+            contents: read
+            packages: write
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
