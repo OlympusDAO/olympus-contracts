@@ -18,6 +18,7 @@ WORKDIR /opt
 COPY package.json .
 COPY pnpm-lock.yaml .
 COPY pnpm-workspace.yaml .
+COPY patches patches
 RUN corepack enable && corepack prepare pnpm@11.13.0 --activate
 # Workaround for an issue with package manager and git
 RUN git config --global url."https://github.com/".insteadOf ssh://git@github.com/ && \
