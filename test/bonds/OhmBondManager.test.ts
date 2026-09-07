@@ -9,11 +9,11 @@ import {
     OlympusTreasury,
 } from "../../types";
 import { addEth, addressZero, bne, getCoin, impersonate, pinBlock } from "../utils/scripts";
+import { advanceTime } from "../utils/Utilities";
 import { olympus } from "../utils/olympus";
 import { coins } from "../utils/coins";
 import { BigNumber } from "ethers";
 import { easyAuctionAbi, feAuctioneerAbi, feTellerAbi, bondAggregatorAbi } from "../utils/abi";
-import { defaultAbiCoder } from "ethers/lib/utils";
 
 // Network
 const url: string = config.networks.hardhat.forking!.url;
@@ -252,6 +252,37 @@ describe.only("OhmBondManager", () => {
         });
     });
 
+    describe("closeBondProtocolMarket", () => {
+        beforeEach(async () => {
+            await ohmBondManager.connect(policy).setBondProtocolParameters(
+                "1000000000000000000000000000000000000", // 1e36
+                "500000000000000000000000000000000000", // 5e35
+                100_000,
+                604800,
+                21600
+            );
+            await ohmBondManager
+                .connect(policy)
+                .createBondProtocolMarket("10000000000000", 1210000);
+        });
+
+        it("can only be called by policy", async () => {
+            const marketId = (await bondAggregator.marketCounter()).sub("1");
+            await expect(ohmBondManager.connect(policy).closeBondProtocolMarket(marketId)).to.not.be.reverted;
+
+            await expect(ohmBondManager.connect(other).closeBondProtocolMarket(marketId)).to.be.reverted;
+
+            await expect(ohmBondManager.connect(guardian).closeBondProtocolMarket(marketId)).to.be.reverted;
+        });
+
+        it("should correctly close the market", async () => {
+            const marketId = (await bondAggregator.marketCounter()).sub("1");
+            await ohmBondManager.connect(policy).closeBondProtocolMarket(marketId);
+
+            expect((await feAuctioneer.isLive(marketId))).to.be.false;
+        });
+    });
+
     describe("createGnosisAuction", () => {
         beforeEach(async () => {
             await ohmBondManager
@@ -287,6 +318,77 @@ describe.only("OhmBondManager", () => {
             expect(auctionData.auctionEndDate).to.be.gte(
                 BigNumber.from("1665411455").add(7 * 24 * 60 * 60)
             );
+        });
+    });
+
+    describe("settleGnosisAuction", () => {
+        beforeEach(async () => {
+            await ohmBondManager
+                .connect(policy)
+                .setGnosisAuctionParameters(518400, 604800, 2, "10000000", "1000000000000");
+
+            await ohmBondManager.connect(policy).createGnosisAuction("10000000000000", 1210000);
+        });
+
+        it("can only be called by policy", async () => {
+            await advanceTime(1210005);
+
+            const auctionId = await easyAuction.auctionCounter();
+            await expect(ohmBondManager.connect(policy).settleGnosisAuction(auctionId)).to.not.be.reverted;
+
+            await expect(ohmBondManager.connect(other).settleGnosisAuction(auctionId)).to.be.reverted;
+
+            await expect(ohmBondManager.connect(guardian).settleGnosisAuction(auctionId)).to.be.reverted;
+        });
+
+        it("should settle the auction", async () => {
+            await advanceTime(1210005);
+
+            const auctionId = await easyAuction.auctionCounter();
+            await expect(ohmBondManager.connect(policy).settleGnosisAuction(auctionId)).to.not.be.reverted;
+
+            const auctionData = await easyAuction.auctionData(auctionId);
+            expect(auctionData.minimumBiddingAmountPerOrder).to.equal("0");
+        });
+    });
+
+    describe("series of market creations", () => {
+        beforeEach(async () => {
+            await ohmBondManager.connect(policy).setBondProtocolParameters(
+                "1000000000000000000000000000000000000", // 1e36
+                "500000000000000000000000000000000000", // 5e35
+                100_000,
+                604800,
+                21600
+            );
+
+            await ohmBondManager
+                .connect(policy)
+                .setGnosisAuctionParameters(518400, 604800, 2, "10000000", "1000000000000");
+        });
+
+        it("should not steal OHM when launching subsequent markets", async () => {
+            await ohmBondManager.connect(policy).createBondProtocolMarket(10000000000000, 1210000);
+            await ohmBondManager.connect(policy).createGnosisAuction(10000000000000, 1210000);
+
+            expect((await ohm.allowance(ohmBondManager.address, feTeller.address))).to.equal(10000000000000);
+            expect((await ohm.balanceOf(ohmBondManager.address))).to.equal(10000000000000);
+        });
+    });
+
+    describe("setEmergencyApproval", () => {
+        it("can only be called by policy", async () => {
+            await expect(ohmBondManager.connect(policy).setEmergencyApproval(ohm.address, feTeller.address, "10000000000000")).to.not.be.reverted;
+
+            await expect(ohmBondManager.connect(other).setEmergencyApproval(ohm.address, feTeller.address, "10000000000000")).to.be.reverted;
+
+            await expect(ohmBondManager.connect(guardian).setEmergencyApproval(ohm.address, feTeller.address, "10000000000000")).to.be.reverted;
+        });
+
+        it("should set approval on the passed token", async () => {
+            expect((await ohm.allowance(ohmBondManager.address, feTeller.address))).to.equal("0");
+            await ohmBondManager.connect(policy).setEmergencyApproval(ohm.address, feTeller.address, "10000000000000");
+            expect((await ohm.allowance(ohmBondManager.address, feTeller.address))).to.equal("10000000000000");
         });
     });
 
