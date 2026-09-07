@@ -43,21 +43,24 @@ contract InvestorClaimV2 is Ownable {
     }
 
     /* ========== STATE VARIABLES ========== */
-
+    /*
+        the below defaults are the accurate internal variables for mainnet.
+        we changed the variables so that they could be added in the constructor for test nets.
+    */
     // claim token
-    IERC20 internal immutable ohm = IERC20(0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5);
+    IERC20 internal ohm = IERC20(0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5);
     // payment token
-    IERC20 internal immutable dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    IERC20 internal dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     // mints claim token
-    ITreasury internal immutable treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
+    ITreasury internal treasury = ITreasury(0x9A315BdF513367C0377FB36545857d12e85813Ef);
     // stake OHM for sOHM
-    IStaking internal immutable staking = IStaking(0xB63cac384247597756545b500253ff8E607a8020);
+    IStaking internal staking = IStaking(0xB63cac384247597756545b500253ff8E607a8020);
     // holds non-circulating supply
-    address internal immutable dao = 0x245cc372C84B3645Bf0Ffe6538620B04a217988B;
+    address internal dao = 0x245cc372C84B3645Bf0Ffe6538620B04a217988B;
     // tracks rebase-agnostic balance
-    IgOHM internal immutable gOHM = IgOHM(0x0ab87046fBb341D058F17CBC4c1133F25a20a52f);
+    IgOHM internal gOHM = IgOHM(0x0ab87046fBb341D058F17CBC4c1133F25a20a52f);
     // previous deployment of contract (to migrate terms)
-    IClaim internal immutable previous = IClaim(0xcD4B3c7B746161f0E54bc9a23307CE222a2bF081);
+    IClaim internal previous = IClaim(0xcD4B3c7B746161f0E54bc9a23307CE222a2bF081);
 
     // tracks address info
     mapping(address => Term) public terms;
@@ -68,7 +71,31 @@ contract InvestorClaimV2 is Ownable {
     // maximum portion of supply can allocate. == 4%
     uint256 public maximumAllocated = 40000;
 
-    constructor() {}
+    /// @dev adjust constructor to declare OHM, DAI, TREASURY, STAKING, DAO, gOHM, ICLAIM
+    constructor(
+        address ohmAd,
+        address daiAd,
+        address treasuryAd,
+        address stakingAd,
+        address daoAd,
+        address gohmAd,
+        address claimAd
+    ) {
+        // claim token
+        ohm = IERC20(ohmAd);
+        // payment token
+        dai = IERC20(daiAd);
+        // mints claim token
+        treasury = ITreasury(treasuryAd);
+        // stake OHM for sOHM
+        staking = IStaking(stakingAd);
+        // holds non-circulating supply
+        dao = daoAd;
+        // tracks rebase-agnostic balance
+        gOHM = IgOHM(gohmAd);
+        // previous deployment of contract (to migrate terms)
+        previous = IClaim(claimAd);
+    }
 
     /* ========== MUTABLE FUNCTIONS ========== */
 
