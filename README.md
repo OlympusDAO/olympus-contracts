@@ -1,6 +1,6 @@
-# Ω Olympus Smart Contracts
+# Ω Olympus Smart Contracts 
 
-![image](https://img.shields.io/github/forks/OlympusDAO/olympus-contracts?style=social)
+[![image](https://img.shields.io/github/forks/OlympusDAO/olympus-contracts?style=social)](https://github.com/OlympusDAO/olympus-contracts/network/members)
 
 This is the main Olympus smart contract development repository.
 
